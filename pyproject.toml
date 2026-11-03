@@ -84,9 +84,6 @@ project-includes = ["lint/private/okf_docs", "runtime/private", "tools"]
 # diagnostic kind at error severity on top of it, so the gate holds even if
 # a later release reshuffles what the preset turns on.
 preset = "strict"
-# Check as Linux on every host: the interim tooling uses fcntl, which
-# Windows lacks, and a gate's verdict must not depend on the machine.
-python-platform = "linux"
 
 # Every error kind pyrefly knows, pinned to "error" except the two marked
 # below. The catalog is version-specific and pyrefly reorganizes it between
