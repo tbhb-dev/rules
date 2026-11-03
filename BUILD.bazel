@@ -204,8 +204,11 @@ FORMATTERS = [
 ]
 
 # Test fixtures hold deliberately malformed files, which no formatter may
-# fix.
-FORMAT_EXCLUDE = ["*/testdata/*"]
+# fix, and pnpm writes its own lockfiles.
+FORMAT_EXCLUDE = [
+    "*/testdata/*",
+    "pnpm-lock.yaml",
+]
 
 format(
     name = "format",

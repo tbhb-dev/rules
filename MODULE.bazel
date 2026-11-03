@@ -14,6 +14,7 @@ module(
 
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
 bazel_dep(name = "rules_multitool", version = "1.11.1")
+bazel_dep(name = "aspect_rules_js", version = "3.5.2")
 
 # Default tool pins. They join rules_multitool's default `multitool` hub,
 # which merges the lockfiles of every module in the graph with the root
@@ -23,6 +24,27 @@ bazel_dep(name = "rules_multitool", version = "1.11.1")
 multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
 multitool.hub(lockfile = "//:multitool.lock.json")
 use_repo(multitool, "multitool")
+
+# cspell ships only on npm, so rules_js installs it from a committed pnpm
+# lock, with every package pinned by integrity hash and no lifecycle script
+# allowed to run. The hub name is private and unique: extension repo names
+# share one namespace across the module graph, so a consumer's own `npm`
+# hub never meets this one. tbhb_rules registers no Node toolchain; js
+# binaries run on rules_nodejs' default `nodejs` toolchain, which the root
+# module controls.
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "tbhb_rules_cspell_npm",
+    data = ["//lint/private/cspell:package.json"],
+    lifecycle_hooks = {"*": []},
+    pnpm_lock = "//lint/private/cspell:pnpm-lock.yaml",
+)
+use_repo(npm, "tbhb_rules_cspell_npm")
+
+# The pnpm that rules_js pins, for maintainers regenerating the cspell lock:
+# bazel run -- @pnpm//:pnpm --dir "$PWD/lint/private/cspell" install --lockfile-only
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm", dev_dependency = True)
+use_repo(pnpm, "pnpm")
 
 # Dev dependencies: tooling that only this repository's own gates need.
 bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)

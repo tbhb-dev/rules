@@ -17,6 +17,7 @@ path = [
   "mise.lock",
   "MODULE.bazel.lock",
   "uv.lock",
+  "lint/private/cspell/pnpm-lock.yaml",
   ".mise/locks/**",
   # Go module files, which go mod tidy rewrites.
   "**/go.mod",

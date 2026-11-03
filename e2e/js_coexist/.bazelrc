@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# This module consumes tbhb_rules from the parent directory, so its lockfile
+# would churn with every change there; it is not committed.
+common --lockfile_mode=off
+common --check_direct_dependencies=error

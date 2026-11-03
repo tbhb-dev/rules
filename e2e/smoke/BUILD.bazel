@@ -4,6 +4,7 @@
 load(
     "@tbhb_rules//lint:defs.bzl",
     "actionlint_test",
+    "cspell_test",
     "editorconfig_checker_test",
     "gitleaks_test",
     "rumdl_test",
@@ -141,3 +142,32 @@ PROOF_REASONS = {
     )
     for proof, pattern in PROOF_REASONS.items()
 ]
+
+# Spelling: a clean tree passes, and a planted misspelling is found.
+cspell_test(
+    name = "cspell_clean",
+    srcs = glob(
+        ["testdata/clean_cspell/**"],
+        exclude = [
+            "testdata/clean_cspell/.cspell.jsonc",
+            "testdata/clean_cspell/words.txt",
+        ],
+    ),
+    config = "testdata/clean_cspell/.cspell.jsonc",
+    data = ["testdata/clean_cspell/words.txt"],
+    strip_prefix = "testdata/clean_cspell",
+)
+
+cspell_test(
+    name = "cspell_bad",
+    srcs = glob(["testdata/proofs/cspell_bad/**"]),
+    config = "testdata/proofs/cspell_bad/.cspell.jsonc",
+    strip_prefix = "testdata/proofs/cspell_bad",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "cspell_bad_is_found",
+    pattern = "notes\\.md:3:[0-9]+ - Unknown word \\(sentance\\)",
+    test = ":cspell_bad",
+)

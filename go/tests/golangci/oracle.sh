@@ -55,9 +55,10 @@ fi
 export GOTOOLCHAIN=local
 export GOWORK=off
 export GOTELEMETRY=off
-export GOFLAGS=-mod=mod
+# -modcacherw: the module cache is deleted with the rest at exit.
+export GOFLAGS="-mod=mod -modcacherw"
 if [[ -d "$mod/vendor" ]]; then
-  export GOFLAGS=-mod=vendor
+  export GOFLAGS="-mod=vendor -modcacherw"
 fi
 # Pure Go, so the oracle needs no C toolchain.
 export CGO_ENABLED=0

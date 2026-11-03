@@ -72,8 +72,8 @@ go_mod_proxy_repo = repository_rule(
 _from_file = tag_class(
     doc = "A proxy repository for one go.sum.",
     attrs = {
-        "name": attr.string(mandatory = True, doc = "Repository name, for use_repo."),
         "go_sum": attr.label(mandatory = True, doc = "The go.sum whose modules to fetch."),
+        "name": attr.string(mandatory = True, doc = "Repository name, for use_repo."),
         "proxy_url": attr.string(default = "https://proxy.golang.org", doc = "The proxy to fetch from."),
     },
 )

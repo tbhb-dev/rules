@@ -1,0 +1,7 @@
+{
+  "language": "en",
+  "dictionaryDefinitions": [
+    { "name": "project", "path": "./words.txt", "addWords": true }
+  ],
+  "dictionaries": ["project", "golang", "python"]
+}

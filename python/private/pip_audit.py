@@ -17,33 +17,46 @@ import sys
 import tempfile
 from pathlib import Path
 
+EXPORT = (
+    "export",
+    "--quiet",
+    "--frozen",
+    "--all-packages",
+    "--all-groups",
+    "--no-emit-workspace",
+    "--format",
+    "pylock.toml",
+)
+
+
+def commands(work: Path, argv: list[str]) -> tuple[list[str], list[str]]:
+    """Return the export and audit commands for a scratch directory."""
+    export = [os.environ["TBHB_PYTHON_UV"], *EXPORT, "-o", str(work / "pylock.toml")]
+    audit = [
+        sys.executable,
+        "-m",
+        "pip_audit",
+        "--cache-dir",
+        str(work / "cache"),
+        "--locked",
+        str(work),
+        *argv,
+    ]
+    return export, audit
+
 
 def main(argv: list[str]) -> int:
-    """Export the lock and audit it; return pip-audit's status."""
+    """Export the lock and audit it; return the first failing status."""
     workspace = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
     if workspace:
         os.chdir(workspace)
     with tempfile.TemporaryDirectory() as work:
-        lock = Path(work) / "pylock.toml"
-        subprocess.run(  # nosec B603
-            [
-                os.environ["TBHB_PYTHON_UV"],
-                "export",
-                "--quiet",
-                "--frozen",
-                "--all-packages",
-                "--all-groups",
-                "--no-emit-workspace",
-                "--format",
-                "pylock.toml",
-                "-o",
-                str(lock),
-            ],
-            check=True,
-            env=dict(os.environ, UV_NO_CONFIG="1"),
-        )
-        command = [sys.executable, "-m", "pip_audit", "--cache-dir", str(Path(work) / "cache"), "--locked", work, *argv]
-        return subprocess.run(command, check=False).returncode  # nosec B603
+        export, audit = commands(Path(work), argv)
+        env = dict(os.environ, UV_NO_CONFIG="1")
+        exported = subprocess.run(export, check=False, env=env)  # nosec B603
+        if exported.returncode != 0:
+            return exported.returncode
+        return subprocess.run(audit, check=False).returncode  # nosec B603
 
 
 if __name__ == "__main__":

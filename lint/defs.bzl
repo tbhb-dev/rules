@@ -15,6 +15,7 @@ load(
     _zizmor_test = "zizmor_test",
 )
 load("//lint/private:codeowners.bzl", _codeowners_test = "codeowners_test")
+load("//lint/private:cspell.bzl", _cspell_test = "cspell_test")
 load("//lint/private:gitleaks_history.bzl", _gitleaks_history = "gitleaks_history")
 load("//lint/private:shell.bzl", _shellcheck_test = "shellcheck_test", _shfmt_test = "shfmt_test")
 load("//lint/private:tree_check.bzl", _tree_check_test = "tree_check_test")
@@ -23,6 +24,7 @@ load("//lint/private:vale.bzl", _vale_sync = "vale_sync", _vale_test = "vale_tes
 actionlint_test = _actionlint_test
 bats_test = _bats_test
 codeowners_test = _codeowners_test
+cspell_test = _cspell_test
 editorconfig_checker_test = _editorconfig_checker_test
 gitleaks_history = _gitleaks_history
 gitleaks_test = _gitleaks_test

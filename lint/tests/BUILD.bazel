@@ -4,12 +4,15 @@
 load("//lint:defs.bzl", "gitleaks_history")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
+load(":cspell_tests.bzl", "cspell_test_suite")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
 load(":tree_check_tests.bzl", "tree_check_test_suite")
 
 repo_files()
 
 tree_check_test_suite(name = "tree_check_tests")
+
+cspell_test_suite(name = "cspell_tests")
 
 # gitleaks_history against throwaway repositories.
 

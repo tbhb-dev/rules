@@ -20,16 +20,29 @@ import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
-COUNTS = ("total", "killed", "skipped", "survived", "timeout", "suspicious", "no_tests", "segfault")
-STATUSES = {
+COUNTS = (
+    "total",
+    "killed",
+    "skipped",
     "survived",
     "timeout",
     "suspicious",
-    "no tests",
+    "no_tests",
     "segfault",
-    "not checked",
-    "skipped",
-}
+)
+# The statuses `mutmut results --all true` prints for mutants not killed.
+NOT_KILLED = frozenset(
+    {
+        "survived",
+        "timeout",
+        "suspicious",
+        "no tests",
+        "segfault",
+        "not checked",
+        "skipped",
+    },
+)
+STATS = Path("mutants/mutmut-cicd-stats.json")
 
 
 def mutmut(args: list[str], log: Path) -> subprocess.CompletedProcess[str]:
@@ -41,8 +54,18 @@ def mutmut(args: list[str], log: Path) -> subprocess.CompletedProcess[str]:
         check=False,
     )
     with log.open("a") as out:
-        out.write(f"$ mutmut {' '.join(args)} (exit {done.returncode})\n{done.stdout}{done.stderr}\n")
+        out.write(f"$ mutmut {' '.join(args)} (exit {done.returncode})\n")
+        out.write(f"{done.stdout}{done.stderr}\n")
     return done
+
+
+def load_stats(path: Path) -> dict[str, object] | None:
+    """Read the cicd stats, or None when there are none to read."""
+    try:
+        data = json.loads(path.read_text())
+    except OSError, ValueError:
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def report(stats: dict[str, object] | None, results: str) -> str:
@@ -51,28 +74,26 @@ def report(stats: dict[str, object] | None, results: str) -> str:
         lines = [f"{key}=0" for key in COUNTS] + ["interrupted=1"]
     else:
         lines = [f"{key}={int(str(stats.get(key, 0)))}" for key in COUNTS]
-        lines.append(f"interrupted={1 if stats.get('check_was_interrupted_by_user') else 0}")
+        interrupted = 1 if stats.get("check_was_interrupted_by_user") else 0
+        lines.append(f"interrupted={interrupted}")
     for line in results.splitlines():
         name, _, status = line.strip().rpartition(": ")
-        if name and status in STATUSES:
+        if name and status in NOT_KILLED:
             lines.append(f"mutant.{status.replace(' ', '_')}={name}")
     return "\n".join(lines) + "\n"
 
 
 def main(argv: list[str]) -> int:
     """Run mutmut and write the report; fail only on bad usage."""
-    if len(argv) != 2:  # noqa: PLR2004
-        sys.stderr.write("usage: mutmut_report.py REPORT LOG\n")
+    if len(argv) != 2:  # noqa: PLR2004 - REPORT and LOG.
+        print("usage: mutmut_report.py REPORT LOG", file=sys.stderr)
         return 2
     out, log = Path(argv[0]), Path(argv[1])
     log.write_text("")
     mutmut(["run"], log)
     stats = None
     if mutmut(["export-cicd-stats"], log).returncode == 0:
-        try:
-            stats = json.loads(Path("mutants/mutmut-cicd-stats.json").read_text())
-        except (OSError, ValueError):
-            stats = None
+        stats = load_stats(STATS)
     results = mutmut(["results", "--all", "true"], log).stdout
     out.write_text(report(stats, results))
     return 0

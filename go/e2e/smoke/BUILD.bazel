@@ -1,0 +1,88 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//format:defs.bzl", "format_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("@tbhb_rules_go//:defs.bzl", "go_deadcode_test", "go_mod_tidy_test")
+load("@tbhb_rules_go//tests/golangci:oracle.bzl", "golangci_lint_oracle")
+load("//tools/lint:linters.bzl", "golangci_lint_parity_test", "golangci_lint_test")
+
+repo_files(exclude = [".bazelrc.user"])
+
+exports_files([
+    ".golangci.yml",
+    "go.mod",
+])
+
+CLEAN = [
+    "//cmd/smoke",
+    "//lib:lib_test",
+]
+
+golangci_lint_test(
+    name = "golangci_lint_test",
+    srcs = CLEAN,
+)
+
+go_deadcode_test(
+    name = "deadcode_test",
+    srcs = CLEAN,
+)
+
+go_mod_tidy_test(
+    name = "go_mod_tidy_test",
+    srcs = [":repo_files"],
+    go_mod = "go.mod",
+    go_sum = "go.sum",
+    proxy = "@go_mod_proxy//:proxy",
+)
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    formatters = ["@tbhb_rules_go//:golangci_fmt"],
+)
+
+# golangci-lint run the ordinary way, with go-cmp from the module proxy,
+# reports what the aspect reports, planted defects included.
+golangci_lint_oracle(
+    name = "oracle",
+    testonly = True,
+    srcs = CLEAN + ["//dirty"],
+    config = ".golangci.yml",
+    go_mod = "go.mod",
+    proxy = "@go_mod_proxy//:proxy",
+)
+
+golangci_lint_parity_test(
+    name = "parity_test",
+    srcs = CLEAN + ["//dirty"],
+    oracle = ":oracle",
+)
+
+# Proofs. Each wrapped test is manual and must fail for the stated reason.
+
+golangci_lint_test(
+    name = "dirty_lint",
+    srcs = ["//dirty"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "dirty_lint_proof",
+    pattern = "dirty/dirty.go:[0-9]+:[0-9]+: printf: fmt.Printf format %d has arg cmp.AllowUnexported\\\\(\\\\) of wrong type",
+    test = ":dirty_lint",
+)
+
+go_deadcode_test(
+    name = "dirty_deadcode",
+    srcs = CLEAN + ["//dirty"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "dirty_deadcode_proof",
+    pattern = "dirty/dirty.go:[0-9]+:[0-9]+: unreachable func: Dead",
+    test = ":dirty_deadcode",
+)

@@ -33,7 +33,8 @@ export GOMODCACHE="$work/gopath/pkg/mod"
 export GOPROXY="file://$proxy"
 # go.sum is what is checked; the checksum database is not consulted.
 export GOSUMDB=off
-export GOFLAGS=-mod=mod
+# -modcacherw: Bazel deletes TEST_TMPDIR, module cache included.
+export GOFLAGS="-mod=mod -modcacherw"
 export GOTOOLCHAIN=local
 export GOWORK=off
 export GOTELEMETRY=off

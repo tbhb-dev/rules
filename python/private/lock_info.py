@@ -17,33 +17,57 @@ import json
 import sys
 import tomllib
 from pathlib import Path
+from typing import cast
+
+KINDS = ("virtual", "editable")
+
+
+class LockError(Exception):
+    """The lock does not have the shape uv writes."""
+
+
+def table(value: object) -> dict[str, object]:
+    """Return value as a TOML table, or an empty one if it is not a table."""
+    return cast("dict[str, object]", value) if isinstance(value, dict) else {}
 
 
 def members(lock: dict[str, object]) -> list[dict[str, str]]:
     """Return the workspace members of a parsed uv.lock."""
     packages = lock.get("package", [])
     if not isinstance(packages, list):
-        raise SystemExit("uv.lock: `package` is not an array of tables")
-    manifest = lock.get("manifest", {})
-    names = manifest.get("members") if isinstance(manifest, dict) else None
-    found = []
-    for package in packages:
-        source = package.get("source", {})
-        for kind in ("virtual", "editable"):
-            if kind in source and (names is None or package["name"] in names):
-                found.append({"name": package["name"], "path": source[kind], "kind": kind})
+        message = "`package` is not an array of tables"
+        raise LockError(message)
+    names = table(lock.get("manifest")).get("members")
+    found: list[dict[str, str]] = []
+    for value in cast("list[object]", packages):
+        package = table(value)
+        source = table(package.get("source"))
+        name = str(package.get("name"))
+        if isinstance(names, list) and name not in cast("list[object]", names):
+            continue
+        found.extend(
+            {"name": name, "path": str(source[kind]), "kind": kind}
+            for kind in KINDS
+            if kind in source
+        )
     if not found:
-        raise SystemExit("uv.lock records no local project")
+        message = "it records no local project"
+        raise LockError(message)
     return found
 
 
 def main(argv: list[str]) -> int:
     """Print the members of the lock named in argv as JSON."""
     if len(argv) != 1:
-        sys.stderr.write("usage: lock_info.py UV_LOCK\n")
+        print("usage: lock_info.py UV_LOCK", file=sys.stderr)
         return 2
     with Path(argv[0]).open("rb") as lock:
-        print(json.dumps({"members": members(tomllib.load(lock))}))
+        data = tomllib.load(lock)
+    try:
+        print(json.dumps({"members": members(data)}))
+    except LockError as error:
+        print(f"{argv[0]}: {error}", file=sys.stderr)
+        return 1
     return 0
 
 

@@ -9,6 +9,16 @@ load(":oracle.bzl", "golangci_lint_oracle")
 
 repo_files()
 
+# A parity test rule is defined where its factory is called, in a consumer's
+# .bzl (the e2e smoke module), so its runner files must be visible there.
+exports_files(
+    [
+        "oracle.sh",
+        "parity_test.sh.tpl",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 FIXTURE = "//tests/golangci/fixture"
 
 FIXTURE_TARGETS = [
