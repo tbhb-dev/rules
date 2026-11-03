@@ -163,6 +163,11 @@ def worker_deploy(
     object of headers to send: the version override before the move, empty
     after), plus this process's environment without the Cloudflare
     credentials and the secrets' variables, except those `pass_env` names.
+    Until the deployment propagates, some requests still reach the old
+    version, which a healthy check would pass. So a test should check that
+    every response comes from `WORKER_VERSION_ID`, for example through a
+    version header the Worker sets: then an attempt that reached the old
+    version fails and is retried, and one that passes tested the new one.
 
     Credentials come from `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`;
     a global API key (`CLOUDFLARE_API_KEY`, `CLOUDFLARE_EMAIL` or their `CF_`
