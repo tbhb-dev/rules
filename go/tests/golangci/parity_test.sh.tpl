@@ -31,7 +31,10 @@ if grep -q '^golangci-lint did not complete' "$oracle_findings" "$aspect_finding
   cat "$aspect_findings"
   exit 1
 fi
-if ! diff -u "$oracle_findings" "$aspect_findings"; then
+# Not diff(1): MSYS2 does not ship it.
+if [[ "$(<"$oracle_findings")" != "$(<"$aspect_findings")" ]]; then
+  echo "--- aspect findings ---"
+  cat "$aspect_findings"
   echo "golangci_lint_parity_test: FAIL: the aspect's findings (+) differ from the oracle's (-)" >&2
   exit 1
 fi
