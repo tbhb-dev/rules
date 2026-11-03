@@ -298,7 +298,7 @@ switch (tool) {
     ]);
     break;
   case "pnpm-audit":
-    await runBin("pnpm", "bin/pnpm.cjs", ["audit", ...args]);
+    await runBin("pnpm", "bin/pnpm.mjs", ["audit", ...args]);
     break;
   case "stryker":
     if (args[0] === "--workers") {

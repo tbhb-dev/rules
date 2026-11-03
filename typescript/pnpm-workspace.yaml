@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# pnpm's settings. pnpm 11 and later no longer read the "pnpm" field of
+# package.json, and rules_js reads this file too. allowBuilds is empty because
+# no lifecycle script may run.
+
+overrides:
+  minimatch@<11.0.1: 11.0.4
+  qs@<6.16.1: 6.17.1
+
+allowBuilds: {}

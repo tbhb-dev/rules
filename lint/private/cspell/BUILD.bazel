@@ -3,7 +3,7 @@
 
 # The cspell binary behind cspell_test, installed by rules_js from the pnpm
 # lock in this package under tbhb_rules' private hub. To move the pin, edit
-# package.json, then regenerate the lock with the pnpm rules_js pins:
+# package.json, then regenerate the lock with the pnpm 12 that MODULE.bazel pins:
 #   bazel run -- @pnpm//:pnpm --dir "$PWD/lint/private/cspell" install --lockfile-only
 
 load("@tbhb_rules_cspell_npm//:defs.bzl", "npm_link_all_packages")
