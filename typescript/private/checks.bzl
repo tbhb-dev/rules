@@ -344,7 +344,9 @@ def pnpm_audit_test(name, srcs, args = [], tags = [], **kwargs):
 
     Args:
         name: Target name.
-        srcs: Files including the root package.json and pnpm-lock.yaml.
+        srcs: Files including the root package.json, pnpm-lock.yaml and, if
+            there is one, pnpm-workspace.yaml, where pnpm 11 and later read
+            overrides from.
         args: Extra `pnpm audit` options.
         tags: More tags.
         **kwargs: Passed to `tree_check_test`.
