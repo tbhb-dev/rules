@@ -151,6 +151,17 @@ jobs:
       - name: Audit the locked Python dependencies
         run: bazelisk run //tools:pip_audit
 
+      # //:zizmor_test runs the offline audits; a token turns on the online
+      # ones, which need the network.
+      - name: Audit workflow security online
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          bazelisk run @tbhb_rules_zizmor//:zizmor --
+          --persona pedantic --no-progress "${GITHUB_WORKSPACE}/.github"
+
+      # //:codeowners_test checks that every pattern matches a path; owner
+      # and syntax validation needs GitHub's API.
       - name: Check CODEOWNERS owners and syntax
         env:
           GH_TOKEN: ${{ github.token }}
