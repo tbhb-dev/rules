@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+# render.sh with an SVG of a font family its PNG step doesn't know. d2
+# 0.9.0 emits none, so the SVG is made by hand, in d2's shape.
+sh_binary(
+    name = "render_runner",
+    srcs = ["//private:render.sh"],
+    data = ["testdata/unknown_font.svg"],
+)
+
+# The PNG step refuses the SVG before it runs resvg, whose path here names
+# nothing: a step that went on would fail on that instead.
+expect_failure_test(
+    name = "png_unknown_font_fails",
+    args = [
+        "png",
+        "no-resvg",
+        "no-oxipng",
+        "no-sans",
+        "no-mono",
+        "docs/fancy.d2",
+        "tests/testdata/unknown_font.svg",
+        "unused.png",
+    ],
+    pattern = "^render\\.sh: error: cannot draw docs/fancy\\.d2 as PNG: no installed font for these font families in its SVG: d2-1-font-fancy$",
+    test = ":render_runner",
+)
+
+# render.sh's SVG step on a source with a remote image, with d2's path
+# filled in at analysis time.
+genrule(
+    name = "render_remote_sh",
+    srcs = ["@tbhb_rules_d2_cli//:d2"],
+    outs = ["render_remote.sh"],
+    cmd = """cat >$@ <<'EOF'
+#!/usr/bin/env bash
+exec bash private/render.sh svg $(rootpath @tbhb_rules_d2_cli//:d2) tests/testdata/remote.d2 "$$TEST_TMPDIR/remote.svg"
+EOF""",
+)
+
+sh_binary(
+    name = "render_remote",
+    srcs = [":render_remote_sh"],
+    data = [
+        "testdata/remote.d2",
+        "//private:render.sh",
+        "@tbhb_rules_d2_cli//:d2",
+    ],
+)
+
+# The render names the remote image as the reason it failed.
+expect_failure_test(
+    name = "svg_remote_image_fails",
+    pattern = "^render\\.sh: error: tests/testdata/remote\\.d2 uses a remote image, which d2 would fetch at build time\\.",
+    test = ":render_remote",
+)
+
+# And d2's request went to the dead proxy, not to the network.
+expect_failure_test(
+    name = "svg_remote_image_stays_offline",
+    pattern = "proxyconnect tcp: dial tcp 127\\.0\\.0\\.1:0: ",
+    test = ":render_remote",
+)

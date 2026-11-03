@@ -26,7 +26,7 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 # Prebuilt tools (d2, resvg, oxipng): literal per-platform http_archive pins
 # in private/tools.bzl that Renovate bumps, each behind a hub, the same
 # shape as tbhb_rules' own pins. d2's hub is tbhb_rules_d2_cli, since
-# tbhb_rules_d2 is this module. The PNG font (Source Sans Pro) is one more
-# literal pin there.
+# tbhb_rules_d2 is this module. The PNG fonts (Source Sans Pro and Source
+# Code Pro) are literal pins there too.
 tools = use_extension("//private:tools.bzl", "tools")
-use_repo(tools, "tbhb_rules_d2_cli", "tbhb_rules_oxipng", "tbhb_rules_resvg", "tbhb_rules_source_sans_pro")
+use_repo(tools, "tbhb_rules_d2_cli", "tbhb_rules_oxipng", "tbhb_rules_resvg", "tbhb_rules_source_code_pro", "tbhb_rules_source_sans_pro")

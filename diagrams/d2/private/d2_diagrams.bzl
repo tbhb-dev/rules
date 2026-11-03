@@ -40,14 +40,14 @@ def _display(ctx, path):
     """A package path as a workspace-relative path."""
     return ctx.label.package + "/" + path if ctx.label.package else path
 
-def _binary(target):
-    """The file an action runs for a pinned tool.
+def _binary(target, name):
+    """The file an action runs for the pinned tool `name`.
 
     On Windows the hub's executable is a Bash shim that finds the binary
     through a runfiles tree an action does not have: run the binary itself.
     """
     for f in target[DefaultInfo].default_runfiles.files.to_list():
-        if f.extension == "exe":
+        if f.basename == name + ".exe":
             return f
     return target[DefaultInfo].files_to_run.executable
 
@@ -76,10 +76,11 @@ def _orphans(ctx, diagrams):
     return sorted(orphans)
 
 def _d2_renders_impl(ctx):
-    d2 = _binary(ctx.attr._d2)
-    resvg = _binary(ctx.attr._resvg)
-    oxipng = _binary(ctx.attr._oxipng)
-    fonts = ctx.files._fonts
+    d2 = _binary(ctx.attr._d2, "d2")
+    resvg = _binary(ctx.attr._resvg, "resvg")
+    oxipng = _binary(ctx.attr._oxipng, "oxipng")
+    sans = ctx.files._sans_fonts
+    mono = ctx.files._mono_fonts
     diagrams = []
     for src in ctx.files.srcs:
         path = _package_path(ctx, src)
@@ -90,7 +91,7 @@ def _d2_renders_impl(ctx):
         ctx.actions.run(
             executable = ctx.executable._runner,
             arguments = ["svg", d2.path, src.path, svg.path],
-            inputs = [src],
+            inputs = [src] + ctx.files.data,
             outputs = [svg],
             tools = [d2],
             mnemonic = "D2Svg",
@@ -98,8 +99,8 @@ def _d2_renders_impl(ctx):
         )
         ctx.actions.run(
             executable = ctx.executable._runner,
-            arguments = ["png", resvg.path, oxipng.path, fonts[0].dirname, svg.path, png.path],
-            inputs = [svg] + fonts,
+            arguments = ["png", resvg.path, oxipng.path, sans[0].dirname, mono[0].dirname, src.path, svg.path, png.path],
+            inputs = [svg] + sans + mono,
             outputs = [png],
             tools = [resvg, oxipng],
             mnemonic = "D2Png",
@@ -116,12 +117,14 @@ _d2_renders = rule(
     implementation = _d2_renders_impl,
     doc = "Renders each D2 source to its SVG, PNG and manifest, in the output tree.",
     attrs = {
+        "data": attr.label_list(allow_files = True, doc = "Files the sources read: imports and local images."),
         "srcs": attr.label_list(allow_files = [".d2"], doc = "D2 sources of this package."),
         "_d2": attr.label(default = Label("@tbhb_rules_d2_cli//:d2"), executable = True, cfg = "exec"),
-        "_fonts": attr.label(default = Label("@tbhb_rules_source_sans_pro//:ttf"), cfg = "exec"),
+        "_mono_fonts": attr.label(default = Label("@tbhb_rules_source_code_pro//:ttf"), cfg = "exec"),
         "_oxipng": attr.label(default = Label("@tbhb_rules_oxipng//:oxipng"), executable = True, cfg = "exec"),
         "_resvg": attr.label(default = Label("@tbhb_rules_resvg//:resvg"), executable = True, cfg = "exec"),
         "_runner": attr.label(default = Label("//private:render_runner"), executable = True, cfg = "exec"),
+        "_sans_fonts": attr.label(default = Label("@tbhb_rules_source_sans_pro//:ttf"), cfg = "exec"),
     },
 )
 
@@ -161,11 +164,15 @@ def _d2_diagrams_test_impl(ctx):
     committed = {_package_path(ctx, f): f for f in ctx.files.committed}
     calls = []
     files = []
+
+    # After every comparison, beside the orphans: a comparison that can't
+    # run stops the check before any of these lines is printed.
+    missing = []
     for d in diagrams:
         svg, png, sha256 = [committed.get(d.path + suffix) for suffix in _SUFFIXES]
         for suffix, f in zip(_SUFFIXES, (svg, png, sha256)):
             if not f:
-                calls.append(_call("missing", _display(ctx, d.path + suffix)))
+                missing.append(_call("missing", _display(ctx, d.path + suffix)))
         if svg:
             calls.append(_call("svg", d.svg.short_path, svg.short_path, _display(ctx, d.path), _display(ctx, d.path + ".svg")))
             files += [d.svg, svg]
@@ -174,6 +181,7 @@ def _d2_diagrams_test_impl(ctx):
             _manifest(ctx, d.src, svg, png, computed)
             calls.append(_call("manifest", computed.short_path, sha256.short_path, _display(ctx, d.path + ".sha256")))
             files += [computed, sha256]
+    calls += missing
     for path, source in _orphans(ctx, diagrams):
         calls.append(_call("orphan", _display(ctx, path), _display(ctx, source)))
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
@@ -205,14 +213,16 @@ _d2_diagrams_test = rule(
     },
 )
 
-def d2_diagrams(name, srcs = None, **kwargs):
+def d2_diagrams(name, srcs = None, data = [], **kwargs):
     """Renders D2 diagrams, writes the renders beside their sources, and checks them.
 
     For each source `x.d2`, the renders are `x.d2.svg` (D2's own SVG,
     ending in one newline), `x.d2.png` (the SVG rasterized by resvg at
-    twice its size, with D2's embedded fonts swapped for Source Sans Pro,
-    then optimized by oxipng) and `x.d2.sha256` (the `shasum -a 256` lines
-    of `x.d2`, `x.d2.svg` and `x.d2.png`).
+    twice its size, with D2's embedded fonts swapped for Source Sans Pro
+    and Source Code Pro, then optimized by oxipng) and `x.d2.sha256`
+    (the `shasum -a 256` lines of `x.d2`, `x.d2.svg` and `x.d2.png`). A
+    PNG render fails, rather than draw text in the wrong font, when the
+    SVG uses a font family the swap doesn't know.
 
     Creates:
 
@@ -228,20 +238,26 @@ def d2_diagrams(name, srcs = None, **kwargs):
       vouches for it.
 
     The renders must reach Git unchanged: mark them `-text` or `eol=lf` in
-    `.gitattributes`, and the PNG `binary`.
+    `.gitattributes`, and the PNG `binary`, and keep whitespace and
+    end-of-file fixers away from them.
 
     Args:
         name: Name of the `bazel run` target; the test is `<name>_test`.
         srcs: D2 sources of this package; by default every `*.d2` file in
-            its directory. Sources in subdirectories get their renders
-            beside them.
+            it, subdirectories included, which is where the test looks for
+            renders. Sources in subdirectories get their renders beside
+            them.
+        data: Files the sources read, relative to themselves: imported
+            `.d2` files (`...@x`, `x: @x`) and local images. Every render
+            gets them. Remote images (`icon: https://...`) fail the
+            render: no render reaches the network.
         **kwargs: Common attributes, such as `tags` and `visibility`, for
             every target.
     """
     if srcs == None:
-        srcs = native.glob(["*.d2"], allow_empty = True)
+        srcs = native.glob(["**/*.d2"], allow_empty = True)
     committed = native.glob(["**/*.d2" + suffix for suffix in _SUFFIXES], allow_empty = True)
     renders = ":{}.renders".format(name)
-    _d2_renders(name = name + ".renders", srcs = srcs, **kwargs)
+    _d2_renders(name = name + ".renders", srcs = srcs, data = data, **kwargs)
     _d2_write(name = name, renders = renders, committed = committed, **kwargs)
     _d2_diagrams_test(name = name + "_test", renders = renders, committed = committed, run_target = name, **kwargs)

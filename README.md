@@ -105,7 +105,7 @@ To refer to a pinned binary yourself, add `use_repo(tools, "tbhb_rules_gitleaks"
 
 ### D2 diagrams
 
-`tbhb_rules_d2` renders [D2](https://d2lang.com) diagrams and keeps the renders committed beside their sources. Each `x.d2` has an `x.d2.svg` (D2's own SVG), an `x.d2.png` (resvg draws the SVG at twice its size in Source Sans Pro, and oxipng shrinks the file), and an `x.d2.sha256` (the `shasum -a 256` lines of the three files).
+`tbhb_rules_d2` renders [D2](https://d2lang.com) diagrams and keeps the renders committed beside their sources. Each `x.d2` has an `x.d2.svg` (D2's own SVG), an `x.d2.png` (resvg draws the SVG at twice its size in Source Sans Pro and Source Code Pro, and oxipng shrinks the file), and an `x.d2.sha256` (the `shasum -a 256` lines of the three files).
 
 ```starlark
 load("@tbhb_rules_d2//:defs.bzl", "d2_diagrams")
@@ -113,7 +113,7 @@ load("@tbhb_rules_d2//:defs.bzl", "d2_diagrams")
 d2_diagrams(name = "diagrams")
 ```
 
-`d2_diagrams` takes every `*.d2` file in the package unless `srcs` says otherwise. `bazel run //docs:diagrams` writes the renders beside their sources and deletes renders that have lost their source. `//docs:diagrams_test` fails when a render is missing, when a committed SVG differs from a fresh render, when a manifest doesn't hold the hashes of the committed files, or when a render has no source. The test doesn't draw the bitmap again, because its pixels can differ across platforms. The manifest vouches for it instead. `:diagrams.renders` builds the renders into the output tree. Keep the renders byte for byte in Git: mark `*.d2.svg` and `*.d2.sha256` `eol=lf` and `*.d2.png` `binary` in `.gitattributes`.
+By default `d2_diagrams` renders every `*.d2` file in the package and its subdirectories, and `srcs` narrows the set. List the files a diagram reads in `data`: imported `.d2` files (`...@shared`, `x: @x`) and local images, which d2 finds relative to the source. Renders run offline, so a remote image (`icon: https://...`) fails the render. Save the image beside the source and list it in `data` instead. The PNG step fails on any font family in the SVG that it has no font for. `bazel run //docs:diagrams` writes the renders beside their sources and deletes renders that have lost their source. `//docs:diagrams_test` fails when a render is missing, when a committed SVG differs from a fresh render, when a manifest doesn't hold the hashes of the committed files, or when a render has no source. The test doesn't draw the bitmap again, because its pixels can differ across platforms. The manifest vouches for it instead. `:diagrams.renders` builds the renders into the output tree. Keep the renders byte for byte in Git: mark `*.d2.svg` and `*.d2.sha256` `eol=lf` and `*.d2.png` `binary` in `.gitattributes`. Keep fixers away from them too: add `.*\.d2\.(svg|png|sha256)$` to the `exclude` of any pre-commit or prek config with whitespace, line-ending or byte-order-mark fixers. In `.editorconfig`, set `trim_trailing_whitespace = false` for `[*.d2.{svg,png,sha256}]`.
 
 ### Windows
 

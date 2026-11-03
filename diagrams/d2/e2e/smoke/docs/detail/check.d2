@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# A diagram in a subdirectory of the package, so the default srcs and the
+# test's search for renders must both reach here. It imports legend.d2,
+# which reaches the sandbox only through data. Markdown headings are
+# semibold, and the class shape and the `font: mono` labels use the mono
+# families, so the PNG uses every font family d2 0.9.0 emits.
+direction: right
+
+legend: @legend
+
+about: |md
+  # Check
+  Renders the SVG again and **hashes** the rest.
+|
+code: |md
+  # Code
+  The same **text** in *monospace*.
+|
+code.style.font: mono
+
+manifest: {
+  shape: class
+  path: string
+  sha256(): string
+}
+
+legend.render -> legend.gate: fresh SVG {style.font: mono}
+legend.gate -> manifest: hashes

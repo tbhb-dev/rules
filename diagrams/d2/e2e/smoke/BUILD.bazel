@@ -23,16 +23,19 @@ SHA256 = "[0-9a-f]{64}"
 # diagrams_test is manual and must fail for the stated reason.
 PROOFS = {
     # The source changed after its renders were made.
-    "edited_source": "^mismatch: proofs/edited_source/a.d2.sha256 does not hold the hash of a.d2 \\(sha256 {}\\)$".format(SHA256),
+    "edited_source": "^mismatch: proofs/edited_source/a\\.d2\\.sha256 does not hold the hash of a\\.d2 \\(sha256 {}\\)$".format(SHA256),
     # A source whose PNG was never committed.
-    "missing_render": "^missing: proofs/missing_render/a.d2.png$",
+    "missing_render": "^missing: proofs/missing_render/a\\.d2\\.png$",
     # Renders whose source was deleted.
-    "orphan": "^orphan: proofs/orphan/b.d2.svg has no source \\(proofs/orphan/b.d2 is not among the srcs\\)$",
+    "orphan": "^orphan: proofs/orphan/b\\.d2\\.svg has no source \\(proofs/orphan/b\\.d2 is not among the srcs\\)$",
     # The PNG is a different image from the one the manifest vouches for.
-    "png_hash": "^mismatch: proofs/png_hash/a.d2.sha256 does not hold the hash of a.d2.png \\(sha256 {}\\)$".format(SHA256),
+    "png_hash": "^mismatch: proofs/png_hash/a\\.d2\\.sha256 does not hold the hash of a\\.d2\\.png \\(sha256 {}\\)$".format(SHA256),
+    # The manifest holds every right line, but not in its order, so only
+    # the comparison of the whole file catches it.
+    "reordered_manifest": "^mismatch: proofs/reordered_manifest/a\\.d2\\.sha256 is not the manifest its renders would have; expected:$",
     # The SVG was edited and its manifest updated to match, so only the
     # fresh render catches it.
-    "stale_svg": "^stale: proofs/stale_svg/a.d2.svg differs from a fresh render of proofs/stale_svg/a.d2 \\(sha256 {0}, fresh render {0}\\)$".format(SHA256),
+    "stale_svg": "^stale: proofs/stale_svg/a\\.d2\\.svg differs from a fresh render of proofs/stale_svg/a\\.d2 \\(sha256 {0}, fresh render {0}\\)$".format(SHA256),
 }
 
 [
@@ -47,6 +50,6 @@ PROOFS = {
 # The source edit also leaves the SVG stale.
 expect_failure_test(
     name = "proof_edited_source_svg_fails",
-    pattern = "^stale: proofs/edited_source/a.d2.svg differs from a fresh render of proofs/edited_source/a.d2 \\(sha256 {0}, fresh render {0}\\)$".format(SHA256),
+    pattern = "^stale: proofs/edited_source/a\\.d2\\.svg differs from a fresh render of proofs/edited_source/a\\.d2 \\(sha256 {0}, fresh render {0}\\)$".format(SHA256),
     test = "//proofs/edited_source:diagrams_test",
 )

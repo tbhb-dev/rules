@@ -46,5 +46,12 @@
       matchPackageNames: ["adobe-fonts/source-sans"],
       enabled: false,
     },
+    {
+      // tbhb_rules_d2's monospace PNG font. Its release tags hold slashes
+      // too, which the bazel manager would misread, so it moves by hand.
+      description: "Source Code Pro moves by hand",
+      matchPackageNames: ["adobe-fonts/source-code-pro"],
+      enabled: false,
+    },
   ],
 }

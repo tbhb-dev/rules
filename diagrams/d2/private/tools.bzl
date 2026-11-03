@@ -13,9 +13,9 @@ for the target platform. A consumer replaces one with `override_repo`:
     tools = use_extension("@tbhb_rules_d2//private:tools.bzl", "tools")
     override_repo(tools, tbhb_rules_d2_cli = "my_d2")
 
-The font is Source Sans Pro, the family the PNG's text is rewritten to
-(resvg skips the SVG's embedded `@font-face` fonts); `//:ttf` is its TTF
-directory.
+The fonts are Source Sans Pro and Source Code Pro, the families the PNG's
+text is rewritten to (resvg skips the SVG's embedded `@font-face` fonts);
+`//:ttf` is each one's TTF directory.
 """
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
@@ -131,6 +131,15 @@ def _tools_impl(module_ctx):
         url = "https://github.com/adobe-fonts/source-sans/releases/download/2.045R-ro/1.095R-it/source-sans-pro-2.045R-ro-1.095R-it.zip",
     )
 
+    # d2's monospace font, for code, class and sql_table text. Renovate
+    # leaves this pin alone too: the bazel manager would misread the tag.
+    http_archive(
+        name = "tbhb_rules_source_code_pro",
+        build_file_content = _FONT,
+        sha256 = "0c85bac90d15c040b82939aa92bc8404420fccc02e37bbcb9c93a7f21abb52c6",
+        url = "https://github.com/adobe-fonts/source-code-pro/releases/download/2.042R-u/1.062R-i/1.026R-vf/TTF-source-code-pro-2.042R-u_1.062R-i.zip",
+    )
+
     tool_hub(
         name = "tbhb_rules_d2_cli",
         tool = "d2",
@@ -168,5 +177,5 @@ def _tools_impl(module_ctx):
 
 tools = module_extension(
     implementation = _tools_impl,
-    doc = "The tools of this module: d2, resvg and oxipng (prebuilt), and the Source Sans Pro font.",
+    doc = "The tools of this module: d2, resvg and oxipng (prebuilt), and the Source Sans Pro and Source Code Pro fonts.",
 )

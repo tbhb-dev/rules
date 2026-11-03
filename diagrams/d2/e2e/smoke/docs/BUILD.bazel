@@ -6,6 +6,10 @@ load("@tbhb_rules_d2//:defs.bzl", "d2_diagrams")
 
 repo_files()
 
-# `bazel run //docs:diagrams` writes the renders of every *.d2 here;
-# //docs:diagrams_test fails when they are stale, missing or orphaned.
-d2_diagrams(name = "diagrams")
+# `bazel run //docs:diagrams` writes the renders of every *.d2 here,
+# detail/ included; //docs:diagrams_test fails when they are stale, missing
+# or orphaned. detail/check.d2 imports detail/legend.d2.
+d2_diagrams(
+    name = "diagrams",
+    data = ["detail/legend.d2"],
+)

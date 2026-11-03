@@ -36,3 +36,7 @@ shell_variant = bash
 [*.md]
 trim_trailing_whitespace = false
 max_line_length = off
+
+# D2 renders (tbhb_rules_d2) must match a fresh render byte for byte.
+[*.d2.{svg,png,sha256}]
+trim_trailing_whitespace = false

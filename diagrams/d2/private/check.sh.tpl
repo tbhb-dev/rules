@@ -24,9 +24,10 @@ error() {
   exit 2
 }
 
-# digest FILE: sets hash to FILE's SHA-256, read from standard input as
-# render.sh reads it. Not cmp(1): Windows CI's MSYS2 has no diffutils.
-# macOS has shasum but not always sha256sum.
+# digest FILE: sets hash to FILE's SHA-256, read from standard input so no
+# tool marks the name with its read mode. Not cmp(1): Windows CI's MSYS2
+# has no diffutils. macOS has shasum but not always sha256sum. The same
+# function is in render.sh and write.sh.tpl; a change goes to all three.
 digest() {
   local line
   if command -v sha256sum >/dev/null; then

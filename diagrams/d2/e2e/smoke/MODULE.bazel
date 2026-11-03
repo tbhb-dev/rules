@@ -3,8 +3,9 @@
 
 """Consumes tbhb_rules_d2 the way a repository with diagrams would.
 
-Two diagrams under docs/, whose committed renders the check passes, and
-proofs that the check fails on each planted defect under proofs/.
+Diagrams under docs/, one subdirectory deep and with an import, whose
+committed renders the check passes, and proofs that the check fails on
+each planted defect under proofs/.
 """
 
 module(name = "tbhb_rules_d2_smoke")

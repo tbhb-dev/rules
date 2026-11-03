@@ -18,6 +18,7 @@ sh_binary(
 exports_files(
     [
         "check.sh.tpl",
+        "render.sh",
         "write.sh.tpl",
     ],
     visibility = ["//visibility:public"],
