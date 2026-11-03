@@ -1,0 +1,9 @@
+total=10
+killed=7
+skipped=0
+survived=0
+timeout=0
+suspicious=0
+no_tests=0
+segfault=0
+interrupted=0

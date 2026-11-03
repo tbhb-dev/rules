@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files([
+    "codeowners.sh",
+    "shell_select.sh",
+    "tree_check.sh.tpl",
+    "vale.sh",
+    "vale_sync.sh.tpl",
+])
+
+bzl_library(
+    name = "tree_check",
+    srcs = ["tree_check.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = ["@bazel_skylib//lib:shell"],
+)
+
+bzl_library(
+    name = "checks",
+    srcs = ["checks.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [":tree_check"],
+)
+
+bzl_library(
+    name = "codeowners",
+    srcs = ["codeowners.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        ":checks",
+        ":tree_check",
+    ],
+)
+
+bzl_library(
+    name = "shell",
+    srcs = ["shell.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [":tree_check"],
+)
+
+bzl_library(
+    name = "vale",
+    srcs = ["vale.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        ":tree_check",
+        "@bazel_skylib//lib:shell",
+    ],
+)

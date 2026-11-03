@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files([
+    "launch.py",
+    "launch.sh.tpl",
+    "lock_info.py",
+    "mutmut.sh.tpl",
+    "mutmut_report.py",
+    "pip_audit.py",
+])
+
+bzl_library(
+    name = "versions",
+    srcs = ["versions.bzl"],
+    visibility = ["//:__subpackages__"],
+)
+
+bzl_library(
+    name = "repo",
+    srcs = ["repo.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [":versions"],
+)
+
+bzl_library(
+    name = "env",
+    srcs = ["env.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = ["@bazel_skylib//lib:shell"],
+)
+
+bzl_library(
+    name = "checks",
+    srcs = ["checks.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":env",
+        "@tbhb_rules//lint:defs",
+    ],
+)
+
+bzl_library(
+    name = "mutmut",
+    srcs = ["mutmut.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":env",
+        "@tbhb_rules//quality:defs",
+    ],
+)

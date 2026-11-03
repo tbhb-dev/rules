@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//repo:defs.bzl", "repo_files")
+load(":tree_check_tests.bzl", "tree_check_test_suite")
+
+repo_files()
+
+tree_check_test_suite(name = "tree_check_tests")

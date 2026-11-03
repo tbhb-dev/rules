@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//format:defs.bzl", "format_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+load(":format_tests.bzl", "format_test_suite")
+
+repo_files()
+
+ROOT_FORMATTERS = [
+    "//format:buildifier",
+    "//format:rumdl",
+    "//format:ryl",
+    "//format:shfmt",
+    "//format:tombi",
+]
+
+format_test(
+    name = "clean_test",
+    srcs = glob(["testdata/clean/**"]),
+    formatters = ROOT_FORMATTERS,
+    strip_prefix = "format/tests/testdata/clean",
+)
+
+format_test(
+    name = "messy",
+    srcs = glob(["testdata/messy/**"]),
+    formatters = ROOT_FORMATTERS,
+    strip_prefix = "format/tests/testdata/messy",
+    tags = ["manual"],
+)
+
+# Both the shell and the TOML file are reported, so one formatter's failure
+# does not stop the others.
+expect_failure_test(
+    name = "messy_fails",
+    pattern = "not formatted according to: //format:shfmt //format:tombi$",
+    test = ":messy",
+)
+
+format_test(
+    name = "no_files",
+    srcs = [],
+    formatters = ROOT_FORMATTERS,
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "no_files_fails",
+    pattern = "format: FAIL: no files to check",
+    test = ":no_files",
+)
+
+format_test_suite(name = "format_tests")
+
+# Excluded files are left alone, even when unformatted.
+format_test(
+    name = "messy_excluded_test",
+    srcs = glob(["testdata/messy/**"]),
+    exclude = [
+        "bad.sh",
+        "*.toml",
+    ],
+    formatters = ROOT_FORMATTERS,
+    strip_prefix = "format/tests/testdata/messy",
+)

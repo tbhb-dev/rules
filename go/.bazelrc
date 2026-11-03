@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The parent module's generated preset; it follows the same .bazelversion.
+# It comes first so the flags below can override it.
+import %workspace%/../preset.bazelrc
+
+# This module consumes tbhb_rules from the parent directory through
+# local_path_override, so its lockfile would churn with every change there;
+# it is not committed.
+common --lockfile_mode=off
+
+# Fail when a bazel_dep version is lower than what the module graph resolves
+# to, so the declared minimums stay honest.
+common --check_direct_dependencies=error
+
+try-import %workspace%/.bazelrc.user

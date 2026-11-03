@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The smoke module consumes tbhb_rules from the parent directory, so its
+# lockfile would churn with every change there; it is not committed.
+common --lockfile_mode=off

@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Python checks for tbhb-dev repositories, driven by uv.lock.
+
+Consumers load only `@tbhb_rules_python//:defs.bzl`. See README.md.
+"""
+
+module(
+    name = "tbhb_rules_python",
+    version = "0.0.0",
+    bazel_compatibility = [">=8.0.0"],
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "tbhb_rules", version = "0.0.0")
+
+# The released module resolves tbhb_rules from the registry; inside this
+# repository it is the enclosing module.
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "..",
+)
+
+# The Python environment built from the root module's uv.lock. The rules
+# here default to it, so a consumer only declares its project.
+python = use_extension("//:extensions.bzl", "python")
+use_repo(python, "tbhb_python")
+
+bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
+bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)

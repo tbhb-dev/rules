@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# Fixture config: several linters and one exclusion rule.
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - gocritic
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - staticcheck
+    - unparam
+    - unused
+  exclusions:
+    rules:
+      - path: b/excluded\.go
+        linters:
+          - errcheck

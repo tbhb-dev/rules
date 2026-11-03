@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//format:defs.bzl", "formatter")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("//private:env.bzl", "python_tool")
+
+repo_files()
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//private:checks",
+        "//private:env",
+        "//private:mutmut",
+    ],
+)
+
+bzl_library(
+    name = "extensions",
+    srcs = ["extensions.bzl"],
+    visibility = ["//visibility:public"],
+    deps = ["//private:repo"],
+)
+
+# ruff from the root module's locked environment, for formatters.
+python_tool(
+    name = "ruff.tool",
+    allow_empty = True,
+    select = True,
+    tool = "ruff",
+)
+
+# `ruff format` as a tbhb_rules formatter. Every file is offered and the
+# launcher keeps the Python ones (by suffix or shebang), so extensionless
+# scripts are formatted too. ruff reads pyproject.toml from the root it
+# runs at.
+formatter(
+    name = "ruff",
+    check_args = [
+        "format",
+        "--no-cache",
+        "--force-exclude",
+        "--check",
+        "--diff",
+    ],
+    fix_args = [
+        "format",
+        "--no-cache",
+        "--force-exclude",
+    ],
+    include = ["*"],
+    tool = ":ruff.tool",
+    visibility = ["//visibility:public"],
+)

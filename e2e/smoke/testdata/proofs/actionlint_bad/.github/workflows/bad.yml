@@ -1,0 +1,14 @@
+---
+name: bad
+
+on:
+  push:
+
+permissions: {}
+
+jobs:
+  unquoted:
+    runs-on: ubuntu-24.04
+    steps:
+      # shellcheck SC2086: only reported if actionlint really found shellcheck.
+      - run: echo $HOME

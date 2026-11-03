@@ -1,0 +1,229 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# Main quality gate. Each gate runs as its own job so the PR status shows
+# which one fired, and a final `conclusion` job gives branch protection one
+# stable required check. Bazel pins and runs the lint tools; mise installs
+# only bazelisk and uv, read from mise.toml and the committed mise.lock.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A lockfile only binds a version it has already seen: moving a pin in
+# mise.toml while leaving mise.lock alone would make mise fetch the new
+# version and rewrite the lockfile in place. MISE_LOCKED makes that a hard
+# failure instead.
+env:
+  MISE_LOCKED: "1"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # The module supports Bazel 8.x as a minimum and pins .bazelversion to the
+  # current 9.x, so the matrix runs both, on each platform the tool pins
+  # cover, for this repository (whose own gates run on its own rules) and for
+  # the e2e/smoke consumer. USE_BAZEL_VERSION overrides .bazelversion for
+  # bazelisk. Another version cannot satisfy the committed MODULE.bazel.lock
+  # (.bazelrc sets --lockfile_mode=error), so those entries relax it through
+  # the gitignored .bazelrc.user.
+  bazel:
+    name: "bazel (${{ matrix.bazel }}, ${{ matrix.os }})"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        bazel: ["8.x", "9.x"]
+        os: [ubuntu-24.04, macos-15]
+    env:
+      USE_BAZEL_VERSION: ${{ matrix.bazel }}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-${{ matrix.os }}
+          repository-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+
+      - name: Relax the lockfile check for non-pinned Bazel versions
+        if: matrix.bazel != '9.x'
+        run: echo "common --lockfile_mode=update" >> .bazelrc.user
+
+      # //... covers this repository's gates (buildifier, the lint tests, the
+      # shell checks and the bats suite) and preset.update_test, which fails
+      # when preset.bazelrc is stale. The preset is generated for the Bazel
+      # version that runs the generator, so other versions skip that test.
+      - name: Test
+        if: matrix.bazel == '9.x'
+        run: bazelisk test //...
+
+      - name: Test (without the version-specific preset check)
+        if: matrix.bazel != '9.x'
+        run: bazelisk test //... -- -//:preset.update_test
+
+      # The smoke module's proofs run here too: each expect_failure_test
+      # passes only when its proof fails for the stated reason.
+      - name: Test the smoke consumer
+        working-directory: e2e/smoke
+        run: bazelisk test //...
+
+  python:
+    name: python
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Installs the pinned uv, which then provisions the interpreter named
+      # in .python-version.
+      - name: Set up mise
+        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c  # v5.2.6
+        with:
+          # renovate: datasource=github-releases depName=jdx/mise
+          version: 2026.10.25
+          install_args: uv
+
+      - name: Restore the locked Python dependencies
+        run: uv sync --locked
+
+      # REUSE runs first, before anything writes bytecode into the tree.
+      - name: Check REUSE compliance
+        run: uv run reuse lint
+
+      - name: Check docs frontmatter
+        run: uv run python tools/check_docs.py
+
+      # Tests are excluded from bandit: B101 flags every assert, and asserts
+      # are pytest's API.
+      - name: Lint
+        run: |
+          uv run ruff format --check
+          uv run ruff check
+          uv run pyrefly check
+          uv run pylint tools
+          uv run vulture
+          uv run complexipy
+          uv run bandit -r tools -q -x '*/test_*.py'
+
+      - name: Audit dependencies
+        run: |
+          work=$(mktemp -d)
+          uv export --quiet --format pylock.toml --no-emit-project -o "$work/pylock.toml"
+          uv run pip-audit --cache-dir "$work/cache" --locked "$work"
+
+      - name: Test with branch coverage
+        run: uv run pytest --cov=tools --cov-branch
+
+      # `;` rather than `&&`: the gate reports survivors, so it runs even when
+      # mutmut itself exits non-zero.
+      - name: Mutation-test, failing on any mutant not killed
+        run: uv run mutmut run; uv run python tools/mutation_gate.py
+
+  # Checks that need Git history or the GitHub API, which no sandboxed test
+  # can see.
+  repo:
+    name: repo
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # gitleaks scans the whole history, so it needs every commit.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
+        with:
+          bazelisk-cache: true
+          repository-cache: true
+          cache-save: false
+
+      # gitleaks exits 0 when the underlying git invocation fails: it logs
+      # the error, reports "0 commits scanned", then "no leaks found". A scan
+      # that walked no commits proves nothing, so the step asserts it walked
+      # at least one. The working tree is //:gitleaks_test's job.
+      - name: Scan Git history for secrets
+        run: |
+          log=$(mktemp)
+          status=0
+          bazelisk run @multitool//tools/gitleaks:workspace_root -- \
+            git --verbose --redact --no-banner --config .gitleaks.toml . \
+            >"$log" 2>&1 || status=$?
+          cat "$log"
+          if ! grep -qE '[1-9][0-9]* commits scanned' "$log"; then
+            echo "gitleaks walked 0 commits, so this scan proves nothing." >&2
+            exit 1
+          fi
+          exit "$status"
+
+      - name: Check CODEOWNERS owners and syntax
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          errors="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/codeowners/errors?ref=${HEAD_SHA}" \
+            --jq '.errors')"
+          count="$(printf '%s' "${errors}" | jq 'length')"
+          if [ "${count}" -ne 0 ]; then
+            echo "::error::CODEOWNERS has ${count} owner or syntax error(s):"
+            printf '%s' "${errors}" |
+              jq -r '.[] | "  line \(.line): \(.kind): \(.message)"'
+            exit 1
+          fi
+
+  # One stable required check for branch protection. `if: always()` runs it
+  # even when a needed job failed, and skipped jobs count as failures here
+  # so a gate that silently did not run cannot pass.
+  conclusion:
+    name: conclusion
+    if: always()
+    needs: [bazel, python, repo]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Fail if any needed job did not succeed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS"
+          if echo "$NEEDS" | grep -Eq '"result": "(failure|cancelled|skipped)"'; then
+            echo "A required job did not succeed." >&2
+            exit 1
+          fi

@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//quality:defs.bzl", "mutation_gate_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+# Passes: every mutant killed or skipped, summed over two reports.
+mutation_gate_test(
+    name = "all_killed_test",
+    reports = [
+        "testdata/all_killed.txt",
+        "testdata/all_killed_2.txt",
+    ],
+)
+
+# Each case must fail for the stated reason. The wrapped gates are manual so
+# `bazel test //...` runs them only through expect_failure_test.
+FAILING = {
+    "duplicate_key": "sets killed more than once",
+    "empty": "FAIL: no mutants were generated",
+    "interrupted": "FAIL: run was interrupted",
+    "missing_key": "lacks segfault",
+    "not_a_number": "killed is 'x', not a non-negative integer",
+    "survivor": "FAIL: 1 survived, 2 not checked",
+    "three_unchecked": "FAIL: 3 not checked$",
+    "unchecked": "FAIL: 3280 not checked",
+}
+
+[
+    mutation_gate_test(
+        name = case,
+        reports = ["testdata/{}.txt".format(case)],
+        tags = ["manual"],
+    )
+    for case in FAILING
+]
+
+[
+    expect_failure_test(
+        name = case + "_fails",
+        pattern = pattern,
+        test = ":" + case,
+    )
+    for case, pattern in FAILING.items()
+]
+
+# A survivor is named in the failure output.
+expect_failure_test(
+    name = "survivor_is_named",
+    pattern = "survived: pkg.x_f__mutmut_3",
+    test = ":survivor",
+)

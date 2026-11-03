@@ -1,0 +1,115 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load(":linters.bzl", "broken_lint_test", "fixture_lint_test", "golangci_lint_parity_test")
+load(":oracle.bzl", "golangci_lint_oracle")
+
+repo_files()
+
+FIXTURE = "//tests/golangci/fixture"
+
+FIXTURE_TARGETS = [
+    FIXTURE + "/a",
+    FIXTURE + "/a:a_test",
+    FIXTURE + "/b",
+    FIXTURE + "/b:b_test",
+    FIXTURE + "/clean",
+]
+
+# golangci-lint run the ordinary way over the fixture module.
+golangci_lint_oracle(
+    name = "oracle",
+    testonly = True,
+    srcs = FIXTURE_TARGETS,
+    config = FIXTURE + ":.golangci.yml",
+    go_mod = FIXTURE + ":go.mod",
+)
+
+# The aspect, one action per package, must report what the oracle reports.
+golangci_lint_parity_test(
+    name = "parity_test",
+    srcs = FIXTURE_TARGETS,
+    oracle = ":oracle",
+    strip_prefix = "tests/golangci/fixture/",
+)
+
+bzl_library(
+    name = "linters_bzl",
+    srcs = ["linters.bzl"],
+    deps = [
+        "//:defs",
+        "@bazel_skylib//lib:shell",
+    ],
+)
+
+bzl_library(
+    name = "oracle_bzl",
+    srcs = ["oracle.bzl"],
+    deps = ["@rules_go//go:def"],
+)
+
+# A clean package passes.
+fixture_lint_test(
+    name = "clean_test",
+    srcs = [FIXTURE + "/clean"],
+)
+
+# Proofs. Each wrapped test is manual and must fail for the stated reason.
+
+# Planted findings fail the test; the pattern needs one from a dependency
+# (package a, reached from b_test through deps and embed).
+fixture_lint_test(
+    name = "planted_findings",
+    srcs = [FIXTURE + "/b:b_test"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "planted_findings_proof",
+    pattern = "a/a.go:21:11: Error return value of `os.Remove` is not checked \\(errcheck\\)",
+    test = ":planted_findings",
+)
+
+# A test variant decides for the library's files: testOnly is unused in
+# package a alone, but not once a's test is linted with it.
+fixture_lint_test(
+    name = "library_alone",
+    srcs = [FIXTURE + "/a"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "library_alone_proof",
+    pattern = "func testOnly is unused \\(unused\\)",
+    test = ":library_alone",
+)
+
+# srcs that reach no Go target lint nothing, which must not pass.
+fixture_lint_test(
+    name = "nothing_linted",
+    srcs = [FIXTURE + ":repo_files"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "nothing_linted_proof",
+    pattern = "no package was linted",
+    test = ":nothing_linted",
+)
+
+# A run that does not complete (here, a config golangci-lint rejects) is a
+# failure, not a clean report.
+broken_lint_test(
+    name = "broken_config",
+    srcs = [FIXTURE + "/clean"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "broken_config_proof",
+    pattern = "golangci-lint did not complete: exit status [0-9]+",
+    test = ":broken_config",
+)

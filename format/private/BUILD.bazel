@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(["format.sh.tpl"])
+
+bzl_library(
+    name = "format",
+    srcs = ["format.bzl"],
+    visibility = ["//format:__subpackages__"],
+    deps = ["@bazel_skylib//lib:shell"],
+)

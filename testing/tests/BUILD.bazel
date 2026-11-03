@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+load(":expect_failure_tests.bzl", "expect_failure_test_suite")
+load(":script_test.bzl", "script_test")
+
+repo_files()
+
+# Subjects. Tagged manual: some fail on purpose, and only the tests below
+# should run them.
+
+script_test(
+    name = "passes",
+    script = "subject.sh",
+    tags = ["manual"],
+)
+
+script_test(
+    name = "fails_for_the_right_reason",
+    env = {
+        "SUBJECT_MESSAGE": "the right reason",
+        "SUBJECT_STATUS": "3",
+    },
+    script = "subject.sh",
+    tags = ["manual"],
+)
+
+script_test(
+    name = "fails_for_the_wrong_reason",
+    env = {
+        "SUBJECT_MESSAGE": "some other reason",
+        "SUBJECT_STATUS": "1",
+    },
+    script = "subject.sh",
+    tags = ["manual"],
+)
+
+# The wrapped test fails for the stated reason, with the environment it
+# declares, so this passes.
+expect_failure_test(
+    name = "right_reason_test",
+    pattern = "^the right reason$",
+    test = ":fails_for_the_right_reason",
+)
+
+# The wrapped test gets its own scratch directory.
+expect_failure_test(
+    name = "own_tmpdir_test",
+    pattern = "^TEST_TMPDIR=.*/expect_failure/tmp$",
+    test = ":fails_for_the_right_reason",
+)
+
+# Proofs of the proof: each inner expect_failure_test must fail, and the
+# outer one checks it fails for the stated reason.
+
+expect_failure_test(
+    name = "wrapped_test_passes",
+    pattern = "anything",
+    tags = ["manual"],
+    test = ":passes",
+)
+
+expect_failure_test(
+    name = "rejects_a_passing_test",
+    pattern = "FAIL: the wrapped test passed, but it must fail",
+    test = ":wrapped_test_passes",
+)
+
+expect_failure_test(
+    name = "wrapped_test_fails_for_the_wrong_reason",
+    pattern = "the right reason",
+    tags = ["manual"],
+    test = ":fails_for_the_wrong_reason",
+)
+
+expect_failure_test(
+    name = "rejects_the_wrong_reason",
+    pattern = "FAIL: the wrapped test failed \\(exit status 1\\), but its output does not match",
+    test = ":wrapped_test_fails_for_the_wrong_reason",
+)
+
+expect_failure_test(
+    name = "invalid_pattern",
+    pattern = "(",
+    tags = ["manual"],
+    test = ":fails_for_the_right_reason",
+)
+
+expect_failure_test(
+    name = "rejects_an_invalid_pattern",
+    pattern = "is not a valid extended regular expression",
+    test = ":invalid_pattern",
+)
+
+expect_failure_test_suite(name = "expect_failure_tests")

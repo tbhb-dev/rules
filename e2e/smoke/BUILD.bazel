@@ -1,0 +1,143 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load(
+    "@tbhb_rules//lint:defs.bzl",
+    "actionlint_test",
+    "editorconfig_checker_test",
+    "gitleaks_test",
+    "rumdl_test",
+    "ryl_test",
+    "tombi_test",
+    "tree_check_test",
+    "zizmor_test",
+)
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+# Positive tests: every rule passes on testdata/clean/, checked as if it were a
+# repository root.
+
+CLEAN = glob(["testdata/clean/**"])
+
+ryl_test(
+    name = "clean_ryl",
+    srcs = CLEAN,
+    config = "testdata/clean/.ryl.toml",
+    strip_prefix = "testdata/clean",
+)
+
+[
+    rule(
+        name = "clean_" + name,
+        srcs = CLEAN,
+        strip_prefix = "testdata/clean",
+    )
+    for name, rule in [
+        ("actionlint", actionlint_test),
+        ("editorconfig_checker", editorconfig_checker_test),
+        ("gitleaks", gitleaks_test),
+        ("rumdl", rumdl_test),
+        ("tombi", tombi_test),
+        ("zizmor", zizmor_test),
+    ]
+]
+
+# Proofs: each proof_<case> target must fail. They are tagged manual so
+# `bazel test //...` does not run them on their own; the expect_failure_test
+# at the end of this file wraps each one and passes only if it fails for the
+# stated reason.
+
+PROOF_TAGS = ["manual"]
+
+# The planted secret is assembled at build time so the literal never sits in
+# a tracked file, where this repository's own history scan would find it.
+genrule(
+    name = "planted_secret",
+    outs = ["testdata/proofs/gitleaks_planted/creds.txt"],
+    cmd = "printf 'aws_access_key_id = %s%s\\n' AKIA Z7Q3XK2M5TNB4VWR > $@",
+)
+
+gitleaks_test(
+    name = "proof_gitleaks_planted",
+    srcs = [":planted_secret"],
+    strip_prefix = "testdata/proofs/gitleaks_planted",
+    tags = PROOF_TAGS,
+)
+
+gitleaks_test(
+    name = "proof_no_files",
+    srcs = [],
+    tags = PROOF_TAGS,
+)
+
+gitleaks_test(
+    name = "proof_zero_bytes",
+    srcs = glob(["testdata/proofs/empty_file/**"]),
+    strip_prefix = "testdata/proofs/empty_file",
+    tags = PROOF_TAGS,
+)
+
+tree_check_test(
+    name = "proof_output_guard",
+    srcs = glob(["testdata/proofs/gitleaks_clean/**"]),
+    output_guard = "a line gitleaks never prints",
+    strip_prefix = "testdata/proofs/gitleaks_clean",
+    tags = PROOF_TAGS,
+    tool = "@multitool//tools/gitleaks",
+    tool_args = [
+        "dir",
+        ".",
+    ],
+)
+
+ryl_test(
+    name = "proof_ryl",
+    srcs = glob(["testdata/proofs/ryl_bad/**"]),
+    config = "testdata/proofs/ryl_bad/.ryl.toml",
+    strip_prefix = "testdata/proofs/ryl_bad",
+    tags = PROOF_TAGS,
+)
+
+[
+    rule(
+        name = "proof_" + name,
+        srcs = glob(["testdata/proofs/{}_bad/**".format(name)]),
+        strip_prefix = "testdata/proofs/{}_bad".format(name),
+        tags = PROOF_TAGS,
+    )
+    for name, rule in [
+        ("actionlint", actionlint_test),
+        ("editorconfig", editorconfig_checker_test),
+        ("rumdl", rumdl_test),
+        ("tombi", tombi_test),
+        ("zizmor", zizmor_test),
+    ]
+]
+
+# The reason each proof must fail for, as an extended regular expression
+# matched against the proof's output.
+PROOF_REASONS = {
+    "proof_actionlint": "shellcheck reported issue in this script: SC2086",
+    "proof_editorconfig": "trailing whitespace",
+    "proof_gitleaks_planted": "leaks found: [1-9]",
+    "proof_no_files": "tree_check: FAIL: expected at least 1 non-empty files",
+    "proof_output_guard": "tree_check: FAIL: tool output did not match the guard",
+    "proof_rumdl": "MD018",
+    "proof_ryl": "key-duplicates",
+    "proof_tombi.format": "bad\\.toml",
+    "proof_tombi.lint": "an empty key is discouraged",
+    "proof_zero_bytes": "tree_check: scan tree holds 1 files, 0 bytes",
+    "proof_zizmor": "unpinned-uses",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

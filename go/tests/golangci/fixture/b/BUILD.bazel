@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+go_library(
+    name = "b",
+    srcs = [
+        "b.go",
+        "excluded.go",
+        "ignored.go",
+        "more.go",
+    ],
+    importpath = "example.com/fixture/b",
+    visibility = ["//tests:__subpackages__"],
+    deps = ["//tests/golangci/fixture/a"],
+)
+
+go_test(
+    name = "b_test",
+    srcs = ["b_test.go"],
+    embed = [":b"],
+    tags = ["manual"],
+    visibility = ["//tests:__subpackages__"],
+)

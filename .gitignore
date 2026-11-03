@@ -1,0 +1,30 @@
+tmp/
+bin/
+dist/
+bazel-*
+.bazelrc.user
+coverage.*
+mise.local.toml
+.env*
+.DS_Store
+.claude/settings.local.json
+.claude/worktrees/
+.github/PULL_REQUEST_DRAFT.md
+
+# Python tooling
+.venv/
+__pycache__/
+.ruff_cache/
+.pytest_cache/
+.coverage*
+coverage.xml
+.hypothesis/
+# mutmut
+mutants/
+# cosmic-ray session databases
+*.sqlite
+
+# Linter caches
+.rumdl_cache/
+.ryl_cache/
+.complexipy_cache/

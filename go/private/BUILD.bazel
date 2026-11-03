@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(
+    [
+        "golangci_lint.sh",
+        "golangci_lint_merge.sh",
+        "golangci_lint_test.sh.tpl",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "golangci_lint",
+    srcs = ["golangci_lint.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@bazel_skylib//rules:common_settings",
+        "@rules_go//go:def",
+    ],
+)

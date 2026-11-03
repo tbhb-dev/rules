@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Shared Bazel rules for tbhb-dev repositories.
+
+Consumers load only `@tbhb_rules//<family>:defs.bzl`. See README.md.
+"""
+
+module(
+    name = "tbhb_rules",
+    version = "0.0.0",
+    bazel_compatibility = [">=8.0.0"],
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "rules_multitool", version = "1.11.1")
+
+# Default tool pins. They join rules_multitool's default `multitool` hub,
+# which merges the lockfiles of every module in the graph with the root
+# module winning, so a consumer can add tools or override any pin here with
+# its own `multitool.hub(lockfile = ...)`, and its bazel_env shims can point
+# at the same `@multitool//tools/<name>` labels the rules use.
+multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
+multitool.hub(lockfile = "//:multitool.lock.json")
+use_repo(multitool, "multitool")
+
+# Dev dependencies: tooling that only this repository's own gates need.
+bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
+bazel_dep(name = "bazelrc-preset.bzl", version = "1.10.0", dev_dependency = True)
+bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
+
+# Pinned copies of the SchemaStore schemas that pyproject.toml's embedded
+# tombi schema refers to by URL, so //:tombi_test validates offline. Pinned
+# to a SchemaStore commit, because www.schemastore.org serves whatever is
+# current and its digests drift.
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+_SCHEMASTORE = "https://raw.githubusercontent.com/SchemaStore/schemastore/f0e072bb85076fcae82bebf058cf86520d4ea450/src/schemas/json/"
+
+http_file(
+    name = "schemastore_uv",
+    dev_dependency = True,
+    sha256 = "accd72042015703861297d12c682e0d9c35f435506acf942874927bb367ccdf7",
+    url = _SCHEMASTORE + "uv.json",
+)
+
+http_file(
+    name = "schemastore_partial_pytest",
+    dev_dependency = True,
+    sha256 = "15894b3b37e0ae60b79869da43b9e26790bc1198d645586ca8447246c23f9ac4",
+    url = _SCHEMASTORE + "partial-pytest.json",
+)
+
+http_file(
+    name = "schemastore_ruff",
+    dev_dependency = True,
+    sha256 = "d543216c52a7bd33325de767ebba8b410162302bce2cdc8980662e0bc06984be",
+    url = _SCHEMASTORE + "ruff.json",
+)

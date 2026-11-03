@@ -1,0 +1,60 @@
+{
+  "includeCoAuthoredBy": false,
+  "attribution": { "commit": "", "pr": "" },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "uv run --project \"$CLAUDE_PROJECT_DIR\" --quiet bash \"$CLAUDE_PROJECT_DIR/tools/interim/install.sh\"" },
+          {
+            "type": "command",
+            "command": "uv run --no-project --quiet --python '>=3.15' python \"$CLAUDE_PROJECT_DIR/tools/interim/agent_identity.py\" record claude"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project --quiet --python '>=3.15' python \"$CLAUDE_PROJECT_DIR/tools/interim/agent_identity.py\" record claude"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project --quiet --python '>=3.15' python \"$CLAUDE_PROJECT_DIR/tools/interim/agent_identity.py\" record claude"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project --quiet --python '>=3.15' python \"$CLAUDE_PROJECT_DIR/tools/interim/agent_identity.py\" record claude"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project --quiet --python '>=3.15' python \"$CLAUDE_PROJECT_DIR/tools/interim/agent_identity.py\" record claude"
+          }
+        ]
+      }
+    ]
+  }
+}
