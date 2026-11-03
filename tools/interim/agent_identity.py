@@ -25,19 +25,19 @@ wrote none of the staged content. ``check`` validates only the ``LLM``
 trailers, the same for every committer: ``Signed-off-by`` and ``Co-authored-by``
 are not checked (agents don't add them as a norm; the operator may sign off).
 
-``stamp-docs`` sets the ``generated`` list of each staged document's
-frontmatter (see docs/schemas/frontmatter.schema.json) to the same identities,
-from the same edit receipts, read but not consumed. It replaces the previous
-commit's list, so the list names only the latest generation. It rewrites the staged blob and
-the work-tree file together, so prek's modified-files check passes. Only the
-``generated`` block changes. Root-level files, AGENTS.md, CLAUDE.md, index.md and
-log.md are skipped, as are fixtures under a ``testdata`` directory, files without
-LF frontmatter, and files with a ``generated`` value that is not a plain block
-list. Known limit: when a file is partially
-staged and an unstaged change touches the line next to where the first stamp is
-inserted, prek cannot restore that change and fails the commit ("Hook changes
-conflicted with the saved unstaged changes"). Fix it with ``git add`` on the
-whole file, or stash the unstaged change, then commit again.
+``stamp-docs`` sets the ``generated`` list of each staged document's frontmatter
+(see docs/schemas/frontmatter.schema.json) to the same identities, from the same
+edit receipts, read but not consumed. It replaces the previous commit's list, so
+the list names only the latest generation. It rewrites the staged blob and the
+work-tree file together, so prek's modified-files check passes. Only the
+``generated`` block changes. Root-level files, AGENTS.md, CLAUDE.md, index.md
+and log.md are skipped, as are fixtures under a ``testdata`` directory, files
+without LF frontmatter, and files with a ``generated`` value that is not a plain
+block list. Known limit: when a file is partially staged and an unstaged change
+touches the line next to where the first stamp is inserted, prek cannot restore
+that change and fails the commit ("Hook changes conflicted with the saved
+unstaged changes"). Fix it with ``git add`` on the whole file, or stash the
+unstaged change, then commit again.
 
 State lives under ``$(git rev-parse --git-common-dir)/ascm-interim/`` and holds
 hashes only (``sha-256-64`` of each raw ID), never raw session or agent IDs:

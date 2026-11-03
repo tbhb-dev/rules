@@ -5330,10 +5330,7 @@ def test_stamp_text_finds_generated_as_the_first_key() -> None:
     other = entry(model="openai:gpt-5.6-sol", harness="codex")
     out = ai.stamp_text(text, [other])
     assert (
-        out
-        == "---\n"
-        + "\n".join(["generated:", *listing(other)])
-        + "\ntype: x\n---\n"
+        out == "---\n" + "\n".join(["generated:", *listing(other)]) + "\ntype: x\n---\n"
     )
 
 
