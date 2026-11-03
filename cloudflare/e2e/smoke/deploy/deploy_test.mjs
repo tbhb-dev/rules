@@ -24,6 +24,7 @@ const files = {
   log: join(tmp, "calls.ndjson"),
   state: join(tmp, "state.json"),
   started: join(tmp, "started"),
+  attempts: join(tmp, "attempts"),
   output: join(tmp, "github-output"),
   summary: join(tmp, "github-summary"),
 };
@@ -58,6 +59,9 @@ function setup(env, live) {
     FAKE_LOG: files.log,
     FAKE_STATE: files.state,
     FAKE_STARTED: files.started,
+    FAKE_ATTEMPTS: files.attempts,
+    // Shrinks deploy.mjs's 60 s settle window to 3 s, and its pause to 0.25 s.
+    TBHB_DEPLOY_SETTLE_SCALE: "0.05",
     FAKE_NEW: NEW,
     GITHUB_OUTPUT: files.output,
     GITHUB_STEP_SUMMARY: files.summary,
@@ -122,9 +126,18 @@ function deploy(
   return outcome(r.status, r.stdout, r.stderr);
 }
 
-// Starts a deploy, sends `signal` once the fake reports it has started, and
-// waits for the deploy to finish.
-async function interrupt(signal, env) {
+// The steps with each run of a repeated step (a test retried) as one.
+function once(steps) {
+  return steps.filter((step, i) => step !== steps[i - 1]);
+}
+
+// Starts a deploy, sends `signal` once the fake reports it has started (or
+// `ready` accepts the stderr so far), and waits for the deploy to finish.
+async function interrupt(
+  signal,
+  env,
+  ready = () => existsSync(files.started),
+) {
   const child = spawn(join(main, process.env.deploy_stg), [], {
     env: setup(env, [{ version_id: OLD, percentage: 100 }]),
   });
@@ -136,14 +149,19 @@ async function interrupt(signal, env) {
   child.stderr.on("data", (d) => {
     stderr += d;
   });
-  while (!existsSync(files.started)) {
+  const closed = new Promise((r) => child.on("close", r));
+  let exited = false;
+  closed.then(() => {
+    exited = true;
+  });
+  while (!exited && !ready(stderr)) {
     await new Promise((r) => setTimeout(r, 50));
   }
   // The fakes sleep for a minute, so a deploy that finishes this soon
   // stopped them.
   const sent = Date.now();
   child.kill(signal);
-  const status = await new Promise((r) => child.on("close", r));
+  const status = await closed;
   assert.ok(Date.now() - sent < 20_000, "the signal didn't stop the child");
   return outcome(status, stdout, stderr);
 }
@@ -219,7 +237,13 @@ test("deploys at 0%, tests, moves to 100%, tests again", () => {
 test("a failed pre-deploy test leaves the previous version serving", () => {
   const r = deploy("deploy_stg", { FAKE_FAIL: "pre" });
   assert.equal(r.status, 1);
-  assert.deepEqual(r.steps.slice(2), [
+  // It was retried until the settle window passed.
+  assert.ok(r.steps.filter((s) => s === "check pre").length > 1);
+  assert.match(
+    r.stderr,
+    /pre-deploy test \S+ failed \(exited 1\); retrying in 0\.25s/,
+  );
+  assert.deepEqual(once(r.steps).slice(2), [
     `deploy ${OLD}@100% ${NEW}@0%`,
     "check pre",
     "deployments status",
@@ -230,10 +254,36 @@ test("a failed pre-deploy test leaves the previous version serving", () => {
   assert.doesNotMatch(r.output, /^version-id=/m);
 });
 
+test("a test that fails at first and then passes deploys", () => {
+  for (const phase of ["pre", "post"]) {
+    const r = deploy("deploy_stg", {
+      FAKE_FLAKY: `${phase}:2`,
+      TBHB_DEPLOY_SETTLE_SCALE: "0.2",
+    });
+    assert.equal(r.status, 0, `${phase}: ${r.stderr}`);
+    assert.equal(r.steps.filter((s) => s === `check ${phase}`).length, 3);
+    assert.equal(
+      r.stderr.match(new RegExp(`${phase}-deploy test \\S+ failed`, "g")).length,
+      2,
+    );
+    assert.deepEqual(once(r.steps), [
+      "deployments status",
+      "versions upload",
+      `deploy ${OLD}@100% ${NEW}@0%`,
+      "check pre",
+      "deployments status",
+      `deploy ${NEW}@100%`,
+      "check post",
+    ]);
+    assert.match(r.output, /result=success\n$/);
+  }
+});
+
 test("a failed post-deploy test rolls back", () => {
   const r = deploy("deploy_stg", { FAKE_FAIL: "post" });
   assert.equal(r.status, 1);
-  assert.deepEqual(r.steps.slice(-4), [
+  assert.ok(r.steps.filter((s) => s === "check post").length > 1);
+  assert.deepEqual(once(r.steps).slice(-4), [
     `deploy ${NEW}@100%`,
     "check post",
     "deployments status",
@@ -246,7 +296,10 @@ test("a failed post-deploy test rolls back", () => {
 test("without rollback, a failed post-deploy test leaves the new version live", () => {
   const r = deploy("deploy_stg_no_rollback", { FAKE_FAIL: "post" });
   assert.equal(r.status, 1);
-  assert.deepEqual(r.steps.slice(-2), [`deploy ${NEW}@100%`, "check post"]);
+  assert.deepEqual(once(r.steps).slice(-2), [
+    `deploy ${NEW}@100%`,
+    "check post",
+  ]);
   assert.match(r.stderr, /stays live/);
 });
 
@@ -367,6 +420,27 @@ test(
       "deployments status",
       `deploy ${OLD}@100%`,
     ]);
+    assert.match(r.stderr, /interrupted by SIGTERM/);
+  },
+);
+
+test(
+  "SIGTERM while a failed test waits to be retried puts the previous version back",
+  signals,
+  async () => {
+    // A 60 s pause, so a deploy that ends sooner was woken.
+    const r = await interrupt(
+      "SIGTERM",
+      { FAKE_FAIL: "pre", TBHB_DEPLOY_SETTLE_SCALE: "12" },
+      (stderr) => stderr.includes("retrying in 60s"),
+    );
+    assert.notEqual(r.status, 0);
+    assert.deepEqual(r.steps.slice(-3), [
+      "check pre",
+      "deployments status",
+      `deploy ${OLD}@100%`,
+    ]);
+    assert.equal(r.steps.filter((s) => s === "check pre").length, 1);
     assert.match(r.stderr, /interrupted by SIGTERM/);
   },
 );

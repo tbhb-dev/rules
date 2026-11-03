@@ -147,13 +147,16 @@ def worker_deploy(
     against it through the `Cloudflare-Workers-Version-Overrides` header.
     Only when they pass, and the deployment is still the one it made, does it
     move the new version to 100% and run each `post_deploy` target against
-    `url`. A failed pre-deploy test leaves the previous version serving
-    everything; a failed post-deploy test puts it back at 100% unless
-    `rollback` is False. Either way the target exits non-zero, so a workflow
-    stops before the next environment. SIGINT and SIGTERM (Ctrl-C, a
-    cancelled workflow) stop the running wrangler call or test, restore the
-    previous version and clean up; SIGKILL can't. A test or wrangler call
-    that outlives its timeout is stopped with its whole process tree.
+    `url`. A failing test is retried for up to 60 seconds (a deployment takes
+    effect a few seconds after the API returns), with `test_timeout` per
+    attempt. A pre-deploy test that still fails leaves the previous version
+    serving everything; a post-deploy test that still fails puts it back at
+    100% unless `rollback` is False. Either way the target exits non-zero,
+    so a workflow stops before the next environment. SIGINT and SIGTERM
+    (Ctrl-C, a cancelled workflow) stop the running wrangler call or test,
+    restore the previous version and clean up; SIGKILL can't. A test or
+    wrangler call that outlives its timeout is stopped with its whole
+    process tree.
 
     Each test target is an executable that gets `WORKER_URL`, `WORKER_ENV`,
     `WORKER_NAME`, `WORKER_VERSION_ID` and `WORKER_REQUEST_HEADERS` (a JSON
@@ -192,7 +195,8 @@ def worker_deploy(
             or secret values, such as a token the tests send.
         rollback: Put the previous version back when a post-deploy test fails.
         message: The deployment message; defaults to "worker_deploy".
-        test_timeout: Seconds each test may run before it counts as failed.
+        test_timeout: Seconds each attempt of a test may run before it
+            counts as failed.
         wrangler_timeout: Seconds each wrangler call may run.
         **kwargs: Passed to `js_binary`.
     """
