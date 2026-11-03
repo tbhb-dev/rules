@@ -149,13 +149,13 @@ jobs:
           done
           git diff --exit-code -- MODULE.bazel go/MODULE.bazel python/MODULE.bazel
 
-      # //:gitleaks_history fails when gitleaks walked no commits of a
-      # history with content. The working tree is //:gitleaks_test's job.
+      # Git history is not a declared input, so the history scan runs
+      # outside the test graph; //:gitleaks_test covers the working tree.
       - name: Scan Git history for secrets
         run: bazelisk run //:gitleaks_history
 
-      # Advisories change while the lock stands still, so the audit is a
-      # `bazel run` target, never a cached test.
+      # Advisories change without any input changing, so the audit is never
+      # a cached test.
       - name: Audit the locked Python dependencies
         run: bazelisk run //tools:pip_audit
 
@@ -189,6 +189,8 @@ jobs:
   # One stable required check for branch protection. `if: always()` runs it
   # even when a needed job failed, and skipped jobs count as failures here
   # so a gate that silently did not run cannot pass.
+  # `needs` waits for every matrix leg, and the job's result is a failure
+  # if any leg failed.
   conclusion:
     name: conclusion
     if: always()
