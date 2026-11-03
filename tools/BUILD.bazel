@@ -75,13 +75,9 @@ ruff_test(
 )
 
 # pyrefly's verdict depends only on the platform it analyses for, not the
-# host, so both runs are Linux-host only (CI's Linux leg). The main run
-# analyses as Linux; the second analyses as Windows, so the
-# `sys.platform == "win32"` branches are type-checked too.
-LINUX_ONLY = select({
-    "@platforms//os:linux": [],
-    "//conditions:default": ["@platforms//:incompatible"],
-})
+# host, so both runs work on every host. The main run analyses as Linux; the
+# second analyses as Windows, so the `sys.platform == "win32"` branches are
+# type-checked too.
 
 PYREFLY_LINUX = [
     "--python-platform",
@@ -98,7 +94,6 @@ pyrefly_test(
     srcs = PYTHON_SRCS,
     args = PYREFLY_LINUX,
     exclude = PYTHON_EXCLUDE,
-    target_compatible_with = LINUX_ONLY,
 )
 
 pyrefly_test(
@@ -106,7 +101,6 @@ pyrefly_test(
     srcs = PYTHON_SRCS,
     args = PYREFLY_WINDOWS,
     exclude = PYTHON_EXCLUDE,
-    target_compatible_with = LINUX_ONLY,
 )
 
 # Proofs of the two analyses, over planted files and the real config: an
@@ -119,7 +113,6 @@ pyrefly_test(
         "//:pyproject.toml",
     ],
     args = PYREFLY_LINUX,
-    target_compatible_with = LINUX_ONLY,
 )
 
 pyrefly_test(
@@ -130,7 +123,6 @@ pyrefly_test(
     ],
     args = PYREFLY_WINDOWS,
     tags = ["manual"],
-    target_compatible_with = LINUX_ONLY,
 )
 
 pyrefly_test(
@@ -141,14 +133,12 @@ pyrefly_test(
     ],
     args = PYREFLY_LINUX,
     tags = ["manual"],
-    target_compatible_with = LINUX_ONLY,
 )
 
 [
     expect_failure_test(
         name = proof + "_fails",
         pattern = pattern,
-        target_compatible_with = LINUX_ONLY,
         test = ":" + proof,
     )
     for proof, pattern in {
