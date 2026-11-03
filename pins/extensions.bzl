@@ -230,25 +230,25 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_tombi_macos_arm64",
         build_file_content = _EXPORT.format("tombi"),
-        sha256 = "bfda372442e224febf416a18cdc8099b1188cc1bc70260d1daa4d7ddafc45fa1",
-        strip_prefix = "tombi-cli-1.9.7-aarch64-apple-darwin",
-        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.7/tombi-cli-1.9.7-aarch64-apple-darwin.tar.gz",
+        sha256 = "7d07cad962ad3de96113b92f40fbb59617a9214f263027c14a66fd08b61289ec",
+        strip_prefix = "tombi-cli-1.9.8-aarch64-apple-darwin",
+        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.8/tombi-cli-1.9.8-aarch64-apple-darwin.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_tombi_linux_x86_64",
         build_file_content = _EXPORT.format("tombi"),
-        sha256 = "4bab30c956cc2defa5966f78e199c4c0a57e9795964142fdd6c007596519787e",
-        strip_prefix = "tombi-cli-1.9.7-x86_64-unknown-linux-musl",
-        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.7/tombi-cli-1.9.7-x86_64-unknown-linux-musl.tar.gz",
+        sha256 = "cf51b0f134e5b488212bb062538e0381a163a4f7db2330c58e3cf613637b3118",
+        strip_prefix = "tombi-cli-1.9.8-x86_64-unknown-linux-musl",
+        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.8/tombi-cli-1.9.8-x86_64-unknown-linux-musl.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_tombi_linux_arm64",
         build_file_content = _EXPORT.format("tombi"),
-        sha256 = "45c14f2aadc1f8122735dd55961b383ea554979d0ba0f3ee3f3c44cd3a5aaeae",
-        strip_prefix = "tombi-cli-1.9.7-aarch64-unknown-linux-musl",
-        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.7/tombi-cli-1.9.7-aarch64-unknown-linux-musl.tar.gz",
+        sha256 = "696d6b934fd0c4fa002ae905dc72a551d54677d9caa7b272adee3ea27e056307",
+        strip_prefix = "tombi-cli-1.9.8-aarch64-unknown-linux-musl",
+        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.8/tombi-cli-1.9.8-aarch64-unknown-linux-musl.tar.gz",
     )
 
     http_archive(
@@ -353,8 +353,8 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_tombi_windows_x86_64",
         build_file_content = _EXPORT.format("tombi.exe"),
-        sha256 = "6cd38ddb14c3cecde86becbad22a3e8e4e73aa53c98197e78e68f742096e3585",
-        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.7/tombi-cli-1.9.7-x86_64-pc-windows-msvc.zip",
+        sha256 = "df4be8cac00b00c5b0d421723fc25c959539a355a1407ac6ec97c9d30669c622",
+        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.8/tombi-cli-1.9.8-x86_64-pc-windows-msvc.zip",
     )
 
     http_archive(
