@@ -688,17 +688,30 @@ def rel_to_repo(path: object, base: Path | None = None) -> tuple[str, Repo] | No
     return None if rel.parts[:1] == ("..",) else (rel.as_posix(), repo)
 
 
-def blob_of(top: Path, rel: str) -> str | None:
-    """The git blob hash of a work-tree file, or None if it is not a file."""
+def blob_of(top: Path, rel: str, *, store: bool = False) -> str | None:
+    """The git blob hash of a work-tree file, or None if it is not a file.
+
+    ``store`` also writes the blob into the object database (``-w``).
+    """
     path = top / rel
     if not path.is_file():
         return None
-    code, out = git("hash-object", str(path), cwd=top)  # absolute: never an option
+    flags = ("-w",) if store else ()
+    code, out = git("hash-object", *flags, str(path), cwd=top)  # absolute path
     return out if code == 0 else None
 
 
-def write_edit(ident: Ident, path: object, base: Path | None = None) -> None:
-    """Store one edit receipt for ``path``; nothing outside a repository."""
+def write_edit(
+    ident: Ident,
+    path: object,
+    base: Path | None = None,
+    *,
+    store: bool = False,
+) -> None:
+    """Store one edit receipt for ``path``; nothing outside a repository.
+
+    ``store`` also writes the blob into the object database.
+    """
     found = rel_to_repo(path, base)
     if not found:
         return
@@ -711,7 +724,7 @@ def write_edit(ident: Ident, path: object, base: Path | None = None) -> None:
         "effort": ident.effort,
         "surface": ident.surface,
         "path": rel,
-        "blob": blob_of(repo.top, rel),
+        "blob": blob_of(repo.top, rel, store=store),
         "consumed": False,
         "ts": time.time(),
     }
@@ -920,7 +933,9 @@ def tool_call_paths(record: Json) -> list[str]:
 def rollout_patch_edits(
     path: Path, offset: int = 0, skip_lines: int = 0
 ) -> tuple[list[str], int]:
-    """(paths in order, new offset) for the complete lines after ``offset``.
+    """(paths in order, new offset) for ``apply_patch`` lines after ``offset``.
+
+    Only complete lines count.
 
     A forked Codex thread replays its parent's history first, including the
     parent's ``apply_patch`` calls. ``skip_lines`` is the length of that
@@ -935,14 +950,14 @@ def rollout_patch_edits(
     except OSError:
         return [], offset
     end = data.rfind(b"\n") + 1
-    paths: list[str] = []
+    edits: list[str] = []
     for line in data[:end].decode(errors="replace").splitlines():
         if "Begin Patch" not in line:
             continue
         record = parse_line(line)
         if record:
-            paths.extend(tool_call_paths(record))
-    return paths, start + end
+            edits.extend(tool_call_paths(record))
+    return edits, start + end
 
 
 def codex_threads(root_raw: str, env: Mapping[str, str]) -> list[tuple[Path, Json]]:
@@ -979,8 +994,23 @@ def codex_ident(
     )
 
 
+def replayed_lines(meta: Json) -> int:
+    """How many leading rollout lines are a fork's replayed parent history."""
+    # A fork's own history starts at this line; before it is the replayed parent.
+    replayed = meta.get("subagent_history_start_ordinal")
+    # Equivalent mutants: skipping 0 or 1 lines is the same, because line 0
+    # is the session_meta and holds no patch, so `> 0` vs `> 1` and
+    # `else 0` vs `else 1` cannot be told apart. The pragma has to sit on
+    # the line mutmut mutates.
+    fork = isinstance(replayed, int) and replayed > 0  # pragma: no mutate
+    return replayed if fork else 0  # pragma: no mutate
+
+
 def codex_scan(root_raw: str, repo: Repo, env: Mapping[str, str]) -> None:
     """Turn new apply_patch calls in this root's rollouts into edit receipts.
+
+    A thread with a hook record (SessionStart/SubagentStart) is skipped: its
+    PostToolUse hook already wrote its receipts with the edit-time blob.
 
     The per-rollout byte offset (``marks/``) advances here so a later commit
     never re-reads them. The receipts' ``consumed`` flag (set by post-commit)
@@ -988,24 +1018,71 @@ def codex_scan(root_raw: str, repo: Repo, env: Mapping[str, str]) -> None:
     """
     for rollout, meta in codex_threads(root_raw, env):
         tid = as_str(meta.get("id")) or root_raw
+        if (repo.interim / "sessions" / f"{hx(sha256_64(tid))}.json").exists():
+            continue
         mark_path = repo.interim / "marks" / f"{hx(sha256_64(tid))}.json"
         mark = read_record(mark_path).get("offset", 0)
         offset = cast("int", mark)  # pragma: no mutate -- a runtime no-op
-        # A fork's own history starts at this line; before it is the replayed parent.
-        replayed = meta.get("subagent_history_start_ordinal")
-        # Equivalent mutants: skipping 0 or 1 lines is the same, because line 0
-        # is the session_meta and holds no patch, so `> 0` vs `> 1` and
-        # `else 0` vs `else 1` cannot be told apart. The pragma has to sit on
-        # the line mutmut mutates.
-        fork = isinstance(replayed, int) and replayed > 0  # pragma: no mutate
-        skip = replayed if fork else 0  # pragma: no mutate
-        paths, new = rollout_patch_edits(rollout, offset, skip)
+        edits, new = rollout_patch_edits(rollout, offset, replayed_lines(meta))
         if new != offset:
             write_json(mark_path, {"offset": new})
-        if paths:
+        if edits:
             ident = codex_ident(root_raw, meta, rollout, env)
-            for path in dict.fromkeys(paths):
+            for path in dict.fromkeys(edits):
                 write_edit(ident, path, Path(as_str(meta.get("cwd")) or repo.top))
+
+
+# ------------------------------------------------------------------ Codex hooks
+
+CODEX_PATCH_TOOL = "apply_patch"
+CODEX_START_EVENTS = {"SessionStart", "SubagentStart"}
+
+
+def codex_hook_ident(root_raw: str, data: Json, env: Mapping[str, str]) -> Ident:
+    """The identity of the Codex thread (root or subagent) behind a hook.
+
+    The thread is ``agent_id`` or, for the root, ``session_id``. Its model is
+    on stdin; version, surface and effort come from its own rollout, which
+    ``transcript_path`` names.
+    """
+    agent = as_str(data.get("agent_id"))
+    transcript = as_str(data.get("transcript_path"))
+    rollout = Path(transcript) if transcript else None
+    meta = {**(rollout_meta(rollout) if rollout else {}), "id": agent or root_raw}
+    ident = codex_ident(root_raw, meta, rollout, env)
+    model = provider_model(CODEX, parse_stdin(data)[1])
+    return replace(ident, model=model or ident.model)
+
+
+def handle_codex(data: Json, env: Mapping[str, str]) -> None:
+    """Record a Codex hook event: thread records and apply_patch edit receipts.
+
+    Anything else is ignored. Codex hooks have no ``CODEX_*`` environment, so
+    identity comes from stdin alone.
+    """
+    root_raw, event = as_str(data.get("session_id")), data.get("hook_event_name")
+    patching = event == "PostToolUse" and data.get("tool_name") == CODEX_PATCH_TOOL
+    if not root_raw or not (patching or event in CODEX_START_EVENTS):
+        return
+    ident = codex_hook_ident(root_raw, data, env)
+    cwd = cwd_of(data)
+    if not patching:
+        write_record(
+            ident.subagent or ident.root,
+            {
+                "harness": ident.harness,
+                "root": ident.root,
+                "agent_type": data.get("agent_type"),
+                "model": ident.model,
+                "effort": ident.effort,
+                "surface": ident.surface,
+                "transcript": data.get("transcript_path"),
+            },
+            cwd,
+        )
+        return
+    for path in patch_paths(tool_input_of(data).get("command")):
+        write_edit(ident, path, cwd, store=True)
 
 
 # --------------------------------------------------------------------------- agy
@@ -1134,6 +1211,9 @@ def cmd_record(harness: str, env: Mapping[str, str]) -> int:
     if harness not in SLUGS:
         return 0
     data = read_hook_stdin()
+    if harness == CODEX:
+        handle_codex(data, env)
+        return 0
     sid, model, effort = parse_stdin(data)
     if harness == CLAUDE:
         if sid:
@@ -1151,11 +1231,10 @@ def cmd_record(harness: str, env: Mapping[str, str]) -> int:
     if effort:
         rec["effort"] = effort
     brain = as_str(data.get("artifactDirectoryPath"))
-    if harness == ANTIGRAVITY and brain:
+    if brain:
         rec["brain_root"] = str(Path(brain).parent)
     write_json(path, rec)
-    if harness == ANTIGRAVITY:
-        record_agy(sid, data, rec, env)
+    record_agy(sid, data, rec, env)
     return 0
 
 
@@ -1753,7 +1832,7 @@ def stamp_document(top: Path, doc: tuple[str, str, str], entries: list[Entry]) -
 
 
 def refresh_codex(committer: Committer, repo: Repo, env: Mapping[str, str]) -> None:
-    """Codex has no edit hooks: turn its rollouts into receipts before using them."""
+    """Codex: turn rollout edits no hook recorded into receipts before using them."""
     if committer.key == CODEX:
         codex_scan(env["CODEX_SESSION_ID"], repo, env)
 

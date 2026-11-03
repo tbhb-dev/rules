@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("//:defs.bzl", "go_mod_tidy_test")
+
+repo_files()
+
+go_mod_tidy_test(
+    name = "tidy_test",
+    srcs = ["//tests/gomod/tidy:main.go"],
+    go_mod = "//tests/gomod/tidy:go.mod",
+    go_sum = "//tests/gomod/tidy:go.sum",
+    proxy = "@gomod_fixture_proxy//:proxy",
+)
+
+# Proofs. Each wrapped test is manual and must fail for the stated reason.
+
+# go.mod lacks the requirement main.go's import needs.
+go_mod_tidy_test(
+    name = "untidy",
+    srcs = ["//tests/gomod/untidy:main.go"],
+    go_mod = "//tests/gomod/untidy:go.mod",
+    go_sum = "//tests/gomod/untidy:go.sum",
+    proxy = "@gomod_fixture_proxy//:proxy",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "untidy_proof",
+    pattern = "\\+require github.com/google/go-cmp v0.7.0",
+    test = ":untidy",
+)
+
+# go.sum's hash of the go-cmp zip is wrong.
+go_mod_tidy_test(
+    name = "tampered",
+    srcs = ["//tests/gomod/tampered:main.go"],
+    go_mod = "//tests/gomod/tampered:go.mod",
+    go_sum = "//tests/gomod/tampered:go.sum",
+    proxy = "@gomod_fixture_proxy//:proxy",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "tampered_proof",
+    pattern = "github.com/google/go-cmp@v0.7.0: (verifying module: )?checksum mismatch",
+    test = ":tampered",
+)

@@ -39,16 +39,23 @@ golangci_lint_parity_test(
 bzl_library(
     name = "linters_bzl",
     srcs = ["linters.bzl"],
+    visibility = ["//tests:__subpackages__"],
     deps = [
+        ":oracle_bzl",
         "//:defs",
-        "@bazel_skylib//lib:shell",
     ],
 )
 
 bzl_library(
     name = "oracle_bzl",
     srcs = ["oracle.bzl"],
-    deps = ["@rules_go//go:def"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:defs",
+        "//private:golangci_lint",
+        "@bazel_skylib//lib:shell",
+        "@rules_go//go:def",
+    ],
 )
 
 # A clean package passes.

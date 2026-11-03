@@ -62,3 +62,10 @@ bzl_library(
     visibility = ["//lint:__subpackages__"],
     deps = ["@bazel_skylib//lib:shell"],
 )
+
+bzl_library(
+    name = "cspell",
+    srcs = ["cspell.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [":tree_check"],
+)

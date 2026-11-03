@@ -1332,6 +1332,7 @@ def test_read_hook_stdin(monkeypatch: pytest.MonkeyPatch) -> None:
 
 ROOT_THREAD = "01a19ebf-adec-7210-8ba8-550921c2b924"
 CHILD_THREAD = "01a19ebf-e15a-7612-a93f-033e919906de"
+OTHER_THREAD = "01a19ebf-ffff-7000-8000-0123456789ab"
 
 
 def write_rollout(home: Path, thread: str, lines: list[object]) -> Path:
@@ -1353,14 +1354,16 @@ def meta(**payload: object) -> Json:
     return {"type": "session_meta", "payload": payload}
 
 
+def patch_paths_of(path: Path, offset: int = 0, skip: int = 0) -> list[str]:
+    return ai.rollout_patch_edits(path, offset, skip)[0]
+
+
 def patch_call(*paths: str) -> Json:
     body = "*** Begin Patch\n" + "".join(f"*** Add File: {p}\n+x\n" for p in paths)
     patch = json.dumps(body + "*** End Patch")
     code = f"const patch = {patch};\nawait tools.apply_patch(patch);"
-    return {
-        "type": "response_item",
-        "payload": {"type": "custom_tool_call", "name": "exec", "input": code},
-    }
+    payload: Json = {"type": "custom_tool_call", "name": "exec", "input": code}
+    return {"type": "response_item", "payload": payload}
 
 
 def test_codex_home(tmp_path: Path) -> None:
@@ -1546,15 +1549,15 @@ def test_rollout_patch_edits_is_incremental(tmp_path: Path) -> None:
     path = write_rollout(
         tmp_path, CHILD_THREAD, [meta(), patch_call("a.txt"), msg, "Begin Patch junk"]
     )
-    paths, offset = ai.rollout_patch_edits(path)
-    assert paths == ["a.txt"]
+    edits, offset = ai.rollout_patch_edits(path)
+    assert edits == ["a.txt"]
     assert offset == path.stat().st_size
     assert ai.rollout_patch_edits(path, offset) == ([], offset)
     partial = json.dumps(patch_call("c.txt"))[:30]
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(patch_call("b.txt")) + "\n" + partial)
-    paths2, offset2 = ai.rollout_patch_edits(path, offset)
-    assert paths2 == ["b.txt"]
+    edits2, offset2 = ai.rollout_patch_edits(path, offset)
+    assert edits2 == ["b.txt"]
     assert offset2 < path.stat().st_size
     with path.open("a", encoding="utf-8") as handle:
         handle.write("\n")
@@ -1567,7 +1570,7 @@ def test_rollout_patch_edits_counts_every_path_in_order(tmp_path: Path) -> None:
     path = write_rollout(
         tmp_path, CHILD_THREAD, [patch_call("a", "b"), patch_call("c")]
     )
-    assert ai.rollout_patch_edits(path)[0] == ["a", "b", "c"]
+    assert patch_paths_of(path) == ["a", "b", "c"]
 
 
 def test_codex_threads_select_the_root_sessions_rollouts(tmp_path: Path) -> None:
@@ -1855,19 +1858,19 @@ def test_cmd_record_session_from_env_and_filters(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     feed(monkeypatch, {"model": "<synthetic>", "effort": {"level": "high"}})
-    assert ai.cmd_record("codex", {"CODEX_SESSION_ID": ROOT_THREAD}) == 0
-    rec = ai.load_record(ai.sha256_64(ROOT_THREAD))
-    assert rec == {"harness": "codex", "effort": "high"}
-    feed(monkeypatch, {"model": "gpt-5.6-sol", "session_id": ROOT_THREAD})
-    assert ai.cmd_record("codex", {}) == 0
-    assert ai.load_record(ai.sha256_64(ROOT_THREAD)) == {
-        "harness": "codex",
+    assert ai.cmd_record("antigravity", {"ANTIGRAVITY_CONVERSATION_ID": CONV}) == 0
+    rec = ai.load_record(ai.sha256_64(CONV))
+    assert rec == {"harness": "antigravity", "effort": "high"}
+    feed(monkeypatch, {"model": "gpt-5.6-sol", "session_id": CONV})
+    assert ai.cmd_record("antigravity", {}) == 0
+    assert ai.load_record(ai.sha256_64(CONV)) == {
+        "harness": "antigravity",
         "effort": "high",
         "model": "gpt-5.6-sol",
     }
     # No session anywhere, or no repository: nothing is written.
     feed(monkeypatch, {"model": "m"})
-    assert ai.cmd_record("codex", {}) == 0
+    assert ai.cmd_record("antigravity", {}) == 0
     assert len(list((repo / ".git" / "ascm-interim" / "sessions").glob("*"))) == 1
 
 
@@ -1875,17 +1878,16 @@ def test_cmd_record_outside_a_repository(
     plain: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     feed(monkeypatch, {"session_id": "s", "model": "m"})
-    assert ai.cmd_record("codex", {}) == 0
+    assert ai.cmd_record("antigravity", {}) == 0
     assert list(plain.iterdir()) == []
 
 
 @pytest.mark.usefixtures("repo")
-def test_cmd_record_brain_root_only_for_agy(monkeypatch: pytest.MonkeyPatch) -> None:
-    data = {"session_id": "s", "artifactDirectoryPath": "/x/brain/s"}
-    feed(monkeypatch, data)
-    ai.cmd_record("codex", {})
+def test_cmd_record_brain_root_only_when_given(monkeypatch: pytest.MonkeyPatch) -> None:
+    feed(monkeypatch, {"session_id": "s"})
+    ai.cmd_record("antigravity", {})
     assert "brain_root" not in ai.load_record(ai.sha256_64("s"))
-    feed(monkeypatch, data)
+    feed(monkeypatch, {"session_id": "s", "artifactDirectoryPath": "/x/brain/s"})
     ai.cmd_record("antigravity", {})
     assert ai.load_record(ai.sha256_64("s"))["brain_root"] == "/x/brain"
 
@@ -2622,7 +2624,7 @@ def test_main_dispatch(
     path = msg_file(tmp_path)
     feed(monkeypatch, {"session_id": "s", "model": "m"})
     assert ai.main(["record", "codex"], {}) == 0
-    assert ai.main(["record", "codex", "extra"], {}) == 0
+    assert ai.main(["record", "antigravity", "extra"], {}) == 0
     assert ai.main(["trailer", str(path)], {}) == 0
     assert ai.main(["trailer", str(path), "message", "sha"], {}) == 0
     assert ai.main(["trailer", str(path), "merge"], CLAUDE_COMMIT_ENV) == 0
@@ -2689,13 +2691,83 @@ needs_prek = pytest.mark.skipif(
 )
 
 
+def identity_hooks(config: Path) -> dict[str, object]:
+    """Keep only the agent-identity hooks from CONFIG."""
+    loaded = cast(
+        "dict[str, object]", yaml.safe_load(config.read_text(encoding="utf-8"))
+    )
+    kept = []
+    for entry in cast("list[dict[str, object]]", loaded["repos"]):
+        mine = [
+            h
+            for h in cast("list[dict[str, str]]", entry["hooks"])
+            if h["id"].startswith("agent-identity-")
+        ]
+        if mine:
+            kept.append({**entry, "hooks": mine})
+    return {**loaded, "repos": kept}
+
+
+def test_identity_hooks_keeps_only_agent_identity_hooks(tmp_path: Path) -> None:
+    config = tmp_path / "c.yaml"
+    config.write_text(
+        yaml.safe_dump(
+            {
+                "default_install_hook_types": ["pre-commit"],
+                "repos": [
+                    {"repo": "builtin", "hooks": [{"id": "trailing-whitespace"}]},
+                    {
+                        "repo": "local",
+                        "hooks": [
+                            {"id": "lint"},
+                            {"id": "agent-identity-trailer"},
+                            {"id": "agent-identity-check"},
+                        ],
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert identity_hooks(config) == {
+        "default_install_hook_types": ["pre-commit"],
+        "repos": [
+            {
+                "repo": "local",
+                "hooks": [
+                    {"id": "agent-identity-trailer"},
+                    {"id": "agent-identity-check"},
+                ],
+            }
+        ],
+    }
+
+
+def test_live_config_wires_every_agent_identity_hook() -> None:
+    ids = {
+        h["id"]
+        for entry in cast(
+            "list[dict[str, object]]", identity_hooks(PREK_CONFIG)["repos"]
+        )
+        for h in cast("list[dict[str, str]]", entry["hooks"])
+    }
+    assert ids == {
+        "agent-identity-stamp-docs",
+        "agent-identity-trailer",
+        "agent-identity-check",
+        "agent-identity-consume",
+    }
+
+
 @pytest.fixture
 def wired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A repository with the module and this repository's prek hooks installed."""
     path = init_repo(tmp_path / "wired")
     (path / "tools" / "interim").mkdir(parents=True)
     shutil.copy(SCRIPT, path / "tools" / "interim" / "agent_identity.py")
-    shutil.copy(PREK_CONFIG, path / ".pre-commit-config.yaml")
+    (path / ".pre-commit-config.yaml").write_text(
+        yaml.safe_dump(identity_hooks(PREK_CONFIG)), encoding="utf-8"
+    )
     monkeypatch.chdir(path)
     subprocess.run(
         ["bash", str(INSTALL)], check=True, capture_output=True, env=hook_env()
@@ -3052,7 +3124,7 @@ def test_cmd_record_writes_the_sessions_directory(
     repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     feed(monkeypatch, {"session_id": "s", "model": "m"})
-    assert ai.cmd_record("codex", {}) == 0
+    assert ai.cmd_record("antigravity", {}) == 0
     assert os.listdir(repo / ".git" / "ascm-interim") == ["sessions"]  # noqa: PTH208 -- exact on-disk names
 
 
@@ -3178,8 +3250,7 @@ def test_rollouts_tolerate_invalid_utf8(tmp_path: Path) -> None:
     assert ai.rollout_turn_context(path) == ("m", "high")
     patch = json.dumps(patch_call("a.txt"))
     path.write_bytes(b"\xff Begin Patch\n" + patch.encode() + b"\n")
-    paths, _ = ai.rollout_patch_edits(path)
-    assert paths == ["a.txt"]
+    assert patch_paths_of(path) == ["a.txt"]
 
 
 def test_codex_threads_age_limit_is_inclusive(
@@ -3439,8 +3510,8 @@ def test_main_runs_each_command_for_real(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     feed(monkeypatch, {"session_id": "s", "model": "m"})
-    assert ai.main(["record", "codex"], {}) == 0
-    assert ai.load_record(ai.sha256_64("s"))["harness"] == "codex"
+    assert ai.main(["record", "antigravity"], {}) == 0
+    assert ai.load_record(ai.sha256_64("s"))["harness"] == "antigravity"
     path = msg_file(tmp_path)
     assert ai.main(["trailer", str(path)], CLAUDE_COMMIT_ENV) == 0
     assert "Generated-by:" in path.read_text(encoding="utf-8")
@@ -3473,14 +3544,14 @@ START = "subagent_history_start_ordinal"
 
 def test_rollout_patch_edits_skips_the_replayed_prefix(tmp_path: Path) -> None:
     path = write_rollout(tmp_path, CHILD_THREAD, fork_lines(4))
-    assert ai.rollout_patch_edits(path)[0] == ["parent.md", "child.md"]
-    paths, new = ai.rollout_patch_edits(path, 0, 4)
-    assert paths == ["child.md"]
+    assert patch_paths_of(path) == ["parent.md", "child.md"]
+    edits, new = ai.rollout_patch_edits(path, 0, 4)
+    assert edits == ["child.md"]
     assert new == path.stat().st_size
     # A saved offset beyond the prefix wins over the prefix.
     assert ai.rollout_patch_edits(path, new, 4) == ([], new)
     # A prefix beyond the saved offset wins over the offset.
-    assert ai.rollout_patch_edits(path, 1, 4)[0] == ["child.md"]
+    assert patch_paths_of(path, 1, 4) == ["child.md"]
 
 
 def test_codex_scan_ignores_patches_replayed_into_a_fork(
@@ -4770,3 +4841,470 @@ def test_check_message_orders_attributes_alphabetically() -> None:
     assert ai.check_value(ok.removeprefix("Generated-by: ")) is None
     swapped = "LLM harness=codex;effort=high"
     assert ai.check_value(swapped) == "attributes out of order or duplicated"
+
+
+# -------------------------------------------------------------- Codex hooks
+
+HOOKS_JSON = Path(__file__).parents[2] / ".codex" / "hooks.json"
+
+
+def hook_data(name: str, repo: Path, rollout: Path | None, **kw: object) -> Json:
+    data = stdin_fixture(name, cwd=str(repo), **kw)
+    if rollout:
+        data["transcript_path"] = str(rollout)
+    return data
+
+
+def hook_rollouts(home: Path, repo: Path) -> tuple[Path, Path]:
+    """(root rollout, child rollout) shaped like Codex 0.166.0's."""
+    root = write_rollout(
+        home,
+        ROOT_THREAD,
+        [
+            meta(
+                id=ROOT_THREAD,
+                session_id=ROOT_THREAD,
+                cwd=str(repo),
+                source="exec",
+                cli_version="0.166.0",
+            ),
+            turn("gpt-5.6-sol", "high"),
+        ],
+    )
+    child = write_rollout(
+        home,
+        CHILD_THREAD,
+        [
+            meta(
+                id=CHILD_THREAD,
+                session_id=ROOT_THREAD,
+                cwd=str(repo),
+                source={"subagent": 1},
+                cli_version="0.166.0",
+            ),
+            turn("gpt-5.6-terra", "low"),
+        ],
+    )
+    return root, child
+
+
+def run_hook(monkeypatch: pytest.MonkeyPatch, data: object) -> None:
+    feed(monkeypatch, data)
+    assert ai.cmd_record("codex", {}) == 0
+
+
+def interim_of(repo: Path) -> Path:
+    return repo / ".git" / "ascm-interim"
+
+
+def test_codex_sessionstart_records_the_root_thread(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, _ = hook_rollouts(tmp_path / "codex", repo)
+    run_hook(monkeypatch, hook_data("codex-hook-sessionstart.json", repo, root))
+    assert ai.load_record(ai.sha256_64(ROOT_THREAD)) == {
+        "harness": "codex:0.166.0",
+        "root": ai.sha256_64(ROOT_THREAD),
+        "model": "openai:gpt-5.6-sol",
+        "effort": "high",
+        "surface": "exec",
+        "transcript": str(root),
+    }
+
+
+def test_codex_subagentstart_records_the_executing_thread(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, child = hook_rollouts(tmp_path / "codex", repo)
+    run_hook(monkeypatch, hook_data("codex-hook-subagentstart.json", repo, child))
+    # Keyed by the subagent; the model is stdin's, effort the rollout's.
+    assert ai.load_record(ai.sha256_64(CHILD_THREAD)) == {
+        "harness": "codex:0.166.0",
+        "root": ai.sha256_64(ROOT_THREAD),
+        "agent_type": "default",
+        "model": "openai:gpt-5.6-luna",
+        "effort": "low",
+        "transcript": str(child),
+    }
+    assert ai.load_record(ai.sha256_64(ROOT_THREAD)) == {}
+
+
+def test_codex_hook_ident_fallbacks(repo: Path, tmp_path: Path) -> None:
+    root, _ = hook_rollouts(tmp_path / "codex", repo)
+    start = hook_data("codex-hook-sessionstart.json", repo, root)
+    ident = ai.codex_hook_ident(ROOT_THREAD, start, {})
+    assert ident.model == "openai:gpt-5.6-sol"
+    # Without a usable stdin model the rollout's turn context is used.
+    no_model = {k: v for k, v in start.items() if k != "model"}
+    assert ai.codex_hook_ident(ROOT_THREAD, no_model, {}).model == (
+        "openai:gpt-5.6-sol"
+    )
+    unusable = {**start, "model": "<synthetic>"}
+    assert ai.codex_hook_ident(ROOT_THREAD, unusable, {}).model == (
+        "openai:gpt-5.6-sol"
+    )
+    # Without a rollout only stdin's model is known.
+    for gone in (None, str(tmp_path / "missing.jsonl"), 3):
+        bare = {**start, "transcript_path": gone}
+        assert ai.codex_hook_ident(ROOT_THREAD, bare, {}) == ai.Ident(
+            ai.sha256_64(ROOT_THREAD), "codex", None, "openai:gpt-5.6-sol"
+        )
+    assert ai.codex_hook_ident(ROOT_THREAD, {}, {}) == ai.Ident(
+        ai.sha256_64(ROOT_THREAD), "codex"
+    )
+
+
+def test_codex_apply_patch_writes_an_edit_time_receipt(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, _ = hook_rollouts(tmp_path / "codex", repo)
+    (repo / "root.txt").write_text("root\n", encoding="utf-8")
+    expected = run_git(repo, "hash-object", "root.txt").strip()
+    data = hook_data("codex-hook-posttooluse-apply-patch.json", repo, root)
+    run_hook(monkeypatch, data)
+    # The file changes after the hook: the receipt keeps the edit-time blob.
+    (repo / "root.txt").write_text("later\n", encoding="utf-8")
+    (got,) = receipts_of(repo, ai.sha256_64(ROOT_THREAD))
+    assert got["path"] == "root.txt"
+    assert got["blob"] == expected
+    assert run_git(repo, "cat-file", "blob", expected) == "root\n"
+    assert got["subagent"] is None
+    assert got["harness"] == "codex:0.166.0"
+    assert got["model"] == "openai:gpt-5.6-sol"
+    assert got["effort"] == "high"
+    assert got["surface"] == "exec"
+    assert ROOT_THREAD not in json.dumps(got)
+
+
+def test_codex_apply_patch_in_a_subagent_is_attributed_to_it(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, child = hook_rollouts(tmp_path / "codex", repo)
+    (repo / "sub.txt").write_text("sub\n", encoding="utf-8")
+    data = hook_data("codex-hook-posttooluse-subagent-apply-patch.json", repo, child)
+    run_hook(monkeypatch, data)
+    (got,) = receipts_of(repo, ai.sha256_64(ROOT_THREAD))
+    assert got["root"] == ai.sha256_64(ROOT_THREAD)
+    assert got["subagent"] == ai.sha256_64(CHILD_THREAD)
+    assert got["model"] == "openai:gpt-5.6-luna"
+    assert got["effort"] == "low"
+    assert got["surface"] is None
+
+
+def test_codex_apply_patch_covers_every_patch_operation(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    patch = (
+        "*** Begin Patch\n*** Add File: a.txt\n+a\n*** Update File: b.txt\n"
+        "*** Move to: sub/c.txt\n@@\n-b\n+c\n*** Delete File: gone.txt\n"
+        "*** End Patch"
+    )
+    for name in ("a.txt", "sub/c.txt"):
+        (repo / name).parent.mkdir(exist_ok=True)
+        (repo / name).write_text(name, encoding="utf-8")
+    data = hook_data("codex-hook-posttooluse-apply-patch.json", repo, None)
+    data["tool_input"] = {"command": patch}
+    run_hook(monkeypatch, data)
+    got = {str(r["path"]): r for r in receipts_of(repo, ai.sha256_64(ROOT_THREAD))}
+    assert sorted(got) == ["a.txt", "b.txt", "gone.txt", "sub/c.txt"]
+    assert got["a.txt"]["blob"] == run_git(repo, "hash-object", "a.txt").strip()
+    assert got["b.txt"]["blob"] is None
+    assert got["gone.txt"]["blob"] is None
+
+
+def test_blob_of_only_stores_the_object_on_request(repo: Path) -> None:
+    (repo / "f.txt").write_text("blob me\n", encoding="utf-8")
+    blob = run_git(repo, "hash-object", "f.txt").strip()
+    assert ai.blob_of(repo, "f.txt") == blob
+    missing = subprocess.run(
+        ["git", "-C", str(repo), "cat-file", "-e", blob],
+        check=False,
+        capture_output=True,
+        env=hook_env(),
+    )
+    assert missing.returncode != 0
+    assert ai.blob_of(repo, "f.txt", store=True) == blob
+    assert run_git(repo, "cat-file", "blob", blob) == "blob me\n"
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        {"hook_event_name": "PreToolUse"},
+        {"hook_event_name": "UserPromptSubmit"},
+        {"hook_event_name": "SessionEnd"},
+        {"tool_name": "Bash"},
+        {"tool_name": "apply_patch_x"},
+        {"session_id": None},
+        {"session_id": 7},
+        {"session_id": ""},
+    ],
+)
+def test_codex_ignores_other_events_and_tools(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, mutate: Json
+) -> None:
+    data = hook_data("codex-hook-posttooluse-apply-patch.json", repo, None, **mutate)
+    run_hook(monkeypatch, data)
+    assert not interim_of(repo).exists()
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "",
+        "not json",
+        "[1, 2]",
+        "{}",
+        '{"hook_event_name": "PostToolUse", "tool_name": "apply_patch"}',
+        (
+            '{"session_id": "s", "hook_event_name": "PostToolUse",'
+            ' "tool_name": "apply_patch", "tool_input": "oops", "tool_use_id": 3,'
+            ' "cwd": 4, "transcript_path": 5}'
+        ),
+        (
+            '{"session_id": "s", "hook_event_name": "PostToolUse",'
+            ' "tool_name": "apply_patch", "tool_input": {"command": 9}}'
+        ),
+    ],
+)
+def test_codex_hook_fails_open_on_bad_stdin(
+    repo: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    raw: str,
+) -> None:
+    run_hook(monkeypatch, raw)
+    assert capsys.readouterr().out == ""
+    assert not list(interim_of(repo).glob("edits/**/*.json"))
+
+
+def test_codex_hook_outside_a_repository(
+    plain: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (plain / "root.txt").write_text("root\n", encoding="utf-8")
+    run_hook(
+        monkeypatch, hook_data("codex-hook-posttooluse-apply-patch.json", plain, None)
+    )
+    run_hook(monkeypatch, hook_data("codex-hook-sessionstart.json", plain, None))
+    assert [p.name for p in plain.iterdir()] == ["root.txt"]
+
+
+@pytest.mark.parametrize("hooked", ["root", "child"])
+def test_codex_scan_takes_nothing_from_a_hooked_thread(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, hooked: str
+) -> None:
+    home = tmp_path / "codex"
+    root, child = hook_rollouts(home, repo)
+    (repo / "root.txt").write_text("root\n", encoding="utf-8")
+    (repo / "sub.txt").write_text("sub\n", encoding="utf-8")
+    # Only one thread has a hook record; the other never fired a hook.
+    start, rollout = (
+        ("codex-hook-sessionstart.json", root)
+        if hooked == "root"
+        else ("codex-hook-subagentstart.json", child)
+    )
+    run_hook(monkeypatch, hook_data(start, repo, rollout))
+    for path, name in ((root, "root.txt"), (child, "sub.txt")):
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(patch_call(name)) + "\n")
+    store = ai.repo_info(repo)
+    assert store is not None
+    checked: list[str] = []
+    real = Path.exists
+
+    def spy(self: Path) -> bool:
+        checked.append(self.parent.name)
+        return real(self)
+
+    monkeypatch.setattr(Path, "exists", spy)
+    ai.codex_scan(ROOT_THREAD, store, {"CODEX_HOME": str(home)})
+    monkeypatch.undo()
+    assert "sessions" in checked
+    got = receipts_of(repo, ai.sha256_64(ROOT_THREAD))
+    # The hooked thread's rollout patch added nothing; the other's was read.
+    expect = ("sub.txt", False) if hooked == "root" else ("root.txt", True)
+    assert [(str(r["path"]), r["subagent"] is None) for r in got] == [expect]
+
+
+def test_trailers_mix_hooked_edits_and_a_rollout_only_thread(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "codex"
+    root, child = hook_rollouts(home, repo)
+    (repo / "root.txt").write_text("root\n", encoding="utf-8")
+    run_hook(
+        monkeypatch, hook_data("codex-hook-posttooluse-apply-patch.json", repo, root)
+    )
+    # The child never fired a hook (untrusted, say): only its rollout shows it.
+    (repo / "sub.txt").write_text("sub\n", encoding="utf-8")
+    with child.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(patch_call("sub.txt")) + "\n")
+    run_git(repo, "add", "root.txt", "sub.txt")
+    env = {
+        "CODEX_HOME": str(home),
+        "CODEX_SESSION_ID": ROOT_THREAD,
+        "CODEX_THREAD_ID": ROOT_THREAD,
+    }
+    path = msg_file(tmp_path)
+    assert ai.cmd_trailer(str(path), None, env) == 0
+    session = ai.sha256_64(ROOT_THREAD)
+    assert sorted(
+        line
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if ": LLM " in line
+    ) == [
+        (
+            "Generated-by: LLM effort=high;harness=codex:0.166.0;"
+            f"model=openai:gpt-5.6-sol;session={session};surface=exec"
+        ),
+        (
+            "Generated-by: LLM effort=low;harness=codex:0.166.0;"
+            f"model=openai:gpt-5.6-terra;session={session};"
+            f"subagent={ai.sha256_64(CHILD_THREAD)};surface=exec"
+        ),
+    ]
+
+
+def test_hooks_json_registers_one_stable_command() -> None:
+    hooks = cast("dict[str, list[dict[str, object]]]", loaded(HOOKS_JSON)["hooks"])
+    # Appending groups never shifts the identity hooks' trust keys.
+    assert list(hooks)[:3] == ["SessionStart", "SubagentStart", "PostToolUse"]
+    commands = set()
+    for event, groups in hooks.items():
+        group = groups[0]
+        if event != "PostToolUse":
+            assert len(groups) == 1
+        (handler,) = cast("list[dict[str, str]]", group["hooks"])
+        assert set(handler) == {"type", "command"}  # no timeout to drift
+        assert handler["type"] == "command"
+        commands.add(handler["command"])
+        assert group.get("matcher") == (
+            "apply_patch" if event == "PostToolUse" else None
+        )
+    (command,) = commands
+    assert command.endswith('/tools/interim/agent_identity.py" record codex')
+    assert command.startswith("uv run --no-project --quiet --python '>=3.15' python ")
+
+
+def test_hooks_json_command_works_from_a_subdirectory(
+    repo: Path, tmp_path: Path
+) -> None:
+    (repo / "tools" / "interim").mkdir(parents=True)
+    shutil.copy(SCRIPT, repo / "tools" / "interim" / "agent_identity.py")
+    (repo / "deep" / "dir").mkdir(parents=True)
+    (repo / "root.txt").write_text("root\n", encoding="utf-8")
+    root, _ = hook_rollouts(tmp_path / "codex", repo)
+    command = cast(
+        "dict[str, list[dict[str, list[dict[str, str]]]]]", loaded(HOOKS_JSON)["hooks"]
+    )["PostToolUse"][0]["hooks"][0]["command"]
+    # Swap uv for the running interpreter; the path expression is under test.
+    command = command.replace(
+        "uv run --no-project --quiet --python '>=3.15' python",
+        shlex.quote(sys.executable),
+    )
+    data = hook_data("codex-hook-posttooluse-apply-patch.json", repo, root)
+    done = subprocess.run(
+        ["sh", "-c", command],
+        input=json.dumps(data),
+        text=True,
+        capture_output=True,
+        check=False,
+        cwd=repo / "deep" / "dir",
+        env=hook_env(),
+    )
+    assert (done.returncode, done.stdout, done.stderr) == (0, "", "")
+    assert [r["path"] for r in receipts_of(repo, ai.sha256_64(ROOT_THREAD))] == [
+        "root.txt"
+    ]
+
+
+@needs_prek
+def test_e2e_codex_hooks_then_commit(wired: Path, tmp_path: Path) -> None:
+    home = tmp_path / "codex"
+    root, child = hook_rollouts(home, wired)
+    start = hook_data("codex-hook-sessionstart.json", wired, root)
+    record(wired, "codex", start)
+    (wired / "root.txt").write_text("root\n", encoding="utf-8")
+    record(
+        wired,
+        "codex",
+        hook_data("codex-hook-posttooluse-apply-patch.json", wired, root),
+    )
+    (wired / "sub.txt").write_text("sub\n", encoding="utf-8")
+    sub = hook_data("codex-hook-posttooluse-subagent-apply-patch.json", wired, child)
+    record(wired, "codex", sub)
+    run_git(wired, "add", "root.txt", "sub.txt")
+    env = {
+        "CODEX_HOME": str(home),
+        "CODEX_SESSION_ID": ROOT_THREAD,
+        "CODEX_THREAD_ID": ROOT_THREAD,
+    }
+    done = git_commit(wired, "feat: both", env)
+    assert done.returncode == 0, done.stderr
+    session = ai.sha256_64(ROOT_THREAD)
+    assert sorted(trailers(wired)) == [
+        (
+            "Generated-by: LLM effort=high;harness=codex:0.166.0;"
+            f"model=openai:gpt-5.6-sol;session={session};surface=exec"
+        ),
+        (
+            "Generated-by: LLM effort=low;harness=codex:0.166.0;"
+            f"model=openai:gpt-5.6-luna;session={session};"
+            f"subagent={ai.sha256_64(CHILD_THREAD)};surface=exec"
+        ),
+    ]
+
+
+def test_write_edit_stores_the_blob_only_when_asked(repo: Path) -> None:
+    (repo / "f.txt").write_text("f\n", encoding="utf-8")
+    blob = run_git(repo, "hash-object", "f.txt").strip()
+    ai.write_edit(make_ident(), "f.txt")
+    (got,) = receipts_of(repo, ROOT)
+    assert got["blob"] == blob
+    missing = subprocess.run(
+        ["git", "-C", str(repo), "cat-file", "-e", blob],
+        check=False,
+        capture_output=True,
+        env=hook_env(),
+    )
+    assert missing.returncode != 0
+    ai.write_edit(make_ident(), "f.txt", store=True)
+    assert run_git(repo, "cat-file", "blob", blob) == "f\n"
+
+
+def test_rollout_patch_edits_defaults_read_from_the_first_line(
+    tmp_path: Path,
+) -> None:
+    path = write_rollout(tmp_path, CHILD_THREAD, [patch_call("first.txt")])
+    assert ai.rollout_patch_edits(path) == (["first.txt"], path.stat().st_size)
+
+
+def test_codex_hook_ident_takes_the_thread_from_the_hook_not_the_rollout(
+    repo: Path, tmp_path: Path
+) -> None:
+    root, child = hook_rollouts(tmp_path / "codex", repo)
+    other = write_rollout(tmp_path / "codex", OTHER_THREAD, [meta(id=OTHER_THREAD)])
+    start = hook_data("codex-hook-sessionstart.json", repo, other)
+    assert ai.codex_hook_ident(ROOT_THREAD, start, {}).subagent is None
+    sub = hook_data("codex-hook-subagentstart.json", repo, other)
+    got = ai.codex_hook_ident(ROOT_THREAD, sub, {})
+    assert got.subagent == ai.sha256_64(CHILD_THREAD)
+    assert (root, child) != (other, other)
+
+
+def test_codex_hooks_use_the_hook_cwd_not_the_process_cwd(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, _ = hook_rollouts(tmp_path / "codex", repo)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    (repo / "root.txt").write_text("root\n", encoding="utf-8")
+    run_hook(monkeypatch, hook_data("codex-hook-sessionstart.json", repo, root))
+    run_hook(
+        monkeypatch, hook_data("codex-hook-posttooluse-apply-patch.json", repo, root)
+    )
+    assert [r["path"] for r in receipts_of(repo, ai.sha256_64(ROOT_THREAD))] == [
+        "root.txt"
+    ]
+    assert (interim_of(repo) / "sessions").is_dir()

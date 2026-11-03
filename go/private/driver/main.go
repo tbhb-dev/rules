@@ -30,6 +30,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -305,12 +306,11 @@ func respond(cfg *config, root, mirror string) (*driverResponse, error) {
 // readPackages decodes a stream of packages: one per go_library, or the
 // whole standard library in one file.
 func readPackages(path string, onPkg func(*flatPackage)) error {
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	dec := json.NewDecoder(f)
+	dec := json.NewDecoder(bytes.NewReader(data))
 	for dec.More() {
 		p := &flatPackage{}
 		if err := dec.Decode(p); err != nil {

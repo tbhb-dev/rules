@@ -8,8 +8,10 @@
 # vendored modules only (-mod=vendor when vendor/ exists), no proxy, no
 # toolchain switch, empty caches.
 #
-# Usage: oracle.sh GOLANGCI_LINT REPORT GO MODULE_DIR CONFIG FILES OUT
+# Usage: oracle.sh GOLANGCI_LINT REPORT GO MODULE_DIR CONFIG FILES OUT [PROXY]
 #
+# PROXY, when given, is a go_mod_proxy directory: modules come from it, as
+# GOPROXY=file://..., instead of from vendor/.
 # FILES lists the module's files, the config among them, as exec paths under
 # MODULE_DIR; CONFIG is one of them.
 
@@ -22,6 +24,7 @@ module_dir=$4
 config=$5
 files=$6
 out=$7
+proxy=${8:-}
 
 root=$PWD
 tmp=$(mktemp -d)
@@ -45,6 +48,10 @@ export GOLANGCI_LINT_CACHE="$tmp/golangci-lint"
 export GOPATH="$tmp/gopath"
 export GOMODCACHE="$tmp/gopath/pkg/mod"
 export GOPROXY=off
+if [[ -n $proxy ]]; then
+  export GOPROXY="file://$root/$proxy"
+  export GOSUMDB=off
+fi
 export GOTOOLCHAIN=local
 export GOWORK=off
 export GOTELEMETRY=off

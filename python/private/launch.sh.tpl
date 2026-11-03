@@ -12,7 +12,8 @@ set -euo pipefail
 
 # The runfiles root, found from this script's own path: beside it when run
 # as an action's tool or with `bazel run`, else from the path it was called
-# by (tests and the format runner call "$runfiles/<short path>").
+# by (tests and the format runner call "$runfiles/<short path>"), else from
+# the runfiles Bazel names in the environment (a test's PATH tool).
 self=@@SELF@@
 if [[ -d "$0.runfiles/_main" ]]; then
   base="$0.runfiles/_main"
@@ -20,6 +21,8 @@ elif [[ $0 == *"/$self" ]]; then
   base=${0%"/$self"}
 elif [[ -n ${RUNFILES_DIR:-} ]]; then
   base="$RUNFILES_DIR/_main"
+elif [[ -n ${TEST_SRCDIR:-} ]]; then
+  base="$TEST_SRCDIR/_main"
 else
   echo "python_tool: cannot find the runfiles of $0" >&2
   exit 1
@@ -34,20 +37,22 @@ export TBHB_PYTHON_UV="$base/@@UV@@"
 # Workspace members' source roots, relative to the tree root (the current
 # directory), so a test sees the copy and the formatter the workspace.
 pythonpath="$base/@@BOOT@@"
-for root in @@SOURCE_ROOTS@@; do
+source_roots=(@@SOURCE_ROOTS@@)
+for root in ${source_roots[@]+"${source_roots[@]}"}; do
   pythonpath+=":$PWD/$root"
 done
 export PYTHONPATH="$pythonpath"
 export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1
 unset PYTHONHOME PYTHONSTARTUP VIRTUAL_ENV
 
-# Tools that look for an interpreter on PATH (pyrefly asks it for sys.path)
+# As under `uv run`, the environment's executables come first on PATH, and
+# tools that look for an interpreter there (pyrefly asks it for sys.path)
 # find this one.
 shims=$(mktemp -d)
 trap 'rm -rf "$shims"' EXIT
 ln -s "$interpreter" "$shims/python"
 ln -s "$interpreter" "$shims/python3"
-export PATH="$shims:$PATH"
+export PATH="$shims:$TBHB_PYTHON_BIN:$PATH"
 
 status=0
 "$interpreter" "$base/@@LAUNCH@@" @@OPTIONS@@ -- @@TOOL@@ "$@" || status=$?

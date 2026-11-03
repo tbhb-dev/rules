@@ -40,6 +40,19 @@ use_repo(go_deps, "org_golang_x_tools")
 # Dev dependencies: this module's own tests.
 bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
 
+# Module proxies for go_mod_tidy_test: the fixtures' (the tampered go.sum
+# lists the same modules) and this module's own.
+go_mod_proxy = use_extension("//:extensions.bzl", "go_mod_proxy", dev_dependency = True)
+go_mod_proxy.from_file(
+    name = "gomod_fixture_proxy",
+    go_sum = "//tests/gomod/tidy:go.sum",
+)
+go_mod_proxy.from_file(
+    name = "self_go_mod_proxy",
+    go_sum = "//:go.sum",
+)
+use_repo(go_mod_proxy, "gomod_fixture_proxy", "self_go_mod_proxy")
+
 # The Go SDK the tests build with; consumers bring their own. Matches the
 # toolchain directive in tbhb-dev's Go modules.
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk", dev_dependency = True)

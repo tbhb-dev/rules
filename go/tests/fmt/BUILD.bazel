@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//format:defs.bzl", "format_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+format_test(
+    name = "clean_test",
+    srcs = [
+        "clean/.golangci.yml",
+        "clean/go.mod",
+        "clean/ok.go",
+    ],
+    formatters = ["//:golangci_fmt"],
+    strip_prefix = "tests/fmt/clean",
+)
+
+# Proof: an unformatted file fails the check, with golangci-lint's diff.
+format_test(
+    name = "dirty",
+    srcs = [
+        "dirty/.golangci.yml",
+        "dirty/bad.go",
+        "dirty/go.mod",
+    ],
+    formatters = ["//:golangci_fmt"],
+    strip_prefix = "tests/fmt/dirty",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "dirty_proof",
+    pattern = "^\\+import \\($",
+    test = ":dirty",
+)

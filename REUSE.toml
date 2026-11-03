@@ -18,6 +18,9 @@ path = [
   "MODULE.bazel.lock",
   "uv.lock",
   ".mise/locks/**",
+  # Go module files, which go mod tidy rewrites.
+  "**/go.mod",
+  "**/go.sum",
 ]
 SPDX-FileCopyrightText = "Tony Burns"
 SPDX-License-Identifier = "Apache-2.0"
@@ -28,7 +31,7 @@ SPDX-License-Identifier = "Apache-2.0"
 path = [
   "**/.bazelversion",
   ".python-version",
-  ".bazelignore",
+  "**/.bazelignore",
   ".rylignore",
   ".cspell-words.txt",
   ".vale/config/vocabularies/project/*.txt",

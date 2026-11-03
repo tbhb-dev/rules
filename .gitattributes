@@ -9,6 +9,7 @@ mise.lock -diff linguist-generated
 # from the archive as the test module.
 .agents/ export-ignore
 .claude/ export-ignore
+.codex/ export-ignore
 .github/ export-ignore
 .pre-commit-config.yaml export-ignore
 docs/ export-ignore

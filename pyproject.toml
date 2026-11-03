@@ -279,7 +279,7 @@ source_paths = ["tools"]
 # Tests are copied and run, never mutated.
 do_not_mutate = ["tools/test_*.py", "tools/interim/test_*.py"]
 # Tests read these at paths relative to themselves.
-also_copy = ["tools/interim/testdata", "tools/interim/install.sh", "tools/testdata", "docs/schemas", ".pre-commit-config.yaml"]
+also_copy = ["tools/interim/testdata", "tools/interim/install.sh", "tools/testdata", "docs/schemas", ".pre-commit-config.yaml", ".codex"]
 pytest_add_cli_args_test_selection = ["tools"]
 
 [tool.ruff]

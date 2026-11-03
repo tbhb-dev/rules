@@ -2,9 +2,15 @@
 # Copyright Tony Burns
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//format:defs.bzl", "formatter")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 
-exports_files(["multitool.lock.json"])
+exports_files([
+    ".golangci.yml",
+    "go.mod",
+    "go.sum",
+    "multitool.lock.json",
+])
 
 repo_files(
     exclude = [
@@ -20,6 +26,28 @@ bzl_library(
     visibility = ["//visibility:public"],
     deps = [
         "//private:deadcode",
+        "//private:go_mod_tidy",
         "//private:golangci_lint",
     ],
+)
+
+bzl_library(
+    name = "extensions",
+    srcs = ["extensions.bzl"],
+    visibility = ["//visibility:public"],
+    deps = ["//private:go_mod_proxy"],
+)
+
+# `golangci-lint fmt`: the formatters the consumer's .golangci.yml enables
+# (gci, gofumpt, goimports, golines, ...), found from the workspace root.
+formatter(
+    name = "golangci_fmt",
+    include = ["*.go"],
+    check_args = [
+        "fmt",
+        "--diff",
+    ],
+    fix_args = ["fmt"],
+    tool = "//private:golangci_fmt_tool",
+    visibility = ["//visibility:public"],
 )

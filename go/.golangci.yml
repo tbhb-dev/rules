@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# golangci-lint config for this module's own Go code (the packages driver
+# and the report tool), linted by //tests/self through the aspect it ships.
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - gocritic
+    - misspell
+    - revive
+    - unparam
+
+formatters:
+  enable:
+    - gci
+    - gofumpt

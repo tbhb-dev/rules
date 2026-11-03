@@ -3,14 +3,22 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load(":golangci_fmt.bzl", "golangci_fmt_tool")
 
 repo_files()
+
+# The tool behind //:golangci_fmt.
+golangci_fmt_tool(
+    name = "golangci_fmt_tool",
+    visibility = ["//:__pkg__"],
+)
 
 exports_files(
     [
         "deadcode.sh",
         "golangci_lint.sh",
         "golangci_lint_merge.sh",
+        "go_mod_tidy.sh.tpl",
         "golangci_lint_test.sh.tpl",
         "report_test.sh.tpl",
     ],
@@ -35,4 +43,23 @@ bzl_library(
         ":golangci_lint",
         "@rules_go//go:def",
     ],
+)
+
+bzl_library(
+    name = "go_mod_tidy",
+    srcs = ["go_mod_tidy.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = ["@bazel_skylib//lib:shell"],
+)
+
+bzl_library(
+    name = "go_mod_proxy",
+    srcs = ["go_mod_proxy.bzl"],
+    visibility = ["//:__subpackages__"],
+)
+
+bzl_library(
+    name = "golangci_fmt",
+    srcs = ["golangci_fmt.bzl"],
+    visibility = ["//:__subpackages__"],
 )
