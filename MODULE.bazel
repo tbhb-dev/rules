@@ -61,9 +61,14 @@ npm.npm_translate_lock(
 )
 use_repo(npm, "tbhb_rules_cspell_npm")
 
-# The pnpm that rules_js pins, for maintainers regenerating the cspell lock:
+# The pnpm 12 pinned here, for maintainers regenerating the cspell lock:
 # bazel run -- @pnpm//:pnpm --dir "$PWD/lint/private/cspell" install --lockfile-only
 pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm", dev_dependency = True)
+pnpm.pnpm(
+    name = "pnpm",
+    pnpm_version = "12.16.1",
+    pnpm_version_integrity = "sha512-CR0d7nknV1Zhsl2rPCrjHK/BxU1rce1qZgDPDByxBDSkR+rhQBXxsj4ua+3u1535SpMuIWTSgyKA3OP7MvZW0Q==",
+)
 use_repo(pnpm, "pnpm")
 
 # Regular, not dev, dependencies, though only this repository's own gates
