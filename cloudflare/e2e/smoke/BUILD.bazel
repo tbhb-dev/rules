@@ -236,3 +236,23 @@ expect_failure_test(
     pattern = "a workers check needs test.coverage.provider \"istanbul\"",
     test = ":proof_workers_v8",
 )
+
+# Planted: a wrangler config whose compatibility date the pinned workerd
+# doesn't support. The check fails at once, naming the date, instead of
+# hanging until the timeout; "short" bounds it at a minute.
+workers_vitest_test(
+    name = "proof_future_date",
+    srcs = WORKER + [
+        "proof/future_date/wrangler.jsonc",
+        "vitest.config.mjs",
+    ],
+    node_modules = [":node_modules"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_future_date_fails",
+    timeout = "short",
+    pattern = "supports compatibility dates up to [0-9-]+, but proof/future_date/wrangler.jsonc \\(2099-01-01\\)",
+    test = ":proof_future_date",
+)

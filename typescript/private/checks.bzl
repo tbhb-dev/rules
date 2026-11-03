@@ -327,7 +327,7 @@ def stryker_test(name, srcs, config = None, node_modules = [], workers = False, 
         config = config,
         node_modules = node_modules,
         workers = workers,
-        tool_args = ["run"] + (["{config}"] if config else []),
+        tool_args = (["--workers"] if workers else []) + ["run"] + (["{config}"] if config else []),
         # Stryker reports how many mutants it made; none means nothing was tested.
         output_guard = "with [1-9][0-9]* mutant\\(s\\)",
         **kwargs

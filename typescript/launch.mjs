@@ -23,7 +23,8 @@ import {
   realpathSync,
   symlinkSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -122,6 +123,58 @@ function linkPackages() {
   }
 }
 
+// The wrangler configs in the tree, outside node_modules and dot
+// directories.
+function wranglerConfigs(dir) {
+  const found = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith(".") || entry.name === "node_modules") {
+      continue;
+    }
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...wranglerConfigs(path));
+    } else if (/^wrangler\.(json|jsonc|toml)$/.test(entry.name)) {
+      found.push(path);
+    }
+  }
+  return found;
+}
+
+// workerd refuses a Worker whose compatibility date is newer than its own,
+// and inside Bazel the test then hangs until its timeout instead of
+// failing. Each wrangler config's dates must be no newer than the pinned
+// workerd's, which the plugin reaches through miniflare.
+async function checkCompatibilityDates() {
+  const plugin = pinnedDir("@cloudflare/vitest-plugin");
+  const miniflare = createRequire(join(plugin, "package.json")).resolve(
+    "miniflare",
+  );
+  const workerd = createRequire(miniflare).resolve("workerd");
+  const { compatibilityDate, version: workerdVersion } = await import(
+    pathToFileURL(workerd).href
+  );
+  const late = [];
+  for (const file of wranglerConfigs(process.cwd())) {
+    const text = readFileSync(file, "utf8");
+    for (const [, date] of text.matchAll(
+      /compatibility_date["']?\s*[:=]\s*["'](\d{4}-\d{2}-\d{2})["']/g,
+    )) {
+      if (date > compatibilityDate) {
+        late.push(`${relative(process.cwd(), file)} (${date})`);
+      }
+    }
+  }
+  if (late.length > 0) {
+    console.error(
+      `launch.mjs: the pinned workerd ${workerdVersion} supports compatibility dates up to ${compatibilityDate}, ` +
+        `but ${late.join(", ")} asks for a later one. Set compatibility_date to ${compatibilityDate} or earlier, ` +
+        "or wait for this module's next workerd.",
+    );
+    process.exit(1);
+  }
+}
+
 async function runBin(name, bin, args) {
   const path = join(pinnedDir(name), bin);
   process.argv = [process.argv[0], path, ...args];
@@ -165,6 +218,9 @@ async function vitest(args) {
     } else {
       throw new Error(`launch.mjs: unknown vitest argument ${arg}`);
     }
+  }
+  if (workers) {
+    await checkCompatibilityDates();
   }
   const { startVitest } = await import(
     pathToFileURL(join(pinnedDir("vitest"), "dist", "node.js")).href
@@ -237,6 +293,10 @@ switch (tool) {
     await runBin("pnpm", "bin/pnpm.cjs", ["audit", ...args]);
     break;
   case "stryker":
+    if (args[0] === "--workers") {
+      args.shift();
+      await checkCompatibilityDates();
+    }
     await runBin("@stryker-mutator/core", "bin/stryker.js", args);
     break;
   case "tsc":
