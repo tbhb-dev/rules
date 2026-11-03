@@ -6,6 +6,11 @@
 MODULE.bazel.lock -diff linguist-generated
 uv.lock -diff linguist-generated
 mise.lock -diff linguist-generated
+# D2 renders (tbhb_rules_d2), written by `bazel run` beside their sources.
+# The check compares them byte for byte, so the PNG is never converted.
+*.d2.svg linguist-generated
+*.d2.png binary linguist-generated
+*.d2.sha256 linguist-generated
 
 # Release archives carry the module only: the rule families, the root build
 # files and the tool pins. This repository's own tooling, tests and CI stay

@@ -13,6 +13,8 @@
     "mise.lock",
     "tmp/**/*",
     "**/testdata/**/*",
+    "**/*.d2.svg",
+    "**/*.d2.sha256",
     "**/pnpm-lock.yaml",
     "preset.bazelrc",
     "uv.lock"

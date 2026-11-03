@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+edit: Edit a diagram
+run: bazel run //docs:diagrams
+commit: Commit the renders
+test: bazel test //...
+
+edit -> run -> commit -> test
+test -> edit: stale {style.stroke-dash: 3}

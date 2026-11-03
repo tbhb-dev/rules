@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="24"><style type="text/css"><![CDATA[
+.d2-1 .text-fancy {
+	font-family: "d2-1-font-fancy";
+}
+.d2-1 .text-bold {
+	font-family: "d2-1-font-bold";
+}
+]]></style><g class="d2-1"><text class="text-fancy" x="0" y="10">fancy</text><text class="text-bold" x="0" y="22">bold</text></g></svg>

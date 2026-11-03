@@ -22,6 +22,10 @@ path = [
   # Go module files, which go mod tidy rewrites.
   "**/go.mod",
   "**/go.sum",
+  # D2 renders, which d2_diagrams writes.
+  "**/*.d2.svg",
+  "**/*.d2.png",
+  "**/*.d2.sha256",
 ]
 SPDX-FileCopyrightText = "Tony Burns"
 SPDX-License-Identifier = "Apache-2.0"

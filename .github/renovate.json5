@@ -15,10 +15,10 @@
 
   // The presets cover the rest of this tree: the bazel manager the literal
   // http_archive and http_file pins (pins/extensions.bzl, go/private/tools.bzl,
-  // MODULE.bazel) and dugite's git, gomod the go.mod requirements, tool
-  // directives and toolchain lines that go_sdk.from_file reads, python.json5
-  // the pyproject and uv.lock pins and uv's required-version, and bazelisk
-  // every .bazelversion as one group.
+  // diagrams/d2/private/tools.bzl, MODULE.bazel) and dugite's git, gomod the
+  // go.mod requirements, tool directives and toolchain lines that
+  // go_sdk.from_file reads, python.json5 the pyproject and uv.lock pins and
+  // uv's required-version, and bazelisk every .bazelversion as one group.
   customManagers: [
     {
       // The runtime downloads uv at repository-fetch time from this dict, so
@@ -33,6 +33,25 @@
       ],
       depNameTemplate: "uv",
       datasourceTemplate: "github-release-attachments",
+    },
+  ],
+
+  packageRules: [
+    {
+      // tbhb_rules_d2's PNG font. 2.045R-ro/1.095R-it is the last Source
+      // Sans Pro release; later ones are Source Sans 3, another family name
+      // and asset layout, and the bazel manager would misread the tag's
+      // slash anyway. A move to Source Sans 3 is a change to the renderer.
+      description: "Source Sans Pro stays at its last release",
+      matchPackageNames: ["adobe-fonts/source-sans"],
+      enabled: false,
+    },
+    {
+      // tbhb_rules_d2's monospace PNG font. Its release tags hold slashes
+      // too, which the bazel manager would misread, so it moves by hand.
+      description: "Source Code Pro moves by hand",
+      matchPackageNames: ["adobe-fonts/source-code-pro"],
+      enabled: false,
     },
   ],
 }

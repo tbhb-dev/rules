@@ -11,7 +11,7 @@ Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned 
 | runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
 | testing | `@tbhb_rules//testing:defs.bzl` | `expect_failure_test` |
 
-Language rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/` and `tbhb_rules_python` in `python/`.
+Language and diagram rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/`, `tbhb_rules_python` in `python/`, and `tbhb_rules_d2` in `diagrams/d2/`.
 
 The modules require Bazel 9 or newer (`bazel_compatibility = [">=9.0.0"]`), the only release line tbhb-dev repositories use.
 
@@ -103,6 +103,18 @@ override_repo(tools, tbhb_rules_gitleaks = "my_gitleaks")
 
 To refer to a pinned binary yourself, add `use_repo(tools, "tbhb_rules_gitleaks")`.
 
+### D2 diagrams
+
+`tbhb_rules_d2` renders [D2](https://d2lang.com) diagrams and keeps the renders committed beside their sources. Each `x.d2` has an `x.d2.svg` (D2's own SVG), an `x.d2.png` (resvg draws the SVG at twice its size in Source Sans Pro and Source Code Pro, and oxipng shrinks the file), and an `x.d2.sha256` (the `shasum -a 256` lines of the three files).
+
+```starlark
+load("@tbhb_rules_d2//:defs.bzl", "d2_diagrams")
+
+d2_diagrams(name = "diagrams")
+```
+
+By default `d2_diagrams` renders every `*.d2` file in the package and its subdirectories, and `srcs` narrows the set. List the files a diagram reads in `data`: imported `.d2` files (`...@shared`, `x: @x`) and local images, which d2 finds relative to the source. Renders run offline, so a remote image (`icon: https://...`) fails the render. Save the image beside the source and list it in `data` instead. The PNG step fails on any font family in the SVG that it has no font for. `bazel run //docs:diagrams` writes the renders beside their sources and deletes renders that have lost their source. `//docs:diagrams_test` fails when a render is missing, when a committed SVG differs from a fresh render, when a manifest doesn't hold the hashes of the committed files, or when a render has no source. The test doesn't draw the bitmap again, because its pixels can differ across platforms. The manifest vouches for it instead. `:diagrams.renders` builds the renders into the output tree. Keep the renders byte for byte in Git: mark `*.d2.svg` and `*.d2.sha256` `eol=lf` and `*.d2.png` `binary` in `.gitattributes`. Keep fixers away from them too: add `.*\.d2\.(svg|png|sha256)$` to the `exclude` of any pre-commit or prek config with whitespace, line-ending or byte-order-mark fixers. In `.editorconfig`, set `trim_trailing_whitespace = false` for `[*.d2.{svg,png,sha256}]`.
+
 ### Windows
 
 The rules' executables are Bash scripts. On Windows each runs through a `.bat` launcher with the Bash of the shell `toolchain`, so set `BAZEL_SH` to an MSYS2 or Git for Windows `bash.exe`. The scripts read their files from the `runfiles` tree, so add `startup --windows_enable_symlinks` and `common:windows --enable_runfiles` (with `common --enable_platform_specific_config`) to your `.bazelrc`, and turn on Developer Mode so Bazel can create the symlinks.
@@ -116,7 +128,7 @@ mise provides bazelisk, and uv for the interim pull request scripts (`mise insta
 | `bazelisk test //...` | buildifier, this repository's lint, shell and Python gates (in `tools/`), run on its own rules |
 | `(cd e2e/smoke && bazelisk test //...)` | the rules as a consumer sees them, including the failure proofs |
 | `bazelisk run //:format` | rewrites files with the formatters, and `//:format.check` only checks |
-| `(cd go && bazelisk test //...)`, `(cd python && bazelisk test //...)` | the nested language modules, each with its own consumers under `e2e/` |
+| `(cd go && bazelisk test //...)`, `(cd python && bazelisk test //...)`, `(cd diagrams/d2 && bazelisk test //...)` | the nested modules, each with its own consumers under `e2e/` |
 | `mise run test` | every command in this table except the format runs |
 
 `.github/workflows/ci.yml` lists the complete gate set.

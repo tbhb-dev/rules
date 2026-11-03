@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The parent module's generated preset; it follows the same .bazelversion.
+# It comes first so the flags below can override it.
+import %workspace%/../../../../preset.bazelrc
+
+# aspect_tools_telemetry, which aspect_rules_js brings in, reports the Bazel
+# and module versions in use unless told not to.
+common --repo_env=DO_NOT_TRACK=1
+
+# The smoke module consumes tbhb_rules_d2 and tbhb_rules from parent
+# directories, so its lockfile would churn with every change there; it is
+# not committed.
+common --lockfile_mode=off
+# --config=ci (from the preset) would turn it back to error.
+common:ci --lockfile_mode=off
+
+common --enable_platform_specific_config
+# Windows runs only .exe, .bat and .cmd files and makes no runfiles tree by
+# default; the rules' scripts read their files from that tree. Without real
+# symlinks (Developer Mode or admin) Bazel fills the tree with copies, which
+# can go stale. The startup flag is a no-op elsewhere.
+startup --windows_enable_symlinks
+common:windows --enable_runfiles

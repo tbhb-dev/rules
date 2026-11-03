@@ -11,9 +11,16 @@
 default_stages: [pre-commit]
 
 # Never touch Vale's synced style packages, build output, scratch work, agent
-# worktrees, mutation output, or test fixtures (failure-proof fixtures are
-# deliberately malformed).
-exclude: ^(\.vale/(Google|write-good|proselint|ai-tells.*)/|bazel-.*/|tmp/|\.worktrees/|(.*/)?(mutants|testdata)/)
+# worktrees, mutation output, test fixtures (failure-proof fixtures are
+# deliberately malformed), or D2 renders, which must match a fresh render
+# byte for byte.
+exclude: |
+  (?x)^(
+    \.vale/(Google|write-good|proselint|ai-tells.*)/
+    |bazel-.*/|tmp/|\.worktrees/
+    |(.*/)?(mutants|testdata)/
+    |.*\.d2\.(svg|png|sha256)$
+  )
 
 repos:
   - repo: builtin

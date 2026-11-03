@@ -105,6 +105,7 @@ nosource
 nosystem
 NTFS
 owenlamont
+oxipng
 perfsprint
 pflag
 pipefail
@@ -122,6 +123,7 @@ PYTHONSTARTUP
 rawfile
 rctx
 recvcheck
+resvg
 rlocation
 rollouts
 rollup

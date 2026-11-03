@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_d2//:defs.bzl", "d2_diagrams")
+
+repo_files()
+
+# `bazel run //docs:diagrams` writes the renders of every *.d2 here,
+# detail/ included; //docs:diagrams_test fails when they are stale, missing
+# or orphaned. detail/check.d2 imports detail/legend.d2.
+d2_diagrams(
+    name = "diagrams",
+    data = ["detail/legend.d2"],
+)
