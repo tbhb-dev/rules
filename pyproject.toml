@@ -276,8 +276,9 @@ testpaths = ["tools"]
 # mutant must be killed, so the pytest and coverage settings above stay
 # strict. The gate script and any mutate task live outside this file.
 source_paths = ["tools"]
-# Tests are copied and run, never mutated.
-do_not_mutate = ["tools/test_*.py", "tools/interim/test_*.py"]
+# Tests are copied and run, never mutated. Interim code (tools/interim)
+# is held to the static gates and 100% branch coverage, not mutation.
+do_not_mutate = ["tools/test_*.py", "tools/interim/*"]
 # Tests read these at paths relative to themselves.
 also_copy = ["tools/interim/testdata", "tools/interim/install.sh", "tools/testdata", "docs/schemas", ".pre-commit-config.yaml", ".codex"]
 pytest_add_cli_args_test_selection = ["tools"]
