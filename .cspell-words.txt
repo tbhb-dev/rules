@@ -76,8 +76,10 @@ listy
 LLMX
 localmodule
 lockfiles
+manylinux
 mapfile
 mapliteral
+maturin
 mctx
 mdfile
 mdir
@@ -130,6 +132,7 @@ rollup
 rumdl
 runfile
 runfiles
+rustup
 rylignore
 sandboxed
 sess
