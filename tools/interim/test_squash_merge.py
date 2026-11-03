@@ -19,6 +19,7 @@ from hypothesis import strategies as st
 from tools.interim import agent_identity
 from tools.interim import pull_request as pr
 from tools.interim import squash_merge as sm
+from tools.interim.fake_tool import write_fake
 
 FIXTURE = Path(__file__).parent / "testdata" / "pull_request" / "passing-draft.md"
 HARNESS_ENV = {"CLAUDE_CODE_SESSION_ID": "raw-session"}
@@ -28,8 +29,7 @@ GEN = (
 )
 ASSIST = "Assisted-by: LLM harness=codex;model=openai:gpt-6.1-sol"
 
-GH = """#!{python}
-import json, os, sys
+GH = """import json, os, sys
 here = os.path.dirname(os.path.abspath(__file__))
 spec = json.load(open(os.path.join(here, "gh.spec")))
 kind = sys.argv[2] if sys.argv[1] == "pr" else "?"
@@ -39,8 +39,7 @@ sys.stdout.write(spec[kind + "_out"])
 sys.stderr.write(spec[kind + "_err"])
 sys.exit(spec[kind + "_rc"])
 """
-COG = """#!{python}
-import sys
+COG = """import sys
 text = sys.stdin.read()
 if "BAD" in text:
     sys.stderr.write("not conventional")
@@ -91,9 +90,7 @@ def tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Tools:
     git_dir.mkdir()
     (git_dir / "git").symlink_to(shutil.which("git") or "git")
     for name, body in (("gh", GH), ("cog", COG)):
-        script = bin_dir / name
-        script.write_text(body.format(python=sys.executable))
-        script.chmod(0o755)
+        write_fake(bin_dir / name, body.format())
     # One statement, not a loop: under Bazel's clean environment there is
     # nothing to remove, and a loop body that never runs is a missed branch.
     prefixes = ("CLAUDE", "CODEX", "ANTIGRAVITY", "GIT_")

@@ -22,6 +22,7 @@ from jsonschema import Draft202012Validator
 
 from tools.interim import agent_identity
 from tools.interim import pull_request as pr
+from tools.interim.fake_tool import write_fake
 
 # mutmut runs the tests from a copy of the source tree, so everything resolves
 # against this file: the real repository root, or the mutants/ copy of it.
@@ -45,10 +46,9 @@ OTHER = "LLM harness=codex;model=openai:gpt-6.1-sol"
 BASE = "# fix: x\n\n## Why\n\nw\n\n## Behavior change\n\nb\n\n## Verification\n\nv\n"
 # Line numbers in BASE: title 1, Why 3, Behavior change 7, Verification 11.
 
-FAKE = """#!{python}
-import json, os, sys
+FAKE = """import json, os, sys
 here = os.path.dirname(os.path.abspath(__file__))
-name = os.path.basename(__file__)
+name = os.path.basename(__file__).removesuffix(".py")
 spec = json.load(open(os.path.join(here, name + ".spec")))
 draft = ".github/PULL_REQUEST_DRAFT.md"
 record = {{
@@ -77,9 +77,7 @@ class World:
     def fake(
         self, name: str, *, rc: int = 0, stdout: str = "", stderr: str = ""
     ) -> None:
-        script = self.bin / name
-        script.write_text(FAKE.format(python=sys.executable))
-        script.chmod(0o755)
+        write_fake(self.bin / name, FAKE.format())
         spec = {"rc": rc, "stdout": stdout, "stderr": stderr}
         (self.bin / f"{name}.spec").write_text(json.dumps(spec))
 
