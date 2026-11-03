@@ -17,12 +17,38 @@ workspace=$BUILD_WORKSPACE_DIRECTORY
 updated=0
 removed=0
 
+# error MESSAGE: a comparison that could not run.
+error() {
+  echo "d2_diagrams: error: $1" >&2
+  exit 2
+}
+
+# digest FILE: sets hash to FILE's SHA-256, as check.sh.tpl does. Not
+# cmp(1): Windows CI's MSYS2 has no diffutils.
+digest() {
+  local line
+  if command -v sha256sum >/dev/null; then
+    line=$(sha256sum <"$1") || error "cannot hash $1 with sha256sum"
+  elif command -v shasum >/dev/null; then
+    line=$(shasum -a 256 <"$1") || error "cannot hash $1 with shasum"
+  else
+    error "cannot hash $1: neither sha256sum nor shasum is on PATH"
+  fi
+  hash=${line%% *}
+  [[ $hash =~ ^[0-9a-f]{64}$ ]] || error "cannot hash $1: the hash tool printed '$line'"
+}
+
 # put RENDER DEST: copies RENDER to DEST, a workspace path, unless it is
 # already there. Outputs are read-only and executable; DEST is neither.
 put() {
-  local render="$PWD/$1" dest="$workspace/$2"
-  if cmp -s "$render" "$dest"; then
-    return
+  local render="$PWD/$1" dest="$workspace/$2" want
+  if [[ -e $dest ]]; then
+    digest "$render"
+    want=$hash
+    digest "$dest"
+    if [[ $hash == "$want" ]]; then
+      return
+    fi
   fi
   rm -f "$dest"
   cp "$render" "$dest"

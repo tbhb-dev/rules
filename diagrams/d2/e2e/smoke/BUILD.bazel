@@ -13,21 +13,26 @@ format_test(
     formatters = ["@tbhb_rules//format:buildifier"],
 )
 
+# A SHA-256 in a message. Only a comparison that ran prints one; one that
+# could not run prints "d2_diagrams: error: ..." instead, so a proof can't
+# pass on a missing tool or an unreadable file.
+SHA256 = "[0-9a-f]{64}"
+
 # Proofs. Each package under proofs/ holds renders made by
 # `bazel run //proofs/<name>:diagrams` and then broken one way; its
 # diagrams_test is manual and must fail for the stated reason.
 PROOFS = {
     # The source changed after its renders were made.
-    "edited_source": "^mismatch: proofs/edited_source/a.d2.sha256 does not hold the hash of a.d2$",
+    "edited_source": "^mismatch: proofs/edited_source/a.d2.sha256 does not hold the hash of a.d2 \\(sha256 {}\\)$".format(SHA256),
     # A source whose PNG was never committed.
     "missing_render": "^missing: proofs/missing_render/a.d2.png$",
     # Renders whose source was deleted.
     "orphan": "^orphan: proofs/orphan/b.d2.svg has no source \\(proofs/orphan/b.d2 is not among the srcs\\)$",
     # The PNG is a different image from the one the manifest vouches for.
-    "png_hash": "^mismatch: proofs/png_hash/a.d2.sha256 does not hold the hash of a.d2.png$",
+    "png_hash": "^mismatch: proofs/png_hash/a.d2.sha256 does not hold the hash of a.d2.png \\(sha256 {}\\)$".format(SHA256),
     # The SVG was edited and its manifest updated to match, so only the
     # fresh render catches it.
-    "stale_svg": "^stale: proofs/stale_svg/a.d2.svg differs from a fresh render of proofs/stale_svg/a.d2$",
+    "stale_svg": "^stale: proofs/stale_svg/a.d2.svg differs from a fresh render of proofs/stale_svg/a.d2 \\(sha256 {0}, fresh render {0}\\)$".format(SHA256),
 }
 
 [
@@ -42,6 +47,6 @@ PROOFS = {
 # The source edit also leaves the SVG stale.
 expect_failure_test(
     name = "proof_edited_source_svg_fails",
-    pattern = "^stale: proofs/edited_source/a.d2.svg differs from a fresh render of proofs/edited_source/a.d2$",
+    pattern = "^stale: proofs/edited_source/a.d2.svg differs from a fresh render of proofs/edited_source/a.d2 \\(sha256 {0}, fresh render {0}\\)$".format(SHA256),
     test = "//proofs/edited_source:diagrams_test",
 )

@@ -8,8 +8,8 @@ own SVG; `x.d2.png`, the SVG rasterized by resvg at twice its size and
 optimized by oxipng; and `x.d2.sha256`, the `shasum -a 256` lines of
 `x.d2`, `x.d2.svg` and `x.d2.png`, in that order.
 
-The check renders the SVG again and compares it with the committed one
-byte for byte, and recomputes the manifest from the committed files. It
+The check renders the SVG again and compares its SHA-256 with the
+committed one's, and recomputes the manifest from the committed files. It
 does not render the PNG again, because rasterized pixels can differ across
 platforms; the manifest vouches for it instead.
 """
