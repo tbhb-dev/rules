@@ -59,6 +59,7 @@ jobs:
               {"id": "python-workspace", "dir": "python/e2e/workspace", "deps": ["root", "python"]},
               {"id": "typescript", "dir": "typescript", "deps": ["root"]},
               {"id": "typescript-smoke", "dir": "typescript/e2e/smoke", "deps": ["root", "typescript"]},
+              {"id": "typescript-bare", "dir": "typescript/e2e/bare", "deps": ["root", "typescript"]},
               {"id": "cloudflare", "dir": "cloudflare", "deps": ["root", "typescript"]},
               {"id": "cloudflare-smoke", "dir": "cloudflare/e2e/smoke", "deps": ["root", "typescript", "cloudflare"]}
             ]
