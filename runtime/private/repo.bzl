@@ -118,8 +118,8 @@ def _python_env_repo_impl(rctx):
     # A package without a wheel for this platform builds from source, and a
     # Rust one (maturin) runs rustup and cargo, which look under HOME unless
     # RUSTUP_HOME and CARGO_HOME say otherwise. HOME above is private, so
-    # point them at the user's own toolchain. getenv also refetches this
-    # environment when they change.
+    # point them at the user's own toolchain. getenv also makes Bazel fetch this
+    # environment again when they change.
     user_home = rctx.getenv("HOME")
     for name, default in [("RUSTUP_HOME", ".rustup"), ("CARGO_HOME", ".cargo")]:
         value = rctx.getenv(name) or (user_home + "/" + default if user_home else None)
