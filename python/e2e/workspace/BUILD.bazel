@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load(
+    "@tbhb_rules_python//:defs.bzl",
+    "import_linter_test",
+    "pyrefly_test",
+    "pytest_test",
+    "ruff_test",
+)
+
+repo_files()
+
+PLANTED = [
+    "planted/run-check",
+    "tools/interim/leak.py",
+]
+
+CLEAN = glob(
+    ["**"],
+    exclude = PLANTED,
+)
+
+# ruff and pyrefly select tools/check-layout by its `uv run --script`
+# shebang, and pyrefly resolves its `tbhbops` import through the member's
+# source root (cli/src), not an installed copy.
+ruff_test(
+    name = "ruff_test",
+    srcs = CLEAN,
+)
+
+pyrefly_test(
+    name = "pyrefly_test",
+    srcs = CLEAN,
+)
+
+pytest_test(
+    name = "pytest_test",
+    srcs = CLEAN,
+    coverage = [
+        "tbhbops",
+        "tools",
+    ],
+)
+
+# Root packages: the `tools` namespace package (no __init__.py) and the
+# src-layout member's `tbhbops`. tools/check-layout has no .py suffix, so
+# it is not a module and its imports are not analysed.
+import_linter_test(
+    name = "import_linter_test",
+    srcs = CLEAN,
+)
+
+# Proofs: each target must fail, for the reason expect_failure_test states.
+PROOF_TAGS = ["manual"]
+
+ruff_test(
+    name = "proof_ruff_script",
+    srcs = CLEAN + ["planted/run-check"],
+    tags = PROOF_TAGS,
+)
+
+import_linter_test(
+    name = "proof_import_linter_leak",
+    srcs = CLEAN + ["tools/interim/leak.py"],
+    tags = PROOF_TAGS,
+)
+
+PROOF_REASONS = {
+    "proof_import_linter_leak": "interim code stays out of tbhbops BROKEN",
+    "proof_ruff_script": "F401 .*`os` imported but unused",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

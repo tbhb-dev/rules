@@ -69,3 +69,25 @@ bzl_library(
     visibility = ["//lint:__subpackages__"],
     deps = [":tree_check"],
 )
+
+exports_files(["okf_docs/check_docs.py"])
+
+bzl_library(
+    name = "okf_docs",
+    srcs = ["okf_docs.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        ":tree_check",
+        "//runtime:defs",
+    ],
+)
+
+bzl_library(
+    name = "reuse",
+    srcs = ["reuse.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        ":tree_check",
+        "//runtime:defs",
+    ],
+)

@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_go//go:def.bzl", "go_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+go_library(
+    name = "core",
+    srcs = ["core.go"],
+    importpath = "example.com/smoke/internal/core",
+    visibility = ["//visibility:public"],
+    deps = ["//internal/platform"],
+)
+
+# Planted defect, for a proof: the package plus one bad file.
+go_library(
+    name = "planted_layers",
+    srcs = [
+        "core.go",
+        "planted_layers.go",
+    ],
+    importpath = "example.com/smoke/internal/core",
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/feature1",
+        "//internal/platform",
+    ],
+)

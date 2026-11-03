@@ -22,3 +22,12 @@ broken_lint = golangci_lint_aspect_factory(
 broken_lint_test = golangci_lint_test_factory(broken_lint)
 
 golangci_lint_parity_test = golangci_lint_parity_test_factory(fixture_lint)
+
+# Not given the go.mod beside the config, which must therefore stay unread.
+outside_lint = golangci_lint_aspect_factory(
+    config = Label("//tests/golangci/outside:.golangci.yml"),
+)
+
+outside_lint_test = golangci_lint_test_factory(outside_lint)
+
+outside_parity_test = golangci_lint_parity_test_factory(outside_lint)

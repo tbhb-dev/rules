@@ -83,19 +83,61 @@ def report(stats: dict[str, object] | None, results: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+HEADER = "[tool.mutmut]"
+NO_GIT = "use_git_change_detection = false"
+# Verdicts that depend on the machine (load, signals) rather than the code:
+# the action fails on them, so Bazel never caches one.
+UNSTABLE = ("timeout", "segfault", "suspicious", "interrupted")
+
+
+def scratch_config(path: Path) -> None:
+    """Turn off mutmut's git change detection in the copy's pyproject.toml.
+
+    The copy has no history, and a report must follow from its inputs alone.
+    """
+    if not path.is_file():
+        return
+    text = path.read_text()
+    if "use_git_change_detection" in text:
+        return
+    lines = text.splitlines(keepends=True)
+    for number, line in enumerate(lines):
+        if line.strip() == HEADER:
+            lines.insert(number + 1, NO_GIT + "\n")
+            path.write_text("".join(lines))
+            return
+
+
+def unstable(text: str) -> list[str]:
+    """Return the machine-dependent verdicts a report records."""
+    counts = dict(line.split("=", 1) for line in text.splitlines())
+    return [key for key in UNSTABLE if counts[key] != "0"]
+
+
 def main(argv: list[str]) -> int:
-    """Run mutmut and write the report; fail only on bad usage."""
+    """Run mutmut and write the report.
+
+    Returns 2 on bad usage and 1 when the run timed out, crashed, was
+    interrupted or found suspicious mutants, so that verdict is not cached.
+    """
     if len(argv) != 2:  # noqa: PLR2004 - REPORT and LOG.
         print("usage: mutmut_report.py REPORT LOG", file=sys.stderr)
         return 2
     out, log = Path(argv[0]), Path(argv[1])
     log.write_text("")
+    scratch_config(Path("pyproject.toml"))
     mutmut(["run"], log)
     stats = None
     if mutmut(["export-cicd-stats"], log).returncode == 0:
         stats = load_stats(STATS)
     results = mutmut(["results", "--all", "true"], log).stdout
-    out.write_text(report(stats, results))
+    text = report(stats, results)
+    out.write_text(text)
+    found = unstable(text)
+    if found:
+        print(f"mutmut_report: not cacheable: {', '.join(found)}", file=sys.stderr)
+        sys.stderr.write(log.read_text())
+        return 1
     return 0
 
 

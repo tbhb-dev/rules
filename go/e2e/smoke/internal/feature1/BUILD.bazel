@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_go//go:def.bzl", "go_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+go_library(
+    name = "feature1",
+    srcs = ["feature1.go"],
+    importpath = "example.com/smoke/internal/feature1",
+    visibility = ["//visibility:public"],
+    deps = ["//internal/core"],
+)
+
+# Planted defect, for a proof: the package plus one bad file.
+go_library(
+    name = "planted_sibling",
+    srcs = [
+        "feature1.go",
+        "planted_sibling.go",
+    ],
+    importpath = "example.com/smoke/internal/feature1",
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/core",
+        "//internal/feature2",
+    ],
+)

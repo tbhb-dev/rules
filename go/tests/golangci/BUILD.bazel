@@ -4,7 +4,7 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
-load(":linters.bzl", "broken_lint_test", "fixture_lint_test", "golangci_lint_parity_test")
+load(":linters.bzl", "broken_lint_test", "fixture_lint_test", "golangci_lint_parity_test", "outside_lint_test", "outside_parity_test")
 load(":oracle.bzl", "golangci_lint_oracle")
 
 repo_files()
@@ -62,9 +62,9 @@ bzl_library(
     visibility = ["//visibility:public"],
     deps = [
         "//:defs",
+        "//private:go_srcs",
         "//private:golangci_lint",
         "@bazel_skylib//lib:shell",
-        "@rules_go//go:def",
     ],
 )
 
@@ -104,17 +104,19 @@ expect_failure_test(
     test = ":library_alone",
 )
 
-# srcs that reach no Go target lint nothing, which must not pass.
+# A package srcs do not reach is unlinted; with expect_linted, the test
+# says so. Here only clean is linted, so a.go (among others) is not.
 fixture_lint_test(
-    name = "nothing_linted",
-    srcs = [FIXTURE + ":repo_files"],
+    name = "unreached",
+    srcs = [FIXTURE + "/clean"],
+    expect_linted = [FIXTURE + ":repo_files"],
     tags = ["manual"],
 )
 
 expect_failure_test(
-    name = "nothing_linted_proof",
-    pattern = "no package was linted",
-    test = ":nothing_linted",
+    name = "unreached_proof",
+    pattern = "^not linted: tests/golangci/fixture/a/a.go$",
+    test = ":unreached",
 )
 
 # A run that does not complete (here, a config golangci-lint rejects) is a
@@ -145,4 +147,44 @@ expect_failure_test(
     name = "parity_divergence_proof",
     pattern = "differ from the oracle's",
     test = ":parity_divergence",
+)
+
+# Nothing outside the action's inputs is read. outside/go.mod sits next to
+# the config and the package in the source tree, but the aspect is not
+# given it. Its Go version (1.21) turns intrange off, so the finding below
+# appears only if the action did not read it.
+outside_lint_test(
+    name = "outside_go_mod",
+    srcs = ["//tests/golangci/outside"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "outside_go_mod_unread_proof",
+    pattern = "^tests/golangci/outside/outside.go:[0-9]+:[0-9]+: for loop can be changed to use an integer range",
+    test = ":outside_go_mod",
+)
+
+# The control: golangci-lint run the ordinary way, which does read that
+# go.mod, finds nothing, so reading it would change the aspect's result.
+golangci_lint_oracle(
+    name = "outside_oracle",
+    testonly = True,
+    srcs = ["//tests/golangci/outside"],
+    config = "//tests/golangci/outside:.golangci.yml",
+    go_mod = "//tests/golangci/outside:go.mod",
+)
+
+outside_parity_test(
+    name = "outside_parity",
+    srcs = ["//tests/golangci/outside"],
+    oracle = ":outside_oracle",
+    strip_prefix = "tests/golangci/outside/",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "outside_go_mod_read_changes_result_proof",
+    pattern = "^--- oracle findings \\(0\\) ---$",
+    test = ":outside_parity",
 )

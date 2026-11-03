@@ -3,7 +3,7 @@
 # Copyright Tony Burns
 
 # mise pins the two launchers (and cocogitto for the interim PR script). Bazel pins every other tool: lint tool
-# binaries come from rules_multitool (multitool.lock.json) and run as
+# binaries come from //pins (literal http_archive pins) and run as
 # Bazel targets, and uv owns Python and the Python tooling (uv.lock).
 
 [settings]
@@ -33,6 +33,12 @@ uv = "0.13.6"
 [tasks.pr]
 description = "Check a PR draft and open or update the PR from it (interim)"
 run = "uv run python -m tools.interim.pull_request"
+
+# Interim until the real PR tooling lands; see tools/interim/squash_merge.py.
+# Usage: mise run merge -- PR [--dry-run] [--signoff]. Agents may only --dry-run.
+[tasks.merge]
+description = "Squash-merge a PR with a plain-text commit message (interim)"
+run = "uv run python -m tools.interim.squash_merge"
 
 # The Bazel suites CI runs, in the same order, for one local or peer run
 # (runbook's peer-test.sh runs this task by default).

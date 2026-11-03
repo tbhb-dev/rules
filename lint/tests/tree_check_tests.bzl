@@ -150,9 +150,14 @@ def _test_bats_uses_pinned_git(name):
 
 def _test_bats_uses_pinned_git_impl(env, target):
     env.expect.that_target(target).action_named("TemplateExpand").substitutions().contains_at_least({
-        "@@PATH_TOOLS@@": "'../rules_multitool++multitool+multitool/tools/git/git'",
         "@@TOOL_ARGS@@": "'a.bats'",
     })
+
+    # The hub's canonical name depends on the module's name in the graph
+    # (`+tools+...` here, `tbhb_rules++tools+...` in a consumer).
+    expand = [a for a in target.actions if a.mnemonic == "TemplateExpand"][0]
+    path_tools = expand.substitutions["@@PATH_TOOLS@@"]
+    env.expect.that_bool(path_tools.endswith("+tools+tbhb_rules_git/git/git'")).equals(True)
     env.expect.that_target(target).provider(RunEnvironmentInfo).environment().contains_exactly({
         "GIT_CONFIG_GLOBAL": "/dev/null",
         "GIT_CONFIG_NOSYSTEM": "1",

@@ -249,6 +249,66 @@ def test_json_round_trip(obj: dict[str, object]) -> None:
         assert ai.read_json(path) == obj
 
 
+LOCK_PROBE = """
+import fcntl, sys
+with open(sys.argv[1], "a") as handle:
+    try:
+        fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
+    except BlockingIOError:
+        sys.exit(1)
+"""
+
+
+def lock_is_free(path: Path) -> bool:
+    done = subprocess.run(
+        [sys.executable, "-c", LOCK_PROBE, str(path)], check=False, env=hook_env()
+    )
+    return done.returncode == 0
+
+
+def test_locked_holds_an_exclusive_lock_and_creates_the_store(
+    tmp_path: Path,
+) -> None:
+    store = tmp_path / "x" / "ascm-interim"
+    with ai.locked(store):
+        assert not lock_is_free(store / "lock")
+    assert lock_is_free(store / "lock")
+    with ai.locked(store):  # the store exists now
+        pass
+    assert [p.name for p in store.iterdir()] == ["lock"]
+
+
+RECORD_WRITER = """
+import sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+import agent_identity as ai
+for i in range(20):
+    ai.write_record(sys.argv[3], {f"{sys.argv[4]}-{i}": "v"}, Path(sys.argv[2]))
+"""
+
+
+def test_concurrent_record_writers_lose_no_update(repo: Path) -> None:
+    """Regression: unlocked read-modify-write lost most of these updates."""
+    writers = [
+        subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                RECORD_WRITER,
+                str(SCRIPT.parent),
+                str(repo),
+                ROOT,
+                str(n),
+            ],
+            env=hook_env(),
+        )
+        for n in range(10)
+    ]
+    assert [w.wait() for w in writers] == [0] * 10
+    assert len(ai.load_record(ROOT)) == 200
+
+
 # ---------------------------------------------------- detection and values
 
 
@@ -973,10 +1033,20 @@ def test_ancestry_stops_at_init_and_gaps_and_limit(
     assert len(ai.ancestry(50)) == ai.ANCESTRY_LIMIT
 
 
+def ps_command(pid: int) -> str:
+    done = subprocess.run(
+        ["ps", "-ww", "-o", "command=", "-p", str(pid)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return done.stdout.strip()
+
+
 def test_ancestry_defaults_to_this_process() -> None:
+    # Compared with ps, not a "python" substring: xdist workers retitle themselves.
     chain = ai.ancestry()
-    assert chain
-    assert "python" in chain[0].lower()
+    assert chain[:2] == [ps_command(os.getpid()), ps_command(os.getppid())]
 
 
 # ------------------------------------------------------------- edit receipts
@@ -2409,54 +2479,283 @@ def test_cmd_trailer_scans_codex_rollouts(repo: Path, tmp_path: Path) -> None:
     assert ai.cmd_trailer(str(other), None, CLAUDE_COMMIT_ENV) == 0
 
 
-# ----------------------------------------------------------------- consume
+# ------------------------------------------------------------- amend
+
+
+GEN_ROOT = ("Generated-by", f"LLM harness=claude-code;session={ROOT}")
+GEN_SUB = ("Generated-by", f"LLM harness=claude-code;session={ROOT};subagent={CHILD}")
+ASSIST_ROOT = ("Assisted-by", f"LLM harness=claude-code;session={ROOT}")
+ASSIST_OTHER = ("Assisted-by", f"LLM harness=codex;session={OTHER}")
+
+
+def test_llm_trailers_reads_only_llm_trailer_lines() -> None:
+    text = (
+        "s\n\nGenerated-by: robot\nNote: Generated-by: LLM x=y\n"
+        f"{GEN_ROOT[0]}: {GEN_ROOT[1]}\nAssisted-by: LLMX a=b\n"
+        f"{ASSIST_OTHER[0]}: {ASSIST_OTHER[1]}\n"
+    )
+    assert ai.llm_trailers(text) == [GEN_ROOT, ASSIST_OTHER]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (f"LLM harness=x;session={ROOT};subagent={CHILD}", (ROOT, CHILD)),
+        (f"LLM session={ROOT}", (ROOT, None)),
+        (f"LLM xsession={ROOT};model=a:subagent=b", (None, None)),
+        ("LLM", (None, None)),
+    ],
+)
+def test_trailer_agent(value: str, expected: tuple[str | None, str | None]) -> None:
+    assert ai.trailer_agent(value) == expected
+
+
+def test_merge_trailers_dedupes_orders_and_lets_generated_win() -> None:
+    found = [ASSIST_ROOT, ASSIST_OTHER, GEN_SUB, GEN_ROOT, GEN_SUB, ASSIST_OTHER]
+    assert ai.merge_trailers(found) == [GEN_SUB, GEN_ROOT, ASSIST_OTHER]
+
+
+def test_add_trailers_rewrites_existing_ones_in_order(tmp_path: Path) -> None:
+    path = msg_file(
+        tmp_path,
+        f"s\n\nbody\n\n{ASSIST_ROOT[0]}: {ASSIST_ROOT[1]}\nGenerated-by: robot\n",
+    )
+    ai.add_trailers(path, [make_ident(model=None)], [], [GEN_SUB])
+    assert path.read_text(encoding="utf-8") == (
+        "s\n\nbody\n\nGenerated-by: robot\n"
+        f"{GEN_SUB[0]}: {GEN_SUB[1]}\n{GEN_ROOT[0]}: {GEN_ROOT[1]}\n"
+    )
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        ("git commit --amend -m x", True),
+        ("/opt/bin/git -C d commit -q --am", True),
+        ("git commit --ame --no-edit", True),
+        ("git commit --amen", True),
+        ("git commit -m x -- --amend", False),
+        ("git commit -m x", False),
+        ("git commit --a", False),
+        ("zsh -c git commit --amend", False),
+        ("git log --amend", False),
+        ("", False),
+    ],
+)
+def test_amending(line: str, expected: bool) -> None:
+    assert ai.amending([line]) is expected
+
+
+def test_amending_takes_the_nearest_git_commit() -> None:
+    assert ai.amending(["python x", "git commit -m x", "git commit --amend"]) is False
+    assert ai.amending(["python x", "git commit --amend", "git commit"]) is True
+    assert ai.amending([]) is False
+
+
+def test_amended_trailers_reads_head_only_when_amending(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    stage(repo, "a.txt")
+    commit(repo, f"s\n\n{GEN_SUB[0]}: {GEN_SUB[1]}\n")
+    monkeypatch.setattr(ai, "ancestry", returning(["git commit -m x"]))
+    assert ai.amended_trailers(repo) == []
+    monkeypatch.setattr(ai, "ancestry", returning(["git commit --amend -m x"]))
+    assert ai.amended_trailers(repo) == [GEN_SUB]
+
+
+def test_cmd_trailer_amend_keeps_the_amended_commits_trailers(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: ``--amend -m`` dropped a subagent's consumed Generated-by."""
+    session = ai.sha256_64("session-raw")
+    sub = f"LLM harness=claude-code;session={session};subagent={CHILD}"
+    stage(repo, "a.txt")
+    commit(repo, f"s\n\nGenerated-by: {sub}\nAssisted-by: {ASSIST_OTHER[1]}\n")
+    monkeypatch.setattr(ai, "ancestry", returning(["git commit --amend -m x"]))
+    path = msg_file(tmp_path, "reworded\n")
+    assert ai.cmd_trailer(str(path), "message", CLAUDE_COMMIT_ENV) == 0
+    # Message only: no new edit, so no committer fallback either.
+    assert path.read_text(encoding="utf-8") == (
+        f"reworded\n\nGenerated-by: {sub}\nAssisted-by: {ASSIST_OTHER[1]}\n"
+    )
+    # New content in the amend adds its writer and keeps the rest.
+    stage(repo, "b.txt")
+    put_receipt(
+        repo, "b.json", make_receipt("b.txt", make_ident(root=session)), session
+    )
+    path = msg_file(tmp_path, "reworded\n")
+    assert ai.cmd_trailer(str(path), "message", CLAUDE_COMMIT_ENV) == 0
+    lines = path.read_text(encoding="utf-8").splitlines()
+    assert lines[2] == f"Generated-by: {sub}"
+    assert lines[3] == (
+        "Generated-by: LLM harness=claude-code:2.1.316;model=anthropic:m;"
+        f"session={session};surface=cli"
+    )
+    assert lines[4:] == [f"Assisted-by: {ASSIST_OTHER[1]}"]
+
+
+def test_cmd_trailer_human_amend_keeps_trailers_and_adds_none(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    stage(repo, "a.txt")
+    commit(repo, f"s\n\n{GEN_SUB[0]}: {GEN_SUB[1]}\n")
+    path = msg_file(tmp_path, "human\n")
+    monkeypatch.setattr(ai, "ancestry", returning(["git commit -m x"]))
+    assert ai.cmd_trailer(str(path), "message", {}) == 0
+    assert path.read_text(encoding="utf-8") == "human\n"
+    monkeypatch.setattr(ai, "ancestry", returning(["git commit --amend -m x"]))
+    assert ai.cmd_trailer(str(path), "message", {}) == 0
+    assert path.read_text(encoding="utf-8") == f"human\n\n{GEN_SUB[0]}: {GEN_SUB[1]}\n"
+
+
+def test_cmd_trailer_keeps_the_fallback_without_any_generated_by(
+    repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    stage(repo, "a.txt")
+    commit(repo, f"s\n\n{ASSIST_OTHER[0]}: {ASSIST_OTHER[1]}\n")
+    monkeypatch.setattr(ai, "ancestry", returning(["git commit --amend -m x"]))
+    path = msg_file(tmp_path, "x\n")
+    assert ai.cmd_trailer(str(path), "message", CLAUDE_COMMIT_ENV) == 0
+    keys = [k for k, _ in ai.llm_trailers(path.read_text(encoding="utf-8"))]
+    assert keys == ["Generated-by", "Assisted-by"]
+
+
+# ------------------------------------------------- claims and consume
 
 
 def commit(repo: Path, message: str = "m") -> None:
     run_git(repo, "commit", "-q", "--no-verify", "-m", message)
 
 
-def test_cmd_consume_marks_receipts_for_committed_paths(repo: Path) -> None:
+def edits_dir(repo: Path, root: str = ROOT) -> Path:
+    return repo / ".git" / "ascm-interim" / "edits" / ai.hx(root)
+
+
+def put_receipt(repo: Path, name: str, receipt: Json, root: str = ROOT) -> Path:
+    path = edits_dir(repo, root) / name
+    ai.write_json(path, receipt)
+    return path
+
+
+def claims_of(repo: Path) -> dict[str, Json]:
+    folder = repo / ".git" / "ascm-interim" / "claims"
+    return {p.stem: loaded(p) for p in sorted(folder.glob("*.json"))}
+
+
+def test_unstaged_blobs_covers_only_staged_files_that_differ(repo: Path) -> None:
+    stage(repo, "same.txt")
+    stage(repo, "changed.txt")
+    stage(repo, "gone.txt")
+    stage(repo, "other.txt")
+    (repo / "changed.txt").write_text("later\n", encoding="utf-8")
+    (repo / "other.txt").write_text("later\n", encoding="utf-8")
+    (repo / "gone.txt").unlink()
+    later = run_git(repo, "hash-object", "changed.txt").strip()
+    staged = {"same.txt", "changed.txt", "gone.txt"}
+    assert ai.unstaged_blobs(repo, staged) == {"changed.txt": later}
+
+
+def test_committing_keeps_staged_paths_except_still_unstaged_edits() -> None:
     who = make_ident()
-    other = make_ident(root=OTHER)
-    store = ai.repo_info(repo)
-    assert store is not None
-    for name, ident in (("a.txt", who), ("b.txt", who), ("a.txt", other)):
-        ai.write_json(
-            store.interim
-            / "edits"
-            / ai.hx(ident.root)
-            / f"{name}-{ident.root[-4:]}.json",
-            make_receipt(name, ident),
+    edits = [
+        (Path(name), make_receipt(path, who, blob))
+        for name, path, blob in (
+            ("staged", "a.txt", "b1"),
+            ("unstaged", "a.txt", "b2"),
+            ("no-blob", "a.txt", None),
+            ("other-path", "c.txt", "b2"),
+            ("clean-path", "d.txt", "b2"),
+            ("not-staged", "e.txt", "b1"),
         )
-    stage(repo, "a.txt")
-    commit(
-        repo,
-        f"s\n\nGenerated-by: LLM harness=claude-code;session={ROOT}\n"
-        f"Assisted-by: LLM harness=codex;session={ROOT}\n",
+    ]
+    got = ai.committing(
+        edits, {"a.txt", "c.txt", "d.txt"}, {"a.txt": "b2", "c.txt": "x"}
     )
-    assert ai.cmd_consume() == 0
-    consumed = {
-        (str(r["path"]), str(r["root"])): bool(r["consumed"])
-        for d in ("a", "d")
-        for r in map(
-            loaded, sorted((store.interim / "edits" / (d * 16)).glob("*.json"))
-        )
-    }
-    assert consumed == {
-        ("a.txt", ROOT): True,
-        ("b.txt", ROOT): False,
-        ("a.txt", OTHER): False,
-    }
+    assert [path.name for path, _ in got] == [
+        "staged",
+        "no-blob",
+        "other-path",
+        "clean-path",
+    ]
 
 
-def test_cmd_consume_on_a_root_commit_without_trailers(repo: Path) -> None:
-    store = ai.repo_info(repo)
-    assert store is not None
-    receipt = store.interim / "edits" / ("a" * 16) / "x.json"
-    ai.write_json(receipt, make_receipt("a.txt", make_ident()))
+def test_write_claim_keys_the_receipts_by_the_index_tree(repo: Path) -> None:
     stage(repo, "a.txt")
-    commit(repo, "no trailers")
+    info = ai.repo_info()
+    assert info is not None
+    ai.write_claim(info, ROOT, [Path("/x/b.json"), Path("/y/a.json")])
+    tree = run_git(repo, "write-tree").strip()
+    assert claims_of(repo) == {tree: {"root": ROOT, "receipts": ["a.json", "b.json"]}}
+
+
+def test_write_claim_writes_nothing_when_the_index_has_no_tree(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    info = ai.repo_info()
+    assert info is not None
+    monkeypatch.setattr(ai, "git", returning((128, "")))
+    ai.write_claim(info, ROOT, [Path("a.json")])
+    assert not (repo / ".git" / "ascm-interim").exists()
+
+
+def test_cmd_trailer_claims_what_it_credits(repo: Path, tmp_path: Path) -> None:
+    stage(repo, "a.txt")
+    stage(repo, "b.txt")
+    blob = run_git(repo, "rev-parse", ":b.txt").strip()
+    (repo / "b.txt").write_text("after staging\n", encoding="utf-8")
+    later = run_git(repo, "hash-object", "b.txt").strip()
+    session = ai.sha256_64("session-raw")
+    child = make_ident(CHILD, root=session)
+    put_receipt(
+        repo, "a.json", make_receipt("a.txt", make_ident(root=session)), session
+    )
+    put_receipt(repo, "b1.json", make_receipt("b.txt", child, blob), session)
+    put_receipt(repo, "b2.json", make_receipt("b.txt", child, later), session)
+    put_receipt(repo, "c.json", make_receipt("c.txt", child), session)
+    path = msg_file(tmp_path)
+    assert ai.cmd_trailer(str(path), None, CLAUDE_COMMIT_ENV) == 0
+    tree = run_git(repo, "write-tree").strip()
+    assert claims_of(repo) == {
+        tree: {"root": session, "receipts": ["a.json", "b1.json"]}
+    }
+    # The edit made after staging is not this commit's: no credit from it alone.
+    ai.write_json(edits_dir(repo, session) / "b1.json", {})
+    other = msg_file(tmp_path, "s\n")
+    assert ai.cmd_trailer(str(other), None, CLAUDE_COMMIT_ENV) == 0
+    assert f"subagent={CHILD}" not in other.read_text(encoding="utf-8")
+
+
+def test_cmd_consume_consumes_exactly_the_claim_of_the_committed_tree(
+    repo: Path,
+) -> None:
+    who = make_ident()
+    claimed = put_receipt(repo, "claimed.json", make_receipt("a.txt", who))
+    later = put_receipt(repo, "later.json", make_receipt("a.txt", who))
+    elsewhere = put_receipt(repo, "x.json", make_receipt("a.txt", who), OTHER)
+    stage(repo, "a.txt")
+    info = ai.repo_info()
+    assert info is not None
+    ai.write_claim(info, ROOT, [claimed, edits_dir(repo) / "missing.json"])
+    stale = repo / ".git" / "ascm-interim" / "claims" / "stale.json"
+    ai.write_json(stale, {"root": ROOT, "receipts": ["later.json"]})
+    commit(repo)
+    assert ai.cmd_consume() == 0
+    assert [loaded(p)["consumed"] for p in (claimed, later, elsewhere)] == [
+        True,
+        False,
+        False,
+    ]
+    assert not (edits_dir(repo) / "missing.json").exists()
+    assert list(claims_of(repo)) == ["stale"]
+    # Nothing to claim: a second post-commit changes nothing.
+    assert ai.cmd_consume() == 0
+    assert loaded(later)["consumed"] is False
+
+
+def test_cmd_consume_without_a_claim_consumes_nothing(repo: Path) -> None:
+    receipt = put_receipt(repo, "x.json", make_receipt("a.txt", make_ident()))
+    stage(repo, "a.txt")
+    commit(repo, f"s\n\nGenerated-by: LLM harness=claude-code;session={ROOT}\n")
     assert ai.cmd_consume() == 0
     assert loaded(receipt)["consumed"] is False
 
@@ -2466,21 +2765,52 @@ def test_cmd_consume_outside_a_repository(plain: Path) -> None:
     assert list(plain.iterdir()) == []
 
 
-def test_cmd_consume_reads_only_the_session_attribute(repo: Path) -> None:
-    store = ai.repo_info(repo)
-    assert store is not None
-    ai.write_json(
-        store.interim / "edits" / ("a" * 16) / "x.json",
-        make_receipt("a.txt", make_ident()),
+def test_failed_attempt_then_retry_keeps_and_then_consumes_every_receipt(
+    repo: Path, tmp_path: Path
+) -> None:
+    """Regression: a failed commit attempt must not consume or drop receipts."""
+    session = ai.sha256_64("session-raw")
+    root = put_receipt(
+        repo, "root.json", make_receipt("a.txt", make_ident(root=session)), session
+    )
+    sub = put_receipt(
+        repo,
+        "sub.json",
+        make_receipt("b.txt", make_ident(CHILD, root=session)),
+        session,
     )
     stage(repo, "a.txt")
-    commit(
-        repo,
-        f"s\n\nGenerated-by: LLM harness=x;session=sha-256-64:{'a' * 16}\n"
-        f"Note: session={ROOT}\n",
-    )
-    ai.cmd_consume()
-    assert loaded(store.interim / "edits" / ("a" * 16) / "x.json")["consumed"] is True
+    stage(repo, "b.txt")
+    first = msg_file(tmp_path)
+    assert ai.cmd_trailer(str(first), None, CLAUDE_COMMIT_ENV) == 0
+    # commit-msg rejects the attempt: no commit, so no post-commit.
+    assert [loaded(p)["consumed"] for p in (root, sub)] == [False, False]
+    retry = msg_file(tmp_path)
+    assert ai.cmd_trailer(str(retry), None, CLAUDE_COMMIT_ENV) == 0
+    assert retry.read_text(encoding="utf-8") == first.read_text(encoding="utf-8")
+    assert retry.read_text(encoding="utf-8").count("Generated-by:") == 2
+    commit(repo)
+    assert ai.cmd_consume() == 0
+    assert [loaded(p)["consumed"] for p in (root, sub)] == [True, True]
+
+
+def test_a_receipt_recorded_during_the_commit_is_left_for_the_next(
+    repo: Path, tmp_path: Path
+) -> None:
+    """Regression: post-commit consumed edits recorded after the trailers ran."""
+    session = ai.sha256_64("session-raw")
+    child = make_ident(CHILD, root=session)
+    first = put_receipt(repo, "1.json", make_receipt("b.txt", child), session)
+    stage(repo, "b.txt")
+    assert ai.cmd_trailer(str(msg_file(tmp_path)), None, CLAUDE_COMMIT_ENV) == 0
+    late = put_receipt(repo, "2.json", make_receipt("b.txt", child), session)
+    commit(repo)
+    assert ai.cmd_consume() == 0
+    assert [loaded(p)["consumed"] for p in (first, late)] == [True, False]
+    stage(repo, "b.txt", "second edit\n")
+    path = msg_file(tmp_path)
+    assert ai.cmd_trailer(str(path), None, CLAUDE_COMMIT_ENV) == 0
+    assert f"subagent={CHILD}" in path.read_text(encoding="utf-8")
 
 
 # ------------------------------------------------------------------- check
@@ -2677,6 +3007,25 @@ def test_script_runs_as_main(tmp_path: Path) -> None:
     assert done.returncode == 1
 
 
+def test_run_reports_a_crash_in_one_line(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def boom() -> int:
+        raise KeyError(RAW_ID)
+
+    monkeypatch.setattr(ai, "cmd_consume", boom)
+    assert ai.run(["consume"], {}) == 1
+    line = boom.__code__.co_firstlineno + 1
+    assert capsys.readouterr().err == (
+        f"agent_identity consume: failed: KeyError in boom (line {line})\n"
+    )
+    monkeypatch.setattr(ai, "cmd_consume", returning(0))
+    assert ai.run(["consume"], {}) == 0
+
+
+RAW_ID = "raw-session-id-0000"
+
+
 # ----------------------------------------------- end to end with real hooks
 
 # The repository's live prek config, so the end-to-end tests exercise exactly
@@ -2743,20 +3092,32 @@ def test_identity_hooks_keeps_only_agent_identity_hooks(tmp_path: Path) -> None:
     }
 
 
-def test_live_config_wires_every_agent_identity_hook() -> None:
-    ids = {
-        h["id"]
+def test_live_config_runs_only_stamp_docs_under_prek() -> None:
+    hooks = [
+        h
         for entry in cast(
             "list[dict[str, object]]", identity_hooks(PREK_CONFIG)["repos"]
         )
-        for h in cast("list[dict[str, str]]", entry["hooks"])
-    }
-    assert ids == {
-        "agent-identity-stamp-docs",
-        "agent-identity-trailer",
-        "agent-identity-check",
-        "agent-identity-consume",
-    }
+        for h in cast("list[dict[str, object]]", entry["hooks"])
+    ]
+    assert [(h["id"], h["stages"]) for h in hooks] == [
+        ("agent-identity-stamp-docs", ["pre-commit"])
+    ]
+
+
+@needs_prek
+def test_install_writes_plain_identity_hooks(wired: Path) -> None:
+    hooks = wired / ".git" / "hooks"
+    for hook, command in (
+        ("prepare-commit-msg", "trailer"),
+        ("commit-msg", "check"),
+        ("post-commit", "consume"),
+    ):
+        text = (hooks / hook).read_text(encoding="utf-8")
+        assert "prek" not in text
+        assert text.endswith(f'tools/interim/agent_identity.py {command} "$@"\n')
+        assert os.access(hooks / hook, os.X_OK)
+    assert "prek" in (hooks / "pre-commit").read_text(encoding="utf-8")
 
 
 @pytest.fixture
@@ -2840,7 +3201,9 @@ CLAUDE_E2E = {
 }
 
 
-def claude_write(repo: Path, name: str, **kw: object) -> None:
+def claude_write(
+    repo: Path, name: str, content: str | None = None, **kw: object
+) -> None:
     (repo / "t.jsonl").write_text(
         json.dumps({"message": {"model": "claude-opus-5-5"}}) + "\n", encoding="utf-8"
     )
@@ -2851,7 +3214,9 @@ def claude_write(repo: Path, name: str, **kw: object) -> None:
         tool_input={"file_path": name},
         **kw,
     )
-    (repo / name).write_text(f"{name}\n", encoding="utf-8")
+    (repo / name).write_text(
+        f"{name}\n" if content is None else content, encoding="utf-8"
+    )
     record(repo, "claude", data, CLAUDE_E2E)
 
 
@@ -3023,6 +3388,135 @@ def test_e2e_store_is_shared_between_worktrees(wired: Path, tmp_path: Path) -> N
     assert [r["path"] for _, r in ai.load_edits(store, session)] == ["a.txt"]
 
 
+SUB_E2E = ai.sha256_64("agent-raw")
+
+
+def generated_subagents(repo: Path) -> list[str | None]:
+    """The ``subagent=`` of each Generated-by trailer on HEAD (None: the root)."""
+    return [
+        (m[1] if (m := re.search(r"subagent=(\S+?)(;|$)", line)) else None)
+        for line in trailers(repo)
+        if line.startswith("Generated-by")
+    ]
+
+
+@needs_prek
+def test_e2e_failed_commit_then_retry_keeps_the_subagent_trailer(
+    wired: Path,
+) -> None:
+    claude_write(wired, "a.txt")
+    claude_write(wired, "b.txt", agent_id="agent-raw")
+    run_git(wired, "add", "a.txt", "b.txt")
+    head = run_git(wired, "rev-parse", "HEAD")
+    failed = git_commit(wired, "feat: ab", CLAUDE_E2E, "-s")
+    assert failed.returncode != 0
+    assert run_git(wired, "rev-parse", "HEAD") == head
+    done = git_commit(wired, "feat: ab", CLAUDE_E2E)
+    assert done.returncode == 0, done.stderr
+    assert sorted(generated_subagents(wired), key=str) == [None, SUB_E2E]
+    receipts = list((wired / ".git" / "ascm-interim" / "edits").rglob("*.json"))
+    assert [loaded(p)["consumed"] for p in receipts] == [True, True]
+
+
+@needs_prek
+@pytest.mark.parametrize("hook", ["prepare-commit-msg", "commit-msg"])
+def test_e2e_a_concurrent_edit_during_a_hook_does_not_fail_the_commit(
+    wired: Path, hook: str
+) -> None:
+    """Regression: under prek these stages failed on a concurrent edit.
+
+    prek reported "files were modified by this hook" and stashed unstaged
+    edits away while the hook ran.
+    """
+    (wired / "base.txt").write_text("unstaged\n", encoding="utf-8")
+    shim = wired / ".git" / "hooks" / hook
+    lines = shim.read_text(encoding="utf-8").splitlines(keepends=True)
+    # Another agent's edit lands while the hook runs, and sees the real file.
+    lines.insert(1, "cat base.txt > seen.txt; echo concurrent >> base.txt\n")
+    shim.write_text("".join(lines), encoding="utf-8")
+    claude_write(wired, "a.txt")
+    run_git(wired, "add", "a.txt")
+    done = git_commit(wired, "feat: a", CLAUDE_E2E)
+    assert done.returncode == 0, done.stderr
+    assert (wired / "seen.txt").read_text(encoding="utf-8") == "unstaged\n"
+    base = (wired / "base.txt").read_text(encoding="utf-8")
+    assert base == "unstaged\nconcurrent\n"
+    assert generated_subagents(wired) == [None]
+
+
+@needs_prek
+def test_e2e_a_formatter_rewrite_keeps_the_subagent_trailer(wired: Path) -> None:
+    config = wired / ".pre-commit-config.yaml"
+    loaded_config = cast("dict[str, list[object]]", yaml.safe_load(config.read_text()))
+    loaded_config["repos"].append(
+        {"repo": "builtin", "hooks": [{"id": "trailing-whitespace"}]}
+    )
+    config.write_text(yaml.safe_dump(loaded_config), encoding="utf-8")
+    claude_write(wired, "b.txt", "sub   \n", agent_id="agent-raw")
+    run_git(wired, "add", "b.txt")
+    failed = git_commit(wired, "feat: b", CLAUDE_E2E)
+    assert failed.returncode != 0
+    assert (wired / "b.txt").read_text(encoding="utf-8") == "sub\n"
+    run_git(wired, "add", "b.txt")
+    done = git_commit(wired, "feat: b", CLAUDE_E2E)
+    assert done.returncode == 0, done.stderr
+    assert generated_subagents(wired) == [SUB_E2E]
+    (receipt,) = (wired / ".git" / "ascm-interim" / "edits").rglob("*.json")
+    assert loaded(receipt)["consumed"] is True
+
+
+@needs_prek
+def test_e2e_an_edit_after_staging_is_credited_to_the_commit_that_has_it(
+    wired: Path,
+) -> None:
+    claude_write(wired, "a.txt")
+    run_git(wired, "add", "a.txt")
+    claude_write(wired, "a.txt", "a.txt\nsub\n", agent_id="agent-raw")
+    done = git_commit(wired, "feat: a", CLAUDE_E2E)
+    assert done.returncode == 0, done.stderr
+    assert generated_subagents(wired) == [None]
+    run_git(wired, "add", "a.txt")
+    done = git_commit(wired, "feat: sub", CLAUDE_E2E)
+    assert done.returncode == 0, done.stderr
+    assert generated_subagents(wired) == [SUB_E2E]
+
+
+@needs_prek
+@pytest.mark.parametrize("flags", [("--amend",), ("--amend", "--no-edit")])
+def test_e2e_amend_keeps_the_subagent_trailer(
+    wired: Path, flags: tuple[str, ...]
+) -> None:
+    """Regression: an amend after post-commit dropped the subagent's credit."""
+    claude_write(wired, "a.txt")
+    claude_write(wired, "b.txt", agent_id="agent-raw")
+    run_git(wired, "add", "a.txt", "b.txt")
+    assert git_commit(wired, "feat: ab", CLAUDE_E2E).returncode == 0
+    before = trailers(wired)
+    args = ["git", "commit", "-q", *flags]
+    if "--no-edit" not in flags:
+        args += ["-m", "feat: reworded"]
+    done = subprocess.run(
+        args, capture_output=True, text=True, check=False, cwd=wired,
+        env=hook_env(CLAUDE_E2E),
+    )  # fmt: skip
+    assert done.returncode == 0, done.stderr
+    assert trailers(wired) == before
+
+
+@needs_prek
+def test_e2e_amend_with_new_root_edit_orders_generated_first(wired: Path) -> None:
+    claude_write(wired, "b.txt", agent_id="agent-raw")
+    run_git(wired, "add", "b.txt")
+    assert git_commit(wired, "feat: b", CLAUDE_E2E).returncode == 0
+    assert [t.split(":")[0] for t in trailers(wired)] == ["Generated-by", "Assisted-by"]
+    claude_write(wired, "a.txt")
+    run_git(wired, "add", "a.txt")
+    done = git_commit(wired, "feat: ab", CLAUDE_E2E, "--amend", "--no-edit")
+    assert done.returncode == 0, done.stderr
+    assert sorted(generated_subagents(wired), key=str) == [None, SUB_E2E]
+    assert not any(t.startswith("Assisted-by") for t in trailers(wired))
+
+
 # ------------------------------------------------- pinning exact behavior
 
 
@@ -3093,7 +3587,7 @@ def test_store_directory_names(repo: Path, tmp_path: Path) -> None:
     info = ai.repo_info()
     assert info is not None
     ai.codex_scan(ROOT_THREAD, info, {"CODEX_HOME": str(home)})
-    assert sorted(os.listdir(store)) == ["cmds", "edits", "marks", "sessions"]  # noqa: PTH208 -- exact on-disk names
+    assert sorted(os.listdir(store)) == ["cmds", "edits", "lock", "marks", "sessions"]  # noqa: PTH208 -- exact on-disk names
     feed_sid = ai.sha256_64("fresh")
     ai.write_json(store / "sessions" / f"{ai.hx(feed_sid)}.json", {})
     assert sorted(os.listdir(store / "sessions"))  # noqa: PTH208 -- exact on-disk names
@@ -3125,7 +3619,7 @@ def test_cmd_record_writes_the_sessions_directory(
 ) -> None:
     feed(monkeypatch, {"session_id": "s", "model": "m"})
     assert ai.cmd_record("antigravity", {}) == 0
-    assert os.listdir(repo / ".git" / "ascm-interim") == ["sessions"]  # noqa: PTH208 -- exact on-disk names
+    assert sorted(os.listdir(repo / ".git" / "ascm-interim")) == ["lock", "sessions"]  # noqa: PTH208 -- exact on-disk names
 
 
 def test_finish_command_prefers_the_newest_not_the_last_path(repo: Path) -> None:
@@ -3447,9 +3941,10 @@ def test_add_trailers_asks_git_to_add_only_different_values(
             "addIfDifferent",
             f"--trailer=Generated-by: LLM harness=claude-code;session={ROOT}",
             f"--trailer=Assisted-by: LLM harness=claude-code;session={OTHER}",
-            str(path),
+            str(path.with_name("MSG.ascm")),
         )
     ]
+    assert not path.with_name("MSG.ascm").exists()
 
 
 def test_cmd_consume_asks_git_exact_questions(
@@ -3466,14 +3961,7 @@ def test_cmd_consume_asks_git_exact_questions(
 
     monkeypatch.setattr(ai, "git", spy)
     assert ai.cmd_consume() == 0
-    calls = [call for call in calls if call[0][0] != "rev-parse"]
-    assert calls == [
-        (("log", "-1", "--format=%B"), repo),
-        (
-            tuple("diff-tree --root --no-commit-id --name-only -r -z HEAD".split()),  # noqa: SIM905 -- a list literal would duplicate the module under test
-            repo,
-        ),
-    ]
+    assert calls[-1] == (("rev-parse", "HEAD^{tree}"), repo)
 
 
 def test_check_pair_splits_at_the_first_equals_sign() -> None:
@@ -4493,6 +4981,9 @@ def test_staged_docs_picks_stampable_markdown(repo: Path) -> None:
         "docs/notes.txt",
         "docs/data.md.bak",
         "docs/mdfile",
+        "tools/testdata/x.md",
+        "testdata/y.md",
+        "a/testdata/b/z.md",
     ):
         stage_doc(repo, rel, "x\n")
     got = ai.staged_docs(repo)
@@ -4652,6 +5143,17 @@ def test_cmd_stamp_docs_stamps_a_human_commit_from_receipts(repo: Path) -> None:
     ]
     # Receipts are read, not consumed.
     assert len(receipts_of(repo, SESSION_HASH)) == 1
+
+
+def test_cmd_stamp_docs_leaves_testdata_fixtures_byte_identical(repo: Path) -> None:
+    """Regression: a staged fixture under testdata/ got a ``generated`` block."""
+    rel = "tools/interim/testdata/pull_request/passing-draft.md"
+    stage_doc(repo, rel)
+    before = (repo / rel).read_bytes()
+    edit_by(MAIN, rel, 1_800_000_000)
+    assert ai.cmd_stamp_docs(CLAUDE_COMMIT_ENV) == 0
+    assert staged_text(repo, rel) == before
+    assert (repo / rel).read_bytes() == before
 
 
 def test_cmd_stamp_docs_credits_a_shell_edit_to_the_committer(

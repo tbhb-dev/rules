@@ -7,14 +7,6 @@ reviewers:
   - tbhb
 assignees:
   - "@me"
-generated:
-  - role: generated
-    harness: claude-code:2.1.316
-    model: anthropic:claude-opus-5-5
-    effort: medium
-    surface: cli
-    session: sha-256-64:debb814921f029ad
-    at: "2026-11-03T04:30:46Z"
 ---
 
 # feat(cli): add the stamp subcommand

@@ -4,7 +4,7 @@
 
 # Runs go-arch-lint over a copy of a Go module. Generated from
 # go_arch_lint.sh.tpl by go_arch_lint_test; the @@NAME@@ markers are filled
-# in at analysis time.
+# in at analysis time. Arguments go to `go-arch-lint check`.
 
 set -euo pipefail
 
@@ -12,7 +12,6 @@ root=$PWD
 tool="$root/@@TOOL@@"
 manifest=@@MANIFEST@@
 config=@@CONFIG@@
-args=(@@ARGS@@)
 
 ws="$TEST_TMPDIR/ws"
 mkdir -p "$ws"
@@ -52,4 +51,4 @@ echo "go_arch_lint_test: checking $count Go files"
   --output-color=false \
   --project-path "$ws" \
   --arch-file "$config" \
-  ${args[@]+"${args[@]}"}
+  "$@"

@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+go_library(
+    name = "thing",
+    srcs = ["thing.go"],
+    importpath = "example.com/quickstart/pkg/thing",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_google_go_cmp//cmp"],
+)
+
+go_test(
+    name = "thing_test",
+    srcs = ["thing_test.go"],
+    embed = [":thing"],
+)

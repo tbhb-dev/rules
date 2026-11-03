@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+[tool.importlinter]
+root_packages = ["tools"]
+
+[[tool.importlinter.contracts]]
+name = "report must not use calc"
+type = "forbidden"
+source_modules = ["tools.report"]
+forbidden_modules = ["tools.calc"]

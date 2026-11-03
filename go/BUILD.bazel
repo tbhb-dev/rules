@@ -2,15 +2,26 @@
 # Copyright Tony Burns
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-load("@tbhb_rules//format:defs.bzl", "formatter")
-load("@tbhb_rules//lint:defs.bzl", "tree_check_test")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@tbhb_rules//format:defs.bzl", "format", "format_test", "formatter")
+load(
+    "@tbhb_rules//lint:defs.bzl",
+    "editorconfig_checker_test",
+    "gitleaks_test",
+    "rumdl_test",
+    "ryl_test",
+    "shellcheck_test",
+    "shfmt_test",
+    "tombi_test",
+)
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("//private:formatter_include.bzl", "formatter_include")
 
 exports_files([
     ".golangci.yml",
+    "README.md",
     "go.mod",
     "go.sum",
-    "multitool.lock.json",
 ])
 
 repo_files(
@@ -54,39 +65,102 @@ formatter(
     visibility = ["//visibility:public"],
 )
 
-# Shell scripts and templates, held to the parent module's bar.
-SHELL_SCRIPTS = [
-    "private/deadcode.sh",
-    "private/go_arch_lint.sh.tpl",
-    "private/go_mod_tidy.sh.tpl",
-    "private/golangci_fmt.sh.tpl",
-    "private/golangci_lint.sh",
-    "private/golangci_lint_merge.sh",
-    "private/golangci_lint_test.sh.tpl",
-    "private/report_test.sh.tpl",
-    "tests/golangci/oracle.sh",
-    "tests/golangci/parity_test.sh.tpl",
+# This module is released on its own (strip_prefix go/), so it carries its
+# own copies of the parent module's lint configs. Each copy must match the
+# parent's byte for byte; a change goes to both. .gitignore and .rylignore
+# are this module's own (.ryl.toml reads them).
+LINT_CONFIGS = [
+    ".editorconfig",
+    ".editorconfig-checker.json",
+    ".gitleaks.toml",
+    ".rumdl.toml",
+    ".ryl.toml",
+    "tombi.toml",
 ]
 
-tree_check_test(
-    name = "shellcheck_test",
+[
+    diff_test(
+        name = "config_matches_parent_" + config.lstrip(".").replace(".", "_").replace("-", "_"),
+        file1 = config,
+        file2 = "@tbhb_rules//:" + config,
+    )
+    for config in LINT_CONFIGS
+]
+
+# The parent module's whole-tree checks, over this module's files.
+gitleaks_test(
+    name = "gitleaks_test",
     srcs = [":repo_files"],
-    tool = "@multitool//tools/shellcheck",
-    tool_args = [
-        "-o",
-        "check-extra-masked-returns",
-    ] + SHELL_SCRIPTS,
+    config = ".gitleaks.toml",
 )
 
-# shfmt reads its style from the parent module's .editorconfig, which the
-# copy of this module lacks, so the flags spell it out: 2-space indent.
-tree_check_test(
+ryl_test(
+    name = "ryl_test",
+    srcs = [":repo_files"],
+    config = ".ryl.toml",
+)
+
+tombi_test(
+    name = "tombi_test",
+    srcs = [":repo_files"],
+    config = "tombi.toml",
+)
+
+rumdl_test(
+    name = "rumdl_test",
+    srcs = [":repo_files"],
+    config = ".rumdl.toml",
+)
+
+editorconfig_checker_test(
+    name = "editorconfig_checker_test",
+    srcs = [":repo_files"],
+    config = ".editorconfig-checker.json",
+)
+
+# This module's own formatting: `bazel run //:format` rewrites the tree,
+# `//:format.check` and `format_test` check it, with the parent module's
+# formatters plus golangci_fmt. shfmt takes the bash dialect of the
+# templates from .editorconfig.
+formatter_include(
+    name = "shfmt_templates",
+    include = ["*.sh.tpl"],
+    formatter = "@tbhb_rules//format:shfmt",
+)
+
+FORMATTERS = [
+    ":golangci_fmt",
+    ":shfmt_templates",
+    "@tbhb_rules//format:buildifier",
+    "@tbhb_rules//format:rumdl",
+    "@tbhb_rules//format:ryl",
+    "@tbhb_rules//format:shfmt",
+]
+
+# The fmt fixtures are deliberately unformatted.
+FORMAT_EXCLUDE = ["tests/fmt/dirty/*"]
+
+format(
+    name = "format",
+    exclude = FORMAT_EXCLUDE,
+    formatters = FORMATTERS,
+)
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    exclude = FORMAT_EXCLUDE,
+    formatters = FORMATTERS,
+)
+
+# Shell scripts and templates (found by extension or shebang), held to the
+# parent module's bar. shfmt takes its style from .editorconfig.
+shellcheck_test(
+    name = "shellcheck_test",
+    srcs = [":repo_files"],
+)
+
+shfmt_test(
     name = "shfmt_test",
     srcs = [":repo_files"],
-    tool = "@multitool//tools/shfmt",
-    tool_args = [
-        "-i",
-        "2",
-        "-d",
-    ] + SHELL_SCRIPTS,
 )

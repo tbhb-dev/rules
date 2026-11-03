@@ -4,8 +4,8 @@
 """Whole-tree lint tests, one macro per tool, all built on `tree_check_test`.
 
 Each macro takes `srcs` (usually a `repo_files` target), an optional
-`config` and `data`, and a `tool` that defaults to the tbhb_rules pin in the
-`@multitool` hub. Any other keyword (`min_files`, `tags`, `size`, ...) goes
+`config` and `data`, and a `tool` that defaults to the tbhb_rules pin, a
+`@tbhb_rules_<tool>` hub label from //pins. Any other keyword (`min_files`, `tags`, `size`, ...) goes
 to `tree_check_test`.
 """
 
@@ -17,7 +17,7 @@ visibility("//lint/...")
 def _config_args(config, flag):
     return [flag, "{config}"] if config else []
 
-def gitleaks_test(name, srcs, config = None, tool = Label("@multitool//tools/gitleaks"), **kwargs):
+def gitleaks_test(name, srcs, config = None, tool = Label("@tbhb_rules_gitleaks//:gitleaks"), **kwargs):
     """Scans the files in `srcs` for secrets with `gitleaks dir`.
 
     This checks the working tree only. Git history needs `.git`, which a
@@ -41,7 +41,7 @@ def gitleaks_test(name, srcs, config = None, tool = Label("@multitool//tools/git
         **kwargs
     )
 
-def ryl_test(name, srcs, config = None, tool = Label("@multitool//tools/ryl"), **kwargs):
+def ryl_test(name, srcs, config = None, tool = Label("@tbhb_rules_ryl//:ryl"), **kwargs):
     """Lints YAML with `ryl check --strict`.
 
     Args:
@@ -61,7 +61,7 @@ def ryl_test(name, srcs, config = None, tool = Label("@multitool//tools/ryl"), *
         **kwargs
     )
 
-def rumdl_test(name, srcs, config = None, tool = Label("@multitool//tools/rumdl"), **kwargs):
+def rumdl_test(name, srcs, config = None, tool = Label("@tbhb_rules_rumdl//:rumdl"), **kwargs):
     """Lints Markdown with `rumdl check`.
 
     rumdl takes the nearest directory holding `.git` as the project root, for
@@ -86,7 +86,7 @@ def rumdl_test(name, srcs, config = None, tool = Label("@multitool//tools/rumdl"
         **kwargs
     )
 
-def tombi_test(name, srcs, config = None, schemas = {}, tool = Label("@multitool//tools/tombi"), **kwargs):
+def tombi_test(name, srcs, config = None, schemas = {}, tool = Label("@tbhb_rules_tombi//:tombi"), **kwargs):
     """Checks TOML formatting and lints it with tombi, offline.
 
     Creates `<name>.format` and `<name>.lint` and a `<name>` test suite.
@@ -131,7 +131,7 @@ def tombi_test(name, srcs, config = None, schemas = {}, tool = Label("@multitool
         visibility = kwargs.get("visibility"),
     )
 
-def editorconfig_checker_test(name, srcs, config = None, tool = Label("@multitool//tools/editorconfig-checker"), **kwargs):
+def editorconfig_checker_test(name, srcs, config = None, tool = Label("@tbhb_rules_editorconfig_checker//:editorconfig-checker"), **kwargs):
     """Checks every file in `srcs` against the `.editorconfig` files among them.
 
     Args:
@@ -155,8 +155,8 @@ def actionlint_test(
         name,
         srcs,
         config = None,
-        tool = Label("@multitool//tools/actionlint"),
-        shellcheck = Label("@multitool//tools/shellcheck"),
+        tool = Label("@tbhb_rules_actionlint//:actionlint"),
+        shellcheck = Label("@tbhb_rules_shellcheck//:shellcheck"),
         shellcheck_opts = "-o check-extra-masked-returns",
         **kwargs):
     """Lints GitHub Actions workflows under `.github/` with actionlint.
@@ -189,7 +189,7 @@ def actionlint_test(
         **kwargs
     )
 
-def zizmor_test(name, srcs, config = None, tool = Label("@multitool//tools/zizmor"), persona = "pedantic", **kwargs):
+def zizmor_test(name, srcs, config = None, tool = Label("@tbhb_rules_zizmor//:zizmor"), persona = "pedantic", **kwargs):
     """Audits GitHub Actions workflows under `.github/` with zizmor's offline audits.
 
     The online audits need the network and a GitHub token, so they do not
@@ -225,8 +225,8 @@ def bats_test(
         name,
         srcs,
         tests,
-        tool = Label("@multitool//tools/bats"),
-        git = Label("@multitool//tools/git"),
+        tool = Label("@tbhb_rules_bats//:bats"),
+        git = Label("@tbhb_rules_git//:git"),
         **kwargs):
     """Runs bats test files over a copy of `srcs`.
 

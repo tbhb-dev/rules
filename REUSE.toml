@@ -66,6 +66,7 @@ path = [
   ".gitattributes",
   ".gitignore",
   ".editorconfig",
+  "go/.editorconfig",
   ".cspell.jsonc",
   ".bazelrc",
   "preset.bazelrc",

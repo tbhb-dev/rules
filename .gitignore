@@ -28,3 +28,13 @@ mutants/
 .rumdl_cache/
 .ryl_cache/
 .complexipy_cache/
+
+# vale sync writes the synced style packages and templates under .vale/;
+# only the project's own style and vocabulary are tracked.
+.vale/*
+!.vale/project/
+!.vale/config/
+.vale/config/*
+!.vale/config/vocabularies/
+.vale/config/vocabularies/*
+!.vale/config/vocabularies/project/

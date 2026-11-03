@@ -38,7 +38,6 @@ def _go_arch_lint_test_impl(ctx):
         template = ctx.file._runner,
         output = script,
         substitutions = {
-            "@@ARGS@@": " ".join([shell.quote(a) for a in ctx.attr.args]),
             "@@CONFIG@@": shell.quote(ctx.file.config.short_path[len(prefix):]),
             "@@MANIFEST@@": manifest.short_path,
             "@@TOOL@@": ctx.executable.tool.short_path,
@@ -61,9 +60,10 @@ config must set `allow.deepScan: false`: deep scanning runs the go command,
 which the test does not have. The test fails when no Go file reaches the
 copy, and go-arch-lint fails on a file that belongs to no component, so a
 package `srcs` reach cannot escape the contracts. A package `srcs` does not
-reach is not checked: list every binary and test, or every package.""",
+reach is not checked: list every binary and test, or every package.
+
+The test's `args` go to `go-arch-lint check`, such as `--max-warnings`.""",
     attrs = {
-        "args": attr.string_list(doc = "Extra `go-arch-lint check` flags, such as `--max-warnings`."),
         "config": attr.label(
             mandatory = True,
             allow_single_file = True,
@@ -76,7 +76,7 @@ reach is not checked: list every binary and test, or every package.""",
             doc = "Go targets whose main-repository sources make up the module.",
         ),
         "tool": attr.label(
-            default = Label("//private:go_arch_lint"),
+            default = Label("//private:go_arch_lint_bin"),
             executable = True,
             allow_files = True,
             cfg = "target",

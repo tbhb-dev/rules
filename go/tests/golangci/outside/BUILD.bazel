@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_go//go:def.bzl", "go_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files([
+    ".golangci.yml",
+    "go.mod",
+])
+
+go_library(
+    name = "outside",
+    srcs = ["outside.go"],
+    importpath = "example.com/outside",
+    visibility = ["//tests:__subpackages__"],
+)

@@ -149,8 +149,12 @@ def test_main_writes_the_report_from_the_stats(
     stats.parent.mkdir()
     stats.write_text(json.dumps(ALL_KILLED | {"survived": 1, "total": 5}))
     Path("log").write_text("stale")
+    Path("pyproject.toml").write_text("[tool.mutmut]\nsource_paths = []\n")
     assert mr.main(["report", "log"]) == 0
     assert fake_mutmut == [["run"], ["export-cicd-stats"], ["results", "--all", "true"]]
+    assert Path("pyproject.toml").read_text() == (
+        "[tool.mutmut]\nuse_git_change_detection = false\nsource_paths = []\n"
+    )
     assert Path("log").read_text() == ""
     assert Path("report").read_text().splitlines() == [
         "total=5",
@@ -177,7 +181,67 @@ def test_main_reports_an_interrupted_run_when_the_export_fails(
     export_status["code"] = 1
     read: list[Path] = []
     monkeypatch.setattr(mr, "load_stats", read.append)
-    assert mr.main(["report", "log"]) == 0
+    Path("log").write_text("")
+    assert mr.main(["report", "log"]) == 1
     assert "interrupted=1" in Path("report").read_text().splitlines()
     assert len(fake_mutmut) == 3
     assert read == []
+
+
+NO_GIT = "use_git_change_detection = false\n"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("[tool.mutmut]\n", "[tool.mutmut]\n" + NO_GIT),
+        (
+            "[project]\n  [tool.mutmut]  \nx = 1\n",
+            "[project]\n  [tool.mutmut]  \n" + NO_GIT + "x = 1\n",
+        ),
+        ("[tool.mutmut]\nuse_git_change_detection = true\n", None),
+        ("[tool.mutmut.extra]\n", None),
+        (
+            "[tool.mutmut]\n[tool.mutmut]\n",
+            "[tool.mutmut]\n" + NO_GIT + "[tool.mutmut]\n",
+        ),
+    ],
+)
+def test_scratch_config(tmp_path: Path, text: str, expected: str | None) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text(text)
+    mr.scratch_config(path)
+    assert path.read_text() == (text if expected is None else expected)
+
+
+def test_scratch_config_without_a_pyproject(tmp_path: Path) -> None:
+    mr.scratch_config(tmp_path / "pyproject.toml")
+    assert not (tmp_path / "pyproject.toml").exists()
+
+
+@pytest.mark.parametrize(
+    ("counts", "expected"),
+    [
+        ({}, []),
+        ({"timeout": "2"}, ["timeout"]),
+        ({"segfault": "1", "suspicious": "1"}, ["segfault", "suspicious"]),
+        ({"interrupted": "1", "survived": "3"}, ["interrupted"]),
+    ],
+)
+def test_unstable(counts: dict[str, str], expected: list[str]) -> None:
+    base = dict.fromkeys(mr.COUNTS, "0") | {"interrupted": "0"} | counts
+    text = "".join(f"{key}={value}\n" for key, value in base.items())
+    assert mr.unstable(text + "mutant.survived=a=b\n") == expected
+
+
+def test_main_fails_an_unstable_run_and_shows_the_log(
+    fake_mutmut: list[list[str]],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(json.dumps(ALL_KILLED | {"timeout": 1}))
+    Path("pyproject.toml").write_text("")
+    assert mr.main(["report", "log"]) == 1
+    assert len(fake_mutmut) == 3
+    assert capsys.readouterr().err == "mutmut_report: not cacheable: timeout\n"

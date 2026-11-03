@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# A planted defect: the test runs the code but checks nothing, so its
+# mutants survive. Not a uv project; mutmut and pytest read it from here.
+[tool.pytest]
+addopts = ["--import-mode=importlib"]
+testpaths = ["lib"]
+
+[tool.mutmut]
+source_paths = ["lib"]
+do_not_mutate = ["lib/test_*.py"]
+pytest_add_cli_args_test_selection = ["lib"]

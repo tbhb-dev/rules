@@ -29,8 +29,11 @@ repos:
   # Interim agent identity, a copy of ascm's (replaced there by `ascm
   # git-hook` at M1). The module
   # needs Python 3.15, and the python3 on PATH may be older, so it runs
-  # through uv. prek passes the message file to prepare-commit-msg and
-  # commit-msg, and the commit source in PRE_COMMIT_COMMIT_MSG_SOURCE.
+  # through uv. Only stamp-docs runs under prek: tools/interim/install.sh
+  # installs the trailer, check and consume hooks (prepare-commit-msg,
+  # commit-msg, post-commit) as plain git hooks, because prek stashes unstaged
+  # changes around every stage and fails a hook when the work tree changes
+  # while it runs, which a concurrent agent's edit does.
   #
   # stamp-docs rewrites the staged blob and the work-tree file together, so
   # prek's modified-files check passes. With unstaged edits next to the
@@ -44,23 +47,4 @@ repos:
         entry: uv run --no-project --quiet --python ">=3.15" python tools/interim/agent_identity.py stamp-docs
         stages: [pre-commit]
         types: [markdown]
-        pass_filenames: false
-      - id: agent-identity-trailer
-        name: agent identity trailers
-        language: system
-        entry: uv run --no-project --quiet --python ">=3.15" python tools/interim/agent_identity.py trailer
-        stages: [prepare-commit-msg]
-        always_run: true
-      - id: agent-identity-check
-        name: agent identity check
-        language: system
-        entry: uv run --no-project --quiet --python ">=3.15" python tools/interim/agent_identity.py check
-        stages: [commit-msg]
-        always_run: true
-      - id: agent-identity-consume
-        name: agent identity consume
-        language: system
-        entry: uv run --no-project --quiet --python ">=3.15" python tools/interim/agent_identity.py consume
-        stages: [post-commit]
-        always_run: true
         pass_filenames: false

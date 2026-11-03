@@ -27,7 +27,7 @@ def vale_test(
         config = ".vale.ini",
         packages = {},
         include = ["*.md"],
-        tool = Label("@multitool//tools/vale"),
+        tool = Label("@tbhb_rules_vale//:vale"),
         **kwargs):
     """Lints prose with Vale, offline, against pinned style packages.
 
@@ -105,7 +105,7 @@ config's URLs, for editors and for running vale by hand.""",
             doc = "Package archives, in the order of the config's `Packages` list.",
         ),
         "tool": attr.label(
-            default = Label("@multitool//tools/vale"),
+            default = Label("@tbhb_rules_vale//:vale"),
             executable = True,
             cfg = "target",
             doc = "The vale binary.",

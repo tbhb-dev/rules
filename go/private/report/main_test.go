@@ -54,6 +54,24 @@ func TestReport(t *testing.T) {
 			want: "p/a.go:10:2: unchecked (errcheck)\np/b.go:3:6: func f is unused (unused)\n",
 		},
 		{
+			name: "findings outside the base (dependencies) dropped",
+			json: `{"Issues":[
+				{"FromLinter":"errcheck","Text":"unchecked","Pos":{"Filename":"/ws/p/a.go","Line":10,"Column":2}},
+				{"FromLinter":"errcheck","Text":"unchecked","Pos":{"Filename":"/execroot/external/dep/d.go","Line":4,"Column":2}},
+				{"FromLinter":"govet","Text":"bad","Pos":{"Filename":"/ws2/x.go","Line":1,"Column":1}}
+			]}`,
+			exit: 1,
+			want: "p/a.go:10:2: unchecked (errcheck)\n",
+		},
+		{
+			name: "dependency that did not type-check",
+			json: `{"Issues":[
+				{"FromLinter":"typecheck","Text":"undefined: rand.New","Pos":{"Filename":"/execroot/external/dep/d.go","Line":122,"Column":21}}
+			]}`,
+			exit: 1,
+			want: "golangci-lint did not complete: a dependency did not type-check: /execroot/external/dep/d.go:122:21: undefined: rand.New\n",
+		},
+		{
 			name: "failed run",
 			json: "",
 			exit: 3,

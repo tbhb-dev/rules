@@ -12,6 +12,7 @@ report is cached like any action output.
 
 load("@rules_go//go:def.bzl", "GoArchive")
 
+# GoStdLib, the precompiled standard library, is not exported by go:def.bzl.
 # buildifier: disable=bzl-visibility
 load("@rules_go//go/private:providers.bzl", "GoStdLib")
 load("@rules_go//go/tools/gopackagesdriver:aspect.bzl", "GoPkgInfo", "go_pkg_info_aspect")

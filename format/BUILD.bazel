@@ -27,7 +27,7 @@ formatter(
     ],
     check_args = ["-d"],
     fix_args = ["-w"],
-    tool = "@multitool//tools/shfmt",
+    tool = "@tbhb_rules_shfmt//:shfmt",
     visibility = ["//visibility:public"],
 )
 
@@ -41,7 +41,7 @@ formatter(
     ],
     check_args = ["-mode=check"],
     fix_args = ["-mode=fix"],
-    tool = "@multitool//tools/buildifier",
+    tool = "@buildifier_prebuilt//:buildifier",
     visibility = ["//visibility:public"],
 )
 
@@ -58,7 +58,7 @@ formatter(
         "format",
         "--offline",
     ],
-    tool = "@multitool//tools/tombi",
+    tool = "@tbhb_rules_tombi//:tombi",
     visibility = ["//visibility:public"],
 )
 
@@ -70,7 +70,7 @@ formatter(
         "--check",
     ],
     fix_args = ["fmt"],
-    tool = "@multitool//tools/rumdl",
+    tool = "@tbhb_rules_rumdl//:rumdl",
     visibility = ["//visibility:public"],
 )
 
@@ -85,6 +85,6 @@ formatter(
         "--check",
     ],
     fix_args = ["format"],
-    tool = "@multitool//tools/ryl",
+    tool = "@tbhb_rules_ryl//:ryl",
     visibility = ["//visibility:public"],
 )

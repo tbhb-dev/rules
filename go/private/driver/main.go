@@ -220,6 +220,15 @@ func respond(cfg *config, root, mirror string) (*driverResponse, error) {
 			if p.ExportFile == "" && cfg.StdlibPkgDir != "" {
 				p.ExportFile = filepath.Join(root, cfg.StdlibPkgDir, cfg.GOOS+"_"+cfg.GOARCH, p.PkgPath+".a")
 			}
+			// rules_go lists the standard library with `go list -compiled`
+			// only when cgo is on (go/tools/builders/stdliblist.go,
+			// stdliblist). With cgo off (pure, or static on some
+			// platforms) CompiledGoFiles is absent, and go/packages would
+			// typecheck an empty package; then GoFiles are what the
+			// compiler compiled.
+			if len(p.CompiledGoFiles) == 0 {
+				p.CompiledGoFiles = p.GoFiles
+			}
 			continue
 		}
 		// rules_go lists every source of a target; the compiler skips the

@@ -8,6 +8,7 @@ load(
     "//lint:defs.bzl",
     "actionlint_test",
     "bats_test",
+    "cspell_test",
     "editorconfig_checker_test",
     "gitleaks_history",
     "gitleaks_test",
@@ -15,6 +16,8 @@ load(
     "ryl_test",
     "tombi_test",
     "tree_check_test",
+    "vale_sync",
+    "vale_test",
     "zizmor_test",
 )
 load("//repo:defs.bzl", "repo_files", "repo_layout_test")
@@ -27,7 +30,6 @@ exports_files([
     ".gitleaks.toml",
     ".rumdl.toml",
     ".ryl.toml",
-    "multitool.lock.json",
     "tombi.toml",
 ])
 
@@ -40,6 +42,8 @@ repo_files(
     exclude = [
         ".DS_Store",
         "**/.DS_Store",
+        # The gitignored PR draft, which the PR script lints itself.
+        ".github/PULL_REQUEST_DRAFT.md",
         ".bazelrc.user",
         ".coverage*",
         ".env*",
@@ -170,7 +174,7 @@ SHELL_SCRIPTS = [
 tree_check_test(
     name = "shellcheck_test",
     srcs = [":repo_files"],
-    tool = "@multitool//tools/shellcheck",
+    tool = "@tbhb_rules_shellcheck//:shellcheck",
     tool_args = [
         "-o",
         "check-extra-masked-returns",
@@ -181,7 +185,7 @@ tree_check_test(
 tree_check_test(
     name = "shfmt_test",
     srcs = [":repo_files"],
-    tool = "@multitool//tools/shfmt",
+    tool = "@tbhb_rules_shfmt//:shfmt",
     tool_args = ["-d"] + SHELL_SCRIPTS,
 )
 
@@ -201,7 +205,7 @@ formatter(
     include = ["*.sh.tpl"],
     check_args = ["-d"],
     fix_args = ["-w"],
-    tool = "@multitool//tools/shfmt",
+    tool = "@tbhb_rules_shfmt//:shfmt",
 )
 
 FORMATTERS = [
@@ -247,12 +251,14 @@ repo_layout_test(
         ".claude",
         ".codex",
         ".github",
+        ".vale",
         "LICENSES",
         "docs",
         "e2e",
         "format",
         "go",
         "lint",
+        "pins",
         "python",
         "quality",
         "repo",
@@ -260,4 +266,35 @@ repo_layout_test(
         "testing",
         "tools",
     ],
+)
+
+# Prose and spelling, offline, with the same configs the PR script uses.
+VALE_PACKAGES = {
+    "Google": "@vale_google//file",
+    "ai-tells": "@vale_ai_tells//file",
+    "ai-tells-experimental": "@vale_ai_tells_experimental//file",
+    "proselint": "@vale_proselint//file",
+    "write-good": "@vale_write_good//file",
+}
+
+vale_test(
+    name = "vale_test",
+    srcs = [":repo_files"],
+    config = ".vale.ini",
+    packages = VALE_PACKAGES,
+)
+
+# `bazel run //:vale_sync` writes the same packages into .vale/, for editors
+# and for running vale by hand.
+vale_sync(
+    name = "vale_sync",
+    config = ".vale.ini",
+    packages = VALE_PACKAGES,
+)
+
+cspell_test(
+    name = "cspell_test",
+    srcs = [":repo_files"],
+    config = ".cspell.jsonc",
+    data = [".cspell-words.txt"],
 )

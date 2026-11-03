@@ -116,6 +116,11 @@ func TestRespondLibrary(t *testing.T) {
 		!slices.Equal(fmtPkg.GoFiles, []string{filepath.Join(root, "sdk/src/fmt/print.go")}) {
 		t.Errorf("fmt = %+v", fmtPkg)
 	}
+	// With cgo off, rules_go lists no CompiledGoFiles for the standard
+	// library; the GoFiles stand in.
+	if !slices.Equal(fmtPkg.CompiledGoFiles, fmtPkg.GoFiles) {
+		t.Errorf("fmt.CompiledGoFiles = %v, want %v", fmtPkg.CompiledGoFiles, fmtPkg.GoFiles)
+	}
 	if _, ok := pkgs["//a:a_test"]; ok {
 		t.Error("a package b does not reach is in the response")
 	}

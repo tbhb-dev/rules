@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+[project]
+name = "e2e-workspace"
+version = "0"
+requires-python = ">=3.15"
+dependencies = ["tbhbops"]
+
+[dependency-groups]
+dev = [
+  "pyrefly==1.4.0",
+  "pytest==9.2.0",
+  "pytest-cov==7.1.0",
+  "ruff==0.17.3",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["cli"]
+
+[tool.uv.sources]
+tbhbops = { workspace = true }
+
+[tool.pytest]
+addopts = ["-ra", "--strict-markers", "--import-mode=importlib"]
+testpaths = ["cli/tests", "tools"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.importlinter]
+root_packages = ["tools", "tbhbops"]
+
+[[tool.importlinter.contracts]]
+name = "the commands build on gitfiles"
+type = "layers"
+layers = ["tbhbops.docs | tbhbops.layout | tbhbops.mutation", "tbhbops.gitfiles"]
+
+[[tool.importlinter.contracts]]
+name = "the commands are independent"
+type = "independence"
+modules = ["tbhbops.docs", "tbhbops.layout", "tbhbops.mutation"]
+
+[[tool.importlinter.contracts]]
+name = "interim code stays out of tbhbops"
+type = "forbidden"
+source_modules = ["tools.interim"]
+forbidden_modules = ["tbhbops"]
+
+[[tool.importlinter.contracts]]
+name = "tbhbops does not use the repository tools"
+type = "forbidden"
+source_modules = ["tbhbops"]
+forbidden_modules = ["tools"]

@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The quickstart's files must hold go/README.md's quickstart blocks
+# verbatim, below their "README quickstart below, verbatim." marker.
+
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+[
+    (
+        genrule(
+            name = name + "_readme_block",
+            srcs = ["@tbhb_rules_go//:README.md"],
+            outs = [name + ".readme"],
+            cmd = "awk -v want='<!-- quickstart: {} -->' '$$0 == want {{ found = 1; next }} found && /^```starlark$$/ {{ inside = 1; next }} inside && /^```$$/ {{ exit }} inside {{ print }}' $< > $@".format(path),
+        ),
+        genrule(
+            name = name + "_file_block",
+            srcs = ["//:" + path],
+            outs = [name + ".file"],
+            cmd = "awk 'found {{ print }} $$0 == \"# README quickstart below, verbatim.\" {{ found = 1 }}' $< > $@",
+        ),
+        diff_test(
+            name = name + "_matches_readme_test",
+            file1 = name + "_readme_block",
+            file2 = name + "_file_block",
+        ),
+    )
+    for name, path in [
+        ("module", "MODULE.bazel"),
+        ("build", "BUILD.bazel"),
+        ("linters", "tools/lint/linters.bzl"),
+    ]
+]

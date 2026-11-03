@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# Bazel's convenience symlinks hold no source; ignoring them keeps them out
+# of every glob, so //:repo_files never follows them into the output tree.
+ignore_directories(["bazel-*"])

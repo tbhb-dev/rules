@@ -15,6 +15,8 @@ bzl_library(
         "//lint/private:codeowners",
         "//lint/private:cspell",
         "//lint/private:gitleaks_history",
+        "//lint/private:okf_docs",
+        "//lint/private:reuse",
         "//lint/private:shell",
         "//lint/private:tree_check",
         "//lint/private:vale",

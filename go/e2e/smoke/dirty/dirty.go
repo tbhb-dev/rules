@@ -26,6 +26,3 @@ func Kept(path string) {
 func Show() {
 	fmt.Printf("%d\n", cmp.Diff(1, 2))
 }
-
-// Dead is called by nothing (deadcode).
-func Dead() {}

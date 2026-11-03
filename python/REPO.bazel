@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# e2e/ holds consumer modules with their own MODULE.bazel, and Bazel's
+# convenience symlinks hold no source.
+ignore_directories([
+    "bazel-*",
+    "e2e",
+    "**/__pycache__",
+])

@@ -34,6 +34,10 @@ SECTIONS = pr.load_sections()
 H = "sha-256-64:"
 SESSION = H + "a" * 16
 SUBAGENT = H + "b" * 16
+FALLBACK = (
+    "LLM effort=medium;harness=claude-code:2.1.316;"
+    "session=sha-256-64:71c761039ac2c7f9;surface=cli"
+)
 GEN = "LLM harness=claude-code;model=anthropic:m1"
 OTHER = "LLM harness=codex;model=openai:gpt-6.1-sol"
 
@@ -118,9 +122,8 @@ def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> World:
     for name in pr.CONFIGS:
         (root / name).write_text("")
     monkeypatch.setattr(pr, "ROOT", root)
-    # Not the repository, so a missing cwd=ROOT shows up as a wrong directory.
-    (tmp_path / "outside").mkdir()
-    monkeypatch.chdir(tmp_path / "outside")
+    # The script runs inside the repository whose branch it posts.
+    monkeypatch.chdir(root)
     made = World(root, tools_dir)
     made.git("init", "-q", "-b", "main")
     made.git("config", "user.email", "t@example.com")
@@ -1394,8 +1397,9 @@ def test_every_invalid_trailer_is_listed(world: World) -> None:
     assert str(info.value).count("LLM harness=") == 2
 
 
-def test_branch_git_calls_run_in_the_repository(
-    world: World, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.usefixtures("world")
+def test_branch_git_calls_run_in_the_current_directory(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     seen: list[Path | None] = []
     real = agent_identity.git
@@ -1406,7 +1410,7 @@ def test_branch_git_calls_run_in_the_repository(
 
     monkeypatch.setattr(agent_identity, "git", spy)
     pr.branch_trailers("main")
-    assert seen == [world.root, world.root]
+    assert seen == [None, None]
 
 
 def test_help_describes_the_script(capsys: pytest.CaptureFixture[str]) -> None:
@@ -1691,3 +1695,62 @@ def test_parse_frontmatter_errors() -> None:
     message = str(info.value)
     assert message.startswith("invalid YAML: ")
     assert "\n" not in message
+
+
+def test_cog_runs_in_root_wherever_the_script_is_run(
+    world: World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "outside").mkdir()
+    monkeypatch.chdir(tmp_path / "outside")
+    assert pr.title_problems("fix: x") == []
+    assert world.calls("cog")[-1]["cwd"] == str(world.root.resolve())
+
+
+def test_branch_trailers_come_from_the_current_repository_not_root(
+    world: World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The script lives in one repo and posts a branch of another."""
+    other = tmp_path / "other"
+    other.mkdir()
+    for args in (
+        ("init", "-q", "-b", "main"),
+        ("config", "user.email", "o@example.com"),
+        ("config", "user.name", "O"),
+        ("config", "commit.gpgsign", "false"),
+        ("commit", "--allow-empty", "-q", "-m", "init"),
+        ("update-ref", "refs/remotes/origin/main", "HEAD"),
+        ("commit", "--allow-empty", "-q", "-m", f"feat: x\n\nGenerated-by: {FALLBACK}"),
+    ):
+        subprocess.run(["git", *args], cwd=other, check=True, capture_output=True)
+    monkeypatch.chdir(other)
+    assert world.root == pr.ROOT
+    assert pr.branch_trailers("main") == [("Generated-by", FALLBACK)]
+
+
+def test_same_identity_in_commit_and_posting_is_one_generated_by() -> None:
+    """Generated-by wins over the posting agent's own Assisted-by."""
+    assert pr.merge_trailers([("Generated-by", FALLBACK)], FALLBACK) == [
+        ("Generated-by", FALLBACK)
+    ]
+
+
+def test_generated_by_precedes_assisted_by() -> None:
+    assert pr.merge_trailers([("Assisted-by", OTHER), ("Generated-by", GEN)], None) == [
+        ("Generated-by", GEN),
+        ("Assisted-by", OTHER),
+    ]
+
+
+def test_description_for_one_identity_ends_in_one_generated_by(
+    world: World, agent: dict[str, str]
+) -> None:
+    """Regression: a branch commit and the posting agent share an identity."""
+    posting = pr.posting_value(agent)
+    assert posting is not None
+    world.git("update-ref", "refs/remotes/origin/main", "HEAD")
+    world.git("switch", "-q", "-c", "topic")
+    world.commit(f"feat: x\n\nGenerated-by: {posting}")
+    checked = pr.check_text(BASE, agent)
+    body = pr.description(checked, agent)
+    assert body.endswith(f"\nGenerated-by: {posting}\n")
+    assert "Assisted-by" not in body

@@ -15,6 +15,13 @@ class Executed(Exception):  # noqa: N818 - a sentinel, not an error.
     """Raised in place of os.execv so a test can see what would run."""
 
 
+@pytest.fixture(autouse=True)
+def no_real_exec(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A test that reaches os.execv by mistake fails instead of replacing the
+    # test process (which, under mutmut, can exit 0 and pass a mutant).
+    monkeypatch.setattr(launch.os, "execv", None)
+
+
 @pytest.fixture
 def executed(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
     calls: list[list[str]] = []
@@ -90,6 +97,7 @@ def test_parse_reads_every_option() -> None:
     options, command = launch.parse(
         [
             "--select",
+            "--filter",
             "--allow-empty",
             "--exclude",
             "a",
@@ -105,6 +113,7 @@ def test_parse_reads_every_option() -> None:
     )
     assert options == launch.Options(
         select=True,
+        filter=True,
         allow_empty=True,
         exclude=["a", "b"],
         chdir="cli",
@@ -286,6 +295,39 @@ def test_main_allows_an_empty_selection_when_asked(
     assert launch.main(["--select", "--allow-empty", "--", "ruff"]) == 0
     assert recorded == []
     assert capsys.readouterr().err == ""
+
+
+def test_main_filters_the_arguments_to_python_files(
+    recorded: list[tuple[str, list[str], str]],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    write(tmp_path / "a.py", "")
+    write(tmp_path / "notes.md", "")
+    write(tmp_path / "run", "#!/usr/bin/env python3\n")
+    monkeypatch.chdir(tmp_path)
+    argv = ["--filter", "--", "ruff", "format", "a.py", "notes.md", "run", "gone.py"]
+    assert launch.main(argv) == 7
+    assert recorded == [("ruff", ["format", "a.py", "run", "gone.py"], "")]
+
+
+@pytest.mark.parametrize(("flags", "code"), [([], 1), (["--allow-empty"], 0)])
+def test_main_filtering_to_nothing(
+    recorded: list[tuple[str, list[str], str]],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    flags: list[str],
+    code: int,
+) -> None:
+    write(tmp_path / "notes.md", "")
+    monkeypatch.chdir(tmp_path)
+    assert (
+        launch.main(["--filter", *flags, "--", "ruff", "--check", "notes.md"]) == code
+    )
+    assert recorded == []
+    expected = "launch.py: no Python files, so nothing was checked\n" if code else ""
+    assert capsys.readouterr().err == expected
 
 
 def test_main_reports_an_unknown_tool(

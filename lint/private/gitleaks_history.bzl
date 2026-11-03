@@ -42,14 +42,14 @@ has, so CI should fetch the full history. The working tree is
             doc = "gitleaks config, a file of the main repository.",
         ),
         "git": attr.label(
-            default = "@multitool//tools/git",
+            default = "@tbhb_rules_git//:git",
             executable = True,
             cfg = "target",
             allow_files = True,
             doc = "The git put first on PATH for gitleaks.",
         ),
         "tool": attr.label(
-            default = "@multitool//tools/gitleaks",
+            default = "@tbhb_rules_gitleaks//:gitleaks",
             executable = True,
             cfg = "target",
             allow_files = True,

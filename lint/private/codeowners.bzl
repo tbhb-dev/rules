@@ -14,7 +14,7 @@ def codeowners_test(
         srcs,
         codeowners = ".github/CODEOWNERS",
         tool = Label(":codeowners.sh"),
-        git = Label("@multitool//tools/git"),
+        git = Label("@tbhb_rules_git//:git"),
         **kwargs):
     """Fails when a CODEOWNERS pattern matches no file in `srcs`.
 

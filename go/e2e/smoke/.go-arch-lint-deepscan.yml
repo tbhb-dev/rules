@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# Planted defect, for a proof: the contracts of .go-arch-lint.yml without
+# deepScan: false, which go_arch_lint_test must reject.
+#
+# Import contracts: features sit on core, core on platform; features do not
+# import each other; platform imports nothing of the module; only cmd/*
+# imports features (no other component lists them). Every package must
+# belong to a component. dirty/ holds golangci-lint fixtures and is not
+# checked here.
+version: 3
+
+allow:
+  depOnAnyVendor: false
+
+components:
+  cmd: {in: cmd/*}
+  feature1: {in: internal/feature1}
+  feature2: {in: internal/feature2}
+  core: {in: internal/core}
+  platform: {in: internal/platform}
+  shared: {in: internal/shared}
+  lib: {in: lib}
+
+vendors:
+  cmp: {in: github.com/google/go-cmp/**}
+
+deps:
+  cmd:
+    mayDependOn: [feature1, feature2, shared, lib]
+  feature1:
+    mayDependOn: [core]
+  feature2:
+    mayDependOn: [core]
+  core:
+    mayDependOn: [platform]
+  platform:
+    mayDependOn: [platform]  # a leaf; go-arch-lint rejects an empty list
+  shared:
+    mayDependOn: [shared]
+  lib:
+    mayDependOn: [lib]
+    canUse: [cmp]

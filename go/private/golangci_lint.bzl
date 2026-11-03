@@ -15,6 +15,7 @@ report is an ordinary cacheable action output.
 See docs/golangci-lint.md for what this cannot see.
 """
 
+load("@bazel_skylib//lib:shell.bzl", "shell")
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("@rules_go//go:def.bzl", "GoArchive")
 
@@ -81,7 +82,15 @@ def driver_inputs(ctx, pkg_info, stdlib):
 
     Every package's sources are inputs, the standard library's too:
     golangci-lint computes analysis facts for dependencies from source when
-    its cache holds none, which in a fresh action is always.
+    its cache holds none, which in a fresh action is always. Design change
+    from PR #901, which passed export data only: see golangci-lint
+    pkg/goanalysis/runner_loadingpackage.go, loadingPackage.loadWithFacts
+    and loadImportedPackageWithFacts. A dependency's types come from export
+    data, but when loadActionCachedFacts fails (an empty cache) the action
+    is marked needAnalyzeSource and the package is loaded from source;
+    without sources it typechecks empty ("undefined: strings.ToUpper").
+    Revisit if golangci-lint gains a facts-from-export-data mode, or if
+    rules_go's nogo facts can seed its cache.
 
     Args:
         ctx: The aspect or rule context.
@@ -223,7 +232,7 @@ def main_repo_label(value):
 def golangci_lint_aspect_factory(
         config,
         go_mod = None,
-        tool = Label("@multitool//tools/golangci-lint"),
+        tool = Label("//private:golangci_lint_bin"),
         data = [],
         args = [],
         rule_kinds = DEFAULT_RULE_KINDS):
@@ -277,7 +286,7 @@ def golangci_lint_aspect_factory(
         "_go_pure": attr.label(default = Label("@rules_go//go/config:pure")),
         "_go_stdlib": attr.label(default = Label("@rules_go//:stdlib")),
         "_go_tags": attr.label(default = Label("@rules_go//go/config:tags")),
-        "_golangci_lint": attr.label(default = tool, executable = True, cfg = "exec"),
+        "_golangci_lint": attr.label(default = tool, executable = True, allow_files = True, cfg = "exec"),
         "_key": attr.string(default = key),
         "_report": attr.label(
             default = Label("//private/report"),
@@ -327,14 +336,26 @@ def write_report_manifest(ctx, reports):
     return manifest
 
 def _golangci_lint_test_impl(ctx):
+    for t in ctx.attr.srcs:
+        if not t[GolangciLintInfo].reports:
+            fail("{} reaches no Go target of the main repository to lint".format(t.label))
     reports = depset(transitive = [t[GolangciLintInfo].reports for t in ctx.attr.srcs])
     manifest = write_report_manifest(ctx, reports)
+
+    expected = ctx.actions.declare_file(ctx.label.name + ".expected")
+    ctx.actions.write(expected, "".join([
+        f.short_path + "\n"
+        for f in ctx.files.expect_linted
+        if f.extension == "go" and f.owner.repo_name == ""
+    ]))
 
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.expand_template(
         template = ctx.file._runner,
         output = script,
         substitutions = {
+            "@@EXCLUDES@@": " ".join([shell.quote(p) for p in ctx.attr.expect_linted_exclude]),
+            "@@EXPECTED@@": expected.short_path,
             "@@MANIFEST@@": manifest.short_path,
             "@@MERGE@@": ctx.executable._merge.short_path,
         },
@@ -342,7 +363,7 @@ def _golangci_lint_test_impl(ctx):
     )
     return [DefaultInfo(
         executable = script,
-        runfiles = ctx.runfiles(files = [manifest, ctx.executable._merge], transitive_files = reports),
+        runfiles = ctx.runfiles(files = [manifest, expected, ctx.executable._merge], transitive_files = reports),
     )]
 
 def golangci_lint_test_factory(aspect):
@@ -355,9 +376,17 @@ def golangci_lint_test_factory(aspect):
     The test takes `srcs`, the Go targets to lint (and through `deps` and
     `embed`, the main-repository targets they reach). It fails when any
     report holds a finding, printing them all, and when no package was
-    linted at all. Findings in a library's files come from a go_test that
-    embeds it when `srcs` reach one, as golangci-lint lints a package with
-    tests only as its test variant.
+    linted at all; a target in `srcs` that reaches nothing to lint fails
+    analysis. Findings in a library's files come from a go_test that embeds
+    it when `srcs` reach one, as golangci-lint lints a package with tests
+    only as its test variant, and a package linted in two configurations
+    (a go_binary with `pure`, `goos` or `static` transitions its deps)
+    reports a finding once.
+
+    The aspect lints only what `srcs` reach, so a package nothing lists is
+    silently unlinted. `expect_linted` closes that: give it the repository's
+    files (a `repo_files` target), and the test fails on any `.go` file in
+    it that no report covers, unless `expect_linted_exclude` matches it.
 
     Args:
         aspect: An aspect from `golangci_lint_aspect_factory`.
@@ -370,6 +399,13 @@ def golangci_lint_test_factory(aspect):
         test = True,
         doc = "Fails when golangci-lint reports an issue in `srcs` or the main-repository targets they depend on.",
         attrs = {
+            "expect_linted": attr.label_list(
+                allow_files = True,
+                doc = "Files whose `.go` files must all be linted, usually a `repo_files` target.",
+            ),
+            "expect_linted_exclude": attr.string_list(
+                doc = "Bash glob patterns of `.go` files in `expect_linted` that need not be linted (fixtures, testdata). `*` also matches `/`.",
+            ),
             "srcs": attr.label_list(
                 aspects = [aspect],
                 mandatory = True,

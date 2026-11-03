@@ -14,6 +14,8 @@ def _python_tool_impl(ctx):
     options = []
     if ctx.attr.select:
         options.append("--select")
+    if ctx.attr.filter:
+        options.append("--filter")
     if ctx.attr.allow_empty:
         options.append("--allow-empty")
     for pattern in ctx.attr.exclude:
@@ -63,10 +65,11 @@ executable in the environment's bin directory. It runs from the current
 directory with the environment's site-packages and the workspace members'
 source roots (relative to the current directory) importable.""",
     attrs = {
-        "allow_empty": attr.bool(doc = "With `select`, finding no Python file is not an error."),
+        "allow_empty": attr.bool(doc = "With `select` or `filter`, finding no Python file is not an error."),
         "chdir": attr.string(doc = "Directory, relative to the current one, to run the tool from."),
         "exclude": attr.string_list(doc = "fnmatch patterns of relative paths `select` skips."),
         "extra_source_roots": attr.string_list(doc = "More directories, relative to the current one, to put on the path."),
+        "filter": attr.bool(doc = "Drop each argument that names a file other than a Python one (by suffix or shebang), as a formatter offered every file needs."),
         "main": attr.label(allow_single_file = [".py"], doc = "A Python file to run with the interpreter instead of `tool`."),
         "python_env": attr.label(
             mandatory = True,

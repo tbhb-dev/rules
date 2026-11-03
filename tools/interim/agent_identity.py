@@ -9,7 +9,7 @@ those records into trailers and validate them:
 
     record <claude|codex|antigravity>  harness hook: reads hook JSON on stdin
     trailer <msgfile> [source]         prepare-commit-msg: stamp the trailers
-    consume                            post-commit: mark edit receipts consumed
+    consume                            post-commit: consume the credited receipts
     check <msgfile>                    commit-msg and CI: validate the trailers
     stamp-docs                         pre-commit: stamp staged Markdown frontmatter
 
@@ -29,8 +29,9 @@ staged document's frontmatter (see docs/schemas/frontmatter.schema.json), from
 the same edit receipts, read but not consumed. It rewrites the staged blob and
 the work-tree file together, so prek's modified-files check passes. Only the
 ``generated`` block changes. Root-level files, AGENTS.md, CLAUDE.md, index.md and
-log.md are skipped, as are files without LF frontmatter or with a ``generated``
-value that is not a plain block list. Known limit: when a file is partially
+log.md are skipped, as are fixtures under a ``testdata`` directory, files without
+LF frontmatter, and files with a ``generated`` value that is not a plain block
+list. Known limit: when a file is partially
 staged and an unstaged change touches the line next to where the first stamp is
 inserted, prek cannot restore that change and fails the commit ("Hook changes
 conflicted with the saved unstaged changes"). Fix it with ``git add`` on the
@@ -43,8 +44,22 @@ hashes only (``sha-256-64`` of each raw ID), never raw session or agent IDs:
     edits/<root-hex>/<id>.json  edit receipts
     cmds/<root-hex>/<id>.json   Claude Bash command records
     marks/<hex>.json            Codex rollout scan offsets
+    claims/<tree>.json          receipts a pending commit's trailers credit
+    lock                        held for every read-modify-write
+
+Concurrent agents share the store. Every file is written whole (temp file plus
+rename), so a reader never sees a partial one, and every read-modify-write
+holds ``lock``, so concurrent hooks never lose each other's updates.
+
+A receipt is consumed only by the post-commit hook of the commit whose trailers
+credited it (``claims/``), so a failed or aborted commit attempt consumes
+nothing, and an edit recorded after the trailers were stamped, or still
+unstaged when they were, stays for the commit that does contain it. A receipt
+matches by path, not blob: a formatter rewriting the file before the commit
+keeps the credit.
 """
 
+import fcntl
 import hashlib
 import json
 import os
@@ -53,7 +68,9 @@ import shlex
 import subprocess  # nosec B404
 import sys
 import time
+import traceback
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from itertools import islice, takewhile
@@ -61,7 +78,7 @@ from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Generator, Iterable, Iterator, Mapping
 
 KEY_GEN = "Generated-by"
 KEY_ASSIST = "Assisted-by"
@@ -75,6 +92,7 @@ SLUGS = {CLAUDE: "claude-code", CODEX: "codex", ANTIGRAVITY: "antigravity"}
 PROVIDERS = {CLAUDE: "anthropic", CODEX: "openai", ANTIGRAVITY: "gcp.gemini"}
 EFFORTS = {"none", "minimal", "low", "medium", "high", "xhigh", "max"}
 EDITS = "edits"
+CLAIMS = "claims"
 ATTR_ORDER = ["effort", "harness", "model", "session", "subagent", "surface"]
 BAD_VALUE = re.compile(r"[\s;,]")
 SURFACE_VALUE = re.compile(r"[^\s;,=]+")
@@ -274,6 +292,18 @@ def write_json(path: Path, obj: Json) -> None:
     tmp.replace(path)
 
 
+@contextmanager
+def locked(interim: Path) -> Generator[None]:
+    """Hold the store's exclusive lock for one read-modify-write.
+
+    Never nested: a second ``flock`` from the same process would deadlock.
+    """
+    interim.mkdir(parents=True, exist_ok=True)
+    with (interim / "lock").open("a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
+
+
 def as_str(value: object) -> str | None:
     """The value if it is a non-empty string, else None."""
     return value if isinstance(value, str) and value else None
@@ -464,11 +494,12 @@ def write_record(sid_hash: str, updates: Json, cwd: Path | None = None) -> None:
     if not interim:
         return
     path = interim / "sessions" / f"{hx(sid_hash)}.json"
-    rec = read_record(path)
-    rec.update(
-        {k: v for k, v in updates.items() if v}
-    )  # never overwrite known with missing
-    write_json(path, rec)
+    with locked(interim):
+        rec = read_record(path)
+        rec.update(
+            {k: v for k, v in updates.items() if v}
+        )  # never overwrite known with missing
+        write_json(path, rec)
 
 
 def load_record(hashed: str, cwd: Path | None = None) -> Json:
@@ -580,15 +611,16 @@ def finish_command(
     if not interim or not isinstance(cmd, str):
         return
     hashes = set(cmd_hashes(cmd))
-    candidates = [
-        (path, rec)
-        for path, rec in command_records(interim, root)
-        if rec.get("agent") == agent and hashes & rec_hashes(rec)
-    ]
-    best = max(candidates, key=lambda item: rec_ts(item[1]), default=None)
-    if best:
-        best[1]["done"] = time.time()
-        write_json(*best)
+    with locked(interim):
+        candidates = [
+            (path, rec)
+            for path, rec in command_records(interim, root)
+            if rec.get("agent") == agent and hashes & rec_hashes(rec)
+        ]
+        best = max(candidates, key=lambda item: rec_ts(item[1]), default=None)
+        if best:
+            best[1]["done"] = time.time()
+            write_json(*best)
 
 
 def ps_row(pid: str) -> tuple[str, str] | None:
@@ -1014,22 +1046,25 @@ def codex_scan(root_raw: str, repo: Repo, env: Mapping[str, str]) -> None:
 
     The per-rollout byte offset (``marks/``) advances here so a later commit
     never re-reads them. The receipts' ``consumed`` flag (set by post-commit)
-    is what stops double credit, so an aborted commit loses nothing.
+    is what stops double credit, so an aborted commit loses nothing. The scan
+    holds the lock, so two concurrent scans never turn one patch into two
+    receipts.
     """
-    for rollout, meta in codex_threads(root_raw, env):
-        tid = as_str(meta.get("id")) or root_raw
-        if (repo.interim / "sessions" / f"{hx(sha256_64(tid))}.json").exists():
-            continue
-        mark_path = repo.interim / "marks" / f"{hx(sha256_64(tid))}.json"
-        mark = read_record(mark_path).get("offset", 0)
-        offset = cast("int", mark)  # pragma: no mutate -- a runtime no-op
-        edits, new = rollout_patch_edits(rollout, offset, replayed_lines(meta))
-        if new != offset:
-            write_json(mark_path, {"offset": new})
-        if edits:
-            ident = codex_ident(root_raw, meta, rollout, env)
-            for path in dict.fromkeys(edits):
-                write_edit(ident, path, Path(as_str(meta.get("cwd")) or repo.top))
+    with locked(repo.interim):
+        for rollout, meta in codex_threads(root_raw, env):
+            tid = as_str(meta.get("id")) or root_raw
+            if (repo.interim / "sessions" / f"{hx(sha256_64(tid))}.json").exists():
+                continue
+            mark_path = repo.interim / "marks" / f"{hx(sha256_64(tid))}.json"
+            mark = read_record(mark_path).get("offset", 0)
+            offset = cast("int", mark)  # pragma: no mutate -- a runtime no-op
+            edits, new = rollout_patch_edits(rollout, offset, replayed_lines(meta))
+            if new != offset:
+                write_json(mark_path, {"offset": new})
+            if edits:
+                ident = codex_ident(root_raw, meta, rollout, env)
+                for path in dict.fromkeys(edits):
+                    write_edit(ident, path, Path(as_str(meta.get("cwd")) or repo.top))
 
 
 # ------------------------------------------------------------------ Codex hooks
@@ -1224,16 +1259,17 @@ def cmd_record(harness: str, env: Mapping[str, str]) -> int:
     if not sid or not interim:
         return 0
     path = interim / "sessions" / f"{hx(sha256_64(sid))}.json"
-    rec = read_record(path)
-    rec["harness"] = SLUGS[harness]
-    if model and not model.startswith("<"):
-        rec["model"] = model
-    if effort:
-        rec["effort"] = effort
-    brain = as_str(data.get("artifactDirectoryPath"))
-    if brain:
-        rec["brain_root"] = str(Path(brain).parent)
-    write_json(path, rec)
+    with locked(interim):
+        rec = read_record(path)
+        rec["harness"] = SLUGS[harness]
+        if model and not model.startswith("<"):
+            rec["model"] = model
+        if effort:
+            rec["effort"] = effort
+        brain = as_str(data.get("artifactDirectoryPath"))
+        if brain:
+            rec["brain_root"] = str(Path(brain).parent)
+        write_json(path, rec)
     record_agy(sid, data, rec, env)
     return 0
 
@@ -1400,66 +1436,182 @@ def enrich(ident: Ident, committer: Committer) -> Ident:
     return ident
 
 
-def add_trailers(msgfile: Path, gen: list[Ident], assisted: list[Ident]) -> None:
-    """Append the trailers to the message; git skips any already present."""
-    args = [
-        f"--trailer={key}: {format_value(ident.attrs())}"
-        for key, group in ((KEY_GEN, gen), (KEY_ASSIST, assisted))
-        for ident in group
+LLM_LINE = re.compile(r"^(Generated-by|Assisted-by): (LLM\b.*)$", re.MULTILINE)
+LLM_LINES = re.compile(r"^(?:Generated-by|Assisted-by): LLM\b.*\n?", re.MULTILINE)
+AGENT_ATTR = re.compile(r"(?<![^\s;])(session|subagent)=([^\s;]+)")
+AMEND_FLAGS = {"--am", "--ame", "--amen", "--amend"}  # git takes unique prefixes
+
+type Trailer = tuple[str, str]
+
+
+def llm_trailers(text: str) -> list[Trailer]:
+    """The (key, value) of each ``LLM`` trailer line in a message."""
+    return [(m[1], m[2]) for m in LLM_LINE.finditer(text)]
+
+
+def trailer_agent(value: str) -> tuple[str | None, str | None]:
+    """(session, subagent) named by a trailer value; None where absent."""
+    attrs = dict(AGENT_ATTR.findall(value))
+    return attrs.get("session"), attrs.get("subagent")
+
+
+def merge_trailers(found: list[Trailer]) -> list[Trailer]:
+    """Deduplicated, ``Generated-by`` first; Generated-by beats Assisted-by.
+
+    An agent with any ``Generated-by`` loses its ``Assisted-by`` lines.
+    """
+    generated = {trailer_agent(v) for k, v in found if k == KEY_GEN}
+    kept = [
+        (k, v) for k, v in found if k == KEY_GEN or trailer_agent(v) not in generated
     ]
-    # A human's Signed-off-by (if any) is left where git put it.
+    return sorted(dict.fromkeys(kept), key=lambda kv: kv[0] != KEY_GEN)
+
+
+def add_trailers(
+    msgfile: Path,
+    gen: list[Ident],
+    assisted: list[Ident],
+    kept: list[Trailer] | None = None,
+) -> None:
+    """Rewrite the message's ``LLM`` trailers as one merged, ordered set.
+
+    The set is the message's own ``LLM`` trailers, ``kept`` (an amended
+    commit's) and the new ones. A human's Signed-off-by (if any) is left where
+    git put it.
+    """
+    text = msgfile.read_text()
+    new = [(KEY_GEN, format_value(i.attrs())) for i in gen] + [
+        (KEY_ASSIST, format_value(i.attrs())) for i in assisted
+    ]
+    merged = merge_trailers([*llm_trailers(text), *(kept or []), *new])
+    args = [f"--trailer={key}: {value}" for key, value in merged]
+    bare = msgfile.with_name(msgfile.name + ".ascm")
+    bare.write_text(LLM_LINES.sub("", text))
     code, out = git(
-        "interpret-trailers", "--if-exists", "addIfDifferent", *args, str(msgfile)
+        "interpret-trailers", "--if-exists", "addIfDifferent", *args, str(bare)
     )
+    bare.unlink()
     if code == 0:
         msgfile.write_text(out + "\n")
 
 
+def amending(command_lines: list[str]) -> bool:
+    """Whether the nearest ``git ... commit`` in the ancestry has ``--amend``.
+
+    ps flattens argv, so a message word ``--amend`` (``-m "fix --amend"``)
+    reads as the flag too; the cost is only keeping the parent's trailers.
+    """
+    for line in command_lines:
+        tokens = line.split()
+        if tokens and Path(tokens[0]).name == "git" and "commit" in tokens:
+            args = tokens[tokens.index("commit") + 1 :]
+            return bool(AMEND_FLAGS & set(takewhile(lambda t: t != "--", args)))
+    return False
+
+
+def amended_trailers(top: Path) -> list[Trailer]:
+    """HEAD's ``LLM`` trailers when this commit replaces HEAD (``--amend``)."""
+    if not amending(ancestry()):
+        return []
+    _, msg = git("log", "-1", "--format=%B", "HEAD", cwd=top)
+    return llm_trailers(msg)
+
+
+def unstaged_blobs(top: Path, staged: set[str]) -> dict[str, str]:
+    """The work-tree blob of each staged file whose work tree differs from the index."""
+    _, out = git("diff", "--name-only", "-z", cwd=top)
+    found = ((p, blob_of(top, p)) for p in out.split("\0") if p in staged)
+    return {path: blob for path, blob in found if blob}
+
+
+def committing(
+    edits: list[tuple[Path, Json]], staged: set[str], unstaged: Mapping[str, str]
+) -> list[tuple[Path, Json]]:
+    """The receipts this commit contains: for a staged path, and not still unstaged.
+
+    A receipt whose blob is exactly the path's unstaged work-tree content records
+    an edit made after the path was staged. That edit is not in this commit, so
+    it waits for the commit that stages it.
+    """
+    return [
+        (path, rec)
+        for path, rec in edits
+        if rec["path"] in staged
+        and not (rec["path"] in unstaged and rec.get("blob") == unstaged[rec["path"]])
+    ]
+
+
+def write_claim(repo: Repo, root: str, receipts: list[Path]) -> None:
+    """Record the receipts the trailers credit, keyed by the tree being committed.
+
+    Post-commit consumes them once a commit of exactly that tree exists. A
+    failed attempt leaves only a claim that a retry of the same tree rewrites.
+    """
+    code, tree = git("write-tree", cwd=repo.top)
+    if code == 0:
+        write_json(
+            repo.interim / CLAIMS / f"{tree}.json",
+            {"root": root, "receipts": sorted(p.name for p in receipts)},
+        )
+
+
 def cmd_trailer(msgfile: str, source: str | None, env: Mapping[str, str]) -> int:
-    """prepare-commit-msg: stamp ``Generated-by`` and ``Assisted-by``."""
+    """prepare-commit-msg: stamp ``Generated-by`` and ``Assisted-by``.
+
+    An amend keeps every ``LLM`` trailer of the commit it replaces, even with a
+    new ``-m``: post-commit consumed that commit's receipts, so they cannot be
+    rebuilt. When no receipt matches and the message already has a
+    ``Generated-by`` (such as a message-only amend), the committer fallback is
+    left out.
+    """
     if source in {"merge", "squash"}:
         return 0
-    committer = committer_identity(env)
     repo = repo_info()
-    if not committer or not repo:
+    if not repo:
+        return 0
+    path = Path(msgfile)
+    kept = amended_trailers(repo.top)
+    committer = committer_identity(env)
+    if not committer:
+        if kept:
+            add_trailers(path, [], [], kept)
         return 0
     refresh_codex(committer, repo, env)
-    staged, blobs = staged_info(repo.top)
-    receipts = [rec for _, rec in load_edits(repo, committer.ident.root)]
-    gen, assisted = decide(committer, receipts, set(staged), blobs)
-    add_trailers(Path(msgfile), [enrich(i, committer) for i in gen], assisted)
+    paths, blobs = staged_info(repo.top)
+    staged = set(paths)
+    edits = committing(
+        load_edits(repo, committer.ident.root), staged, unstaged_blobs(repo.top, staged)
+    )
+    gen, assisted = decide(committer, [rec for _, rec in edits], staged, blobs)
+    present = [*llm_trailers(path.read_text()), *kept]
+    if not edits and any(key == KEY_GEN for key, _ in present):
+        gen, assisted = list[Ident](), list[Ident]()
+    add_trailers(path, [enrich(i, committer) for i in gen], assisted, kept)
+    write_claim(repo, committer.ident.root, [p for p, _ in edits])
     return 0
 
 
 def cmd_consume() -> int:
-    """post-commit: consume receipts for paths in HEAD, per its trailers' sessions."""
+    """post-commit: consume the receipts HEAD's trailers credited (its claim).
+
+    Only post-commit consumes, so nothing is consumed unless a commit exists.
+    """
     repo = repo_info()
     if not repo:
         return 0
-    _, msg = git("log", "-1", "--format=%B", cwd=repo.top)
-    roots = set(
-        re.findall(
-            r"^(?:Generated|Assisted)-by: .*?session=(sha-256-64:[0-9a-f]{16})",
-            msg,
-            re.MULTILINE,
-        )
-    )
-    _, out = git(
-        "diff-tree",
-        "--root",
-        "--no-commit-id",
-        "--name-only",
-        "-r",
-        "-z",
-        "HEAD",
-        cwd=repo.top,
-    )
-    paths = {p for p in out.split("\0") if p}
-    for root in roots:
-        for path, rec in load_edits(repo, root):
-            if rec["path"] in paths:
+    _, tree = git("rev-parse", "HEAD^{tree}", cwd=repo.top)
+    claim_path = repo.interim / CLAIMS / f"{tree}.json"
+    with locked(repo.interim):
+        claim = read_record(claim_path)
+        if not claim:
+            return 0
+        folder = repo.interim / EDITS / hx(str(claim["root"]))
+        for name in cast("list[str]", claim["receipts"]):
+            rec = read_record(folder / name)
+            if rec:
                 rec["consumed"] = True
-                write_json(path, rec)
+                write_json(folder / name, rec)
+        claim_path.unlink()
     return 0
 
 
@@ -1499,6 +1651,8 @@ YAML_WORDS = {"null", "true", "false", "yes", "no", "on", "off", "y", "n"}
 # Reserved document names carry no `generated` list: AGENTS.md and CLAUDE.md are
 # read verbatim by the harnesses, index.md and log.md follow the OKF index rules.
 BARE_DOCS = {"AGENTS.md", "CLAUDE.md", "index.md", "log.md"}
+# Fixtures, not documents: skipped like the docs checker (and Go's tooling) does.
+TESTDATA = "testdata"
 ITEM_LINE = re.compile(r"( *)- ([a-z]+): (.*)")
 FIELD_LINE = re.compile(r"( *)([a-z]+): (.*)")
 QUOTED = re.compile(r'"((?:[^"\\]|\\["\\])*)"')
@@ -1789,6 +1943,7 @@ def staged_docs(top: Path) -> list[tuple[str, str, str]]:
             pure.suffix.lower() == ".md"
             and len(pure.parts) > 1
             and pure.name not in BARE_DOCS
+            and TESTDATA not in pure.parts
         ):
             modes = meta.split()
             docs.append((path, modes[1], modes[3]))
@@ -1954,5 +2109,23 @@ def main(argv: list[str], env: Mapping[str, str]) -> int:
             return 2
 
 
+def run(argv: list[str], env: Mapping[str, str]) -> int:
+    """``main``, reporting any crash as one line on stderr and exit status 1.
+
+    The line names the exception type and where it was raised but not its
+    message, which could quote a raw ID from hook input.
+    """
+    try:
+        return main(argv, env)
+    except Exception as exc:  # noqa: BLE001 -- every failure becomes one clear line
+        where = traceback.extract_tb(exc.__traceback__)[-1]
+        print(
+            f"agent_identity {argv[0]}: failed: {type(exc).__name__} in "
+            f"{where.name} (line {where.lineno})",
+            file=sys.stderr,
+        )
+        return 1
+
+
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:], os.environ))
+    sys.exit(run(sys.argv[1:], os.environ))

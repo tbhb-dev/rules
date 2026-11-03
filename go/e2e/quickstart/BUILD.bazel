@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# README quickstart below, verbatim.
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test")
+load("//tools/lint:linters.bzl", "golangci_lint_test")
+
+repo_files()
+
+# Every binary and test of the module.
+GO_TARGETS = [
+    "//cmd/app",
+    "//pkg/thing:thing_test",
+]
+
+golangci_lint_test(
+    name = "golangci_lint_test",
+    srcs = GO_TARGETS,
+    expect_linted = [":repo_files"],
+)
+
+go_deadcode_test(
+    name = "deadcode_test",
+    srcs = GO_TARGETS,
+)
+
+go_arch_lint_test(
+    name = "go_arch_lint_test",
+    srcs = GO_TARGETS,
+    config = ".go-arch-lint.yml",
+    go_mod = "go.mod",
+)
+
+go_mod_tidy_test(
+    name = "go_mod_tidy_test",
+    srcs = [":repo_files"],
+    go_mod = "go.mod",
+    go_sum = "go.sum",
+    proxy = "@go_mod_proxy//:proxy",
+)

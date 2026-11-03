@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+---
 # Fixture config: several linters and one exclusion rule.
 version: "2"
 

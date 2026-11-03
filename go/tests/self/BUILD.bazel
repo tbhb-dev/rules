@@ -5,7 +5,6 @@
 # the checks it ships.
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-load("@tbhb_rules//format:defs.bzl", "format_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("//:defs.bzl", "go_deadcode_test", "go_mod_tidy_test")
 load(":linters.bzl", "self_lint_test")
@@ -42,15 +41,6 @@ go_mod_tidy_test(
     go_mod = "//:go.mod",
     go_sum = "//:go.sum",
     proxy = "@self_go_mod_proxy//:proxy",
-)
-
-format_test(
-    name = "format_test",
-    srcs = GO_SRCS + [
-        "//:.golangci.yml",
-        "//:go.mod",
-    ],
-    formatters = ["//:golangci_fmt"],
 )
 
 bzl_library(

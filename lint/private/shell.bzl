@@ -26,7 +26,7 @@ def shellcheck_test(
         srcs,
         args = ["-o", "check-extra-masked-returns"],
         exclude = [],
-        tool = Label("@multitool//tools/shellcheck"),
+        tool = Label("@tbhb_rules_shellcheck//:shellcheck"),
         **kwargs):
     """Lints every shell script in `srcs` with shellcheck.
 
@@ -50,7 +50,7 @@ def shellcheck_test(
         **kwargs
     )
 
-def shfmt_test(name, srcs, exclude = [], tool = Label("@multitool//tools/shfmt"), **kwargs):
+def shfmt_test(name, srcs, exclude = [], tool = Label("@tbhb_rules_shfmt//:shfmt"), **kwargs):
     """Fails when `shfmt -d` would reformat any shell script in `srcs`.
 
     shfmt takes its style from the `.editorconfig` files among `srcs`.

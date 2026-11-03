@@ -20,7 +20,7 @@ def _test_check_args_required(name):
         name = name + "_subject",
         fix_args = ["-w"],
         include = ["*.sh"],
-        tool = "@multitool//tools/shfmt",
+        tool = "@tbhb_rules_shfmt//:shfmt",
     )
     analysis_test(name = name, impl = _expect_failure("check_args must not be empty"), target = name + "_subject", expect_failure = True)
 
@@ -29,7 +29,7 @@ def _test_include_required(name):
         formatter,
         name = name + "_subject",
         check_args = ["-d"],
-        tool = "@multitool//tools/shfmt",
+        tool = "@tbhb_rules_shfmt//:shfmt",
     )
     analysis_test(name = name, impl = _expect_failure("include must name at least one pattern"), target = name + "_subject", expect_failure = True)
 

@@ -37,8 +37,9 @@ golangci_fmt_tool = rule(
     doc = "golangci-lint with the Go SDK's go on PATH, for `golangci-lint fmt`.",
     attrs = {
         "golangci_lint": attr.label(
-            default = "@multitool//tools/golangci-lint",
+            default = Label("//private:golangci_lint_bin"),
             executable = True,
+            allow_files = True,
             cfg = "target",
         ),
         "_template": attr.label(

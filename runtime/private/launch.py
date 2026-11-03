@@ -43,6 +43,7 @@ class Options:
     """The launcher's own options, before the `--`."""
 
     select: bool = False
+    filter: bool = False
     allow_empty: bool = False
     exclude: list[str] = field(default_factory=list[str])
     chdir: str = ""
@@ -84,6 +85,8 @@ def parse(argv: list[str]) -> tuple[Options, list[str]]:
         flag = rest.pop(0)
         if flag == "--select":
             options.select = True
+        elif flag == "--filter":
+            options.filter = True
         elif flag == "--allow-empty":
             options.allow_empty = True
         elif flag == "--exclude" and rest:
@@ -134,6 +137,13 @@ def main(argv: list[str]) -> int:
     tool, args = command[0], [expand(arg) for arg in command[1:]]
     if options.chdir:
         os.chdir(options.chdir)
+    if options.filter:
+        args = [arg for arg in args if not Path(arg).is_file() or is_python(Path(arg))]
+        if not any(Path(arg).is_file() for arg in args):
+            if options.allow_empty:
+                return 0
+            print("launch.py: no Python files, so nothing was checked", file=sys.stderr)
+            return 1
     if options.select:
         files = select(Path.cwd(), options.exclude)
         if not files:

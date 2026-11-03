@@ -1,0 +1,29 @@
+{
+  "language": "en",
+  "ignorePaths": [
+    ".mise/**/*",
+    ".rumdl_cache/**/*",
+    ".vale/**/*",
+    ".venv/**/*",
+    "bazel-*/**/*",
+    "coverage.xml",
+    "go.sum",
+    "LICENSE",
+    "MODULE.bazel.lock",
+    "mise.lock",
+    "tmp/**/*",
+    "**/testdata/**/*",
+    "**/pnpm-lock.yaml",
+    "multitool.lock.json",
+    "preset.bazelrc",
+    "uv.lock"
+  ],
+  "dictionaryDefinitions": [
+    {
+      "name": "project",
+      "path": "./.cspell-words.txt",
+      "addWords": true
+    }
+  ],
+  "dictionaries": ["project", "golang", "python"]
+}

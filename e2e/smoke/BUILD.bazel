@@ -87,7 +87,7 @@ tree_check_test(
     output_guard = "a line gitleaks never prints",
     strip_prefix = "testdata/proofs/gitleaks_clean",
     tags = PROOF_TAGS,
-    tool = "@multitool//tools/gitleaks",
+    tool = "@tbhb_rules_gitleaks//:gitleaks",
     tool_args = [
         "dir",
         ".",

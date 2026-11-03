@@ -1,4 +1,4 @@
-# tbhb_rules
+# `tbhb_rules`
 
 Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned tools, formatters, quality gates, and the plumbing around them. The root module, `tbhb_rules`, holds the checks every repository uses, with one package per family:
 
@@ -11,7 +11,9 @@ Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned 
 | runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
 | testing | `@tbhb_rules//testing:defs.bzl` | `expect_failure_test` |
 
-Language rules live in nested modules, so a repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/` (documented in `go/README.md`) and `tbhb_rules_python` in `python/`.
+Language rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/` (documented in `go/README.md`) and `tbhb_rules_python` in `python/`.
+
+The modules require Bazel 9 or newer (`bazel_compatibility = [">=9.0.0"]`), the only release line tbhb-dev repositories use.
 
 Load only the `defs.bzl` files. Everything under `private/` is internal and can change without notice.
 
@@ -34,7 +36,7 @@ To develop against a local clone, put `common --override_module=tbhb_rules=/path
 
 `glob()` stops at package boundaries, so a check over the whole repository needs every package to contribute its files. Call `repo_files()` in every `BUILD.bazel`, root included. Each call collects its package's files plus the `repo_files` target of each direct subpackage, so a package that forgets the call breaks analysis of its parent instead of dropping out of the checks unnoticed.
 
-Keep directories that hold no source out of every glob with `ignore_directories` in `REPO.bazel`, for example `.git`, `bazel-*`, `.venv` and tool caches. `repo_files` takes an `exclude` list for loose files such as `.DS_Store`.
+List directories without source files, such as `.git`, `bazel-*`, `.venv`, and tool caches, in `ignore_directories` in `REPO.bazel`, and no glob enters them. `repo_files` takes an `exclude` list for loose files such as `.DS_Store`.
 
 ```starlark
 load("@tbhb_rules//lint:defs.bzl", "gitleaks_test", "ryl_test")
@@ -55,20 +57,20 @@ ryl_test(
 )
 ```
 
-Each test copies its inputs, dereferenced, into a scratch tree at their repository-relative paths and runs the tool there. Configs that name other files still resolve, and the tool can't write into your sources or follow a symlink out of the tree. The copy must hold at least `min_files` files (default 1) and more than zero bytes, or the test fails and reports what it found: a check that scanned nothing proves nothing. `gitleaks_test` also requires gitleaks to report a non-zero scanned byte count.
+Each test copies its inputs, dereferenced, into a scratch tree at their repository-relative paths and runs the tool there. Configs that name other files still resolve, and the tool can't write into your sources or follow a symlink out of the tree. The copy must hold at least `min_files` files (default 1) and more than zero bytes, or the test fails and reports what it found. A check that scanned nothing doesn't prove anything. `gitleaks_test` also requires gitleaks to report a non-zero scanned byte count.
 
 Every macro takes `srcs`, an optional `config`, `data` for other files the tool reads, `tool` to override the binary for one target, and `strip_prefix` to check a subtree as if it were the repository root. Other keywords go to `tree_check_test`.
 
 Notes on individual tools:
 
-- `tombi_test` creates `<name>.format` and `<name>.lint`, with a `<name>` suite. tombi runs offline, and some of its embedded schemas refer to others by URL; pass pinned copies in `schemas = {url: label}` (for example from `http_file` with a `sha256`) or those references become warnings, which fail the lint.
+- `tombi_test` creates `<name>.format` and `<name>.lint`, with a `<name>` suite. tombi runs offline, and some of its embedded schemas refer to others by URL. Pass pinned copies in `schemas = {url: label}`, such as an `http_file` with a `sha256`. Otherwise those references become warnings, which fail the lint.
 - `actionlint_test` puts the pinned shellcheck on PATH, so the `run:` block checks can't silently vanish.
 - `zizmor_test` runs the offline audits only. The online audits need the network and a token, so they belong outside the test graph.
-- `gitleaks_test` scans the working tree. `gitleaks_history` scans the Git history, with `bazel run` (in CI, after a full-depth checkout); it fails when gitleaks walks no commits of a history with content, which gitleaks itself reports as success.
+- `gitleaks_test` scans the working tree. `gitleaks_history` scans the Git history, with `bazel run` (in CI, after a full-depth checkout). It fails when gitleaks walks no commits of a history with content, which gitleaks itself reports as success.
 
 ### Failure proofs
 
-A check that must reject bad input is proven only by running it on bad input and requiring the rejection, for the right reason. `expect_failure_test` wraps a test and passes only when that test fails and its output matches `pattern`, an extended regular expression:
+Only a run on bad input that ends in the expected rejection, for the right reason, proves that a check rejects bad input. `expect_failure_test` wraps a test and passes only when that test fails and its output matches `pattern`, an extended regular expression:
 
 ```starlark
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
@@ -86,15 +88,15 @@ expect_failure_test(
 )
 ```
 
-Tag the wrapped test `manual` so `bazel test //...` doesn't run it on its own. The wrapper gives it its own `TEST_TMPDIR` and `HOME`, forwards its `env`, and keeps it from writing this test's result files. Bazel exposes no provider for a test's `args`, so set those on the `expect_failure_test` instead. A failed proof prints the wrapped test's exit status and output.
+Tag the wrapped test `manual` so `bazel test //...` doesn't run it on its own. The wrapper gives it its own `TEST_TMPDIR` and `HOME` and forwards its `env`. The wrapped test can't write this test's result files. Bazel doesn't expose a provider for a test's `args`, so set those on the `expect_failure_test` instead. A failed proof prints the wrapped test's exit status and output.
 
 ### Tool pins
 
-The default tool versions live in `multitool.lock.json` and join rules_multitool's default `multitool` hub. rules_multitool merges the lockfiles of every module that contributes to a hub, and the root module wins, so a consumer can:
+The default tool versions live in `multitool.lock.json` and join rules_multitool's default `multitool` hub. rules_multitool merges the lockfiles of every module that contributes to a hub, and the root module's pins take precedence. A consumer can:
 
-- add its own tools: `multitool.hub(lockfile = "//:multitool.lock.json")` in its `MODULE.bazel`;
-- override one of these pins: list the same tool name in that lockfile;
-- point bazel_env shims at the same labels, `@multitool//tools/<name>`, so each tool has one pin.
+- Add its own tools with `multitool.hub(lockfile = "//:multitool.lock.json")` in its `MODULE.bazel`.
+- Override one of these pins by listing the same tool name in that lockfile.
+- Point bazel_env shims at the same labels, `@multitool//tools/<name>`, and keep one pin for each tool.
 
 To refer to those labels, declare the hub in your own `MODULE.bazel`:
 
@@ -105,18 +107,18 @@ multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitoo
 use_repo(multitool, "multitool")
 ```
 
-The lockfile pins each binary's URL and SHA-256 for macOS arm64, Linux x86_64 and Linux arm64.
+The lockfile pins each binary's URL and checksum for macOS arm64, Linux x86_64, and Linux arm64.
 
 ## Develop
 
-mise provides bazelisk and uv (`mise install`); Bazel and uv pin everything else.
+mise provides bazelisk and uv (`mise install`). Bazel and uv pin everything else.
 
 | Command | Checks |
 | --- | --- |
 | `bazelisk test //...` | buildifier, this repository's lint, shell and bats gates, run on its own rules |
 | `(cd e2e/smoke && bazelisk test //...)` | the rules as a consumer sees them, including the failure proofs |
 | `(cd e2e/js_coexist && bazelisk test //...)` | `cspell_test` beside a consumer's own rules_js and Node |
-| `bazelisk run //:format` | rewrites files with the formatters; `//:format.check` only checks |
+| `bazelisk run //:format` | rewrites files with the formatters, and `//:format.check` only checks |
 | `uv run pytest --cov=tools --cov-branch` | the Python tooling, at 100% branch coverage |
 | `uv run mutmut run; uv run python tools/mutation_gate.py` | every mutant killed |
 

@@ -1,0 +1,19 @@
+#!/usr/bin/env -S uv run --script
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# /// script
+# requires-python = ">=3.15"
+# dependencies = ["tbhbops"]
+#
+# [tool.uv.sources]
+# tbhbops = { path = "../cli" }
+# ///
+
+"""Print how many files the layout command looks at."""
+
+import sys
+
+from tbhbops import layout
+
+print(layout.count(sys.stdin.read()))

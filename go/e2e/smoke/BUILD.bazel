@@ -4,7 +4,7 @@
 load("@tbhb_rules//format:defs.bzl", "format_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
-load("@tbhb_rules_go//:defs.bzl", "go_deadcode_test", "go_mod_tidy_test")
+load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test")
 load("@tbhb_rules_go//tests/golangci:oracle.bzl", "golangci_lint_oracle")
 load("//tools/lint:linters.bzl", "golangci_lint_parity_test", "golangci_lint_test")
 
@@ -15,19 +15,41 @@ exports_files([
     "go.mod",
 ])
 
+# The module: two binaries sharing internal/shared (cmd/b is built pure, a
+# second configuration), the layers under them, and lib's test.
 CLEAN = [
-    "//cmd/smoke",
+    "//cmd/a",
+    "//cmd/b",
     "//lib:lib_test",
+]
+
+# Go files that are planted defects or proof fixtures, not part of the
+# module the clean checks cover.
+NOT_IN_MODULE = [
+    "dirty/*",
+    "internal/extra/*",
+    "*/planted_*",
 ]
 
 golangci_lint_test(
     name = "golangci_lint_test",
     srcs = CLEAN,
+    expect_linted = [":repo_files"],
+    expect_linted_exclude = NOT_IN_MODULE,
 )
 
+# One deadcode run over both binaries and the test: shared.OnlyB, which only
+# cmd/b calls, is live.
 go_deadcode_test(
     name = "deadcode_test",
     srcs = CLEAN,
+)
+
+go_arch_lint_test(
+    name = "go_arch_lint_test",
+    srcs = CLEAN,
+    config = ".go-arch-lint.yml",
+    go_mod = "go.mod",
 )
 
 go_mod_tidy_test(
@@ -63,6 +85,7 @@ golangci_lint_parity_test(
 
 # Proofs. Each wrapped test is manual and must fail for the stated reason.
 
+# golangci-lint: findings that need go-cmp's types.
 golangci_lint_test(
     name = "dirty_lint",
     srcs = ["//dirty"],
@@ -75,14 +98,116 @@ expect_failure_test(
     test = ":dirty_lint",
 )
 
-go_deadcode_test(
-    name = "dirty_deadcode",
-    srcs = CLEAN + ["//dirty"],
+# golangci-lint: a finding in the shared package, linted in two
+# configurations (cmd/b is pure), is reported once.
+golangci_lint_test(
+    name = "shared_finding",
+    srcs = [
+        "//cmd/a:a_planted",
+        "//cmd/b:b_planted",
+    ],
     tags = ["manual"],
 )
 
 expect_failure_test(
-    name = "dirty_deadcode_proof",
-    pattern = "dirty/dirty.go:[0-9]+:[0-9]+: unreachable func: Dead",
-    test = ":dirty_deadcode",
+    name = "shared_finding_proof",
+    pattern = "^internal/shared/planted_dead.go:[0-9]+:[0-9]+: Error return value of `os.Remove` is not checked \\(errcheck\\)$",
+    test = ":shared_finding",
+)
+
+expect_failure_test(
+    name = "shared_finding_once_proof",
+    pattern = "golangci-lint reported 1 issues in",
+    test = ":shared_finding",
+)
+
+# golangci-lint: a package nothing lists is not linted, and expect_linted
+# says so.
+golangci_lint_test(
+    name = "unlisted_package",
+    srcs = ["//cmd/a"],
+    expect_linted = [":repo_files"],
+    expect_linted_exclude = NOT_IN_MODULE,
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "unlisted_package_proof",
+    pattern = "^not linted: internal/feature2/feature2.go$",
+    test = ":unlisted_package",
+)
+
+# deadcode: shared.Orphan is called by nobody.
+go_deadcode_test(
+    name = "orphan",
+    srcs = [
+        "//cmd/a:a_planted",
+        "//cmd/b:b_planted",
+    ],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "orphan_proof",
+    pattern = "^internal/shared/planted_dead.go:[0-9]+:[0-9]+: unreachable func: Orphan$",
+    test = ":orphan",
+)
+
+# deadcode: run for cmd/a alone, shared.OnlyB looks dead. Why the check
+# takes all binaries at once.
+go_deadcode_test(
+    name = "one_binary",
+    srcs = ["//cmd/a"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "one_binary_proof",
+    pattern = "^internal/shared/shared.go:[0-9]+:[0-9]+: unreachable func: OnlyB$",
+    test = ":one_binary",
+)
+
+# go-arch-lint: each contract, broken once.
+[
+    (
+        go_arch_lint_test(
+            name = "arch_" + name,
+            srcs = CLEAN + [planted],
+            config = ".go-arch-lint.yml",
+            go_mod = "go.mod",
+            tags = ["manual"],
+        ),
+        expect_failure_test(
+            name = "arch_{}_proof".format(name),
+            pattern = pattern,
+            test = ":arch_" + name,
+        ),
+    )
+    for name, planted, pattern in [
+        # Layers: core imports a feature above it.
+        ("layers", "//internal/core:planted_layers", "Component core shouldn't depend on example.com/smoke/internal/feature1"),
+        # Sibling independence: feature1 imports feature2.
+        ("sibling", "//internal/feature1:planted_sibling", "Component feature1 shouldn't depend on example.com/smoke/internal/feature2"),
+        # Leaf: platform imports core.
+        ("leaf", "//internal/platform:planted_leaf", "Component platform shouldn't depend on example.com/smoke/internal/core"),
+        # Inverse: only cmd/* may import features; shared may not.
+        ("inverse", "//internal/shared:planted_inverse", "Component shared shouldn't depend on example.com/smoke/internal/feature1"),
+        # A package in no component.
+        ("unattached", "//internal/extra", "internal/extra/extra.go not attached to any component"),
+    ]
+]
+
+# go-arch-lint: a config that leaves deep scanning on is rejected.
+go_arch_lint_test(
+    name = "arch_deepscan",
+    srcs = CLEAN,
+    config = ".go-arch-lint-deepscan.yml",
+    go_mod = "go.mod",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "arch_deepscan_proof",
+    pattern = "must set allow.deepScan: false",
+    test = ":arch_deepscan",
 )

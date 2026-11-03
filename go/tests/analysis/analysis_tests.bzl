@@ -9,9 +9,9 @@ load("@rules_testing//lib:analysis_test.bzl", "analysis_test", "test_suite")
 load("@rules_testing//lib:truth.bzl", "matching")
 load("@rules_testing//lib:unit_test.bzl", "unit_test")
 load("@rules_testing//lib:util.bzl", "util")
-load("//:defs.bzl", "GolangciLintInfo", "go_deadcode_test", "go_mod_tidy_test", "golangci_lint_aspect_factory")
+load("//:defs.bzl", "GolangciLintInfo", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test", "golangci_lint_aspect_factory")
 load("//private:golangci_lint.bzl", "main_repo_label")
-load("//tests/golangci:linters.bzl", "fixture_lint")
+load("//tests/golangci:linters.bzl", "fixture_lint", "fixture_lint_test")
 
 FIXTURE = "//tests/golangci/fixture"
 
@@ -90,6 +90,36 @@ def _test_deadcode_without_go_targets(name):
         expect_failure = True,
     )
 
+def _test_lint_src_reaching_nothing(name):
+    util.helper_target(
+        fixture_lint_test,
+        name = name + "_subject",
+        srcs = [FIXTURE + "/clean", FIXTURE + ":repo_files"],
+        tags = ["manual"],
+    )
+    analysis_test(
+        name = name,
+        impl = _expect_failure("//tests/golangci/fixture:repo_files reaches no Go target of the main repository to lint"),
+        target = name + "_subject",
+        expect_failure = True,
+    )
+
+def _test_arch_lint_without_go_sources(name):
+    util.helper_target(
+        go_arch_lint_test,
+        name = name + "_subject",
+        srcs = [FIXTURE + ":repo_files"],
+        config = FIXTURE + ":.golangci.yml",
+        go_mod = FIXTURE + ":go.mod",
+        tags = ["manual"],
+    )
+    analysis_test(
+        name = name,
+        impl = _expect_failure("srcs reach no Go source of the main repository"),
+        target = name + "_subject",
+        expect_failure = True,
+    )
+
 def _test_tidy_source_outside_module(name):
     util.helper_target(
         go_mod_tidy_test,
@@ -138,10 +168,12 @@ def analysis_test_suite(name):
     test_suite(
         name = name,
         tests = [
+            _test_arch_lint_without_go_sources,
             _test_binary_without_sources,
             _test_deadcode_without_go_targets,
             _test_follows_deps_and_embed,
             _test_library,
+            _test_lint_src_reaching_nothing,
             _test_main_repo_label,
             _test_rule_kinds,
             _test_tidy_proxy_not_a_proxy,

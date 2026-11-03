@@ -5,6 +5,8 @@ module github.com/tbhb-dev/rules/go
 
 go 1.27.0
 
+toolchain go1.27.3
+
 tool golang.org/x/tools/cmd/deadcode
 
 require (

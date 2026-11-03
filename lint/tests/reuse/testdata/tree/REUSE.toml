@@ -1,0 +1,6 @@
+version = 1
+
+[[annotations]]
+path = "notes.txt"
+SPDX-FileCopyrightText = "Fixture Authors"
+SPDX-License-Identifier = "Apache-2.0"

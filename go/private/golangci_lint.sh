@@ -30,11 +30,17 @@ root=$PWD
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 # golangci-lint resolves symlinks in its working directory and config path
-# (fsutils.EvalSymlinks) but not in source paths, and computes the relative
-# paths that exclusion rules match from the two. In a sandbox every input is
-# a symlink into the source tree, so the config's directory would resolve
-# outside the sandbox. A mirror of real copies, at a symlink-free path, keeps
-# both sides inside it; the driver reports mirrored sources at their copies.
+# but not in source paths, and computes the relative paths that exclusion
+# rules match from the two. In a sandbox every input is a symlink into the
+# source tree, so the config's directory would resolve outside the sandbox.
+# A mirror of real copies, at a symlink-free path, keeps both sides inside
+# it; the driver reports mirrored sources at their copies. Design change
+# from PR #901, which ran on the execroot's symlinks. Sources in
+# golangci-lint 2.15.0: pkg/fsutils/fsutils.go Getwd (EvalSymlinks of the
+# working directory), EvalSymlinks and ShortestRelPath; and
+# pkg/config/base_loader.go BaseLoader.setConfigDir, which takes the
+# config directory from the resolved config path. Revisit if those stop
+# resolving symlinks or gain an option to keep them.
 tmp=$(cd "$tmp" && pwd -P)
 ws="$tmp/ws"
 mkdir -p "$ws" "$tmp/home"
@@ -56,7 +62,13 @@ export GOPACKAGESDRIVER_MIRROR="$ws"
 
 # Nothing outside the sandbox: empty caches of its own, no module proxy, no
 # toolchain switch, no workspace file, no telemetry. golangci-lint takes a
-# lock file in TMPDIR, which a private one keeps from serializing actions.
+# lock file in TMPDIR (pkg/commands/run.go, runCommand.acquireFileLock:
+# $TMPDIR/golangci-lint.lock), so with a shared TMPDIR concurrent actions
+# would wait on each other or fail with "parallel golangci-lint is
+# running"; a private one per action avoids that. Design change from PR
+# #901. --allow-parallel-runners (pkg/commands/flagsets.go) would skip the
+# lock too; a private TMPDIR also keeps every other temporary file in the
+# action.
 export HOME="$tmp/home"
 export TMPDIR="$tmp"
 export GOCACHE="$tmp/gocache"

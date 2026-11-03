@@ -15,31 +15,9 @@ not public API.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
-load("@rules_go//go:def.bzl", "GoArchive")
 load("//:defs.bzl", "GolangciLintInfo")
+load("//private:go_srcs.bzl", "GoSrcsInfo", "go_srcs_aspect")
 load("//private:golangci_lint.bzl", "write_report_manifest")
-
-GoSrcsInfo = provider(
-    doc = "Go sources of a target and the targets it depends on.",
-    fields = {"srcs": "depset of File"},
-)
-
-def _go_srcs_aspect_impl(target, ctx):
-    srcs = []
-    if target.label.repo_name == "" and GoArchive in target:
-        srcs = [f for f in getattr(ctx.rule.files, "srcs", []) if f.is_source]
-    transitive = [
-        dep[GoSrcsInfo].srcs
-        for attr in ("deps", "embed")
-        for dep in getattr(ctx.rule.attr, attr, []) or []
-        if GoSrcsInfo in dep
-    ]
-    return [GoSrcsInfo(srcs = depset(srcs, transitive = transitive))]
-
-go_srcs_aspect = aspect(
-    implementation = _go_srcs_aspect_impl,
-    attr_aspects = ["deps", "embed"],
-)
 
 def _oracle_impl(ctx):
     module_dir = ctx.file.go_mod.dirname
@@ -95,8 +73,9 @@ golangci_lint_oracle = rule(
         "proxy": attr.label(allow_files = True, doc = "A go_mod_proxy repository's `:proxy`, for a module with dependencies and no vendor/."),
         "srcs": attr.label_list(aspects = [go_srcs_aspect], doc = "Go targets whose sources make up the module."),
         "_golangci_lint": attr.label(
-            default = Label("@multitool//tools/golangci-lint"),
+            default = Label("//private:golangci_lint_bin"),
             executable = True,
+            allow_files = True,
             cfg = "exec",
         ),
         "_report": attr.label(default = Label("//private/report"), executable = True, cfg = "exec"),

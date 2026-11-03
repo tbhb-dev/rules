@@ -3,10 +3,12 @@
 
 """Consumes tbhb_rules_go the way a Go repository would.
 
-A small module with one external dependency (go-cmp, through go_deps) under
-golangci-lint, deadcode, go mod tidy and the golangci-lint formatter, a
-parity check of the aspect against golangci-lint run the ordinary way, and
-proofs that the checks fail on planted defects.
+A small module with two binaries sharing a package (one built pure, a second
+configuration), layered internal packages and one external dependency
+(go-cmp, through go_deps), under golangci-lint, deadcode, go-arch-lint,
+go mod tidy and the golangci-lint formatter; a parity check of the aspect
+against golangci-lint run the ordinary way; and proofs that the checks fail
+on planted defects.
 """
 
 module(name = "tbhb_rules_go_smoke")
@@ -27,7 +29,7 @@ bazel_dep(name = "rules_go", version = "0.65.0")
 bazel_dep(name = "gazelle", version = "0.54.0")
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
-go_sdk.download(version = "1.27.3")
+go_sdk.from_file(go_mod = "//:go.mod")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")

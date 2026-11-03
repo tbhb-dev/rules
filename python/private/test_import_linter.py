@@ -16,6 +16,7 @@ KEPT = "Analyzed 11 files, 7 dependencies.\n\nContracts: 3 kept, 0 broken.\n"
     [
         (KEPT, []),
         ("Analyzed 2 files, 0 dependencies.\nContracts: 0 kept, 1 broken.\n", []),
+        ("Analyzed 2 files, 0 dependencies.\nContracts: 1 kept, 1 broken.\n", []),
         (
             "Analyzed 11 files, 7 dependencies.\nContracts: 0 kept, 0 broken.\n",
             ["no contract is defined"],
@@ -91,6 +92,17 @@ def test_main_fails_a_run_that_checked_nothing(
     assert capsys.readouterr() == (
         out,
         "err\nimport_linter: FAIL: no contract is defined\n",
+    )
+
+
+def test_main_names_every_problem(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fake_run(monkeypatch, 0, "")
+    assert import_linter.main([]) == 1
+    assert capsys.readouterr().err.endswith(
+        "import_linter: FAIL: no module was analysed, no contract is defined\n",
     )
 
 

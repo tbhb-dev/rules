@@ -16,10 +16,7 @@ local_path_override(
     path = "../..",
 )
 
-# A consumer that refers to tool labels itself (here the guard proof; in a
-# real repository, its bazel_env shims or its own tool pins) shares
-# tbhb_rules' `multitool` hub.
-bazel_dep(name = "rules_multitool", version = "1.11.1")
-
-multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
-use_repo(multitool, "multitool")
+# A consumer that refers to a tool label itself (here the guard proof; in a
+# real repository, its bazel_env shims) uses tbhb_rules' hub repositories.
+tools = use_extension("@tbhb_rules//pins:extensions.bzl", "tools")
+use_repo(tools, "tbhb_rules_gitleaks")

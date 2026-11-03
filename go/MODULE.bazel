@@ -10,7 +10,7 @@ Consumers load only `@tbhb_rules_go//:defs.bzl`. See README.md.
 module(
     name = "tbhb_rules_go",
     version = "0.0.0",
-    bazel_compatibility = [">=8.0.0"],
+    bazel_compatibility = [">=9.0.0"],
 )
 
 bazel_dep(name = "tbhb_rules")
@@ -22,43 +22,30 @@ local_path_override(
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_go", version = "0.65.0")
+
+# private/golangci_lint.bzl and private/deadcode.bzl load GoStdLib from
+# rules_go's private providers.bzl (go:def.bzl does not export it), and the
+# driver reads rules_go's pkg.json format, so this module is tested against
+# exactly this rules_go. The override binds only when this module is the
+# root; README.md tells consumers to stay on the same version.
+single_version_override(
+    module_name = "rules_go",
+    version = "0.65.0",
+)
+
 bazel_dep(name = "gazelle", version = "0.54.0")
-bazel_dep(name = "rules_multitool", version = "1.11.1")
 
-# Default tool pins. Like tbhb_rules', they join rules_multitool's default
-# `multitool` hub, so a consumer can override any pin with its own lockfile.
-multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
-multitool.hub(lockfile = "//:multitool.lock.json")
-use_repo(multitool, "multitool")
-
-# go-arch-lint, one archive per platform, selected by //private:go_arch_lint.
-# Plain http_archive for now, so the pin is easy to move once the Renovate
-# route for release binaries is settled.
-http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-_GO_ARCH_LINT = "https://github.com/fe3dback/go-arch-lint/releases/download/v1.19.1/go-arch-lint_1.19.1_{}.tar.gz"
-
-_GO_ARCH_LINT_BUILD = 'exports_files(["go-arch-lint"], visibility = ["//visibility:public"])'
-
-http_archive(
-    name = "go_arch_lint_darwin_arm64",
-    build_file_content = _GO_ARCH_LINT_BUILD,
-    sha256 = "e2e9e80594afe21c2e2aedddcfce8df77eca19b055cfce0a1be11e85d06c9e49",
-    url = _GO_ARCH_LINT.format("darwin_arm64"),
-)
-
-http_archive(
-    name = "go_arch_lint_linux_amd64",
-    build_file_content = _GO_ARCH_LINT_BUILD,
-    sha256 = "26730d19b6acd20f3e922f71f5a7ec1c4e873894666fa9ad7bf03496ac17b06e",
-    url = _GO_ARCH_LINT.format("linux_amd64"),
-)
-
-http_archive(
-    name = "go_arch_lint_linux_arm64",
-    build_file_content = _GO_ARCH_LINT_BUILD,
-    sha256 = "57a7b08c375db614a3504df421dbff60209a5f5e444298a26b316889666b5484",
-    url = _GO_ARCH_LINT.format("linux_arm64"),
+# Prebuilt tools (golangci-lint, go-arch-lint), one archive per platform,
+# as literal http_archive calls in private/tools.bzl that Renovate bumps.
+tools = use_extension("//private:tools.bzl", "tools")
+use_repo(
+    tools,
+    "go_arch_lint_darwin_arm64",
+    "go_arch_lint_linux_amd64",
+    "go_arch_lint_linux_arm64",
+    "golangci_lint_darwin_arm64",
+    "golangci_lint_linux_amd64",
+    "golangci_lint_linux_arm64",
 )
 
 # Go tools without a prebuilt release (deadcode) are built by rules_go from
@@ -84,7 +71,7 @@ go_mod_proxy.from_file(
 )
 use_repo(go_mod_proxy, "gomod_fixture_proxy", "self_go_mod_proxy")
 
-# The Go SDK the tests build with; consumers bring their own. Matches the
-# toolchain directive in tbhb-dev's Go modules.
+# The Go SDK the tests build with, from go.mod's toolchain line; consumers
+# bring their own.
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk", dev_dependency = True)
-go_sdk.download(version = "1.27.3")
+go_sdk.from_file(go_mod = "//:go.mod")

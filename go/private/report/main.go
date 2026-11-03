@@ -8,6 +8,13 @@
 // A run that did not finish (an exit status other than 0 or 1, or an error
 // in the JSON) is a finding too, so a broken config or a load failure fails
 // the test instead of passing as "no issues".
+//
+// Only files under the base directory (the action's mirror of the main
+// repository) are reported. A finding in a file outside it, an external
+// dependency or the standard library, is dropped: it is not the
+// repository's to fix. A typecheck error there is the exception: it means
+// the dependency did not load, so everything that uses it was checked
+// against an empty package, and the run counts as not completed.
 package main
 
 import (
@@ -83,14 +90,19 @@ func run(in string, exit int, log, base, out string) error {
 
 	for _, issue := range doc.Issues {
 		path := issue.Pos.Filename
-		if filepath.IsAbs(path) {
-			if rel, err := filepath.Rel(base, path); err == nil {
-				path = rel
-			}
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(base, path)
 		}
-		path = filepath.ToSlash(path)
+		rel, err := filepath.Rel(base, path)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			if issue.FromLinter == "typecheck" {
+				failed(fmt.Sprintf("a dependency did not type-check: %s:%d:%d: %s",
+					path, issue.Pos.Line, issue.Pos.Column, issue.Text))
+			}
+			continue
+		}
 		lines = append(lines, fmt.Sprintf("%s:%d:%d: %s (%s)",
-			path, issue.Pos.Line, issue.Pos.Column, issue.Text, issue.FromLinter))
+			filepath.ToSlash(rel), issue.Pos.Line, issue.Pos.Column, issue.Text, issue.FromLinter))
 	}
 	sort.Strings(lines)
 

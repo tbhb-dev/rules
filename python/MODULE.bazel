@@ -9,7 +9,7 @@ Consumers load only `@tbhb_rules_python//:defs.bzl`. See README.md.
 module(
     name = "tbhb_rules_python",
     version = "0.0.0",
-    bazel_compatibility = [">=8.0.0"],
+    bazel_compatibility = [">=9.0.0"],
 )
 
 bazel_dep(name = "bazel_skylib", version = "1.9.2")

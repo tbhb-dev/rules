@@ -9,21 +9,38 @@ Consumers load only `@tbhb_rules//<family>:defs.bzl`. See README.md.
 module(
     name = "tbhb_rules",
     version = "0.0.0",
-    bazel_compatibility = [">=8.0.0"],
+    bazel_compatibility = [">=9.0.0"],
 )
 
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
-bazel_dep(name = "rules_multitool", version = "1.11.1")
+bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "aspect_rules_js", version = "3.5.2")
 
-# Default tool pins. They join rules_multitool's default `multitool` hub,
-# which merges the lockfiles of every module in the graph with the root
-# module winning, so a consumer can add tools or override any pin here with
-# its own `multitool.hub(lockfile = ...)`, and its bazel_env shims can point
-# at the same `@multitool//tools/<name>` labels the rules use.
-multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
-multitool.hub(lockfile = "//:multitool.lock.json")
-use_repo(multitool, "multitool")
+# Default tool pins: literal http_archive/http_file calls in
+# pins/extensions.bzl, which Renovate's bazel manager bumps, behind one hub
+# repository per tool. A consumer swaps a tool with override_repo.
+tools = use_extension("//pins:extensions.bzl", "tools")
+use_repo(
+    tools,
+    "tbhb_rules_actionlint",
+    "tbhb_rules_bats",
+    "tbhb_rules_editorconfig_checker",
+    "tbhb_rules_git",
+    "tbhb_rules_gitleaks",
+    "tbhb_rules_rumdl",
+    "tbhb_rules_ryl",
+    "tbhb_rules_shellcheck",
+    "tbhb_rules_shfmt",
+    "tbhb_rules_tombi",
+    "tbhb_rules_vale",
+    "tbhb_rules_zizmor",
+)
+
+# The pinned Python that reuse_test and okf_docs_test run on: uv (pinned per
+# platform in runtime/private/versions.bzl) installs the interpreter and
+# syncs runtime/tools/uv.lock, every package hash-checked. No rules_python.
+runtime = use_extension("//runtime:extensions.bzl", "runtime")
+use_repo(runtime, "tbhb_rules_python_runtime")
 
 # cspell ships only on npm, so rules_js installs it from a committed pnpm
 # lock, with every package pinned by integrity hash and no lifecycle script
@@ -46,9 +63,14 @@ use_repo(npm, "tbhb_rules_cspell_npm")
 pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm", dev_dependency = True)
 use_repo(pnpm, "pnpm")
 
-# Dev dependencies: tooling that only this repository's own gates need.
-bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
-bazel_dep(name = "bazelrc-preset.bzl", version = "1.10.0", dev_dependency = True)
+# Regular, not dev, dependencies, though only this repository's own gates
+# use them: the root package loads them, and a consumer that refers to any
+# root target (such as an exported config) loads the root package, which
+# fails when a repository it names is invisible. They fetch only when used.
+bazel_dep(name = "buildifier_prebuilt", version = "10.1.0")
+bazel_dep(name = "bazelrc-preset.bzl", version = "1.10.0")
+
+# Only test packages load rules_testing.
 bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
 
 # Pinned copies of the SchemaStore schemas that pyproject.toml's embedded
@@ -61,21 +83,57 @@ _SCHEMASTORE = "https://raw.githubusercontent.com/SchemaStore/schemastore/f0e072
 
 http_file(
     name = "schemastore_uv",
-    dev_dependency = True,
     sha256 = "accd72042015703861297d12c682e0d9c35f435506acf942874927bb367ccdf7",
     url = _SCHEMASTORE + "uv.json",
 )
 
 http_file(
     name = "schemastore_partial_pytest",
-    dev_dependency = True,
     sha256 = "15894b3b37e0ae60b79869da43b9e26790bc1198d645586ca8447246c23f9ac4",
     url = _SCHEMASTORE + "partial-pytest.json",
 )
 
 http_file(
     name = "schemastore_ruff",
-    dev_dependency = True,
     sha256 = "d543216c52a7bd33325de767ebba8b410162302bce2cdc8980662e0bc06984be",
     url = _SCHEMASTORE + "ruff.json",
+)
+
+# Vale style packages, one per `Packages` URL in .vale.ini and in the same
+# order, pinned by digest. //:vale_test syncs from these instead of the
+# network, and `bazel run //:vale_sync` writes them into .vale/ for editors.
+# Move a version here and in .vale.ini together.
+http_file(
+    name = "vale_google",
+    downloaded_file_path = "Google.zip",
+    sha256 = "4b67fca1f2a88595b2a578ab98bbf3017a23af677b04f93e862843f3ea1a9a0b",
+    url = "https://github.com/errata-ai/Google/releases/download/v0.7.1/Google.zip",
+)
+
+http_file(
+    name = "vale_write_good",
+    downloaded_file_path = "write-good.zip",
+    sha256 = "2960ef10861ddc7dc76292a4967eb3789bf05ca24f862042f6d15f53332887f0",
+    url = "https://github.com/errata-ai/write-good/releases/download/v0.4.1/write-good.zip",
+)
+
+http_file(
+    name = "vale_proselint",
+    downloaded_file_path = "proselint.zip",
+    sha256 = "48b1fb481ba44f6505d44346b283f6cdc74efd234f913bbdb09bf34420fab81c",
+    url = "https://github.com/errata-ai/proselint/releases/download/v0.3.4/proselint.zip",
+)
+
+http_file(
+    name = "vale_ai_tells",
+    downloaded_file_path = "ai-tells.zip",
+    sha256 = "f8d1e981abbfbac1aa092d1623a1ac9bc935f0b15e8071e7a072915abddf0570",
+    url = "https://github.com/tbhb/vale-ai-tells/releases/download/v1.37.0/ai-tells.zip",
+)
+
+http_file(
+    name = "vale_ai_tells_experimental",
+    downloaded_file_path = "ai-tells-experimental.zip",
+    sha256 = "d628f719afead6812028c2a31802d87c7572a931d9b16e94f2874d95e9d597b8",
+    url = "https://github.com/tbhb/vale-ai-tells/releases/download/v1.37.0/ai-tells-experimental.zip",
 )
