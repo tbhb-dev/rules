@@ -5751,6 +5751,8 @@ def test_hooks_json_registers_one_stable_command() -> None:
     assert list(hooks)[:3] == ["SessionStart", "SubagentStart", "PostToolUse"]
     commands = set()
     for event, groups in hooks.items():
+        if event == "PreToolUse":  # the gh pr guard (test_guard_gh_pr.py)
+            continue
         group = groups[0]
         if event != "PostToolUse":
             assert len(groups) == 1

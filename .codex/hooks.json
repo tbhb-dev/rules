@@ -39,6 +39,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project --quiet --python '>=3.15' python \"$(git rev-parse --show-toplevel)/tools/interim/guard_gh_pr.py\""
+          }
+        ]
+      }
     ]
   }
 }

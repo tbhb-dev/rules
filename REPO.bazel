@@ -9,7 +9,7 @@ ignore_directories([
     ".git",
     "bazel-*",
     ".mise",
-    ".venv",
+    "**/.venv",
     "mutants",
     "tmp",
     "**/__pycache__",
