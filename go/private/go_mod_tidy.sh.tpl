@@ -30,7 +30,13 @@ export HOME="$work/home"
 export GOCACHE="$work/gocache"
 export GOPATH="$work/gopath"
 export GOMODCACHE="$work/gopath/pkg/mod"
-export GOPROXY="file://$proxy"
+# The go command wants a file URL with a drive letter on Windows
+# (file:///C:/...), where `cygpath -m` gives C:/...
+if command -v cygpath >/dev/null; then
+  export GOPROXY="file:///$(cygpath -m "$proxy")"
+else
+  export GOPROXY="file://$proxy"
+fi
 # go.sum is what is checked; the checksum database is not consulted.
 export GOSUMDB=off
 # -modcacherw: Bazel deletes TEST_TMPDIR, module cache included.

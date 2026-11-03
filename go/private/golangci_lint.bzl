@@ -158,9 +158,16 @@ def _lint(target, ctx):
         for f in covered + [ctx.file._config] + ([go_mod] if go_mod else []) + ctx.files._data
     ]))
 
+    # On Windows the hub's executable is a Bash shim that finds the binary
+    # through a runfiles tree an action does not have: run the binary.
+    golangci_lint = ctx.executable._golangci_lint
+    for f in ctx.attr._golangci_lint[DefaultInfo].default_runfiles.files.to_list():
+        if f.basename == "golangci-lint.exe":
+            golangci_lint = f
+
     report = ctx.actions.declare_file(name + ".txt")
     args = ctx.actions.args()
-    args.add(ctx.executable._golangci_lint)
+    args.add(golangci_lint)
     args.add(ctx.executable._report)
     args.add(ctx.executable._driver)
     args.add(config)
@@ -179,7 +186,7 @@ def _lint(target, ctx):
             transitive = [driver_inputs(ctx, pkg_info, stdlib)],
         ),
         outputs = [report],
-        tools = [ctx.executable._golangci_lint, ctx.executable._report, ctx.executable._driver],
+        tools = [golangci_lint, ctx.executable._report, ctx.executable._driver],
         mnemonic = "GolangciLint",
         progress_message = "Linting %{label} with golangci-lint",
         toolchain = GO_TOOLCHAIN,

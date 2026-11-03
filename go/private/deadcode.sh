@@ -57,4 +57,5 @@ if ((status != 0)); then
   exit 0
 fi
 # Positions are absolute; report them relative to the execution root.
-sed "s|^$root/||" "$tmp/out" >"$report_out"
+# Windows spells them with backslashes.
+sed -e 's|\\|/|g' -e "s|^$root/||" "$tmp/out" >"$report_out"
