@@ -2,6 +2,8 @@ tmp/
 bin/
 dist/
 bazel-*
+# bazel_env's symlink into the output tree (bazel run //tools:bazel_env).
+.bazel_env
 .bazelrc.user
 coverage.*
 mise.local.toml

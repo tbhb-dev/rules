@@ -24,8 +24,8 @@ exclude = [
   # Generated lockfiles stay out of the format gate. They end in .lock not .toml,
   # so the default include already skips them; listed here to make that choice
   # explicit and durable.
-  "uv.lock",
-  "mise.lock",
+  "**/uv.lock",
+  "**/mise.lock",
 ]
 # Honor .gitignore/.ignore so generated trees (.rumdl_cache/, .venv/) are skipped without enumerating each here.
 respect-ignore-files = true

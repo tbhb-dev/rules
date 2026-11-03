@@ -3,16 +3,17 @@
 # Copyright Tony Burns
 
 # Git hooks for this clone, installed by tools/interim/install.sh (run from the
-# Claude Code SessionStart hook, or by hand with
-# `uv run bash tools/interim/install.sh`, which puts the locked prek on PATH).
-# The lint and format hooks join here once the bazel_env wrapper exists; they
-# will call the prebuilt bazel_env binaries directly, never `bazel run`, so a
-# running build's server lock can't stall a commit.
+# Claude Code SessionStart hook, or by hand). The lint and format hooks call
+# the Bazel-pinned tools through the bazel_env shims in tools/.bazel_env/bin
+# (`bazel run //tools:bazel_env` builds them), never `bazel run`, so a running
+# build's server lock can't stall a commit. They are the fast per-file
+# subset; `bazel test //...` runs every gate, whole-tree ones included.
 default_stages: [pre-commit]
 
-# Never touch Vale's synced style packages, build output, or test fixtures,
-# some of which are deliberately malformed for failure proofs.
-exclude: ^(\.vale/(Google|write-good|proselint|ai-tells.*)/|bazel-.*/)|(^|/)testdata/
+# Never touch Vale's synced style packages, build output, scratch work, agent
+# worktrees, mutation output, or test fixtures (failure-proof fixtures are
+# deliberately malformed).
+exclude: ^(\.vale/(Google|write-good|proselint|ai-tells.*)/|bazel-.*/|tmp/|\.worktrees/|(.*/)?(mutants|testdata)/)
 
 repos:
   - repo: builtin
@@ -25,6 +26,82 @@ repos:
       - id: fix-byte-order-marker
       - id: mixed-line-ending
       - id: trailing-whitespace
+
+  # Lint and format, on the staged files, with the same pins and configs as
+  # the Bazel gates.
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (staged changes)
+        language: system
+        entry: tools/.bazel_env/bin/gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml
+        pass_filenames: false
+      # The commit message: secrets, then the Conventional Commits header.
+      # These run from install.sh's plain commit-msg hook, which chains prek's
+      # commit-msg stage after the identity check.
+      - id: gitleaks-commit-msg
+        name: gitleaks (commit message)
+        language: system
+        entry: bash -c 'tools/.bazel_env/bin/gitleaks stdin --redact --no-banner --config .gitleaks.toml < "$1"' --
+        stages: [commit-msg]
+        always_run: true
+      - id: conventional-commits
+        name: Conventional Commits
+        language: system
+        entry: tools/.bazel_env/bin/cog verify --file
+        stages: [commit-msg]
+        always_run: true
+      - id: ruff-format
+        name: ruff format
+        language: system
+        entry: tools/.bazel_env/bin/ruff format --force-exclude
+        types_or: [python]
+      - id: ruff-check
+        name: ruff check
+        language: system
+        entry: tools/.bazel_env/bin/ruff check --force-exclude
+        types_or: [python]
+      - id: shfmt
+        name: shfmt
+        language: system
+        entry: tools/.bazel_env/bin/shfmt -w
+        types_or: [shell, bats]
+      - id: shellcheck
+        name: shellcheck
+        language: system
+        entry: tools/.bazel_env/bin/shellcheck -o check-extra-masked-returns
+        types_or: [shell, bats]
+      - id: buildifier
+        name: buildifier
+        language: system
+        entry: tools/.bazel_env/bin/buildifier -mode=fix -lint=warn -warnings=all
+        types: [bazel]
+      - id: tombi-format
+        name: tombi format
+        language: system
+        entry: tools/.bazel_env/bin/tombi format --offline
+        types: [toml]
+      - id: ryl
+        name: ryl
+        language: system
+        entry: tools/.bazel_env/bin/ryl check --strict -c .ryl.toml
+        types: [yaml]
+      - id: rumdl
+        name: rumdl
+        language: system
+        entry: tools/.bazel_env/bin/rumdl check
+        types: [markdown]
+      - id: actionlint
+        name: actionlint
+        language: system
+        # Its run: block checks need shellcheck, so it gets the pinned one.
+        entry: env "SHELLCHECK_OPTS=-o check-extra-masked-returns" tools/.bazel_env/bin/actionlint
+        args: [-shellcheck, tools/.bazel_env/bin/shellcheck]
+        files: ^\.github/workflows/
+      - id: editorconfig-checker
+        name: editorconfig-checker
+        language: system
+        entry: tools/.bazel_env/bin/editorconfig-checker -config .editorconfig-checker.json
 
   # Interim agent identity, a copy of ascm's (replaced there by `ascm
   # git-hook` at M1). The module

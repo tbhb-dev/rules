@@ -109,7 +109,7 @@ The rules' executables are Bash scripts. On Windows each runs through a `.bat` l
 
 ## Develop
 
-mise provides bazelisk, and uv for the interim pull request scripts (`mise install`). Bazel pins everything else.
+mise provides bazelisk, and uv for the interim pull request scripts (`mise install`). Bazel pins everything else. `mise run env` (`bazel run //tools:bazel_env`) puts shims for those pins in `tools/.bazel_env/bin`, which the git hooks call and mise adds to PATH.
 
 | Command | Checks |
 | --- | --- |

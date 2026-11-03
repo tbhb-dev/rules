@@ -5,6 +5,7 @@
 # (from the dev-only tbhb_rules_python), Vale, and the interim tooling's
 # tests. tools/ is left out of release archives.
 
+load("@bazel_env.bzl", "bazel_env")
 load(
     "@tbhb_rules_python//:defs.bzl",
     "bandit_test",
@@ -15,6 +16,7 @@ load(
     "pylint_test",
     "pyrefly_test",
     "pytest_test",
+    "python_tool",
     "ruff_test",
     "vulture_test",
 )
@@ -160,4 +162,47 @@ import_linter_test(
 # run` target for the CI repo job, not a cached test.
 pip_audit(
     name = "pip_audit",
+)
+
+# The locked Python tools as executables, for the bazel_env shims (git hooks
+# and editors). Each runs from the current directory.
+[
+    python_tool(
+        name = tool,
+        tool = tool,
+    )
+    for tool in [
+        "pyrefly",
+        "python",
+        "ruff",
+        "uv",
+    ]
+]
+
+# `bazel run //tools:bazel_env` puts shims for the Bazel-pinned tools in
+# .bazel_env/bin, which mise adds to PATH. Git hooks call them directly, so a
+# commit never waits on the Bazel server. It lives here, not in the root
+# package, because consumers load the root package and bazel_env is a dev
+# dependency.
+bazel_env(
+    name = "bazel_env",
+    tools = {
+        "actionlint": "@tbhb_rules_actionlint//:actionlint",
+        "buildifier": "@tbhb_rules_buildifier//:buildifier",
+        "cog": "@tbhb_rules_cog//:cog",
+        "editorconfig-checker": "@tbhb_rules_editorconfig_checker//:editorconfig-checker",
+        "git": "@tbhb_rules_git//:git",
+        "gitleaks": "@tbhb_rules_gitleaks//:gitleaks",
+        "pyrefly": ":pyrefly",
+        "python": ":python",
+        "ruff": ":ruff",
+        "rumdl": "@tbhb_rules_rumdl//:rumdl",
+        "ryl": "@tbhb_rules_ryl//:ryl",
+        "shellcheck": "@tbhb_rules_shellcheck//:shellcheck",
+        "shfmt": "@tbhb_rules_shfmt//:shfmt",
+        "tombi": "@tbhb_rules_tombi//:tombi",
+        "uv": ":uv",
+        "vale": "@tbhb_rules_vale//:vale",
+        "zizmor": "@tbhb_rules_zizmor//:zizmor",
+    },
 )

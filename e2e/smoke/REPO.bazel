@@ -6,6 +6,7 @@
 # same list in every workspace of tbhb_rules).
 ignore_directories([
     "bazel-*",
+    "**/.bazel_env",
     "**/.venv",
     "mutants",
     "tmp",

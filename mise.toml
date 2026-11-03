@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-# mise pins the two launchers (and cocogitto for the interim PR script). Bazel pins every other tool: lint tool
+# mise pins the two launchers. Bazel pins every other tool: lint tool
 # binaries come from //pins (literal http_archive pins) and run as
 # Bazel targets, and uv owns Python and the Python tooling (uv.lock).
 
@@ -21,12 +21,17 @@ idiomatic_version_file_enable_tools = []
 # uv provisions the interpreter rather than settling for a system build it
 # happened to find, which would differ by machine unnoticed.
 UV_PYTHON_PREFERENCE = "only-managed"
+# The Bazel-pinned tools (`bazel run //tools:bazel_env` builds the shims), so
+# a shell or task under mise runs the same versions the gates do.
+_.path = ["tools/.bazel_env/bin"]
 
 [tools]
 bazelisk = "1.30.0"
-# Interim, with tools/interim/pull_request.py: checks PR titles (cog verify).
-cocogitto = "7.0.0"
 uv = "0.13.6"
+
+[tasks.env]
+description = "Build the bazel_env shims for the Bazel-pinned tools"
+run = "bazelisk run //tools:bazel_env"
 
 # Check a PR draft and open or update the PR from it (interim):
 #   mise run pr -- check | create [--dry-run] | edit --pr N

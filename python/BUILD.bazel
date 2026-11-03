@@ -15,13 +15,23 @@ repo_files(
     ],
 )
 
-# shfmt and the editor take their style from .editorconfig, which this
-# workspace needs its own copy of; it must match the parent module's.
-diff_test(
-    name = "config_matches_parent_editorconfig",
-    file1 = ".editorconfig",
-    file2 = "@tbhb_rules//:.editorconfig",
-)
+# This module is released on its own (strip_prefix python/), so it carries
+# its own copies of the parent module's configs. Each copy must match the
+# parent's byte for byte; a change goes to both.
+CONFIGS = [
+    ".editorconfig",
+    ".rumdl.toml",
+    "tombi.toml",
+]
+
+[
+    diff_test(
+        name = "config_matches_parent_" + config.lstrip(".").replace(".", "_").replace("-", "_"),
+        file1 = config,
+        file2 = "@tbhb_rules//:" + config,
+    )
+    for config in CONFIGS
+]
 
 bzl_library(
     name = "defs",
