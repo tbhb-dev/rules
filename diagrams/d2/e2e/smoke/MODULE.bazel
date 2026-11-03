@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules_d2 the way a repository with diagrams would.
+
+Two diagrams under docs/, whose committed renders the check passes, and
+proofs that the check fails on each planted defect under proofs/.
+"""
+
+module(name = "tbhb_rules_d2_smoke")
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../../../..",
+)
+
+bazel_dep(name = "tbhb_rules_d2")
+local_path_override(
+    module_name = "tbhb_rules_d2",
+    path = "../..",
+)

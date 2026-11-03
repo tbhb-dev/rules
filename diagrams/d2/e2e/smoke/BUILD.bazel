@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//format:defs.bzl", "format_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    formatters = ["@tbhb_rules//format:buildifier"],
+)
+
+# Proofs. Each package under proofs/ holds renders made by
+# `bazel run //proofs/<name>:diagrams` and then broken one way; its
+# diagrams_test is manual and must fail for the stated reason.
+PROOFS = {
+    # The source changed after its renders were made.
+    "edited_source": "^mismatch: proofs/edited_source/a.d2.sha256 does not hold the hash of a.d2$",
+    # A source whose PNG was never committed.
+    "missing_render": "^missing: proofs/missing_render/a.d2.png$",
+    # Renders whose source was deleted.
+    "orphan": "^orphan: proofs/orphan/b.d2.svg has no source \\(proofs/orphan/b.d2 is not among the srcs\\)$",
+    # The PNG is a different image from the one the manifest vouches for.
+    "png_hash": "^mismatch: proofs/png_hash/a.d2.sha256 does not hold the hash of a.d2.png$",
+    # The SVG was edited and its manifest updated to match, so only the
+    # fresh render catches it.
+    "stale_svg": "^stale: proofs/stale_svg/a.d2.svg differs from a fresh render of proofs/stale_svg/a.d2$",
+}
+
+[
+    expect_failure_test(
+        name = "proof_{}_fails".format(proof),
+        pattern = pattern,
+        test = "//proofs/{}:diagrams_test".format(proof),
+    )
+    for proof, pattern in PROOFS.items()
+]
+
+# The source edit also leaves the SVG stale.
+expect_failure_test(
+    name = "proof_edited_source_svg_fails",
+    pattern = "^stale: proofs/edited_source/a.d2.svg differs from a fresh render of proofs/edited_source/a.d2$",
+    test = "//proofs/edited_source:diagrams_test",
+)

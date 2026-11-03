@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""D2 diagrams for tbhb-dev repositories: SVG and PNG renders committed
+beside their sources, and a test that fails when they are stale.
+
+Consumers load only `@tbhb_rules_d2//:defs.bzl`.
+"""
+
+module(
+    name = "tbhb_rules_d2",
+    version = "0.0.0",
+    bazel_compatibility = [">=9.0.0"],
+)
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../..",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
+
+# Prebuilt tools (d2, resvg, oxipng): literal per-platform http_archive pins
+# in private/tools.bzl that Renovate bumps, each behind a hub, the same
+# shape as tbhb_rules' own pins. d2's hub is tbhb_rules_d2_cli, since
+# tbhb_rules_d2 is this module. The PNG font (Source Sans Pro) is one more
+# literal pin there.
+tools = use_extension("//private:tools.bzl", "tools")
+use_repo(tools, "tbhb_rules_d2_cli", "tbhb_rules_oxipng", "tbhb_rules_resvg", "tbhb_rules_source_sans_pro")

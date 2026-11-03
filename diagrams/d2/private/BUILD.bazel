@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+# The render actions run this script; sh_binary gives it a launcher Windows
+# can execute.
+sh_binary(
+    name = "render_runner",
+    srcs = ["render.sh"],
+    visibility = ["//visibility:public"],
+)
+
+exports_files(
+    [
+        "check.sh.tpl",
+        "write.sh.tpl",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "d2_diagrams",
+    srcs = ["d2_diagrams.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@bazel_skylib//lib:shell",
+        "@tbhb_rules//shell:defs",
+    ],
+)
+
+bzl_library(
+    name = "formatter_include",
+    srcs = ["formatter_include.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = ["@tbhb_rules//format:defs"],
+)
+
+bzl_library(
+    name = "tools",
+    srcs = ["tools.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@bazel_tools//tools/build_defs/repo:http.bzl",
+        "@tbhb_rules//pins:hub",
+    ],
+)

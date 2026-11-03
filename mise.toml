@@ -51,6 +51,8 @@ run = "uv run python -m tools.interim.squash_merge"
 run = [
   "bazelisk test //...",
   "cd e2e/smoke && bazelisk test //...",
+  "cd diagrams/d2 && bazelisk test //...",
+  "cd diagrams/d2/e2e/smoke && bazelisk test //...",
   "cd go && bazelisk test //...",
   "cd go/e2e/smoke && bazelisk test //...",
   "cd python && bazelisk test //...",

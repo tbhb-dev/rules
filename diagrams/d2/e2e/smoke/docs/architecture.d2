@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# Shape labels are bold, edge labels italic, and `style.bold: false` gives
+# regular text, so the PNG uses all three of D2's font families.
+direction: right
+
+source: Diagram source {
+  shape: page
+}
+renders: Committed renders {
+  svg: SVG
+  png: PNG
+  manifest: Manifest {style.bold: false}
+}
+check: Check {shape: diamond}
+
+source -> renders.svg: d2
+renders.svg -> renders.png: resvg and oxipng
+renders -> check: re-render the SVG, hash the rest

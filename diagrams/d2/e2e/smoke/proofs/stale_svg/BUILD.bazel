@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_d2//:defs.bzl", "d2_diagrams")
+
+repo_files()
+
+# A planted defect for //:proofs; see the BUILD file there.
+d2_diagrams(
+    name = "diagrams",
+    tags = ["manual"],
+    visibility = ["//:__pkg__"],
+)

@@ -15,9 +15,11 @@ gomutants
 [Ll]ockfiles?
 mutmut
 npm
+oxipng
 prek
 pyrefly
 repo
+resvg
 rules_js
 rules_multitool
 shellcheck

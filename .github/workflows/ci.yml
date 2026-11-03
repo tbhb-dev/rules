@@ -50,6 +50,8 @@ jobs:
             [
               {"id": "root", "dir": ".", "deps": ["python"]},
               {"id": "smoke", "dir": "e2e/smoke", "deps": ["root"]},
+              {"id": "d2", "dir": "diagrams/d2", "deps": ["root"]},
+              {"id": "d2-smoke", "dir": "diagrams/d2/e2e/smoke", "deps": ["root", "d2"]},
               {"id": "go", "dir": "go", "deps": ["root"]},
               {"id": "go-smoke", "dir": "go/e2e/smoke", "deps": ["root", "go"]},
               {"id": "python", "dir": "python", "deps": ["root"]},
@@ -218,10 +220,10 @@ jobs:
       # Each module's MODULE.bazel, as `bazel mod tidy` would write it.
       - name: Check that MODULE.bazel is tidy
         run: |
-          for module in . go python; do
+          for module in . diagrams/d2 go python; do
             (cd "$module" && bazelisk mod tidy)
           done
-          git diff --exit-code -- MODULE.bazel go/MODULE.bazel python/MODULE.bazel
+          git diff --exit-code -- MODULE.bazel diagrams/d2/MODULE.bazel go/MODULE.bazel python/MODULE.bazel
 
       # Git history is not a declared input, so the history scan runs
       # outside the test graph; //:gitleaks_test covers the working tree.
