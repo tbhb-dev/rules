@@ -11,8 +11,6 @@ The action loads the package through a static GOPACKAGESDRIVER
 of every dependency, the standard library included. No go command builds
 anything, and no module cache, network or Bazel server is used, so each
 report is an ordinary cacheable action output.
-
-See docs/golangci-lint.md for what this cannot see.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")

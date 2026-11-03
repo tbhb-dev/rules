@@ -86,11 +86,6 @@ jobs:
         working-directory: go/e2e/smoke
         run: bazelisk test //...
 
-      # go/README.md's quickstart, verbatim, as a consumer.
-      - name: Test the Go quickstart
-        working-directory: go/e2e/quickstart
-        run: bazelisk test //...
-
   python:
     name: python
     runs-on: ubuntu-24.04

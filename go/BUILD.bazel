@@ -19,7 +19,6 @@ load("//private:formatter_include.bzl", "formatter_include")
 
 exports_files([
     ".golangci.yml",
-    "README.md",
     "go.mod",
     "go.sum",
 ])

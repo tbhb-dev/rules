@@ -4,7 +4,7 @@
 """Go rules for tbhb-dev repositories: golangci-lint, deadcode, go mod tidy
 and a golangci-lint formatter.
 
-Consumers load only `@tbhb_rules_go//:defs.bzl`. See README.md.
+Consumers load only `@tbhb_rules_go//:defs.bzl`.
 """
 
 module(
@@ -27,7 +27,7 @@ bazel_dep(name = "rules_go", version = "0.65.0")
 # rules_go's private providers.bzl (go:def.bzl does not export it), and the
 # driver reads rules_go's pkg.json format, so this module is tested against
 # exactly this rules_go. The override binds only when this module is the
-# root; README.md tells consumers to stay on the same version.
+# root; consumers should stay on the same version.
 single_version_override(
     module_name = "rules_go",
     version = "0.65.0",
