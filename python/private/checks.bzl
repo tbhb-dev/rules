@@ -34,10 +34,10 @@ def _check(name, srcs, tool, tool_args, select = True, exclude = [], chdir = "",
         exclude = exclude,
         chdir = chdir,
         python_env = python_env,
-        **tool_attrs
         tags = ["manual"],
         visibility = ["//visibility:private"],
         testonly = True,
+        **tool_attrs
     )
     tree_check_test(
         name = name,

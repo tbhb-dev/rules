@@ -30,8 +30,8 @@ concurrency:
 jobs:
   # The module supports Bazel 8.x as a minimum and pins .bazelversion to the
   # current 9.x, so the matrix runs both, on each platform the tool pins
-  # cover, for this repository (whose own gates run on its own rules) and for
-  # the e2e/smoke consumer. USE_BAZEL_VERSION overrides .bazelversion for
+  # cover, for this repository (whose own gates run on its own rules), the
+  # nested modules and the e2e consumers. USE_BAZEL_VERSION overrides .bazelversion for
   # bazelisk. Another version cannot satisfy the committed MODULE.bazel.lock
   # (.bazelrc sets --lockfile_mode=error), so those entries relax it through
   # the gitignored .bazelrc.user.
@@ -90,6 +90,16 @@ jobs:
       # must coexist with them and run on the consumer's Node.
       - name: Test the rules_js consumer
         working-directory: e2e/js_coexist
+        run: bazelisk test //...
+
+      # The nested modules are workspaces of their own, each with its own
+      # gates and consumers, on the same Bazel versions and platforms.
+      - name: Test the Go module
+        working-directory: go
+        run: bazelisk test //...
+
+      - name: Test the Go consumer
+        working-directory: go/e2e/smoke
         run: bazelisk test //...
 
   python:
