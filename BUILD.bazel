@@ -157,6 +157,7 @@ editorconfig_checker_test(
 actionlint_test(
     name = "actionlint_test",
     srcs = [":repo_files"],
+    config = ".github/actionlint.yaml",
 )
 
 zizmor_test(
