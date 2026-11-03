@@ -5,6 +5,10 @@
 # It comes first so the flags below can override it.
 import %workspace%/../preset.bazelrc
 
+# aspect_tools_telemetry, which aspect_rules_js brings in, reports the Bazel
+# and module versions in use unless told not to.
+common --repo_env=DO_NOT_TRACK=1
+
 # This module consumes tbhb_rules from the parent directory through
 # local_path_override, so its lockfile would churn with every change there;
 # it is not committed.

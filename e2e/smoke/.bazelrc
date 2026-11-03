@@ -5,6 +5,10 @@
 # It comes first so the flags below can override it.
 import %workspace%/../../preset.bazelrc
 
+# aspect_tools_telemetry, which aspect_rules_js brings in, reports the Bazel
+# and module versions in use unless told not to.
+common --repo_env=DO_NOT_TRACK=1
+
 # The smoke module consumes tbhb_rules from the parent directory, so its
 # lockfile would churn with every change there; it is not committed.
 common --lockfile_mode=off
