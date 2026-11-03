@@ -79,7 +79,9 @@ case $mode in
 svg)
   d2=$1 src=$2 svg_out=$3
   status=0
-  "$root/$d2" "$src" "$tmp/raw.svg" >"$tmp/log" 2>&1 || status=$?
+  # From the source's directory: on Windows d2 resolves an import against
+  # the working directory, not the importing file's directory.
+  (cd "$(dirname "$src")" && "$root/$d2" "$(basename "$src")" "$tmp/raw.svg") >"$tmp/log" 2>&1 || status=$?
   if ((status != 0)); then
     if grep -q 'failed to bundle remote images' "$tmp/log"; then
       echo "render.sh: error: $src uses a remote image, which d2 would fetch at build time." \
