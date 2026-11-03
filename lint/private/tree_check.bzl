@@ -4,6 +4,7 @@
 """`tree_check`: a test that runs one tool over a real copy of a file tree."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 
 # Internal: consumers load //lint:defs.bzl.
 visibility("//lint/...")
@@ -80,14 +81,16 @@ def _tree_check_impl(ctx):
     for path_tool in ctx.attr.path_tools:
         runfiles = runfiles.merge(path_tool[DefaultInfo].default_runfiles)
     runfiles = runfiles.merge(ctx.runfiles(files = [ctx.executable.tool] + ctx.files.path_tools))
+    executable, runfiles = shell_executable(ctx, script, runfiles)
     return [
-        DefaultInfo(executable = script, runfiles = runfiles),
+        DefaultInfo(executable = executable, runfiles = runfiles),
         RunEnvironmentInfo(environment = ctx.attr.env),
     ]
 
 tree_check_test = rule(
     implementation = _tree_check_impl,
     test = True,
+    toolchains = SHELL_TOOLCHAINS,
     doc = """Runs `tool` with `tool_args` at the root of a dereferenced copy of
 `srcs`, `data` and `config`, laid out at their repository-relative paths
 (relative to `strip_prefix` when set).
@@ -96,7 +99,7 @@ Fails when the copy holds fewer than `min_files` files or zero bytes, and,
 if `output_guard` is set, when the tool's combined output does not match it.
 Both failures say what was scanned, so a check that silently stopped seeing
 its inputs is diagnosable.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "cache_files": attr.label_keyed_string_dict(
             allow_files = True,
             doc = "Files to place under a private `XDG_CACHE_HOME`, keyed to their path inside it.",

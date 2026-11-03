@@ -10,19 +10,21 @@
 
 set -euo pipefail
 
-# The runfiles root, found from this script's own path: beside it when run
-# as an action's tool or with `bazel run`, else from the path it was called
-# by (tests and the format runner call "$runfiles/<short path>"), else from
-# the runfiles Bazel names in the environment (a test's PATH tool).
+# The runfiles root, found from this script's own path when it has its own
+# runfiles (an action's tool, `bazel run`), else from the runfiles Bazel names
+# in the environment (tests and the runners they start), else from the path
+# it was called by ("$runfiles/<short path>"). The environment comes before
+# the calling path: reached through a PATH symlink, a root-package tool's
+# short path is just its name and would match the symlink's directory.
 self=@@SELF@@
 if [[ -d "$0.runfiles/_main" ]]; then
   base="$0.runfiles/_main"
-elif [[ $0 == *"/$self" ]]; then
-  base=${0%"/$self"}
 elif [[ -n ${RUNFILES_DIR:-} ]]; then
   base="$RUNFILES_DIR/_main"
 elif [[ -n ${TEST_SRCDIR:-} ]]; then
   base="$TEST_SRCDIR/_main"
+elif [[ $0 == *"/$self" ]]; then
+  base=${0%"/$self"}
 else
   echo "python_tool: cannot find the runfiles of $0" >&2
   exit 1

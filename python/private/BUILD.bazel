@@ -22,6 +22,7 @@ exports_files([
     "mutmut.sh.tpl",
     "mutmut_report.py",
     "pip_audit.py",
+    "vale_sync_then.sh",
 ])
 
 bzl_library(

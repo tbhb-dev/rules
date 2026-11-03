@@ -152,6 +152,8 @@ def pytest_test(
         coverage_floor = 100,
         chdir = "",
         python_env = _ENV,
+        vale_config = ".vale.ini",
+        vale_packages = {},
         **kwargs):
     """Runs pytest over a copy of the tree, optionally with a coverage floor.
 
@@ -172,6 +174,12 @@ def pytest_test(
         coverage_floor: The minimum total coverage, in percent.
         chdir: Directory, relative to the tree root, to run pytest from.
         python_env: The Python environment.
+        vale_config: With `vale_packages`, the Vale config whose StylesPath
+            the packages are synced into, relative to the tree root.
+        vale_packages: Vale package archives, {package name: label}, synced
+            into the copy before pytest runs, for tests that drive vale
+            against the repository's configuration. vale itself must be on
+            PATH (`path_tools`).
         **kwargs: Passed to `tree_check_test`.
     """
     cov_args = []
@@ -181,14 +189,29 @@ def pytest_test(
             "--cov-report=term-missing",
             "--cov-fail-under={}".format(coverage_floor),
         ]
-    _check(
-        name,
-        srcs,
-        "pytest",
-        ["-p", "no:cacheprovider", "--junitxml={env:XML_OUTPUT_FILE}"] + cov_args + args,
-        select = False,
+    pytest_args = ["-p", "no:cacheprovider", "--junitxml={env:XML_OUTPUT_FILE}"] + cov_args + args
+    if not vale_packages:
+        _check(name, srcs, "pytest", pytest_args, select = False, chdir = chdir, python_env = python_env, **kwargs)
+        return
+    python_tool(
+        name = name + ".tool",
+        tool = "pytest",
         chdir = chdir,
         python_env = python_env,
+        tags = ["manual"],
+        visibility = ["//visibility:private"],
+        testonly = True,
+    )
+    tree_check_test(
+        name = name,
+        srcs = srcs,
+        tool = Label(":vale_sync_then.sh"),
+        tool_args = [vale_config, name + ".tool"] + pytest_args,
+        path_tools = kwargs.pop("path_tools", []) + [":{}.tool".format(name)],
+        cache_files = {
+            label: "vale/packages/{}/{}.zip".format(("00" + str(index))[-3:], package)
+            for index, (package, label) in enumerate(vale_packages.items())
+        },
         **kwargs
     )
 

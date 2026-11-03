@@ -4,8 +4,7 @@
 ---
 # Main quality gate. Each gate runs as its own job so the PR status shows
 # which one fired, and a final `conclusion` job gives branch protection one
-# stable required check. Bazel pins and runs the lint tools; mise installs
-# only bazelisk and uv, read from mise.toml and the committed mise.lock.
+# stable required check. Bazel pins and runs every tool.
 name: ci
 
 on:
@@ -16,13 +15,6 @@ on:
 permissions:
   contents: read
 
-# A lockfile only binds a version it has already seen: moving a pin in
-# mise.toml while leaving mise.lock alone would make mise fetch the new
-# version and rewrite the lockfile in place. MISE_LOCKED makes that a hard
-# failure instead.
-env:
-  MISE_LOCKED: "1"
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -30,15 +22,23 @@ concurrency:
 jobs:
   # tbhb_rules targets Bazel 9.x only (bazel_compatibility >= 9.0.0, and
   # .bazelversion pins the release), so the matrix varies only the platform:
-  # each one the tool pins cover. It runs this repository's own gates on its
-  # own rules, the nested modules and the e2e consumers.
+  # one runner for each platform the tool pins cover that GitHub hosts. It
+  # runs this repository's own gates, including the Python ones, on its own
+  # rules, the nested modules and the e2e consumers.
   bazel:
     name: "bazel (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-15]
+        os: [ubuntu-24.04, macos-15, windows-2025]
+    defaults:
+      run:
+        shell: bash
+    # On Windows the rules' scripts run under the shell toolchain's Bash,
+    # MSYS2's on the hosted image. Elsewhere BAZEL_SH is unused.
+    env:
+      BAZEL_SH: 'C:\msys64\usr\bin\bash.exe'
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
@@ -80,64 +80,17 @@ jobs:
         working-directory: go/e2e/smoke
         run: bazelisk test //...
 
-  python:
-    name: python
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
-        with:
-          egress-policy: audit
+      - name: Test the Python module
+        working-directory: python
+        run: bazelisk test //...
 
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
+      - name: Test the single-project Python consumer
+        working-directory: python/e2e/single
+        run: bazelisk test //...
 
-      # Installs the pinned uv, which then provisions the interpreter named
-      # in .python-version.
-      - name: Set up mise
-        uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c  # v5.2.6
-        with:
-          # renovate: datasource=github-releases depName=jdx/mise
-          version: 2026.10.25
-          install_args: uv
-
-      - name: Restore the locked Python dependencies
-        run: uv sync --locked
-
-      # REUSE runs first, before anything writes bytecode into the tree.
-      - name: Check REUSE compliance
-        run: uv run reuse lint
-
-      - name: Check docs frontmatter
-        run: uv run python tools/check_docs.py
-
-      # Tests are excluded from bandit: B101 flags every assert, and asserts
-      # are pytest's API.
-      - name: Lint
-        run: |
-          uv run ruff format --check
-          uv run ruff check
-          uv run pyrefly check
-          uv run pylint tools
-          uv run vulture
-          uv run complexipy
-          uv run bandit -r tools -q -x '*/test_*.py'
-
-      - name: Audit dependencies
-        run: |
-          work=$(mktemp -d)
-          uv export --quiet --format pylock.toml --no-emit-project -o "$work/pylock.toml"
-          uv run pip-audit --cache-dir "$work/cache" --locked "$work"
-
-      - name: Test with branch coverage
-        run: uv run pytest --cov=tools --cov-branch
-
-      # `;` rather than `&&`: the gate reports survivors, so it runs even when
-      # mutmut itself exits non-zero.
-      - name: Mutation-test, failing on any mutant not killed
-        run: uv run mutmut run; uv run python tools/mutation_gate.py
+      - name: Test the uv workspace Python consumer
+        working-directory: python/e2e/workspace
+        run: bazelisk test //...
 
   # Checks that need Git history or the GitHub API, which no sandboxed test
   # can see.
@@ -169,6 +122,11 @@ jobs:
       - name: Scan Git history for secrets
         run: bazelisk run //:gitleaks_history
 
+      # Advisories change while the lock stands still, so the audit is a
+      # `bazel run` target, never a cached test.
+      - name: Audit the locked Python dependencies
+        run: bazelisk run //tools:pip_audit
+
       - name: Check CODEOWNERS owners and syntax
         env:
           GH_TOKEN: ${{ github.token }}
@@ -191,7 +149,7 @@ jobs:
   conclusion:
     name: conclusion
     if: always()
-    needs: [bazel, python, repo]
+    needs: [bazel, repo]
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner

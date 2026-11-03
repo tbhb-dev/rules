@@ -2,11 +2,20 @@
 # Copyright Tony Burns
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@tbhb_rules//format:defs.bzl", "format", "format_test", "formatter")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("//private:tool.bzl", "python_tool")
 
 repo_files()
+
+# shfmt and the editor take their style from .editorconfig, which this
+# workspace needs its own copy of; it must match the parent module's.
+diff_test(
+    name = "config_matches_parent_editorconfig",
+    file1 = ".editorconfig",
+    file2 = "@tbhb_rules//:.editorconfig",
+)
 
 bzl_library(
     name = "defs",

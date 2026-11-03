@@ -4,6 +4,7 @@
 """The launcher that runs the tools of the locked Python environment."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 load(":env_info.bzl", "PyEnvInfo")
 
 # Internal: load //runtime:defs.bzl.
@@ -53,18 +54,20 @@ def _python_tool_impl(ctx):
         files = [ctx.file._launch, ctx.file._sitecustomize] + ([ctx.file.main] if ctx.file.main else []),
         transitive_files = env.files,
     )
-    return [DefaultInfo(executable = script, runfiles = runfiles)]
+    executable, runfiles = shell_executable(ctx, script, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 python_tool = rule(
     implementation = _python_tool_impl,
     executable = True,
+    toolchains = SHELL_TOOLCHAINS,
     doc = """An executable that runs one tool of the locked Python environment.
 
 `tool` is `python`, `uv`, a console script of an installed package, or an
 executable in the environment's bin directory. It runs from the current
 directory with the environment's site-packages and the workspace members'
 source roots (relative to the current directory) importable.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "allow_empty": attr.bool(doc = "With `select` or `filter`, finding no Python file is not an error."),
         "chdir": attr.string(doc = "Directory, relative to the current one, to run the tool from."),
         "exclude": attr.string_list(doc = "fnmatch patterns of relative paths `select` skips."),

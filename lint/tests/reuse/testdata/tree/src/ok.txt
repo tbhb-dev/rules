@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
-# SPDX-FileCopyrightText: Fixture Authors
+SPDX-License-Identifier: Apache-2.0
+SPDX-FileCopyrightText: Fixture Authors
 
-print("hi")
+A file with a header.

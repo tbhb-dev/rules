@@ -7,17 +7,16 @@ load("//format:defs.bzl", "format", "format_test", "formatter")
 load(
     "//lint:defs.bzl",
     "actionlint_test",
-    "bats_test",
     "cspell_test",
     "editorconfig_checker_test",
     "gitleaks_history",
     "gitleaks_test",
+    "okf_docs_test",
+    "reuse_test",
     "rumdl_test",
     "ryl_test",
     "tombi_test",
     "tree_check_test",
-    "vale_sync",
-    "vale_test",
     "zizmor_test",
 )
 load("//repo:defs.bzl", "repo_files", "repo_layout_test")
@@ -32,6 +31,12 @@ exports_files([
     ".ryl.toml",
     "tombi.toml",
 ])
+
+# For //tools's vale_test and vale_sync.
+exports_files(
+    [".vale.ini"],
+    visibility = ["//tools:__pkg__"],
+)
 
 # Every file of the repository, for the whole-tree checks below. Ignored
 # directories are listed in REPO.bazel; these are the gitignored files that
@@ -189,12 +194,6 @@ tree_check_test(
     tool_args = ["-d"] + SHELL_SCRIPTS,
 )
 
-bats_test(
-    name = "bats_test",
-    srcs = [":repo_files"],
-    tests = ["tools/interim/install.bats"],
-)
-
 # Formatting: `bazel run //:format` rewrites, `bazel run //:format.check`
 # checks the working tree, and format_test is the cached check in `bazel
 # test //...`. The runner templates are bash with a .tpl suffix; shfmt
@@ -263,33 +262,10 @@ repo_layout_test(
         "quality",
         "repo",
         "runtime",
+        "shell",
         "testing",
         "tools",
     ],
-)
-
-# Prose and spelling, offline, with the same configs the PR script uses.
-VALE_PACKAGES = {
-    "Google": "@vale_google//file",
-    "ai-tells": "@vale_ai_tells//file",
-    "ai-tells-experimental": "@vale_ai_tells_experimental//file",
-    "proselint": "@vale_proselint//file",
-    "write-good": "@vale_write_good//file",
-}
-
-vale_test(
-    name = "vale_test",
-    srcs = [":repo_files"],
-    config = ".vale.ini",
-    packages = VALE_PACKAGES,
-)
-
-# `bazel run //:vale_sync` writes the same packages into .vale/, for editors
-# and for running vale by hand.
-vale_sync(
-    name = "vale_sync",
-    config = ".vale.ini",
-    packages = VALE_PACKAGES,
 )
 
 cspell_test(
@@ -297,4 +273,14 @@ cspell_test(
     srcs = [":repo_files"],
     config = ".cspell.jsonc",
     data = [".cspell-words.txt"],
+)
+
+okf_docs_test(
+    name = "okf_docs_test",
+    srcs = [":repo_files"],
+)
+
+reuse_test(
+    name = "reuse_test",
+    srcs = [":repo_files"],
 )

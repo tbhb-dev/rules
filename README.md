@@ -92,33 +92,31 @@ Tag the wrapped test `manual` so `bazel test //...` doesn't run it on its own. T
 
 ### Tool pins
 
-The default tool versions live in `multitool.lock.json` and join rules_multitool's default `multitool` hub. rules_multitool merges the lockfiles of every module that contributes to a hub, and the root module's pins take precedence. A consumer can:
+Each tool binary is a literal `http_archive` or `http_file` pin in `pins/extensions.bzl`, one per tool and platform, so Renovate can move a version. The pins cover macOS arm64, Linux x86_64, Linux arm64, and Windows x86_64. Each tool has a hub repository, `tbhb_rules_<tool>`, whose `//:<tool>` target picks the binary for the target platform, and the rules use only those labels. buildifier comes from the `buildifier_prebuilt` module.
 
-- Add its own tools with `multitool.hub(lockfile = "//:multitool.lock.json")` in its `MODULE.bazel`.
-- Override one of these pins by listing the same tool name in that lockfile.
-- Point bazel_env shims at the same labels, `@multitool//tools/<name>`, and keep one pin for each tool.
-
-To refer to those labels, declare the hub in your own `MODULE.bazel`:
+To swap one tool for your own build, point its hub at a repository with a `//:<tool>` target:
 
 ```starlark
-bazel_dep(name = "rules_multitool", version = "1.11.1")
-
-multitool = use_extension("@rules_multitool//multitool:extension.bzl", "multitool")
-use_repo(multitool, "multitool")
+tools = use_extension("@tbhb_rules//pins:extensions.bzl", "tools")
+override_repo(tools, tbhb_rules_gitleaks = "my_gitleaks")
 ```
 
-The lockfile pins each binary's URL and checksum for macOS arm64, Linux x86_64, and Linux arm64.
+To refer to a pinned binary yourself, add `use_repo(tools, "tbhb_rules_gitleaks")`.
+
+### Windows
+
+The rules' executables are Bash scripts. On Windows each runs through a `.bat` launcher with the Bash of the shell `toolchain`, so set `BAZEL_SH` to an MSYS2 or Git for Windows `bash.exe`. The scripts read their files from the `runfiles` tree, so add `common:windows --enable_runfiles` (with `common --enable_platform_specific_config`) to your `.bazelrc`.
 
 ## Develop
 
-mise provides bazelisk and uv (`mise install`). Bazel and uv pin everything else.
+mise provides bazelisk, and uv for the interim pull request scripts (`mise install`). Bazel pins everything else.
 
 | Command | Checks |
 | --- | --- |
-| `bazelisk test //...` | buildifier, this repository's lint, shell and bats gates, run on its own rules |
+| `bazelisk test //...` | buildifier, this repository's lint, shell and Python gates (in `tools/`), run on its own rules |
 | `(cd e2e/smoke && bazelisk test //...)` | the rules as a consumer sees them, including the failure proofs |
 | `bazelisk run //:format` | rewrites files with the formatters, and `//:format.check` only checks |
-| `uv run pytest --cov=tools --cov-branch` | the Python tooling, at 100% branch coverage |
-| `uv run mutmut run; uv run python tools/mutation_gate.py` | every mutant killed |
+| `(cd go && bazelisk test //...)`, `(cd python && bazelisk test //...)` | the nested language modules, each with its own consumers under `e2e/` |
+| `mise run test` | every command in this table except the format runs |
 
 `.github/workflows/ci.yml` lists the complete gate set.

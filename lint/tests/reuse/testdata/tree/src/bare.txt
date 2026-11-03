@@ -1,1 +1,1 @@
-print("no header")
+A file without a header.

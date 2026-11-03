@@ -9,7 +9,7 @@ repo_files()
 
 PREFIX = "lint/tests/reuse/testdata/tree"
 
-PLANTED = "testdata/tree/src/bare.py"
+PLANTED = "testdata/tree/src/bare.txt"
 
 CLEAN = glob(
     ["testdata/tree/**"],

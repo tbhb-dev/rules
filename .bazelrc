@@ -10,3 +10,7 @@ common --lockfile_mode=error
 common --check_direct_dependencies=error
 
 try-import %workspace%/.bazelrc.user
+
+# Windows runs only .exe, .bat and .cmd files and makes no runfiles tree by
+# default; the rules' scripts read their files from that tree.
+common:windows --enable_runfiles

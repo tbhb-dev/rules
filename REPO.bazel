@@ -15,8 +15,8 @@ ignore_directories([
     "**/__pycache__",
     "**/.*_cache",
     ".hypothesis",
-    # Style packages and helpers that `bazel run //:vale_sync` writes for
-    # editors; //:vale_test syncs its own copies from the pinned zips.
+    # Style packages and helpers that `bazel run //tools:vale_sync` writes for
+    # editors; //tools:vale_test syncs its own copies from the pinned zips.
     ".vale/Google",
     ".vale/ai-tells*",
     ".vale/config/scripts",

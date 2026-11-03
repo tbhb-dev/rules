@@ -4,6 +4,7 @@
 """Formatters: `formatter`, the `format` runners and `format_test`."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 
 # Internal: consumers load //format:defs.bzl.
 visibility("//format/...")
@@ -88,7 +89,7 @@ def _script(ctx, mode, source, manifest = None, strip_prefix = ""):
     )
     return script
 
-_COMMON_ATTRS = {
+_COMMON_ATTRS = SHELL_ATTRS | {
     "exclude": attr.string_list(
         doc = "Bash glob patterns for files no formatter may touch, such as deliberately malformed test fixtures; matched like `include`.",
     ),
@@ -105,11 +106,13 @@ _COMMON_ATTRS = {
 
 def _format_run_impl(ctx):
     script = _script(ctx, ctx.attr.mode, "workspace")
-    return [DefaultInfo(executable = script, runfiles = _runfiles(ctx, ctx.attr.formatters))]
+    executable, runfiles = shell_executable(ctx, script, _runfiles(ctx, ctx.attr.formatters))
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 format_run = rule(
     implementation = _format_run_impl,
     executable = True,
+    toolchains = SHELL_TOOLCHAINS,
     attrs = dict(_COMMON_ATTRS, mode = attr.string(mandatory = True, values = ["check", "fix"])),
 )
 
@@ -135,11 +138,13 @@ def _format_test_impl(ctx):
     )
     script = _script(ctx, "check", "copy", manifest, strip_prefix)
     runfiles = _runfiles(ctx, ctx.attr.formatters, [manifest]).merge(ctx.runfiles(transitive_files = files))
-    return [DefaultInfo(executable = script, runfiles = runfiles)]
+    executable, runfiles = shell_executable(ctx, script, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 format_test = rule(
     implementation = _format_test_impl,
     test = True,
+    toolchains = SHELL_TOOLCHAINS,
     doc = """Fails when any file in `srcs` is not formatted according to `formatters`.
 
 Runs each formatter's `check_args` over a dereferenced copy of `srcs`, laid

@@ -14,6 +14,7 @@ module(
 
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
 bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "aspect_rules_js", version = "3.5.2")
 
 # Default tool pins: literal http_archive/http_file calls in
@@ -24,6 +25,7 @@ use_repo(
     tools,
     "tbhb_rules_actionlint",
     "tbhb_rules_bats",
+    "tbhb_rules_cog",
     "tbhb_rules_editorconfig_checker",
     "tbhb_rules_git",
     "tbhb_rules_gitleaks",
@@ -73,6 +75,18 @@ bazel_dep(name = "bazelrc-preset.bzl", version = "1.10.0")
 # Only test packages load rules_testing.
 bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
 
+# The Python gates for this repository's own Python (tools/, runtime/private,
+# lint/private/okf_docs) come from the nested tbhb_rules_python module, over
+# the root uv project (pyproject.toml, uv.lock).
+bazel_dep(name = "tbhb_rules_python", version = "0.0.0", dev_dependency = True)
+local_path_override(
+    module_name = "tbhb_rules_python",
+    path = "python",
+)
+
+python = use_extension("@tbhb_rules_python//:extensions.bzl", "python", dev_dependency = True)
+python.project()
+
 # Pinned copies of the SchemaStore schemas that pyproject.toml's embedded
 # tombi schema refers to by URL, so //:tombi_test validates offline. One
 # archive of a SchemaStore commit, which Renovate can move, because
@@ -93,8 +107,8 @@ http_archive(
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
 
 # Vale style packages, one per `Packages` URL in .vale.ini and in the same
-# order, pinned by digest. //:vale_test syncs from these instead of the
-# network, and `bazel run //:vale_sync` writes them into .vale/ for editors.
+# order, pinned by digest. //tools:vale_test syncs from these instead of the
+# network, and `bazel run //tools:vale_sync` writes them into .vale/ for editors.
 # Move a version here and in .vale.ini together.
 http_file(
     name = "vale_google",

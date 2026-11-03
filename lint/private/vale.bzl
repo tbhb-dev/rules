@@ -4,6 +4,7 @@
 """Vale prose lint against pinned style packages, and a sync for editors."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 load(":tree_check.bzl", "tree_check_test")
 
 # Internal: consumers load //lint:defs.bzl.
@@ -81,15 +82,17 @@ def _vale_sync_impl(ctx):
     )
     runfiles = ctx.runfiles(files = [ctx.executable.tool] + ctx.files.packages)
     runfiles = runfiles.merge(ctx.attr.tool[DefaultInfo].default_runfiles)
-    return [DefaultInfo(executable = script, runfiles = runfiles)]
+    executable, runfiles = shell_executable(ctx, script, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 _vale_sync = rule(
     implementation = _vale_sync_impl,
     executable = True,
+    toolchains = SHELL_TOOLCHAINS,
     doc = """`bazel run` target that writes the pinned Vale packages into the
 workspace's StylesPath, the same unpacking `vale sync` does from the
 config's URLs, for editors and for running vale by hand.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "config": attr.label(
             allow_single_file = True,
             mandatory = True,

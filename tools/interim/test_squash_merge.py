@@ -94,9 +94,10 @@ def tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Tools:
         script = bin_dir / name
         script.write_text(body.format(python=sys.executable))
         script.chmod(0o755)
-    for name in list(os.environ):
-        if name.startswith(("CLAUDE", "CODEX", "ANTIGRAVITY", "GIT_")):
-            monkeypatch.delenv(name)
+    # One statement, not a loop: under Bazel's clean environment there is
+    # nothing to remove, and a loop body that never runs is a missed branch.
+    prefixes = ("CLAUDE", "CODEX", "ANTIGRAVITY", "GIT_")
+    list(map(monkeypatch.delenv, [n for n in os.environ if n.startswith(prefixes)]))
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{git_dir}")
     made = Tools(bin_dir)

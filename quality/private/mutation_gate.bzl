@@ -4,6 +4,7 @@
 """`mutation_gate_test` and the provider mutation runners return."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 
 # Internal: consumers load //quality:defs.bzl.
 visibility("//quality/...")
@@ -33,18 +34,20 @@ def _mutation_gate_impl(ctx):
         substitutions = {"@@REPORTS@@": " ".join([shell.quote(r.short_path) for r in reports])},
         is_executable = True,
     )
-    return [DefaultInfo(executable = script, runfiles = ctx.runfiles(files = reports))]
+    executable, runfiles = shell_executable(ctx, script, ctx.runfiles(files = reports))
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 mutation_gate_test = rule(
     implementation = _mutation_gate_impl,
     test = True,
+    toolchains = SHELL_TOOLCHAINS,
     doc = """Passes only when every mutant in `reports` was killed or skipped.
 
 Fails when any mutant survived, timed out, was suspicious, had no tests or
 crashed, when a run was interrupted, when nothing was mutated, and when the
 counts don't add up to the total (mutants a failed run never checked). The
 counts are summed over all reports.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "reports": attr.label_list(
             allow_files = True,
             mandatory = True,

@@ -21,10 +21,20 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file"
 
 _EXPORT = """exports_files(["{}"], visibility = ["//visibility:public"])"""
 
+# Git for Windows runs from its own tree, so the whole archive goes along.
+_EXPORT_TREE = _EXPORT + """
+
+filegroup(
+    name = "tree",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)"""
+
 _PLATFORMS = {
     "linux_arm64": ["@platforms//os:linux", "@platforms//cpu:arm64"],
     "linux_x86_64": ["@platforms//os:linux", "@platforms//cpu:x86_64"],
     "macos_arm64": ["@platforms//os:macos", "@platforms//cpu:arm64"],
+    "windows_x86_64": ["@platforms//os:windows", "@platforms//cpu:x86_64"],
 }
 
 def _tool_hub_impl(rctx):
@@ -40,13 +50,21 @@ def _tool_hub_impl(rctx):
     ]
     for platform, label in sorted(rctx.attr.binaries.items()):
         lines.append("        {}: {},".format(repr(":" + platform), repr(label)))
-    lines += [
+    lines.append(
         "    }, no_match_error = " + repr(
             "no pinned {} binary for this platform; the pins cover {}".format(
                 rctx.attr.tool,
                 ", ".join(sorted(rctx.attr.binaries)),
             ),
         ) + "),",
+    )
+    if rctx.attr.data:
+        lines.append("    data = select({")
+        for platform, label in sorted(rctx.attr.data.items()):
+            lines.append("        {}: [{}],".format(repr(":" + platform), repr(label)))
+        lines.append("        \"//conditions:default\": [],")
+        lines.append("    }),")
+    lines += [
         "    visibility = [\"//visibility:public\"],",
         ")",
     ]
@@ -64,6 +82,7 @@ _tool_hub = repository_rule(
     implementation = _tool_hub_impl,
     attrs = {
         "binaries": attr.string_dict(mandatory = True),
+        "data": attr.string_dict(doc = "Per platform, a label of files the binary needs beside it."),
         "tool": attr.string(mandatory = True),
     },
 )
@@ -96,6 +115,30 @@ def _tools_impl(mctx):
         sha256 = "bb537b70b15b732f6d8827dd6578e3d8ce166636ce1f18ea9a074184fcce9177",
         strip_prefix = "bats-core-1.14.0",
         url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.14.0.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_cog_macos_arm64",
+        build_file_content = _EXPORT.format("cog"),
+        sha256 = "429303b6d68c6461aa221ab4de82b26d0bbcdee7127947ea9c7c411ab9bc574c",
+        strip_prefix = "aarch64-apple-darwin",
+        url = "https://github.com/cocogitto/cocogitto/releases/download/7.0.0/cocogitto-7.0.0-aarch64-apple-darwin.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_cog_linux_x86_64",
+        build_file_content = _EXPORT.format("cog"),
+        sha256 = "e03938ff2c4c86d71c00c0f3284dbbe95c5ca76fe34a51f33e945c23010d59bb",
+        strip_prefix = "x86_64-unknown-linux-musl",
+        url = "https://github.com/cocogitto/cocogitto/releases/download/7.0.0/cocogitto-7.0.0-x86_64-unknown-linux-musl.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_cog_linux_arm64",
+        build_file_content = _EXPORT.format("cog"),
+        sha256 = "379949f50c4f8245ef9532913e83f351c048b55e40ebd52ed8a850642c07a753",
+        strip_prefix = "aarch64-unknown-linux-gnu",
+        url = "https://github.com/cocogitto/cocogitto/releases/download/7.0.0/cocogitto-7.0.0-aarch64-unknown-linux-gnu.tar.gz",
     )
 
     http_archive(
@@ -317,6 +360,92 @@ def _tools_impl(mctx):
         url = "https://github.com/zizmorcore/zizmor/releases/download/v1.31.1/zizmor-aarch64-unknown-linux-gnu.tar.gz",
     )
 
+    http_archive(
+        name = "tbhb_rules_actionlint_windows_x86_64",
+        build_file_content = _EXPORT.format("actionlint.exe"),
+        sha256 = "6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9",
+        url = "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_windows_amd64.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_cog_windows_x86_64",
+        build_file_content = _EXPORT.format("cog.exe"),
+        sha256 = "074f68f05d270da5c0d69d3e234ec362bec4c6e3189c21d1c948d038603655d7",
+        strip_prefix = "x86_64-pc-windows-msvc",
+        url = "https://github.com/cocogitto/cocogitto/releases/download/7.0.0/cocogitto-7.0.0-x86_64-pc-windows-msvc.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_editorconfig_checker_windows_x86_64",
+        build_file_content = _EXPORT.format("editorconfig-checker.exe"),
+        sha256 = "857f8f74dfc259d73dac93573e37cf3ce01150787d7b139bf839549cc6b5beb9",
+        url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/download/v4.0.2/editorconfig-checker-windows-amd64.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_git_windows_x86_64",
+        build_file_content = _EXPORT_TREE.format("cmd/git.exe"),
+        sha256 = "f1e17876337d7be143e5d51976da36643d65528125cfbc14d57f171de0fd5f14",
+        url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-windows-x64.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_gitleaks_windows_x86_64",
+        build_file_content = _EXPORT.format("gitleaks.exe"),
+        sha256 = "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e",
+        url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_windows_x64.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_rumdl_windows_x86_64",
+        build_file_content = _EXPORT.format("rumdl.exe"),
+        sha256 = "72ed0bd3912560758cfc66cb439a2804755a858573e605cd3d1e65e8aa79d2a1",
+        url = "https://github.com/rvben/rumdl/releases/download/v0.3.0/rumdl-v0.3.0-x86_64-pc-windows-msvc.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_ryl_windows_x86_64",
+        build_file_content = _EXPORT.format("ryl.exe"),
+        sha256 = "e6c49aaab0d674de1842ee2095c32f22f69394fe84e0898315d9a58e506438d5",
+        url = "https://github.com/owenlamont/ryl/releases/download/v0.26.1/ryl-x86_64-pc-windows-msvc.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_shellcheck_windows_x86_64",
+        build_file_content = _EXPORT.format("shellcheck.exe"),
+        sha256 = "8a4e35ab0b331c85d73567b12f2a444df187f483e5079ceffa6bda1faa2e740e",
+        url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_tombi_windows_x86_64",
+        build_file_content = _EXPORT.format("tombi.exe"),
+        sha256 = "6080696714182be2e35bd89e3bbe4f301f92fb2cb888088fd282c341a4f1e5c1",
+        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.6/tombi-cli-1.9.6-x86_64-pc-windows-msvc.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_vale_windows_x86_64",
+        build_file_content = _EXPORT.format("vale.exe"),
+        sha256 = "3a8884774973b6f2826877e1c6388a5feae4704ef88a9a9c912c77ce186990f3",
+        url = "https://github.com/vale-cli/vale/releases/download/v3.24.0/vale_3.24.0_Windows_64-bit.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_zizmor_windows_x86_64",
+        build_file_content = _EXPORT.format("zizmor.exe"),
+        sha256 = "4de30371c8a3b483aecbcf0dec1fd6a2b6aae65051ca226b4f6527baac6a8c7a",
+        url = "https://github.com/zizmorcore/zizmor/releases/download/v1.31.1/zizmor-x86_64-pc-windows-msvc.zip",
+    )
+
+    http_file(
+        name = "tbhb_rules_shfmt_windows_x86_64",
+        downloaded_file_path = "shfmt.exe",
+        executable = True,
+        sha256 = "13629ce28442ca80b6b5a819f7574ab39e1c28c6e26734ca816c9714e04851df",
+        url = "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_windows_amd64.exe",
+    )
+
     _tool_hub(
         name = "tbhb_rules_actionlint",
         tool = "actionlint",
@@ -324,6 +453,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_actionlint_linux_arm64//:actionlint",
             "linux_x86_64": "@tbhb_rules_actionlint_linux_x86_64//:actionlint",
             "macos_arm64": "@tbhb_rules_actionlint_macos_arm64//:actionlint",
+            "windows_x86_64": "@tbhb_rules_actionlint_windows_x86_64//:actionlint.exe",
         },
     )
 
@@ -334,6 +464,18 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_bats_source//:bin/bats",
             "linux_x86_64": "@tbhb_rules_bats_source//:bin/bats",
             "macos_arm64": "@tbhb_rules_bats_source//:bin/bats",
+            "windows_x86_64": "@tbhb_rules_bats_source//:bin/bats",
+        },
+    )
+
+    _tool_hub(
+        name = "tbhb_rules_cog",
+        tool = "cog",
+        binaries = {
+            "linux_arm64": "@tbhb_rules_cog_linux_arm64//:cog",
+            "linux_x86_64": "@tbhb_rules_cog_linux_x86_64//:cog",
+            "macos_arm64": "@tbhb_rules_cog_macos_arm64//:cog",
+            "windows_x86_64": "@tbhb_rules_cog_windows_x86_64//:cog.exe",
         },
     )
 
@@ -344,6 +486,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_editorconfig_checker_linux_arm64//:editorconfig-checker",
             "linux_x86_64": "@tbhb_rules_editorconfig_checker_linux_x86_64//:editorconfig-checker",
             "macos_arm64": "@tbhb_rules_editorconfig_checker_macos_arm64//:editorconfig-checker",
+            "windows_x86_64": "@tbhb_rules_editorconfig_checker_windows_x86_64//:editorconfig-checker.exe",
         },
     )
 
@@ -354,7 +497,9 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_git_linux_arm64//:bin/git",
             "linux_x86_64": "@tbhb_rules_git_linux_x86_64//:bin/git",
             "macos_arm64": "@tbhb_rules_git_macos_arm64//:bin/git",
+            "windows_x86_64": "@tbhb_rules_git_windows_x86_64//:cmd/git.exe",
         },
+        data = {"windows_x86_64": "@tbhb_rules_git_windows_x86_64//:tree"},
     )
 
     _tool_hub(
@@ -364,6 +509,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_gitleaks_linux_arm64//:gitleaks",
             "linux_x86_64": "@tbhb_rules_gitleaks_linux_x86_64//:gitleaks",
             "macos_arm64": "@tbhb_rules_gitleaks_macos_arm64//:gitleaks",
+            "windows_x86_64": "@tbhb_rules_gitleaks_windows_x86_64//:gitleaks.exe",
         },
     )
 
@@ -374,6 +520,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_rumdl_linux_arm64//:rumdl",
             "linux_x86_64": "@tbhb_rules_rumdl_linux_x86_64//:rumdl",
             "macos_arm64": "@tbhb_rules_rumdl_macos_arm64//:rumdl",
+            "windows_x86_64": "@tbhb_rules_rumdl_windows_x86_64//:rumdl.exe",
         },
     )
 
@@ -384,6 +531,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_ryl_linux_arm64//:ryl",
             "linux_x86_64": "@tbhb_rules_ryl_linux_x86_64//:ryl",
             "macos_arm64": "@tbhb_rules_ryl_macos_arm64//:ryl",
+            "windows_x86_64": "@tbhb_rules_ryl_windows_x86_64//:ryl.exe",
         },
     )
 
@@ -394,6 +542,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_shellcheck_linux_arm64//:shellcheck",
             "linux_x86_64": "@tbhb_rules_shellcheck_linux_x86_64//:shellcheck",
             "macos_arm64": "@tbhb_rules_shellcheck_macos_arm64//:shellcheck",
+            "windows_x86_64": "@tbhb_rules_shellcheck_windows_x86_64//:shellcheck.exe",
         },
     )
 
@@ -404,6 +553,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_shfmt_linux_arm64//file:shfmt",
             "linux_x86_64": "@tbhb_rules_shfmt_linux_x86_64//file:shfmt",
             "macos_arm64": "@tbhb_rules_shfmt_macos_arm64//file:shfmt",
+            "windows_x86_64": "@tbhb_rules_shfmt_windows_x86_64//file:shfmt.exe",
         },
     )
 
@@ -414,6 +564,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_tombi_linux_arm64//:tombi",
             "linux_x86_64": "@tbhb_rules_tombi_linux_x86_64//:tombi",
             "macos_arm64": "@tbhb_rules_tombi_macos_arm64//:tombi",
+            "windows_x86_64": "@tbhb_rules_tombi_windows_x86_64//:tombi.exe",
         },
     )
 
@@ -424,6 +575,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_vale_linux_arm64//:vale",
             "linux_x86_64": "@tbhb_rules_vale_linux_x86_64//:vale",
             "macos_arm64": "@tbhb_rules_vale_macos_arm64//:vale",
+            "windows_x86_64": "@tbhb_rules_vale_windows_x86_64//:vale.exe",
         },
     )
 
@@ -434,6 +586,7 @@ def _tools_impl(mctx):
             "linux_arm64": "@tbhb_rules_zizmor_linux_arm64//:zizmor",
             "linux_x86_64": "@tbhb_rules_zizmor_linux_x86_64//:zizmor",
             "macos_arm64": "@tbhb_rules_zizmor_macos_arm64//:zizmor",
+            "windows_x86_64": "@tbhb_rules_zizmor_windows_x86_64//:zizmor.exe",
         },
     )
 

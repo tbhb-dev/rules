@@ -55,9 +55,9 @@ type Json = dict[str, object]
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """No injected GIT_* or agent variables, no user git config, a temp HOME."""
-    for name in list(os.environ):
-        if name.startswith(AGENT_VARS):
-            monkeypatch.delenv(name)
+    # One statement, not a loop: under Bazel's clean environment there is
+    # nothing to remove, and a loop body that never runs is a missed branch.
+    list(map(monkeypatch.delenv, [n for n in os.environ if n.startswith(AGENT_VARS)]))
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))

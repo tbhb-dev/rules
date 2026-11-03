@@ -22,6 +22,7 @@ cmdlines
 cocogitto
 compgen
 complexipy
+cpus
 cuda
 cyclop
 deadcode
@@ -74,6 +75,8 @@ mctx
 mdfile
 mdir
 msgfile
+msvc
+MSYS
 multitool
 mutmut
 nakedret
@@ -108,6 +111,7 @@ PYTHONNOUSERSITE
 PYTHONSTARTUP
 rctx
 recvcheck
+rlocation
 rollouts
 rollup
 rumdl

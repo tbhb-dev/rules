@@ -3,6 +3,8 @@
 
 """Runs a `format` target the way `bazel run` does, against a scratch workspace."""
 
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
+
 def _outside_git_test_impl(ctx):
     driver = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
@@ -35,12 +37,14 @@ BUILD_WORKSPACE_DIRECTORY="$workspace" GIT_CEILING_DIRECTORIES="$TEST_TMPDIR" "$
     runfiles = ctx.runfiles(files = [ctx.executable.subject, ctx.executable._git])
     runfiles = runfiles.merge(ctx.attr.subject[DefaultInfo].default_runfiles)
     runfiles = runfiles.merge(ctx.attr._git[DefaultInfo].default_runfiles)
-    return [DefaultInfo(executable = driver, runfiles = runfiles)]
+    executable, runfiles = shell_executable(ctx, driver, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 outside_git_test = rule(
     implementation = _outside_git_test_impl,
     test = True,
-    attrs = {
+    toolchains = SHELL_TOOLCHAINS,
+    attrs = SHELL_ATTRS | {
         "git_checkout": attr.bool(doc = "Make the workspace a clean git checkout instead of a plain directory."),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
         "_git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target"),

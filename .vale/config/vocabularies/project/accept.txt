@@ -17,6 +17,7 @@ repo
 rules_js
 rules_multitool
 shellcheck
+subcommand
 subpackages?
 subtree
 tbhb_rules

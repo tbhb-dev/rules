@@ -5,3 +5,8 @@
 # directories, so its lockfile would churn with every change there; it is
 # not committed.
 common --lockfile_mode=off
+
+common --enable_platform_specific_config
+# Windows runs only .exe, .bat and .cmd files and makes no runfiles tree by
+# default; the rules' scripts read their files from that tree.
+common:windows --enable_runfiles

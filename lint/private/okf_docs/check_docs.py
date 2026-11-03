@@ -74,6 +74,9 @@ class _Loader(yaml.SafeLoader):
 _Loader.add_constructor("tag:yaml.org,2002:timestamp", _keep_text)
 
 
+# tools/interim/pull_request.py carries a copy until the interim PR tooling is
+# deleted; this one is the lasting home.
+# pylint: disable=duplicate-code
 def parse(text: str) -> tuple[object, str]:
     """Split a file into its parsed frontmatter and body.
 
@@ -97,6 +100,7 @@ def parse(text: str) -> tuple[object, str]:
     return data, text[match.end() :]
 
 
+# pylint: enable=duplicate-code
 def load_validator(path: Path) -> Draft202012Validator:
     """Load a schema, check it against the 2020-12 meta-schema, and build a validator.
 

@@ -4,6 +4,7 @@
 """`repo_layout_test`: the repository's top-level directories and script dirs."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 
 # Internal: consumers load //repo:defs.bzl.
 visibility("//repo/...")
@@ -64,14 +65,17 @@ def _repo_layout_test_impl(ctx):
         },
         is_executable = True,
     )
-    return [DefaultInfo(
-        executable = script,
-        runfiles = ctx.runfiles(files = [manifest, rules_file] + files),
-    )]
+    executable, runfiles = shell_executable(
+        ctx,
+        script,
+        ctx.runfiles(files = [manifest, rules_file] + files),
+    )
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 repo_layout_test = rule(
     implementation = _repo_layout_test_impl,
     test = True,
+    toolchains = SHELL_TOOLCHAINS,
     doc = """Checks the repository's layout, reporting each problem as `path: problem`.
 
 Every top-level directory that holds a file in `srcs` must be named in
@@ -86,7 +90,7 @@ those `allowed_subdirs` names, whose files are not checked.
 
 `srcs` is usually a `repo_files` target, which lists the files Bazel sees:
 the REPO.bazel ignores apply, but not .gitignore.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "allowed_subdirs": attr.string_list_dict(doc = "Per scripts directory, the subdirectory names it may hold."),
         "scripts": attr.string_dict(doc = "Top-level directory to script kind; the kind is `pep723`."),
         "srcs": attr.label_list(allow_files = True, mandatory = True, doc = "Files to check, usually a `repo_files` target."),

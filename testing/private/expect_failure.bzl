@@ -4,6 +4,7 @@
 """`expect_failure_test`: a test that passes when another test fails for a stated reason."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 
 # Internal: consumers load //testing:defs.bzl.
 visibility("//testing/...")
@@ -31,14 +32,16 @@ def _expect_failure_impl(ctx):
     if RunEnvironmentInfo in ctx.attr.test:
         environment = dict(ctx.attr.test[RunEnvironmentInfo].environment)
         inherited = list(ctx.attr.test[RunEnvironmentInfo].inherited_environment)
+    executable, runfiles = shell_executable(ctx, script, runfiles)
     return [
-        DefaultInfo(executable = script, runfiles = runfiles),
+        DefaultInfo(executable = executable, runfiles = runfiles),
         RunEnvironmentInfo(environment = environment, inherited_environment = inherited),
     ]
 
 expect_failure_test = rule(
     implementation = _expect_failure_impl,
     test = True,
+    toolchains = SHELL_TOOLCHAINS,
     doc = """Passes when `test` fails and its output matches `pattern`.
 
 For failure proofs: a check that must reject bad input is only proven by a
@@ -54,7 +57,7 @@ Bazel exposes no provider for a test's `args`, so the wrapped test's `args`
 are not forwarded: set them on this target instead. Tag the wrapped test
 `manual`, so `bazel test //...` does not run it on its own and report the
 expected failure as a failure.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "pattern": attr.string(
             mandatory = True,
             doc = "Extended regular expression the wrapped test's output must match.",

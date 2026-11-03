@@ -3,6 +3,8 @@
 
 """Runs a `gitleaks_history` target against a throwaway repository."""
 
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
+
 _DRIVER = """#!/usr/bin/env bash
 set -euo pipefail
 export PATH="$PWD/{git_dir}:$PATH" GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TEMPLATE_DIR=
@@ -51,12 +53,14 @@ def _gitleaks_history_scenario_test_impl(ctx):
     runfiles = ctx.runfiles(files = [ctx.executable.subject, ctx.executable.git])
     runfiles = runfiles.merge(ctx.attr.subject[DefaultInfo].default_runfiles)
     runfiles = runfiles.merge(ctx.attr.git[DefaultInfo].default_runfiles)
-    return [DefaultInfo(executable = driver, runfiles = runfiles)]
+    executable, runfiles = shell_executable(ctx, driver, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 gitleaks_history_scenario_test = rule(
     implementation = _gitleaks_history_scenario_test_impl,
     test = True,
-    attrs = {
+    toolchains = SHELL_TOOLCHAINS,
+    attrs = SHELL_ATTRS | {
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
         "scenario": attr.string(mandatory = True, values = ["clean", "corrupt", "no_commits", "no_content", "secret"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),

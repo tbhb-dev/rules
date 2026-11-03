@@ -4,6 +4,7 @@
 """`gitleaks_history`: scans the workspace's git history for secrets."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 
 # Internal: consumers load //lint:defs.bzl.
 visibility("//lint/...")
@@ -24,11 +25,13 @@ def _gitleaks_history_impl(ctx):
     runfiles = ctx.runfiles(files = [ctx.executable.tool, git])
     runfiles = runfiles.merge(ctx.attr.tool[DefaultInfo].default_runfiles)
     runfiles = runfiles.merge(ctx.attr.git[DefaultInfo].default_runfiles)
-    return [DefaultInfo(executable = script, runfiles = runfiles)]
+    executable, runfiles = shell_executable(ctx, script, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 gitleaks_history = rule(
     implementation = _gitleaks_history_impl,
     executable = True,
+    toolchains = SHELL_TOOLCHAINS,
     doc = """Scans the workspace's git history with gitleaks; run it with `bazel run`.
 
 Fails on any finding, when the repository has no commits, and when gitleaks
@@ -36,7 +39,7 @@ scans no commits although the history holds content (gitleaks exits 0 when
 its own git invocation fails). A shallow clone scans only the commits it
 has, so CI should fetch the full history. The working tree is
 `gitleaks_test`'s job.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "config": attr.label(
             allow_single_file = True,
             doc = "gitleaks config, a file of the main repository.",
