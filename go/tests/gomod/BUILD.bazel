@@ -16,35 +16,38 @@ go_mod_tidy_test(
 )
 
 # Proofs. Each wrapped test is manual and must fail for the stated reason.
+PROOF_TAGS = ["manual"]
 
 # go.mod lacks the requirement main.go's import needs.
 go_mod_tidy_test(
-    name = "untidy",
+    name = "proof_untidy",
     srcs = ["//tests/gomod/untidy:main.go"],
     go_mod = "//tests/gomod/untidy:go.mod",
     go_sum = "//tests/gomod/untidy:go.sum",
     proxy = "@gomod_fixture_proxy//:proxy",
-    tags = ["manual"],
-)
-
-expect_failure_test(
-    name = "untidy_proof",
-    pattern = "\\+require github.com/google/go-cmp v0.7.0",
-    test = ":untidy",
+    tags = PROOF_TAGS,
 )
 
 # go.sum's hash of the go-cmp zip is wrong.
 go_mod_tidy_test(
-    name = "tampered",
+    name = "proof_tampered",
     srcs = ["//tests/gomod/tampered:main.go"],
     go_mod = "//tests/gomod/tampered:go.mod",
     go_sum = "//tests/gomod/tampered:go.sum",
     proxy = "@gomod_fixture_proxy//:proxy",
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
-expect_failure_test(
-    name = "tampered_proof",
-    pattern = "github.com/google/go-cmp@v0.7.0: (verifying module: )?checksum mismatch",
-    test = ":tampered",
-)
+PROOF_REASONS = {
+    "proof_tampered": "github.com/google/go-cmp@v0.7.0: (verifying module: )?checksum mismatch",
+    "proof_untidy": "\\+require github.com/google/go-cmp v0.7.0",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

@@ -23,6 +23,8 @@ def _python_tool_impl(ctx):
         options += ["--exclude", pattern]
     if ctx.attr.chdir:
         options += ["--chdir", ctx.attr.chdir]
+    for member in env.members:
+        options += ["--member", member]
 
     source_roots = list(env.source_roots)
     if ctx.attr.source_roots_from:

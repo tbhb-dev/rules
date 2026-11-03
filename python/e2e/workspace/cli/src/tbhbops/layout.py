@@ -3,9 +3,16 @@
 
 """The layout command."""
 
+import sys
+
 from tbhbops import gitfiles
 
 
 def count(listing: str) -> int:
     """Return how many files the layout command looks at."""
     return len(gitfiles.tracked(listing))
+
+
+def main() -> None:
+    """Print the count for the listing on stdin (the tbhbops-layout script)."""
+    print(count(sys.stdin.read()))

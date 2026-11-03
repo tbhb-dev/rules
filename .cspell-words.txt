@@ -44,6 +44,7 @@ flatmap
 frontmatter
 fsfe
 funlen
+genrule
 gochecknoglobals
 gochecksumtype
 gocognit
@@ -77,7 +78,6 @@ mdir
 msgfile
 msvc
 MSYS
-multitool
 mutmut
 nakedret
 nbbbb
@@ -104,6 +104,7 @@ ppid
 prek
 presubmit
 pretooluse
+purelib
 pylock
 PYTHONDONTWRITEBYTECODE
 pythonista

@@ -7,7 +7,13 @@ load("@tbhb_rules//format:defs.bzl", "format", "format_test", "formatter")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("//private:tool.bzl", "python_tool")
 
-repo_files()
+repo_files(
+    exclude = [
+        ".DS_Store",
+        "**/.DS_Store",
+        ".bazelrc.user",
+    ],
+)
 
 # shfmt and the editor take their style from .editorconfig, which this
 # workspace needs its own copy of; it must match the parent module's.

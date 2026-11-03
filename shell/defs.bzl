@@ -7,11 +7,15 @@ load(
     "//shell/private:launcher.bzl",
     _SHELL_ATTRS = "SHELL_ATTRS",
     _SHELL_TOOLCHAINS = "SHELL_TOOLCHAINS",
+    _ToolDirInfo = "ToolDirInfo",
     _is_windows = "is_windows",
+    _path_dir = "path_dir",
     _shell_executable = "shell_executable",
 )
 
 SHELL_ATTRS = _SHELL_ATTRS
 SHELL_TOOLCHAINS = _SHELL_TOOLCHAINS
+ToolDirInfo = _ToolDirInfo
 is_windows = _is_windows
+path_dir = _path_dir
 shell_executable = _shell_executable

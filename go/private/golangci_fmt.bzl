@@ -9,6 +9,8 @@ so this wraps golangci-lint with the rules_go SDK's go on PATH: the
 formatter needs no Go installation and formats the same everywhere.
 """
 
+load("@tbhb_rules//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
+
 # Internal: consumers load //:defs.bzl or use //:golangci_fmt.
 visibility(["//", "//private/...", "//tests/..."])
 
@@ -29,15 +31,16 @@ def _golangci_fmt_tool_impl(ctx):
         files = [ctx.executable.golangci_lint, sdk.go, sdk.root_file],
         transitive_files = depset(transitive = [sdk.srcs, sdk.headers, sdk.tools, sdk.libs]),
     ).merge(ctx.attr.golangci_lint[DefaultInfo].default_runfiles)
-    return [DefaultInfo(executable = script, runfiles = runfiles)]
+    executable, runfiles = shell_executable(ctx, script, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 golangci_fmt_tool = rule(
     implementation = _golangci_fmt_tool_impl,
     executable = True,
     doc = "golangci-lint with the Go SDK's go on PATH, for `golangci-lint fmt`.",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "golangci_lint": attr.label(
-            default = Label("//private:golangci_lint_bin"),
+            default = Label("@tbhb_rules_golangci_lint//:golangci-lint"),
             executable = True,
             allow_files = True,
             cfg = "target",
@@ -47,5 +50,5 @@ golangci_fmt_tool = rule(
             allow_single_file = True,
         ),
     },
-    toolchains = ["@rules_go//go:toolchain"],
+    toolchains = ["@rules_go//go:toolchain"] + SHELL_TOOLCHAINS,
 )

@@ -55,9 +55,10 @@ def _test_default_tool_is_the_pinned_cspell(name):
     analysis_test(name = name, impl = _test_default_tool_impl, target = name + "_subject")
 
 def _test_default_tool_impl(env, target):
-    env.expect.that_target(target).action_named("TemplateExpand").substitutions().contains_at_least({
-        "@@TOOL@@": "lint/private/cspell/cspell_/cspell",
-    })
+    # rules_js names the launcher cspell, or cspell.bat on Windows.
+    expand = [a for a in target.actions if a.mnemonic == "TemplateExpand"][0]
+    tool = expand.substitutions["@@TOOL@@"]
+    env.expect.that_bool(tool.removesuffix(".bat") == "lint/private/cspell/cspell_/cspell").equals(True)
 
 def cspell_test_suite(name):
     test_suite(

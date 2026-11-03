@@ -35,10 +35,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    # On Windows the rules' scripts run under the shell toolchain's Bash,
-    # MSYS2's on the hosted image. Elsewhere BAZEL_SH is unused.
-    env:
-      BAZEL_SH: 'C:\msys64\usr\bin\bash.exe'
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
@@ -49,6 +45,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+
+      # On Windows the rules' scripts run under the shell toolchain's Bash,
+      # MSYS2's on the hosted image. Only there: elsewhere Bazel would run
+      # genrule commands with it too.
+      - name: Point Bazel at Bash
+        if: runner.os == 'Windows'
+        run: echo 'BAZEL_SH=C:/msys64/usr/bin/bash.exe' >>"$GITHUB_ENV"
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1

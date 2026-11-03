@@ -20,7 +20,7 @@ format_test(
 
 # Proof: an unformatted file fails the check, with golangci-lint's diff.
 format_test(
-    name = "dirty",
+    name = "proof_dirty",
     srcs = [
         "dirty/.golangci.yml",
         "dirty/bad.go",
@@ -32,7 +32,7 @@ format_test(
 )
 
 expect_failure_test(
-    name = "dirty_proof",
+    name = "proof_dirty_fails",
     pattern = "^\\+import \\($",
-    test = ":dirty",
+    test = ":proof_dirty",
 )

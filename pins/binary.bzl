@@ -3,7 +3,7 @@
 
 """`pinned_binary`: a pinned tool file as an executable target."""
 
-load("//shell:defs.bzl", "SHELL_ATTRS", "is_windows")
+load("//shell:defs.bzl", "SHELL_ATTRS", "ToolDirInfo", "is_windows")
 
 def _rlocation(ctx, file):
     """The file's path under the runfiles root."""
@@ -16,7 +16,10 @@ def _pinned_binary_impl(ctx):
     # PATH (such as bats_test with git) finds it by its usual name.
     out = ctx.actions.declare_file(ctx.label.name + "/" + ctx.attr.tool)
     runfiles = ctx.runfiles(files = [out, ctx.file.binary] + ctx.files.data)
+    path = out
     if is_windows(ctx):
+        path = ctx.file.binary
+
         # A symlink to a Windows binary would leave it unable to find the
         # files beside it (Git for Windows' own tree), and every caller is a
         # Bash script, so a Bash shim runs the binary where it lies in the
@@ -32,7 +35,10 @@ def _pinned_binary_impl(ctx):
         )
     else:
         ctx.actions.symlink(output = out, target_file = ctx.file.binary, is_executable = True)
-    return [DefaultInfo(executable = out, files = depset([out]), runfiles = runfiles)]
+    return [
+        DefaultInfo(executable = out, files = depset([out]), runfiles = runfiles),
+        ToolDirInfo(dir = path.short_path.rpartition("/")[0]),
+    ]
 
 pinned_binary = rule(
     implementation = _pinned_binary_impl,

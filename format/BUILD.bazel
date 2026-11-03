@@ -41,7 +41,7 @@ formatter(
     ],
     check_args = ["-mode=check"],
     fix_args = ["-mode=fix"],
-    tool = "@buildifier_prebuilt//:buildifier",
+    tool = "@tbhb_rules_buildifier//:buildifier",
     visibility = ["//visibility:public"],
 )
 

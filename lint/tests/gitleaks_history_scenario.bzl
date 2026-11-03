@@ -3,7 +3,7 @@
 
 """Runs a `gitleaks_history` target against a throwaway repository."""
 
-load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "path_dir", "shell_executable")
 
 _DRIVER = """#!/usr/bin/env bash
 set -euo pipefail
@@ -44,7 +44,7 @@ def _gitleaks_history_scenario_test_impl(ctx):
     ctx.actions.write(
         output = driver,
         content = _DRIVER.format(
-            git_dir = ctx.executable.git.short_path.rpartition("/")[0],
+            git_dir = path_dir(ctx.attr.git),
             scenario = ctx.attr.scenario,
             subject = ctx.executable.subject.short_path,
         ),

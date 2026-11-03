@@ -3,10 +3,22 @@
 
 [project]
 name = "tbhbops"
-version = "0"
+version = "0.1.0"
 requires-python = ">=3.15"
 dependencies = []
+
+[project.scripts]
+tbhbops-layout = "tbhbops.layout:main"
 
 [build-system]
 requires = ["uv_build>=0.13.0,<0.14"]
 build-backend = "uv_build"
+
+# mutmut_test(chdir = "cli"): the member's own sources and tests.
+[tool.pytest]
+addopts = ["--import-mode=importlib"]
+testpaths = ["tests"]
+
+[tool.mutmut]
+source_paths = ["src"]
+pytest_add_cli_args_test_selection = ["tests"]

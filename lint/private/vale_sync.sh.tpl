@@ -21,6 +21,17 @@ if [[ -z $styles ]]; then
   exit 1
 fi
 styles="$(cd "$(dirname "$config")" && pwd)/$styles"
+
+# The path as vale.exe reads it on Windows (C:/...); MSYS paths (/c/...) only
+# mean something to the shell. Elsewhere it is unchanged.
+native_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -m "$1"
+  else
+    printf '%s\n' "$1"
+  fi
+}
+
 mkdir -p "$styles"
 
 # vale names a package by its archive's file name, so each archive is
@@ -31,10 +42,12 @@ archives=()
 for i in "${!packages[@]}"; do
   mkdir -p "$work/$i"
   cp "$runfiles/${packages[i]}" "$work/$i/${names[i]}.zip"
-  archives+=("$work/$i/${names[i]}.zip")
+  archive=$(native_path "$work/$i/${names[i]}.zip")
+  archives+=("$archive")
 done
+sync_styles=$(native_path "$styles")
 {
-  echo "StylesPath = $styles"
+  echo "StylesPath = $sync_styles"
   printf 'Packages = %s' "${archives[0]}"
   for archive in "${archives[@]:1}"; do
     printf ', %s' "$archive"

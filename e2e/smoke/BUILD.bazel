@@ -159,15 +159,15 @@ cspell_test(
 )
 
 cspell_test(
-    name = "cspell_bad",
+    name = "proof_cspell",
     srcs = glob(["testdata/proofs/cspell_bad/**"]),
     config = "testdata/proofs/cspell_bad/.cspell.jsonc",
     strip_prefix = "testdata/proofs/cspell_bad",
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "cspell_bad_is_found",
+    name = "proof_cspell_fails",
     pattern = "notes\\.md:3:[0-9]+ - Unknown word \\(sentance\\)",
-    test = ":cspell_bad",
+    test = ":proof_cspell",
 )

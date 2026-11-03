@@ -15,6 +15,7 @@ not public API.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@tbhb_rules//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 load("//:defs.bzl", "GolangciLintInfo")
 load("//private:go_srcs.bzl", "GoSrcsInfo", "go_srcs_aspect")
 load("//private:golangci_lint.bzl", "write_report_manifest")
@@ -73,7 +74,7 @@ golangci_lint_oracle = rule(
         "proxy": attr.label(allow_files = True, doc = "A go_mod_proxy repository's `:proxy`, for a module with dependencies and no vendor/."),
         "srcs": attr.label_list(aspects = [go_srcs_aspect], doc = "Go targets whose sources make up the module."),
         "_golangci_lint": attr.label(
-            default = Label("//private:golangci_lint_bin"),
+            default = Label("@tbhb_rules_golangci_lint//:golangci-lint"),
             executable = True,
             allow_files = True,
             cfg = "exec",
@@ -104,10 +105,12 @@ def _parity_test_impl(ctx):
         },
         is_executable = True,
     )
-    return [DefaultInfo(
-        executable = script,
-        runfiles = ctx.runfiles(files = [manifest, ctx.file.oracle, ctx.executable._merge], transitive_files = reports),
-    )]
+    executable, runfiles = shell_executable(
+        ctx,
+        script,
+        ctx.runfiles(files = [manifest, ctx.file.oracle, ctx.executable._merge], transitive_files = reports),
+    )
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 def golangci_lint_parity_test_factory(aspect):
     """Makes a test rule comparing `aspect`'s reports with an oracle's.
@@ -122,8 +125,9 @@ def golangci_lint_parity_test_factory(aspect):
     return rule(
         implementation = _parity_test_impl,
         test = True,
+        toolchains = SHELL_TOOLCHAINS,
         doc = "Passes when the aspect's reports over `srcs`, merged, equal the oracle's report.",
-        attrs = {
+        attrs = SHELL_ATTRS | {
             "oracle": attr.label(mandatory = True, allow_single_file = True),
             "srcs": attr.label_list(aspects = [aspect], mandatory = True),
             "strip_prefix": attr.string(doc = "Prefix removed from the aspect's paths, making them module-relative."),

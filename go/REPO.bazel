@@ -1,9 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-# Bazel's convenience symlinks hold no source of this module; ignoring them
-# keeps them out of every glob, so //:repo_files never scans them.
+# Directories that hold no source, kept out of every glob so //:repo_files
+# never scans them: Bazel's convenience symlinks and local tool state (the
+# same list in every workspace of tbhb_rules).
 ignore_directories([
     "bazel-*",
+    ".venv",
+    "mutants",
+    "tmp",
+    "**/__pycache__",
     "**/.*_cache",
+    ".hypothesis",
 ])

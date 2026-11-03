@@ -1,10 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-# e2e/ holds consumer modules with their own MODULE.bazel, and Bazel's
-# convenience symlinks hold no source.
+# Directories that hold no source, kept out of every glob so //:repo_files
+# never scans them: Bazel's convenience symlinks and local tool state (the
+# same list in every workspace of tbhb_rules), and e2e/, which holds consumer modules with their own MODULE.bazel.
 ignore_directories([
     "bazel-*",
-    "e2e",
+    ".venv",
+    "mutants",
+    "tmp",
     "**/__pycache__",
+    "**/.*_cache",
+    ".hypothesis",
+    "e2e",
 ])

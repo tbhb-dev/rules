@@ -9,6 +9,8 @@ load(":outside_git_test.bzl", "outside_git_test")
 
 repo_files()
 
+PROOF_TAGS = ["manual"]
+
 ROOT_FORMATTERS = [
     "//format:buildifier",
     "//format:rumdl",
@@ -25,32 +27,32 @@ format_test(
 )
 
 format_test(
-    name = "messy",
+    name = "proof_messy",
     srcs = glob(["testdata/messy/**"]),
     formatters = ROOT_FORMATTERS,
     strip_prefix = "format/tests/testdata/messy",
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 # Both the shell and the TOML file are reported, so one formatter's failure
 # does not stop the others.
 expect_failure_test(
-    name = "messy_fails",
+    name = "proof_messy_fails",
     pattern = "not formatted according to: //format:shfmt //format:tombi$",
-    test = ":messy",
+    test = ":proof_messy",
 )
 
 format_test(
-    name = "no_files",
+    name = "proof_no_files",
     srcs = [],
     formatters = ROOT_FORMATTERS,
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "no_files_fails",
+    name = "proof_no_files_fails",
     pattern = "format: FAIL: no files to check",
-    test = ":no_files",
+    test = ":proof_no_files",
 )
 
 format_test_suite(name = "format_tests")
@@ -75,15 +77,15 @@ format(
 )
 
 outside_git_test(
-    name = "outside_git",
+    name = "proof_outside_git",
     subject = ":subject_format.check",
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "outside_git_fails",
+    name = "proof_outside_git_fails",
     pattern = "not a git repository",
-    test = ":outside_git",
+    test = ":proof_outside_git",
 )
 
 # In a clean checkout, `format.check` runs every formatter, buildifier's

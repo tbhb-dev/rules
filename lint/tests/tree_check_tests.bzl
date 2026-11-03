@@ -157,7 +157,10 @@ def _test_bats_uses_pinned_git_impl(env, target):
     # (`+tools+...` here, `tbhb_rules++tools+...` in a consumer).
     expand = [a for a in target.actions if a.mnemonic == "TemplateExpand"][0]
     path_tools = expand.substitutions["@@PATH_TOOLS@@"]
-    env.expect.that_bool(path_tools.endswith("+tools+tbhb_rules_git/git/git'")).equals(True)
+
+    # The hub's directory, or on Windows the pinned git.exe's own (its
+    # repository is the platform's).
+    env.expect.that_bool("+tools+tbhb_rules_git" in path_tools).equals(True)
     env.expect.that_target(target).provider(RunEnvironmentInfo).environment().contains_exactly({
         "GIT_CONFIG_GLOBAL": "/dev/null",
         "GIT_CONFIG_NOSYSTEM": "1",

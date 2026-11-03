@@ -105,7 +105,7 @@ To refer to a pinned binary yourself, add `use_repo(tools, "tbhb_rules_gitleaks"
 
 ### Windows
 
-The rules' executables are Bash scripts. On Windows each runs through a `.bat` launcher with the Bash of the shell `toolchain`, so set `BAZEL_SH` to an MSYS2 or Git for Windows `bash.exe`. The scripts read their files from the `runfiles` tree, so add `common:windows --enable_runfiles` (with `common --enable_platform_specific_config`) to your `.bazelrc`.
+The rules' executables are Bash scripts. On Windows each runs through a `.bat` launcher with the Bash of the shell `toolchain`, so set `BAZEL_SH` to an MSYS2 or Git for Windows `bash.exe`. The scripts read their files from the `runfiles` tree, so add `startup --windows_enable_symlinks` and `common:windows --enable_runfiles` (with `common --enable_platform_specific_config`) to your `.bazelrc`, and turn on Developer Mode so Bazel can create the symlinks.
 
 ## Develop
 

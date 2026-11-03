@@ -14,22 +14,24 @@ ops_layout_test(
     fixture = "good",
 )
 
+PROOF_TAGS = ["manual"]
+
 # Each fixture breaks one rule; each proof names the problem it must report.
-PROOFS = {
-    "extension": "^tools/check\\.py: tools/ scripts carry no file extension$",
-    "metadata": "^tools/check-other: must declare inline script metadata",
-    "shebang": "^tools/check-other: must start with '#!/usr/bin/env -S uv run --script'$",
-    "subdir": "^tools/extra/thing\\.py: tools/ holds no subdirectory extra/$",
-    "unknown_top": "^scratch/: top-level directory is not in the layout$",
+PROOF_REASONS = {
+    "proof_extension": "^tools/check\\.py: tools/ scripts carry no file extension$",
+    "proof_metadata": "^tools/check-other: must declare inline script metadata",
+    "proof_shebang": "^tools/check-other: must start with '#!/usr/bin/env -S uv run --script'$",
+    "proof_subdir": "^tools/extra/thing\\.py: tools/ holds no subdirectory extra/$",
+    "proof_unknown_top": "^scratch/: top-level directory is not in the layout$",
 }
 
 [
     ops_layout_test(
         name = proof,
-        fixture = proof,
-        tags = ["manual"],
+        fixture = proof.removeprefix("proof_"),
+        tags = PROOF_TAGS,
     )
-    for proof in PROOFS
+    for proof in PROOF_REASONS
 ]
 
 [
@@ -38,17 +40,17 @@ PROOFS = {
         pattern = pattern,
         test = ":" + proof,
     )
-    for proof, pattern in PROOFS.items()
+    for proof, pattern in PROOF_REASONS.items()
 ]
 
 ops_layout_test(
-    name = "no_files",
+    name = "proof_no_files",
     fixture = "",
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "no_files_fails",
+    name = "proof_no_files_fails",
     pattern = "repo_layout: FAIL: no files to check",
-    test = ":no_files",
+    test = ":proof_no_files",
 )

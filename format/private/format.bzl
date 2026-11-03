@@ -4,7 +4,7 @@
 """Formatters: `formatter`, the `format` runners and `format_test`."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
-load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "path_dir", "shell_executable")
 
 # Internal: consumers load //format:defs.bzl.
 visibility("//format/...")
@@ -72,7 +72,7 @@ def _runfiles(ctx, formatters, extra = []):
         runfiles = runfiles.merge(target[FormatterInfo].tool_runfiles)
     return runfiles
 
-def _script(ctx, mode, source, manifest = None, strip_prefix = ""):
+def _script(ctx, mode, source, manifest = None, strip_prefix = "", git_dir = ""):
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.expand_template(
         template = ctx.file._runner,
@@ -80,6 +80,7 @@ def _script(ctx, mode, source, manifest = None, strip_prefix = ""):
         substitutions = {
             "@@CALLS@@": _calls(ctx.attr.formatters, mode),
             "@@EXCLUDES@@": " ".join([shell.quote(p) for p in ctx.attr.exclude]),
+            "@@GIT_DIR@@": git_dir,
             "@@MANIFEST@@": manifest.short_path if manifest else "",
             "@@MODE@@": mode,
             "@@SOURCE@@": source,
@@ -105,15 +106,20 @@ _COMMON_ATTRS = SHELL_ATTRS | {
 }
 
 def _format_run_impl(ctx):
-    script = _script(ctx, ctx.attr.mode, "workspace")
-    executable, runfiles = shell_executable(ctx, script, _runfiles(ctx, ctx.attr.formatters))
+    script = _script(ctx, ctx.attr.mode, "workspace", git_dir = path_dir(ctx.attr._git))
+    runfiles = _runfiles(ctx, ctx.attr.formatters).merge(ctx.attr._git[DefaultInfo].default_runfiles)
+    executable, runfiles = shell_executable(ctx, script, runfiles)
     return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 format_run = rule(
     implementation = _format_run_impl,
     executable = True,
     toolchains = SHELL_TOOLCHAINS,
-    attrs = dict(_COMMON_ATTRS, mode = attr.string(mandatory = True, values = ["check", "fix"])),
+    attrs = dict(
+        _COMMON_ATTRS,
+        mode = attr.string(mandatory = True, values = ["check", "fix"]),
+        _git = attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target"),
+    ),
 )
 
 def _tree_path(file, strip_prefix):

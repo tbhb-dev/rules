@@ -19,29 +19,32 @@ go_deadcode_test(
 )
 
 # Proofs. Each wrapped test is manual and must fail for the stated reason.
+PROOF_TAGS = ["manual"]
 
 # dead.Dead is reached by nothing.
 go_deadcode_test(
-    name = "dead_function",
+    name = "proof_dead_function",
     srcs = [FIXTURE + "/deadapp"],
-    tags = ["manual"],
-)
-
-expect_failure_test(
-    name = "dead_function_proof",
-    pattern = "tests/deadcode/fixture/dead/dead.go:[0-9]+:[0-9]+: unreachable func: Dead",
-    test = ":dead_function",
+    tags = PROOF_TAGS,
 )
 
 # Without the test, lib.OnlyTests is dead: the test main is what reaches it.
 go_deadcode_test(
-    name = "without_tests",
+    name = "proof_without_tests",
     srcs = [FIXTURE + "/app"],
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
-expect_failure_test(
-    name = "without_tests_proof",
-    pattern = "unreachable func: OnlyTests",
-    test = ":without_tests",
-)
+PROOF_REASONS = {
+    "proof_dead_function": "tests/deadcode/fixture/dead/dead.go:[0-9]+:[0-9]+: unreachable func: Dead",
+    "proof_without_tests": "unreachable func: OnlyTests",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

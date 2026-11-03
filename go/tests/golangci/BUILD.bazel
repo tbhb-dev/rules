@@ -75,78 +75,49 @@ fixture_lint_test(
 )
 
 # Proofs. Each wrapped test is manual and must fail for the stated reason.
+PROOF_TAGS = ["manual"]
 
 # Planted findings fail the test; the pattern needs one from a dependency
 # (package a, reached from b_test through deps and embed).
 fixture_lint_test(
-    name = "planted_findings",
+    name = "proof_planted_findings",
     srcs = [FIXTURE + "/b:b_test"],
-    tags = ["manual"],
-)
-
-expect_failure_test(
-    name = "planted_findings_proof",
-    pattern = "a/a.go:21:11: Error return value of `os.Remove` is not checked \\(errcheck\\)",
-    test = ":planted_findings",
+    tags = PROOF_TAGS,
 )
 
 # A test variant decides for the library's files: testOnly is unused in
 # package a alone, but not once a's test is linted with it.
 fixture_lint_test(
-    name = "library_alone",
+    name = "proof_library_alone",
     srcs = [FIXTURE + "/a"],
-    tags = ["manual"],
-)
-
-expect_failure_test(
-    name = "library_alone_proof",
-    pattern = "func testOnly is unused \\(unused\\)",
-    test = ":library_alone",
+    tags = PROOF_TAGS,
 )
 
 # A package srcs do not reach is unlinted; with expect_linted, the test
 # says so. Here only clean is linted, so a.go (among others) is not.
 fixture_lint_test(
-    name = "unreached",
+    name = "proof_unreached",
     srcs = [FIXTURE + "/clean"],
     expect_linted = [FIXTURE + ":repo_files"],
-    tags = ["manual"],
-)
-
-expect_failure_test(
-    name = "unreached_proof",
-    pattern = "^not linted: tests/golangci/fixture/a/a.go$",
-    test = ":unreached",
+    tags = PROOF_TAGS,
 )
 
 # A run that does not complete (here, a config golangci-lint rejects) is a
 # failure, not a clean report.
 broken_lint_test(
-    name = "broken_config",
+    name = "proof_broken_config",
     srcs = [FIXTURE + "/clean"],
-    tags = ["manual"],
-)
-
-expect_failure_test(
-    name = "broken_config_proof",
-    pattern = "golangci-lint did not complete: exit status [0-9]+",
-    test = ":broken_config",
+    tags = PROOF_TAGS,
 )
 
 # The parity test compares: given only some of the fixture's packages, the
 # aspect's findings fall short of the oracle's, and the test must say so.
 golangci_lint_parity_test(
-    name = "parity_divergence",
+    name = "proof_parity_divergence",
     srcs = [FIXTURE + "/clean"],
     oracle = ":oracle",
     strip_prefix = "tests/golangci/fixture/",
-    tags = ["manual"],
-)
-
-expect_failure_test(
-    name = "parity_divergence_proof",
-    pattern = "differ from the oracle's",
-    test = ":parity_divergence",
+    tags = PROOF_TAGS,
 )
 
 # Nothing outside the action's inputs is read. outside/go.mod sits next to
@@ -154,15 +125,9 @@ expect_failure_test(
 # given it. Its Go version (1.21) turns intrange off, so the finding below
 # appears only if the action did not read it.
 outside_lint_test(
-    name = "outside_go_mod",
+    name = "proof_outside_go_mod",
     srcs = ["//tests/golangci/outside"],
-    tags = ["manual"],
-)
-
-expect_failure_test(
-    name = "outside_go_mod_unread_proof",
-    pattern = "^tests/golangci/outside/outside.go:[0-9]+:[0-9]+: for loop can be changed to use an integer range",
-    test = ":outside_go_mod",
+    tags = PROOF_TAGS,
 )
 
 # The control: golangci-lint run the ordinary way, which does read that
@@ -176,15 +141,28 @@ golangci_lint_oracle(
 )
 
 outside_parity_test(
-    name = "outside_parity",
+    name = "proof_outside_parity",
     srcs = ["//tests/golangci/outside"],
     oracle = ":outside_oracle",
     strip_prefix = "tests/golangci/outside/",
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
-expect_failure_test(
-    name = "outside_go_mod_read_changes_result_proof",
-    pattern = "^--- oracle findings \\(0\\) ---$",
-    test = ":outside_parity",
-)
+PROOF_REASONS = {
+    "proof_broken_config": "golangci-lint did not complete: exit status [0-9]+",
+    "proof_library_alone": "func testOnly is unused \\(unused\\)",
+    "proof_outside_go_mod": "^tests/golangci/outside/outside.go:[0-9]+:[0-9]+: for loop can be changed to use an integer range",
+    "proof_outside_parity": "^--- oracle findings \\(0\\) ---$",
+    "proof_parity_divergence": "differ from the oracle's",
+    "proof_planted_findings": "a/a.go:21:11: Error return value of `os.Remove` is not checked \\(errcheck\\)",
+    "proof_unreached": "^not linted: tests/golangci/fixture/a/a.go$",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

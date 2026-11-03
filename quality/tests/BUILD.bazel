@@ -16,40 +16,42 @@ mutation_gate_test(
     ],
 )
 
+PROOF_TAGS = ["manual"]
+
 # Each case must fail for the stated reason. The wrapped gates are manual so
 # `bazel test //...` runs them only through expect_failure_test.
-FAILING = {
-    "duplicate_key": "sets killed more than once",
-    "empty": "FAIL: no mutants were generated",
-    "interrupted": "FAIL: run was interrupted",
-    "missing_key": "lacks segfault",
-    "not_a_number": "killed is 'x', not a non-negative integer",
-    "survivor": "FAIL: 1 survived, 2 not checked",
-    "three_unchecked": "FAIL: 3 not checked$",
-    "unchecked": "FAIL: 3280 not checked",
+PROOF_REASONS = {
+    "proof_duplicate_key": "sets killed more than once",
+    "proof_empty": "FAIL: no mutants were generated",
+    "proof_interrupted": "FAIL: run was interrupted",
+    "proof_missing_key": "lacks segfault",
+    "proof_not_a_number": "killed is 'x', not a non-negative integer",
+    "proof_survivor": "FAIL: 1 survived, 2 not checked",
+    "proof_three_unchecked": "FAIL: 3 not checked$",
+    "proof_unchecked": "FAIL: 3280 not checked",
 }
 
 [
     mutation_gate_test(
-        name = case,
-        reports = ["testdata/{}.txt".format(case)],
-        tags = ["manual"],
+        name = proof,
+        reports = ["testdata/{}.txt".format(proof.removeprefix("proof_"))],
+        tags = PROOF_TAGS,
     )
-    for case in FAILING
+    for proof in PROOF_REASONS
 ]
 
 [
     expect_failure_test(
-        name = case + "_fails",
+        name = proof + "_fails",
         pattern = pattern,
-        test = ":" + case,
+        test = ":" + proof,
     )
-    for case, pattern in FAILING.items()
+    for proof, pattern in PROOF_REASONS.items()
 ]
 
 # A survivor is named in the failure output.
 expect_failure_test(
-    name = "survivor_is_named",
+    name = "proof_survivor_is_named_fails",
     pattern = "survived: pkg.x_f__mutmut_3",
-    test = ":survivor",
+    test = ":proof_survivor",
 )

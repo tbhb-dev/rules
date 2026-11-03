@@ -3,7 +3,7 @@
 
 """Runs a `format` target the way `bazel run` does, against a scratch workspace."""
 
-load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "path_dir", "shell_executable")
 
 def _outside_git_test_impl(ctx):
     driver = ctx.actions.declare_file(ctx.label.name + ".sh")
@@ -29,7 +29,7 @@ unset RUNFILES_DIR RUNFILES_MANIFEST_FILE
 BUILD_WORKSPACE_DIRECTORY="$workspace" GIT_CEILING_DIRECTORIES="$TEST_TMPDIR" "$PWD/{subject}"
 """.format(
             git = "1" if ctx.attr.git_checkout else "",
-            git_dir = ctx.executable._git.short_path.rpartition("/")[0],
+            git_dir = path_dir(ctx.attr._git),
             subject = ctx.executable.subject.short_path,
         ),
         is_executable = True,

@@ -3,7 +3,7 @@
 
 """Python checks for tbhb-dev repositories, driven by uv.lock.
 
-Consumers load only `@tbhb_rules_python//:defs.bzl`. See README.md.
+Consumers load only `@tbhb_rules_python//:defs.bzl`.
 """
 
 module(
@@ -13,6 +13,7 @@ module(
 )
 
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "tbhb_rules", version = "0.0.0")
 
 # The released module resolves tbhb_rules from the registry; inside this

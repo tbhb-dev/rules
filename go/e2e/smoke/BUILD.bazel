@@ -8,7 +8,7 @@ load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_m
 load("@tbhb_rules_go//tests/golangci:oracle.bzl", "golangci_lint_oracle")
 load("//tools/lint:linters.bzl", "golangci_lint_parity_test", "golangci_lint_test")
 
-repo_files(exclude = [".bazelrc.user"])
+repo_files()
 
 exports_files([
     ".golangci.yml",
@@ -85,102 +85,104 @@ golangci_lint_parity_test(
 
 # Proofs. Each wrapped test is manual and must fail for the stated reason.
 
+PROOF_TAGS = ["manual"]
+
 # golangci-lint: findings that need go-cmp's types.
 golangci_lint_test(
-    name = "dirty_lint",
+    name = "proof_dirty_lint",
     srcs = ["//dirty"],
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "dirty_lint_proof",
+    name = "proof_dirty_lint_fails",
     pattern = "dirty/dirty.go:[0-9]+:[0-9]+: printf: fmt.Printf format %d has arg cmp.Diff\\(1, 2\\) of wrong type string",
-    test = ":dirty_lint",
+    test = ":proof_dirty_lint",
 )
 
 # golangci-lint: a finding in the shared package, linted in two
 # configurations (cmd/b is pure), is reported once.
 golangci_lint_test(
-    name = "shared_finding",
+    name = "proof_shared_finding",
     srcs = [
         "//cmd/a:a_planted",
         "//cmd/b:b_planted",
     ],
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "shared_finding_proof",
+    name = "proof_shared_finding_fails",
     pattern = "^internal/shared/planted_dead.go:[0-9]+:[0-9]+: Error return value of `os.Remove` is not checked \\(errcheck\\)$",
-    test = ":shared_finding",
+    test = ":proof_shared_finding",
 )
 
 expect_failure_test(
-    name = "shared_finding_once_proof",
+    name = "proof_shared_finding_once_fails",
     pattern = "golangci-lint reported 1 issues in",
-    test = ":shared_finding",
+    test = ":proof_shared_finding",
 )
 
 # golangci-lint: a package nothing lists is not linted, and expect_linted
 # says so.
 golangci_lint_test(
-    name = "unlisted_package",
+    name = "proof_unlisted_package",
     srcs = ["//cmd/a"],
     expect_linted = [":repo_files"],
     expect_linted_exclude = NOT_IN_MODULE,
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "unlisted_package_proof",
+    name = "proof_unlisted_package_fails",
     pattern = "^not linted: internal/feature2/feature2.go$",
-    test = ":unlisted_package",
+    test = ":proof_unlisted_package",
 )
 
 # deadcode: shared.Orphan is called by nobody.
 go_deadcode_test(
-    name = "orphan",
+    name = "proof_orphan",
     srcs = [
         "//cmd/a:a_planted",
         "//cmd/b:b_planted",
     ],
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "orphan_proof",
+    name = "proof_orphan_fails",
     pattern = "^internal/shared/planted_dead.go:[0-9]+:[0-9]+: unreachable func: Orphan$",
-    test = ":orphan",
+    test = ":proof_orphan",
 )
 
 # deadcode: run for cmd/a alone, shared.OnlyB looks dead. Why the check
 # takes all binaries at once.
 go_deadcode_test(
-    name = "one_binary",
+    name = "proof_one_binary",
     srcs = ["//cmd/a"],
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "one_binary_proof",
+    name = "proof_one_binary_fails",
     pattern = "^internal/shared/shared.go:[0-9]+:[0-9]+: unreachable func: OnlyB$",
-    test = ":one_binary",
+    test = ":proof_one_binary",
 )
 
 # go-arch-lint: each contract, broken once.
 [
     (
         go_arch_lint_test(
-            name = "arch_" + name,
+            name = "proof_arch_" + name,
             srcs = CLEAN + [planted],
             config = ".go-arch-lint.yml",
             go_mod = "go.mod",
-            tags = ["manual"],
+            tags = PROOF_TAGS,
         ),
         expect_failure_test(
-            name = "arch_{}_proof".format(name),
+            name = "proof_arch_{}_fails".format(name),
             pattern = pattern,
-            test = ":arch_" + name,
+            test = ":proof_arch_" + name,
         ),
     )
     for name, planted, pattern in [
@@ -199,15 +201,15 @@ expect_failure_test(
 
 # go-arch-lint: a config that leaves deep scanning on is rejected.
 go_arch_lint_test(
-    name = "arch_deepscan",
+    name = "proof_arch_deepscan",
     srcs = CLEAN,
     config = ".go-arch-lint-deepscan.yml",
     go_mod = "go.mod",
-    tags = ["manual"],
+    tags = PROOF_TAGS,
 )
 
 expect_failure_test(
-    name = "arch_deepscan_proof",
+    name = "proof_arch_deepscan_fails",
     pattern = "must set allow.deepScan: false",
-    test = ":arch_deepscan",
+    test = ":proof_arch_deepscan",
 )

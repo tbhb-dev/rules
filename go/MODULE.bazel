@@ -35,18 +35,11 @@ single_version_override(
 
 bazel_dep(name = "gazelle", version = "0.54.0")
 
-# Prebuilt tools (golangci-lint, go-arch-lint), one archive per platform,
-# as literal http_archive calls in private/tools.bzl that Renovate bumps.
+# Prebuilt tools (golangci-lint, go-arch-lint): literal per-platform
+# http_archive pins in private/tools.bzl that Renovate bumps, each behind a
+# tbhb_rules_<tool> hub, the same shape as tbhb_rules' own pins.
 tools = use_extension("//private:tools.bzl", "tools")
-use_repo(
-    tools,
-    "go_arch_lint_darwin_arm64",
-    "go_arch_lint_linux_amd64",
-    "go_arch_lint_linux_arm64",
-    "golangci_lint_darwin_arm64",
-    "golangci_lint_linux_amd64",
-    "golangci_lint_linux_arm64",
-)
+use_repo(tools, "tbhb_rules_go_arch_lint", "tbhb_rules_golangci_lint")
 
 # Go tools without a prebuilt release (deadcode) are built by rules_go from
 # the `tool` directives in go.mod. A consumer that also uses go_deps shares

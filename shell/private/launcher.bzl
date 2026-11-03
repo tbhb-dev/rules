@@ -7,6 +7,21 @@ _SH_TOOLCHAIN = "@rules_shell//shell:toolchain_type"
 
 SHELL_TOOLCHAINS = [config_common.toolchain_type(_SH_TOOLCHAIN, mandatory = False)]
 
+ToolDirInfo = provider(
+    doc = """Where a tool lives for PATH lookups by its usual name.
+
+A Bash shim (the pinned tools on Windows) runs only under Bash; a native
+program that runs the tool by name (gitleaks running git) needs the real
+binary's directory on PATH.""",
+    fields = {"dir": "The directory's short path."},
+)
+
+def path_dir(target):
+    """The short path of the directory to put on PATH for an executable target."""
+    if ToolDirInfo in target:
+        return target[ToolDirInfo].dir
+    return target[DefaultInfo].files_to_run.executable.short_path.rpartition("/")[0]
+
 SHELL_ATTRS = {
     "_windows": attr.label(default = "@platforms//os:windows"),
 }

@@ -56,18 +56,32 @@ if [[ -z $styles ]]; then
   exit 1
 fi
 styles="$(cd "$(dirname "$config")" && pwd)/$styles"
+
+# The path as vale.exe reads it on Windows (C:/...); MSYS paths (/c/...) only
+# mean something to the shell. Elsewhere it is unchanged.
+native_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -m "$1"
+  else
+    printf '%s\n' "$1"
+  fi
+}
+
 mkdir -p "$styles"
 
 # vale sync from local archives: the same unpacking `vale sync` does from
 # the URLs in the config, with nothing fetched.
 packages=()
 for archive in "$XDG_CACHE_HOME"/vale/packages/*/*.zip; do
-  [[ -e $archive ]] && packages+=("$archive")
+  [[ -e $archive ]] || continue
+  archive=$(native_path "$archive")
+  packages+=("$archive")
 done
 if [[ -n ${packages[0]+set} ]]; then
   sync_config="$TEST_TMPDIR/vale-sync.ini"
+  sync_styles=$(native_path "$styles")
   {
-    echo "StylesPath = $styles"
+    echo "StylesPath = $sync_styles"
     printf 'Packages = %s' "${packages[0]}"
     for archive in "${packages[@]:1}"; do
       printf ', %s' "$archive"

@@ -4,6 +4,7 @@
 """`go_mod_tidy_test`: `go mod tidy -diff` and `go mod verify`, offline."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@tbhb_rules//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 
 # Internal: consumers load //:defs.bzl.
 visibility(["//", "//private/...", "//tests/..."])
@@ -42,7 +43,8 @@ def _go_mod_tidy_test_impl(ctx):
         files = [manifest, sdk.go, sdk.root_file] + files + ctx.files.proxy,
         transitive_files = depset(transitive = [sdk.srcs, sdk.headers, sdk.tools, sdk.libs]),
     )
-    return [DefaultInfo(executable = script, runfiles = runfiles)]
+    executable, runfiles = shell_executable(ctx, script, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 go_mod_tidy_test = rule(
     implementation = _go_mod_tidy_test_impl,
@@ -56,7 +58,7 @@ copy with a fresh module cache and `GOPROXY` set to `proxy`, a directory
 of modules made by the `go_mod_proxy` extension from the same go.sum: no
 network. A module go.sum does not list cannot be fetched, so a missing
 requirement fails as untidy.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "go_mod": attr.label(mandatory = True, allow_single_file = ["go.mod"]),
         "go_sum": attr.label(mandatory = True, allow_single_file = ["go.sum"]),
         "proxy": attr.label(
@@ -73,5 +75,5 @@ requirement fails as untidy.""",
             allow_single_file = True,
         ),
     },
-    toolchains = [_GO_TOOLCHAIN],
+    toolchains = [_GO_TOOLCHAIN] + SHELL_TOOLCHAINS,
 )

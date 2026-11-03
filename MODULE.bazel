@@ -25,6 +25,7 @@ use_repo(
     tools,
     "tbhb_rules_actionlint",
     "tbhb_rules_bats",
+    "tbhb_rules_buildifier",
     "tbhb_rules_cog",
     "tbhb_rules_editorconfig_checker",
     "tbhb_rules_git",
@@ -70,6 +71,20 @@ use_repo(pnpm, "pnpm")
 # root target (such as an exported config) loads the root package, which
 # fails when a repository it names is invisible. They fetch only when used.
 bazel_dep(name = "buildifier_prebuilt", version = "10.1.0")
+
+# buildifier_prebuilt's own per-platform binaries, which //pins puts behind a
+# tbhb_rules_buildifier hub like every other tool. Its //:buildifier wrapper
+# finds the binary relative to the working directory, which the formatters
+# change.
+buildifier_binaries = use_extension("@buildifier_prebuilt//:defs.bzl", "buildifier_prebuilt_deps_extension")
+use_repo(
+    buildifier_binaries,
+    "buildifier_darwin_arm64",
+    "buildifier_linux_amd64",
+    "buildifier_linux_arm64",
+    "buildifier_windows_amd64",
+)
+
 bazel_dep(name = "bazelrc-preset.bzl", version = "1.10.0")
 
 # Only test packages load rules_testing.

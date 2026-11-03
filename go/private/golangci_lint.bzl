@@ -21,6 +21,7 @@ load("@rules_go//go:def.bzl", "GoArchive")
 # buildifier: disable=bzl-visibility
 load("@rules_go//go/private:providers.bzl", "GoStdLib")
 load("@rules_go//go/tools/gopackagesdriver:aspect.bzl", "GoPkgInfo", "go_pkg_info_aspect")
+load("@tbhb_rules//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 
 # Internal: consumers load //:defs.bzl.
 visibility(["//", "//private/...", "//tests/..."])
@@ -230,7 +231,7 @@ def main_repo_label(value):
 def golangci_lint_aspect_factory(
         config,
         go_mod = None,
-        tool = Label("//private:golangci_lint_bin"),
+        tool = Label("@tbhb_rules_golangci_lint//:golangci-lint"),
         data = [],
         args = [],
         rule_kinds = DEFAULT_RULE_KINDS):
@@ -359,10 +360,12 @@ def _golangci_lint_test_impl(ctx):
         },
         is_executable = True,
     )
-    return [DefaultInfo(
-        executable = script,
-        runfiles = ctx.runfiles(files = [manifest, expected, ctx.executable._merge], transitive_files = reports),
-    )]
+    executable, runfiles = shell_executable(
+        ctx,
+        script,
+        ctx.runfiles(files = [manifest, expected, ctx.executable._merge], transitive_files = reports),
+    )
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 def golangci_lint_test_factory(aspect):
     """Makes a test rule that fails when golangci-lint reports any issue.
@@ -395,8 +398,9 @@ def golangci_lint_test_factory(aspect):
     return rule(
         implementation = _golangci_lint_test_impl,
         test = True,
+        toolchains = SHELL_TOOLCHAINS,
         doc = "Fails when golangci-lint reports an issue in `srcs` or the main-repository targets they depend on.",
-        attrs = {
+        attrs = SHELL_ATTRS | {
             "expect_linted": attr.label_list(
                 allow_files = True,
                 doc = "Files whose `.go` files must all be linted, usually a `repo_files` target.",

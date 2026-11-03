@@ -3,8 +3,8 @@
 
 """Run one tool of the locked Python environment.
 
-Usage: launch.py [--select] [--allow-empty] [--exclude PATTERN]...
-    [--chdir DIR] -- TOOL [ARG]...
+Usage: launch.py [--select] [--filter] [--allow-empty] [--exclude PATTERN]...
+    [--chdir DIR] [--member DIR]... -- TOOL [ARG]...
 
 Started by the launcher script that python_tool generates, with the
 interpreter and environment it sets up. TOOL is `python` (the interpreter
@@ -18,12 +18,27 @@ whose first line is a python or `uv run` shebang. Finding none is an error
 unless --allow-empty is given, which makes the run a no-op instead.
 --exclude takes fnmatch patterns over the relative path. `{env:NAME}` in an
 ARG expands to the environment variable NAME.
+
+--member names an editable workspace member's directory, relative to the
+current directory. Before anything else, each member is installed from
+the tree the launcher runs in, as `uv sync` installs an editable member:
+its metadata (so `importlib.metadata` finds it) and its console scripts
+(on PATH, as .exe launchers on Windows), into a scratch prefix. The code
+itself is imported from the member's source root on PYTHONPATH, so it is
+the copy's code, mutated or not. Subprocesses inherit the install.
 """
 
+import base64
 import fnmatch
+import hashlib
 import os
 import re
+import subprocess  # nosec B404
 import sys
+import sysconfig
+import tempfile
+import tomllib
+import zipfile
 from dataclasses import dataclass, field
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -47,6 +62,113 @@ class Options:
     allow_empty: bool = False
     exclude: list[str] = field(default_factory=list[str])
     chdir: str = ""
+    members: list[str] = field(default_factory=list[str])
+
+
+# Module-level, where mutmut leaves names alone: a mutated case still
+# resolves on a case-insensitive filesystem.
+PYPROJECT = "pyproject.toml"
+# The entry-point groups a [project] table declares as tables of its own.
+SCRIPT_GROUPS = (("scripts", "console_scripts"), ("gui-scripts", "gui_scripts"))
+WHEEL = (
+    "Wheel-Version: 1.0\nGenerator: tbhb_rules\nRoot-Is-Purelib: true\n"
+    "Tag: py3-none-any\n"
+)
+
+
+def normalize(name: str) -> str:
+    """Return a distribution name as wheel file names spell it."""
+    return re.sub(r"[-_.]+", "_", name).lower()
+
+
+def table(value: object) -> dict[str, object]:
+    """Return value as a TOML table, or an empty one if it is not a table."""
+    return value if isinstance(value, dict) else {}
+
+
+def entry_points_text(project: dict[str, object]) -> str:
+    """Return entry_points.txt for a [project] table."""
+    groups = {group: table(project.get(key)) for key, group in SCRIPT_GROUPS}
+    for group, entries in table(project.get("entry-points")).items():
+        groups[group] = table(entries)
+    sections = [
+        "\n".join(
+            [f"[{group}]", *(f"{name} = {target}" for name, target in entries.items())]
+        )
+        for group, entries in groups.items()
+        if entries
+    ]
+    return "".join(f"{section}\n" for section in sections)
+
+
+def record_line(name: str, data: bytes) -> str:
+    """Return the RECORD line of one wheel file."""
+    digest = base64.urlsafe_b64encode(hashlib.sha256(data).digest()).replace(b"=", b"")
+    return f"{name},sha256={digest.decode()},{len(data)}"
+
+
+def member_wheel(member: Path, out: Path) -> Path:
+    """Write a metadata-only wheel for the member and return its path.
+
+    The wheel carries the member's name, version and entry points from its
+    pyproject.toml and no code: the code comes from the source root on
+    PYTHONPATH. A dynamic or missing version is "0".
+    """
+    with (member / PYPROJECT).open("rb") as source:
+        project = table(tomllib.load(source).get("project"))
+    name = str(project["name"])
+    version = str(project.get("version", "0"))
+    info = f"{normalize(name)}-{version}.dist-info"
+    files = {
+        f"{info}/METADATA": (
+            f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n"
+        ),
+        f"{info}/WHEEL": WHEEL,
+        f"{info}/entry_points.txt": entry_points_text(project),
+    }
+    wheel = out / f"{normalize(name)}-{version}-py3-none-any.whl"
+    with zipfile.ZipFile(wheel, "w") as archive:
+        record = []
+        for path, text in files.items():
+            archive.writestr(path, text)
+            record.append(record_line(path, text.encode()))
+        record.append(f"{info}/RECORD,,")
+        archive.writestr(f"{info}/RECORD", "\n".join(record) + "\n")
+    return wheel
+
+
+def install_members(members: list[str]) -> tuple[str, str]:
+    """Install the members' metadata and scripts; return (site dir, scripts dir).
+
+    uv installs the wheels offline, without dependencies, into a scratch
+    prefix, and writes the console scripts for this platform.
+    """
+    prefix = Path(
+        tempfile.mkdtemp(prefix="members-", dir=os.environ.get("TEST_TMPDIR"))
+    )
+    wheels = [str(member_wheel(Path(member), prefix)) for member in members]
+    command = [os.environ["TBHB_PYTHON_UV"], "pip", "install", "--quiet", "--offline"]
+    command += ["--no-deps", "--python", sys.executable, "--prefix", str(prefix)]
+    env = os.environ | {"UV_CACHE_DIR": str(prefix / "cache"), "UV_NO_CONFIG": "1"}
+    done = subprocess.run([*command, *wheels], env=env, check=False)  # nosec B603
+    if done.returncode != 0:
+        message = f"installing the workspace members failed ({done.returncode})"
+        raise UsageError(message)
+    paths = {"base": str(prefix)}
+    return sysconfig.get_path("purelib", vars=paths), sysconfig.get_path(
+        "scripts", vars=paths
+    )
+
+
+def use_members(members: list[str]) -> None:
+    """Install the members and put them on sys.path, PYTHONPATH and PATH."""
+    site, scripts = install_members(members)
+    sys.path.append(site)
+    pythonpath = [os.environ.get("PYTHONPATH"), site]
+    os.environ["PYTHONPATH"] = os.pathsep.join(filter(None, pythonpath))
+    os.environ["PATH"] = os.pathsep.join(
+        filter(None, [scripts, os.environ.get("PATH")])
+    )
 
 
 def is_python(path: Path) -> bool:
@@ -93,6 +215,8 @@ def parse(argv: list[str]) -> tuple[Options, list[str]]:
             options.exclude.append(rest.pop(0))
         elif flag == "--chdir" and rest:
             options.chdir = rest.pop(0)
+        elif flag == "--member" and rest:
+            options.members.append(rest.pop(0))
         else:
             message = f"unexpected argument {flag!r}"
             raise UsageError(message)
@@ -146,19 +270,17 @@ def main(argv: list[str]) -> int:
     """Run the tool named in argv and return the exit status."""
     try:
         options, command = parse(argv)
-    except UsageError as error:
-        print(f"launch.py: {error}", file=sys.stderr)
-        return 2
-    tool, args = command[0], [expand(arg) for arg in command[1:]]
-    if options.chdir:
-        os.chdir(options.chdir)
-    found = gather(options, args)
-    if found is None:
-        if options.allow_empty:
-            return 0
-        print("launch.py: no Python files, so nothing was checked", file=sys.stderr)
-        return 1
-    try:
+        tool, args = command[0], [expand(arg) for arg in command[1:]]
+        if options.members:
+            use_members(options.members)
+        if options.chdir:
+            os.chdir(options.chdir)
+        found = gather(options, args)
+        if found is None:
+            if options.allow_empty:
+                return 0
+            print("launch.py: no Python files, so nothing was checked", file=sys.stderr)
+            return 1
         return run(tool, found)
     except UsageError as error:
         print(f"launch.py: {error}", file=sys.stderr)

@@ -4,7 +4,7 @@
 """`tree_check`: a test that runs one tool over a real copy of a file tree."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
-load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "path_dir", "shell_executable")
 
 # Internal: consumers load //lint:defs.bzl.
 visibility("//lint/...")
@@ -68,7 +68,7 @@ def _tree_check_impl(ctx):
             "@@MANIFEST@@": manifest.short_path,
             "@@MIN_FILES@@": str(ctx.attr.min_files),
             "@@OUTPUT_GUARD@@": shell.quote(ctx.attr.output_guard),
-            "@@PATH_TOOLS@@": " ".join([shell.quote(t.short_path) for t in ctx.files.path_tools]) or "",
+            "@@PATH_TOOLS@@": " ".join([shell.quote(path_dir(t)) for t in ctx.attr.path_tools]) or "",
             "@@STRIP_PREFIX@@": shell.quote(strip_prefix),
             "@@TOOL@@": ctx.executable.tool.short_path,
             "@@TOOL_ARGS@@": " ".join([shell.quote(a) for a in tool_args]),

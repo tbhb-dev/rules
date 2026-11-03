@@ -29,7 +29,7 @@ def _test_wraps_executable_and_env(name):
         expect_failure_test,
         name = name + "_subject",
         pattern = "x",
-        test = ":fails_for_the_right_reason",
+        test = ":proof_right_reason",
         tags = ["manual"],
     )
     analysis_test(name = name, impl = _test_wraps_executable_and_env_impl, target = name + "_subject")
@@ -37,8 +37,12 @@ def _test_wraps_executable_and_env(name):
 def _test_wraps_executable_and_env_impl(env, target):
     env.expect.that_target(target).action_named("TemplateExpand").substitutions().contains_at_least({
         "@@PATTERN@@": "'x'",
-        "@@TEST@@": "testing/tests/fails_for_the_right_reason",
     })
+
+    # The wrapped test's executable, or its .bat launcher on Windows.
+    expand = [a for a in target.actions if a.mnemonic == "TemplateExpand"][0]
+    wrapped = expand.substitutions["@@TEST@@"]
+    env.expect.that_bool(wrapped.removesuffix(".bat") == "testing/tests/proof_right_reason").equals(True)
     env.expect.that_target(target).runfiles().contains("_main/testing/tests/subject.sh")
     env.expect.that_target(target).provider(RunEnvironmentInfo).environment().contains_exactly({
         "SUBJECT_MESSAGE": "the right reason",

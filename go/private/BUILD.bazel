@@ -7,52 +7,6 @@ load(":golangci_fmt.bzl", "golangci_fmt_tool")
 
 repo_files()
 
-# golangci-lint and go-arch-lint for this platform (private/tools.bzl pins
-# one archive each).
-alias(
-    name = "golangci_lint_bin",
-    actual = select({
-        ":darwin_arm64": "@golangci_lint_darwin_arm64//:golangci-lint",
-        ":linux_amd64": "@golangci_lint_linux_amd64//:golangci-lint",
-        ":linux_arm64": "@golangci_lint_linux_arm64//:golangci-lint",
-    }),
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "go_arch_lint_bin",
-    actual = select({
-        ":darwin_arm64": "@go_arch_lint_darwin_arm64//:go-arch-lint",
-        ":linux_amd64": "@go_arch_lint_linux_amd64//:go-arch-lint",
-        ":linux_arm64": "@go_arch_lint_linux_arm64//:go-arch-lint",
-    }),
-    visibility = ["//visibility:public"],
-)
-
-config_setting(
-    name = "darwin_arm64",
-    constraint_values = [
-        "@platforms//os:macos",
-        "@platforms//cpu:arm64",
-    ],
-)
-
-config_setting(
-    name = "linux_amd64",
-    constraint_values = [
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
-)
-
-config_setting(
-    name = "linux_arm64",
-    constraint_values = [
-        "@platforms//os:linux",
-        "@platforms//cpu:arm64",
-    ],
-)
-
 # The tool behind //:golangci_fmt.
 golangci_fmt_tool(
     name = "golangci_fmt_tool",
@@ -139,5 +93,8 @@ bzl_library(
     name = "tools",
     srcs = ["tools.bzl"],
     visibility = ["//:__subpackages__"],
-    deps = ["@bazel_tools//tools/build_defs/repo:http.bzl"],
+    deps = [
+        "@bazel_tools//tools/build_defs/repo:http.bzl",
+        "@tbhb_rules//pins:hub",
+    ],
 )

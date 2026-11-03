@@ -55,10 +55,12 @@ if [[ $source == copy ]]; then
   fi
 else
   root=${BUILD_WORKSPACE_DIRECTORY:?run this target with bazel run}
-  # Tools that find their own files through runfiles (such as
-  # @buildifier_prebuilt//:buildifier, a wrapper) resolve them relative to
-  # the working directory unless RUNFILES_DIR says where the tree is.
+  # Tools that find their own files through runfiles (python_tool
+  # launchers) resolve them relative to the working directory unless
+  # RUNFILES_DIR says where the tree is.
   export RUNFILES_DIR="${RUNFILES_DIR:-$(cd "$runfiles/.." && pwd)}"
+  # The pinned git lists the files, not whichever one is on PATH.
+  export PATH="$runfiles/@@GIT_DIR@@:$PATH"
   cd "$root"
   listing=$(mktemp)
   trap 'rm -f "$listing"' EXIT

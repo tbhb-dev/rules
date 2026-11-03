@@ -88,6 +88,9 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, **kw
     does a run that mutated nothing. Mark an equivalent mutant with
     `# pragma: no mutate` and a reason.
 
+    mutmut does not run on Windows (it points Windows users to WSL), so the
+    targets are incompatible there: `bazel test //...` skips them.
+
     Args:
         name: Target name.
         srcs: Files to copy, usually a `repo_files` target.
@@ -98,12 +101,18 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, **kw
         cpus: CPUs to reserve for the mutmut action.
         **kwargs: Passed to the gate test.
     """
+    not_windows = select({
+        Label("@platforms//os:windows"): [Label("@platforms//:incompatible")],
+        "//conditions:default": [],
+    })
+    compatible = kwargs.pop("target_compatible_with", []) + not_windows
     python_tool(
         name = name + ".runner",
         main = Label(":mutmut_report.py"),
         chdir = chdir,
         python_env = python_env,
         tags = ["manual"],
+        target_compatible_with = compatible,
         visibility = ["//visibility:private"],
     )
     mutmut_report(
@@ -112,10 +121,12 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, **kw
         runner = ":{}.runner".format(name),
         cpus = cpus,
         tags = kwargs.get("tags", []),
+        target_compatible_with = compatible,
         visibility = ["//visibility:private"],
     )
     mutation_gate_test(
         name = name,
         reports = [":{}.report".format(name)],
+        target_compatible_with = compatible,
         **kwargs
     )

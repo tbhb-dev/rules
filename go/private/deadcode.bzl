@@ -16,6 +16,7 @@ load("@rules_go//go:def.bzl", "GoArchive")
 # buildifier: disable=bzl-visibility
 load("@rules_go//go/private:providers.bzl", "GoStdLib")
 load("@rules_go//go/tools/gopackagesdriver:aspect.bzl", "GoPkgInfo", "go_pkg_info_aspect")
+load("@tbhb_rules//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 load(":golangci_lint.bzl", "GO_TOOLCHAIN", "driver_config", "driver_inputs")
 
 # Internal: consumers load //:defs.bzl.
@@ -113,7 +114,8 @@ def _go_deadcode_test_impl(ctx):
         substitutions = {"@@REPORT@@": report.short_path},
         is_executable = True,
     )
-    return [DefaultInfo(executable = script, runfiles = ctx.runfiles(files = [report]))]
+    executable, runfiles = shell_executable(ctx, script, ctx.runfiles(files = [report]))
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 go_deadcode_test = rule(
     implementation = _go_deadcode_test_impl,
@@ -128,7 +130,7 @@ List the binaries and tests.
 
 deadcode reports only functions in the packages `filter` matches; by
 default, exactly the main-repository packages of the program.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "deadcode_args": attr.string_list(doc = "Extra deadcode flags, such as `-generated`."),
         "filter": attr.string(doc = "deadcode's `-filter`: a regular expression of the import paths to report on."),
         "srcs": attr.label_list(
@@ -165,5 +167,5 @@ default, exactly the main-repository packages of the program.""",
             allow_single_file = True,
         ),
     },
-    toolchains = [GO_TOOLCHAIN],
+    toolchains = [GO_TOOLCHAIN] + SHELL_TOOLCHAINS,
 )

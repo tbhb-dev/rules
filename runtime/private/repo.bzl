@@ -41,6 +41,7 @@ python_env(
     ),
     bin_dir = "venv/bin",
     interpreter = {interpreter},
+    members = {members},
     python = glob(["python/{install}/**"], exclude = ["**/__pycache__/**"]),
     site_packages = glob(["{site_packages}/**"], exclude = ["**/__pycache__/**"]),
     site_packages_dir = "{site_packages}",
@@ -62,17 +63,21 @@ for top in sys.argv[1:]:
 """
 
 def _uv(rctx):
-    key = (rctx.os.name, rctx.os.arch)
+    windows = rctx.os.name.startswith("windows")
+    key = ("windows" if windows else rctx.os.name, rctx.os.arch)
     if key not in UV_PLATFORMS:
-        fail("tbhb_rules has no pinned uv for {} {}".format(*key))
+        fail("tbhb_rules has no pinned uv for {} {}".format(rctx.os.name, rctx.os.arch))
     asset = UV_PLATFORMS[key]
     url, sha256 = UV_ASSETS[asset]
     rctx.download_and_extract(
         url = url,
         sha256 = sha256,
         output = "uv-dist",
-        strip_prefix = asset,
+        # The Windows zip holds uv.exe at its top level.
+        strip_prefix = "" if windows else asset,
     )
+    if windows:
+        return rctx.path("uv-dist/uv.exe")
     rctx.symlink("uv-dist/uv", "uv")
     return rctx.path("uv")
 
@@ -120,6 +125,7 @@ def _python_env_repo_impl(rctx):
     rctx.file("project/pyproject.toml", rctx.read(pyproject))
     rctx.file("project/uv.lock", rctx.read(lock))
     source_roots = []
+    members = []
     for member in info["members"]:
         path = member["path"].rstrip("/")
         if path not in ("", "."):
@@ -127,6 +133,7 @@ def _python_env_repo_impl(rctx):
             rctx.file("project/{}/pyproject.toml".format(path), rctx.read(member_pyproject, watch = "yes"))
         if member["kind"] != "editable":
             continue
+        members.append(path or ".")
 
         # The src layout when the member has one, the flat layout otherwise.
         member_root = root if path in ("", ".") else root.get_child(path)
@@ -172,6 +179,7 @@ def _python_env_repo_impl(rctx):
         interpreter = repr("python/{}/bin/{}".format(install, interpreter.basename)),
         site_packages = "venv/lib/{}/site-packages".format(lib[0]),
         source_roots = repr(source_roots),
+        members = repr(members),
     ))
 
 python_env_repo = repository_rule(

@@ -24,17 +24,17 @@ output_guard=@@OUTPUT_GUARD@@
 strip_prefix=@@STRIP_PREFIX@@
 
 tree="$TEST_TMPDIR/tree"
-bin="$TEST_TMPDIR/bin"
 log="$TEST_TMPDIR/tool.log"
-mkdir -p "$tree" "$bin"
+mkdir -p "$tree"
 
-# Tools that the main tool looks up on PATH (actionlint runs shellcheck).
-path_tools=(@@PATH_TOOLS@@)
+# The directories of tools that the main tool looks up on PATH (actionlint
+# runs shellcheck), each holding the tool under its usual name.
+path_dirs=(@@PATH_TOOLS@@)
 # The ${a[@]+...} form keeps an empty array safe under set -u in bash 3.2.
-for path_tool in ${path_tools[@]+"${path_tools[@]}"}; do
-  ln -s "$runfiles/$path_tool" "$bin/$(basename "$path_tool")"
+for path_dir in ${path_dirs[@]+"${path_dirs[@]}"}; do
+  PATH="$runfiles/$path_dir:$PATH"
 done
-export PATH="$bin:$PATH"
+export PATH
 
 # -h dereferences symlinks in both GNU and BSD tar. The manifest lists one
 # path per line, relative to strip_prefix (or to the repository root), which

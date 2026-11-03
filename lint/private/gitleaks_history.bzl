@@ -4,7 +4,7 @@
 """`gitleaks_history`: scans the workspace's git history for secrets."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
-load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "path_dir", "shell_executable")
 
 # Internal: consumers load //lint:defs.bzl.
 visibility("//lint/...")
@@ -17,7 +17,7 @@ def _gitleaks_history_impl(ctx):
         output = script,
         substitutions = {
             "@@CONFIG@@": shell.quote(ctx.file.config.short_path if ctx.file.config else ""),
-            "@@GIT_DIR@@": git.short_path.rpartition("/")[0],
+            "@@GIT_DIR@@": path_dir(ctx.attr.git),
             "@@TOOL@@": ctx.executable.tool.short_path,
         },
         is_executable = True,

@@ -11,6 +11,7 @@ aspect: the contracts are graph-wide and a run takes milliseconds.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
+load("@tbhb_rules//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 load(":go_srcs.bzl", "GoSrcsInfo", "go_srcs_aspect")
 
 # Internal: consumers load //:defs.bzl.
@@ -46,11 +47,13 @@ def _go_arch_lint_test_impl(ctx):
     )
     runfiles = ctx.runfiles(files = [manifest, ctx.executable.tool] + files)
     runfiles = runfiles.merge(ctx.attr.tool[DefaultInfo].default_runfiles)
-    return [DefaultInfo(executable = script, runfiles = runfiles)]
+    executable, runfiles = shell_executable(ctx, script, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 go_arch_lint_test = rule(
     implementation = _go_arch_lint_test_impl,
     test = True,
+    toolchains = SHELL_TOOLCHAINS,
     doc = """Fails when the module breaks the contracts of a go-arch-lint config.
 
 The test copies `go_mod`, `config` and the main-repository Go sources that
@@ -63,7 +66,7 @@ package `srcs` reach cannot escape the contracts. A package `srcs` does not
 reach is not checked: list every binary and test, or every package.
 
 The test's `args` go to `go-arch-lint check`, such as `--max-warnings`.""",
-    attrs = {
+    attrs = SHELL_ATTRS | {
         "config": attr.label(
             mandatory = True,
             allow_single_file = True,
@@ -76,7 +79,7 @@ The test's `args` go to `go-arch-lint check`, such as `--max-warnings`.""",
             doc = "Go targets whose main-repository sources make up the module.",
         ),
         "tool": attr.label(
-            default = Label("//private:go_arch_lint_bin"),
+            default = Label("@tbhb_rules_go_arch_lint//:go-arch-lint"),
             executable = True,
             allow_files = True,
             cfg = "target",

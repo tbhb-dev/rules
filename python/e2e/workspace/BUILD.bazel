@@ -6,6 +6,7 @@ load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load(
     "@tbhb_rules_python//:defs.bzl",
     "import_linter_test",
+    "mutmut_test",
     "pyrefly_test",
     "pytest_test",
     "ruff_test",
@@ -53,6 +54,16 @@ import_linter_test(
     srcs = CLEAN,
 )
 
+# The member's mutants, from its own directory. Its tests check the member
+# is installed (metadata and console script) from the copy, which a clean
+# mutmut run needs.
+mutmut_test(
+    name = "mutmut_test",
+    srcs = CLEAN,
+    chdir = "cli",
+    cpus = 2,
+)
+
 # Proofs: each target must fail, for the reason expect_failure_test states.
 PROOF_TAGS = ["manual"]
 
@@ -68,8 +79,17 @@ import_linter_test(
     tags = PROOF_TAGS,
 )
 
+mutmut_test(
+    name = "proof_mutmut_member_survivor",
+    srcs = CLEAN,
+    chdir = "weak",
+    cpus = 2,
+    tags = PROOF_TAGS,
+)
+
 PROOF_REASONS = {
     "proof_import_linter_leak": "interim code stays out of tbhbops BROKEN",
+    "proof_mutmut_member_survivor": "survived: weakpkg\\.x_half__mutmut_",
     "proof_ruff_script": "F401 .*`os` imported but unused",
 }
 
