@@ -24,6 +24,7 @@ vitest_test(
 
 expect_failure_test(
     name = "proof_vitest_version_mismatch_fails",
-    pattern = "the consumer's node_modules has its own vitest 4.0.0 \\(this module pins 4.1.12\\)",
+    # Any pinned version, so a Vitest bump doesn't have to edit this proof.
+    pattern = "the consumer's node_modules has its own vitest 4.0.0 \\(this module pins [0-9.]+\\)",
     test = ":proof_vitest_version_mismatch",
 )
