@@ -25,13 +25,28 @@ jobs:
   # one runner for each platform the tool pins cover that GitHub hosts. It
   # runs this repository's own gates, including the Python ones, on its own
   # rules, the nested modules and the e2e consumers.
+  # One job per platform and workspace, so the workspaces test at once.
+  # The root covers this repository's gates (buildifier, the lint tests,
+  # the shell checks, the bats suite and the rule families' proofs) and
+  # preset.update_test, which fails when preset.bazelrc is stale. The smoke
+  # consumer's expect_failure_tests pass only when each proof fails for the
+  # stated reason. The nested modules are workspaces of their own, each with
+  # its own gates and consumers, on the same Bazel versions and platforms.
   bazel:
-    name: "bazel (${{ matrix.os }})"
+    name: "bazel (${{ matrix.os }}, ${{ matrix.workspace.id }})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-15, windows-2025]
+        workspace:
+          - {id: root, dir: .}
+          - {id: smoke, dir: e2e/smoke}
+          - {id: go, dir: go}
+          - {id: go-smoke, dir: go/e2e/smoke}
+          - {id: python, dir: python}
+          - {id: python-single, dir: python/e2e/single}
+          - {id: python-workspace, dir: python/e2e/workspace}
     defaults:
       run:
         shell: bash
@@ -57,13 +72,13 @@ jobs:
         uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}-${{ matrix.os }}
+          disk-cache: ${{ github.workflow }}-${{ matrix.os }}-${{ matrix.workspace.id }}
           repository-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
 
       # Some runfiles paths pass Windows' 260-character limit under the
       # default output root in the runner's profile. The user bazelrc reaches
-      # every workspace the job tests. After setup-bazel, which writes that file
+      # the workspace wherever it is. After setup-bazel, which writes that file
       # too and leaves its last line unterminated, hence the leading newline.
       - name: Shorten Bazel's output root
         if: runner.os == 'Windows'
@@ -75,61 +90,40 @@ jobs:
         if: runner.os == 'Windows'
         run: reg add 'HKLM\SYSTEM\CurrentControlSet\Control\FileSystem' //v LongPathsEnabled //t REG_DWORD //d 1 //f
 
-      # //... covers this repository's gates (buildifier, the lint tests, the
-      # shell checks, the bats suite and the rule families' proofs) and
-      # preset.update_test, which fails when preset.bazelrc is stale.
-      # Each test step fetches with retries, then tests once.
+      # Fetching hits go.dev's release list (go_sdk.from_file), PyPI, GitHub
+      # and the BCR mirror, which can fail for longer than Bazel's own
+      # download retries wait. Only the fetch is retried: a test failure never
+      # is.
+      - name: Fetch, retrying transient failures
+        working-directory: ${{ matrix.workspace.dir }}
+        run: |
+          for attempt in 1 2 3; do
+            bazelisk fetch --config=ci //... && break
+            if ((attempt == 3)); then exit 1; fi
+            sleep 60
+          done
+
       - name: Test
-        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
-
-      # The smoke module's proofs run here too: each expect_failure_test
-      # passes only when its proof fails for the stated reason.
-      - name: Test the smoke consumer
-        working-directory: e2e/smoke
-        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
-
-      # The nested modules are workspaces of their own, each with its own
-      # gates and consumers, on the same Bazel versions and platforms.
-      - name: Test the Go module
-        working-directory: go
-        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
-
-      - name: Test the Go consumer
-        working-directory: go/e2e/smoke
-        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
-
-      - name: Test the Python module
-        working-directory: python
-        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
-
-      - name: Test the single-project Python consumer
-        working-directory: python/e2e/single
-        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
-
-      - name: Test the uv workspace Python consumer
-        working-directory: python/e2e/workspace
-        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
+        working-directory: ${{ matrix.workspace.dir }}
+        run: bazelisk test --config=ci //...
 
       # Mutation reports rerun along the dependency graph: an edit reruns
       # its unit and the dependents, and the others stay cached. mutmut does
       # not run on Windows.
       - name: Prove incremental mutation
-        if: runner.os != 'Windows'
+        if: matrix.workspace.id == 'python-workspace' && runner.os != 'Windows'
         run: python/e2e/incremental.sh
 
       # A failed run's test logs, so a failure that does not recur can still
-      # be read. Every workspace shares setup-bazel's output base, so each
-      # one's bazel-testlogs is the same directory, holding the last tested
-      # workspace's logs; a failed step skips the rest, so that is the failing
-      # one.
+      # be read.
       - name: Keep the test logs
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
-          name: testlogs-${{ matrix.os }}
+          name: testlogs-${{ matrix.os }}-${{ matrix.workspace.id }}
           path: |
-            bazel-testlogs/**/test.log
-            bazel-testlogs/**/test.xml
+            ${{ matrix.workspace.dir }}/bazel-testlogs/**/test.log
+            ${{ matrix.workspace.dir }}/bazel-testlogs/**/test.xml
           if-no-files-found: ignore
 
   # Checks that need Git history or the GitHub API, which no sandboxed test
