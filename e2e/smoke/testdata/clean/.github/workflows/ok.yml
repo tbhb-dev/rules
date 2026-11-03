@@ -1,0 +1,19 @@
+---
+name: ok
+
+on:
+  push:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hello:
+    name: hello
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Say hello
+        run: echo "hello"

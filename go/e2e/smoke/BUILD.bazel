@@ -1,0 +1,368 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@gazelle//:def.bzl", "gazelle")
+load("@tbhb_rules//format:defs.bzl", "format_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test")
+load("@tbhb_rules_go//tests/golangci:oracle.bzl", "golangci_lint_oracle")
+load("//tools/lint:linters.bzl", "golangci_lint_parity_test", "golangci_lint_test")
+load("//tools/mutation:defs.bzl", "gomutants_test")
+
+# `bazel run //:gazelle` writes the Go rules. The planted_*.go files hold
+# defects for the proofs; their hand-written targets carry `# keep`, and
+# because each shares its package's importpath, the resolves below name the
+# real package.
+# gazelle:prefix example.com/smoke
+# gazelle:exclude **/planted_*.go
+# gazelle:resolve go example.com/smoke/internal/core //internal/core
+# gazelle:resolve go example.com/smoke/internal/feature1 //internal/feature1
+# gazelle:resolve go example.com/smoke/internal/platform //internal/platform
+# gazelle:resolve go example.com/smoke/internal/shared //internal/shared
+gazelle(name = "gazelle")
+
+repo_files()
+
+exports_files([
+    ".golangci.yml",
+    "go.mod",
+])
+
+# The module: two binaries sharing internal/shared (cmd/b is built pure, a
+# second configuration), the layers under them, and lib's test.
+CLEAN = [
+    "//cmd/a",
+    "//cmd/b",
+    "//lib:lib_test",
+]
+
+# The mutation fixtures: mutation/clean, whose tests kill every mutant,
+# mutation/weak, whose do not, and mutation/nothing, with nothing to
+# mutate. Linted, but outside the module's contracts.
+MUTATION = [
+    "//mutation/clean:clean_test",
+    "//mutation/nothing:nothing_test",
+    "//mutation/weak:weak_test",
+]
+
+# Go files that are planted defects or proof fixtures, not part of the
+# module the clean checks cover.
+NOT_IN_MODULE = [
+    "dirty/*",
+    "internal/extra/*",
+    "*/planted_*",
+]
+
+golangci_lint_test(
+    name = "golangci_lint_test",
+    srcs = CLEAN + MUTATION,
+    expect_linted = [":repo_files"],
+    expect_linted_exclude = NOT_IN_MODULE,
+)
+
+# One deadcode run over both binaries and the test: shared.OnlyB, which only
+# cmd/b calls, is live.
+go_deadcode_test(
+    name = "deadcode_test",
+    srcs = CLEAN,
+)
+
+go_arch_lint_test(
+    name = "go_arch_lint_test",
+    srcs = CLEAN,
+    config = ".go-arch-lint.yml",
+    go_mod = "go.mod",
+)
+
+go_mod_tidy_test(
+    name = "go_mod_tidy_test",
+    srcs = [":repo_files"],
+    go_mod = "go.mod",
+    go_sum = "go.sum",
+    proxy = "@go_mod_proxy//:proxy",
+)
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    formatters = ["@tbhb_rules_go//:golangci_fmt"],
+)
+
+# golangci-lint run the ordinary way, with go-cmp from the module proxy,
+# reports what the aspect reports, planted defects included.
+golangci_lint_oracle(
+    name = "oracle",
+    testonly = True,
+    srcs = CLEAN + ["//dirty"],
+    config = ".golangci.yml",
+    go_mod = "go.mod",
+    proxy = "@go_mod_proxy//:proxy",
+)
+
+golangci_lint_parity_test(
+    name = "parity_test",
+    srcs = CLEAN + ["//dirty"],
+    oracle = ":oracle",
+)
+
+# Proofs. Each wrapped test is manual and must fail for the stated reason.
+
+PROOF_TAGS = ["manual"]
+
+# golangci-lint: findings that need go-cmp's types.
+golangci_lint_test(
+    name = "proof_dirty_lint",
+    srcs = ["//dirty"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_dirty_lint_fails",
+    pattern = "dirty/dirty.go:[0-9]+:[0-9]+: printf: fmt.Printf format %d has arg cmp.Diff\\(1, 2\\) of wrong type string",
+    test = ":proof_dirty_lint",
+)
+
+# golangci-lint: a finding in the shared package, linted in two
+# configurations (cmd/b is pure), is reported once.
+golangci_lint_test(
+    name = "proof_shared_finding",
+    srcs = [
+        "//cmd/a:a_planted",
+        "//cmd/b:b_planted",
+    ],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_shared_finding_fails",
+    pattern = "^internal/shared/planted_dead.go:[0-9]+:[0-9]+: Error return value of `os.Remove` is not checked \\(errcheck\\)$",
+    test = ":proof_shared_finding",
+)
+
+expect_failure_test(
+    name = "proof_shared_finding_once_fails",
+    pattern = "golangci-lint reported 1 issues in",
+    test = ":proof_shared_finding",
+)
+
+# golangci-lint: a package nothing lists is not linted, and expect_linted
+# says so.
+golangci_lint_test(
+    name = "proof_unlisted_package",
+    srcs = ["//cmd/a"],
+    expect_linted = [":repo_files"],
+    expect_linted_exclude = NOT_IN_MODULE,
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_unlisted_package_fails",
+    pattern = "^not linted: internal/feature2/feature2.go$",
+    test = ":proof_unlisted_package",
+)
+
+# deadcode: shared.Orphan is called by nobody.
+go_deadcode_test(
+    name = "proof_orphan",
+    srcs = [
+        "//cmd/a:a_planted",
+        "//cmd/b:b_planted",
+    ],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_orphan_fails",
+    pattern = "^internal/shared/planted_dead.go:[0-9]+:[0-9]+: unreachable func: Orphan$",
+    test = ":proof_orphan",
+)
+
+# deadcode: run for cmd/a alone, shared.OnlyB looks dead. Why the check
+# takes all binaries at once.
+go_deadcode_test(
+    name = "proof_one_binary",
+    srcs = ["//cmd/a"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_one_binary_fails",
+    pattern = "^internal/shared/shared.go:[0-9]+:[0-9]+: unreachable func: OnlyB$",
+    test = ":proof_one_binary",
+)
+
+# go-arch-lint: each contract, broken once.
+[
+    (
+        go_arch_lint_test(
+            name = "proof_arch_" + name,
+            srcs = CLEAN + [planted],
+            config = ".go-arch-lint.yml",
+            go_mod = "go.mod",
+            tags = PROOF_TAGS,
+        ),
+        expect_failure_test(
+            name = "proof_arch_{}_fails".format(name),
+            pattern = pattern,
+            test = ":proof_arch_" + name,
+        ),
+    )
+    for name, planted, pattern in [
+        # Layers: core imports a feature above it.
+        ("layers", "//internal/core:planted_layers", "Component core shouldn't depend on example.com/smoke/internal/feature1"),
+        # Sibling independence: feature1 imports feature2.
+        ("sibling", "//internal/feature1:planted_sibling", "Component feature1 shouldn't depend on example.com/smoke/internal/feature2"),
+        # Leaf: platform imports core.
+        ("leaf", "//internal/platform:planted_leaf", "Component platform shouldn't depend on example.com/smoke/internal/core"),
+        # Inverse: only cmd/* may import features; shared may not.
+        ("inverse", "//internal/shared:planted_inverse", "Component shared shouldn't depend on example.com/smoke/internal/feature1"),
+        # A package in no component.
+        ("unattached", "//internal/extra", "internal/extra/extra.go not attached to any component"),
+    ]
+]
+
+# go-arch-lint: a config that leaves deep scanning on is rejected.
+go_arch_lint_test(
+    name = "proof_arch_deepscan",
+    srcs = CLEAN,
+    config = ".go-arch-lint-deepscan.yml",
+    go_mod = "go.mod",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_arch_deepscan_fails",
+    pattern = "must set allow.deepScan: false",
+    test = ":proof_arch_deepscan",
+)
+
+# gomutants. By default the scope is //quality:changes: full.
+
+# Every mutant of mutation/clean is killed by its tests, in a full run.
+gomutants_test(
+    name = "gomutants_test",
+    require_scope = "full",
+    tests = ["//mutation/clean:clean_test"],
+)
+
+# A diff that reaches no function of the packages mutates nothing, and
+# passes.
+gomutants_test(
+    name = "gomutants_nothing_changed_test",
+    changes = "mutation/changes/none.json",
+    tests = [
+        "//mutation/clean:clean_test",
+        "//mutation/weak:weak_test",
+    ],
+)
+
+# A diff that changes only weak's Neg mutates only Neg, whose mutants its
+# test kills: it passes, although the full run (proof_weak) fails.
+gomutants_test(
+    name = "gomutants_outside_survivor_test",
+    changes = "mutation/changes/weak_neg.json",
+    tests = ["//mutation/weak:weak_test"],
+)
+
+# A unit no change reaches gets the same slice whatever the base and the
+# unrelated files changed, and so does a reached unit whose changed lines
+# are the same; the mutation run reads the slice, not the changes file, so
+# it is the same action, a cache hit.
+CACHE_UNITS = ("clean", "weak")
+
+CACHE_CHANGES = ("weak_neg", "weak_neg_other_base")
+
+[
+    gomutants_test(
+        name = "cache_{}_{}".format(unit, changes),
+        changes = "mutation/changes/{}.json".format(changes),
+        tags = ["manual"],
+        tests = ["//mutation/{0}:{0}_test".format(unit)],
+    )
+    for unit in CACHE_UNITS
+    for changes in CACHE_CHANGES
+]
+
+[
+    filegroup(
+        name = "cache_{}_{}_slice".format(unit, changes),
+        testonly = True,
+        srcs = [":cache_{0}_{1}.mutation_{0}".format(unit, changes)],
+        output_group = "changes",
+    )
+    for unit in CACHE_UNITS
+    for changes in CACHE_CHANGES
+]
+
+[
+    diff_test(
+        name = "cache_{}_slice_test".format(unit),
+        file1 = ":cache_{}_{}_slice".format(
+            unit,
+            CACHE_CHANGES[0],
+        ),
+        file2 = ":cache_{}_{}_slice".format(
+            unit,
+            CACHE_CHANGES[1],
+        ),
+    )
+    for unit in CACHE_UNITS
+]
+
+# gomutants proofs, each failing for the stated reason: the test, the
+# changes file (None for full scope) and the expected failure.
+MUTATION_PROOFS = {
+    # A diff in a package-level line, or in a test, runs the unit in full.
+    "proof_diff_package_clause": ("//mutation/weak:weak_test", "weak_package", "FAIL: 3 lived, 4 not_covered$"),
+    # A diff in Pass: its surviving mutants fail the diff run.
+    "proof_diff_survivor": ("//mutation/weak:weak_test", "weak_pass", "FAIL: 3 lived$"),
+    "proof_diff_test_file": ("//mutation/weak:weak_test", "weak_test", "FAIL: 3 lived, 4 not_covered$"),
+    # A full run that tested nothing fails.
+    "proof_no_mutants": ("//mutation/nothing:nothing_test", None, "FAIL: no mutants were generated$"),
+    # mutation/weak in full: its test misses Pass's boundary and calls no
+    # Double.
+    "proof_weak": ("//mutation/weak:weak_test", None, "FAIL: 3 lived, 4 not_covered$"),
+}
+
+[
+    gomutants_test(
+        name = proof,
+        changes = "mutation/changes/{}.json".format(changes) if changes else None,
+        tags = ["manual"],
+        tests = [test],
+    )
+    for proof, (test, changes, _) in MUTATION_PROOFS.items()
+]
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, (_, _, pattern) in MUTATION_PROOFS.items()
+]
+
+# The surviving mutant is named, in gomutants' vocabulary.
+expect_failure_test(
+    name = "proof_weak_names_survivor_fails",
+    pattern = "^  lived: mutation/weak/weak.go:10:15 CONDITIONALS_BOUNDARY ",
+    test = ":proof_weak",
+)
+
+# A diff-scope run fails a gate that requires full scope (main, nightly).
+gomutants_test(
+    name = "proof_diff_on_main",
+    changes = "mutation/changes/weak_neg.json",
+    require_scope = "full",
+    tags = ["manual"],
+    tests = ["//mutation/weak:weak_test"],
+)
+
+expect_failure_test(
+    name = "proof_diff_on_main_fails",
+    pattern = "diff-scoped report\\(s\\), but a full run is required",
+    test = ":proof_diff_on_main",
+)

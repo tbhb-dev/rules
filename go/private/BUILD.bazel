@@ -1,0 +1,125 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load(":golangci_fmt.bzl", "golangci_fmt_tool")
+
+repo_files()
+
+# The tool behind //:golangci_fmt.
+golangci_fmt_tool(
+    name = "golangci_fmt_tool",
+    visibility = ["//:__pkg__"],
+)
+
+# The aspects' build actions run these scripts; sh_binary gives each a
+# launcher Windows can execute.
+[
+    sh_binary(
+        name = name + "_runner",
+        srcs = [name + ".sh"],
+        visibility = ["//visibility:public"],
+    )
+    for name in [
+        "deadcode",
+        "golangci_lint",
+    ]
+]
+
+exports_files(
+    [
+        "deadcode.sh",
+        "go_arch_lint.sh.tpl",
+        "golangci_lint.sh",
+        "golangci_lint_merge.sh",
+        "go_mod_tidy.sh.tpl",
+        "golangci_lint_test.sh.tpl",
+        "report_test.sh.tpl",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "golangci_lint",
+    srcs = ["golangci_lint.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@bazel_skylib//rules:common_settings",
+        "@rules_go//go:def",
+    ],
+)
+
+bzl_library(
+    name = "deadcode",
+    srcs = ["deadcode.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":golangci_lint",
+        "@rules_go//go:def",
+    ],
+)
+
+bzl_library(
+    name = "go_mod_tidy",
+    srcs = ["go_mod_tidy.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = ["@bazel_skylib//lib:shell"],
+)
+
+bzl_library(
+    name = "go_mod_proxy",
+    srcs = ["go_mod_proxy.bzl"],
+    visibility = ["//:__subpackages__"],
+)
+
+bzl_library(
+    name = "golangci_fmt",
+    srcs = ["golangci_fmt.bzl"],
+    visibility = ["//:__subpackages__"],
+)
+
+bzl_library(
+    name = "go_srcs",
+    srcs = ["go_srcs.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = ["@rules_go//go:def"],
+)
+
+bzl_library(
+    name = "go_arch_lint",
+    srcs = ["go_arch_lint.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":go_srcs",
+        "@bazel_skylib//lib:shell",
+    ],
+)
+
+bzl_library(
+    name = "gomutants",
+    srcs = ["gomutants.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":go_srcs",
+        "@tbhb_rules//quality:defs",
+    ],
+)
+
+bzl_library(
+    name = "formatter_include",
+    srcs = ["formatter_include.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = ["@tbhb_rules//format:defs"],
+)
+
+bzl_library(
+    name = "tools",
+    srcs = ["tools.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@bazel_tools//tools/build_defs/repo:http.bzl",
+        "@tbhb_rules//pins:hub",
+    ],
+)

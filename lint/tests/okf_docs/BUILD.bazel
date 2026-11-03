@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//lint:defs.bzl", "okf_docs_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+# A clean tree passes; each planted file makes it fail for its own reason.
+PREFIX = "lint/tests/okf_docs/testdata/tree"
+
+PLANTED = {
+    "bad_frontmatter": "testdata/tree/pkg/bad.md",
+    "root_frontmatter": "testdata/tree/NOTES.md",
+    "unlisted": "testdata/tree/docs/unlisted.md",
+}
+
+CLEAN = glob(
+    ["testdata/tree/**"],
+    exclude = PLANTED.values(),
+)
+
+okf_docs_test(
+    name = "clean_test",
+    srcs = CLEAN,
+    strip_prefix = PREFIX,
+)
+
+[
+    okf_docs_test(
+        name = "proof_" + proof,
+        srcs = CLEAN + [planted],
+        strip_prefix = PREFIX,
+        tags = ["manual"],
+    )
+    for proof, planted in PLANTED.items()
+]
+
+PROOF_REASONS = {
+    "proof_bad_frontmatter": "pkg/bad.md: .*'shipped' is not one of",
+    # A root file, like README.md, must have no frontmatter.
+    "proof_root_frontmatter": "NOTES.md: must have no frontmatter",
+    "proof_unlisted": "docs/unlisted.md: not listed in any index.md",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

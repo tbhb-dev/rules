@@ -1,0 +1,132 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load(
+    "//:defs.bzl",
+    "bandit_test",
+    "complexipy_test",
+    "mutmut_test",
+    "pylint_test",
+    "pyrefly_test",
+    "pytest_test",
+    "ruff_test",
+    "vulture_test",
+)
+
+repo_files()
+
+exports_files([
+    "import_linter.py",
+    "mutmut.sh.tpl",
+    "mutmut_report.py",
+    "pip_audit.py",
+    "vale_sync_then.sh",
+])
+
+bzl_library(
+    name = "extension",
+    srcs = ["extension.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = ["@tbhb_rules//runtime:defs"],
+)
+
+bzl_library(
+    name = "tool",
+    srcs = ["tool.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = ["@tbhb_rules//runtime:defs"],
+)
+
+bzl_library(
+    name = "checks",
+    srcs = ["checks.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":tool",
+        "@tbhb_rules//lint:defs",
+    ],
+)
+
+bzl_library(
+    name = "library",
+    srcs = ["library.bzl"],
+    visibility = ["//:__subpackages__"],
+)
+
+bzl_library(
+    name = "mutmut",
+    srcs = ["mutmut.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":tool",
+        "@tbhb_rules//quality:defs",
+    ],
+)
+
+# The gates for this module's own Python, from its dev project
+# (pyproject.toml and uv.lock at the module root), when it is the root
+# module. Interim-free, so the mutation gate covers every source file.
+
+SRCS = ["//:repo_files"]
+
+ruff_test(
+    name = "ruff_test",
+    srcs = SRCS,
+)
+
+# As in the root //tools: pyrefly's verdict depends only on the platform it
+# analyses for, so both runs work on every host, one as Linux and one as
+# Windows (the `sys.platform == "win32"` branches).
+
+pyrefly_test(
+    name = "pyrefly_test",
+    srcs = SRCS,
+    args = [
+        "--python-platform",
+        "linux",
+    ],
+)
+
+pyrefly_test(
+    name = "pyrefly_windows_test",
+    srcs = SRCS,
+    args = [
+        "--python-platform",
+        "win32",
+    ],
+)
+
+pylint_test(
+    name = "pylint_test",
+    srcs = SRCS,
+)
+
+vulture_test(
+    name = "vulture_test",
+    srcs = SRCS,
+)
+
+complexipy_test(
+    name = "complexipy_test",
+    srcs = SRCS,
+)
+
+bandit_test(
+    name = "bandit_test",
+    srcs = SRCS,
+    exclude = ["**/test_*.py"],
+)
+
+pytest_test(
+    name = "pytest_test",
+    srcs = SRCS,
+    coverage = ["private"],
+)
+
+mutmut_test(
+    name = "mutmut_test",
+    srcs = SRCS,
+    cpus = 4,
+)

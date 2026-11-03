@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The cspell binary behind cspell_test, installed by rules_js from the pnpm
+# lock in this package under tbhb_rules' private hub. To move the pin, edit
+# package.json, then regenerate the lock with the pnpm rules_js pins:
+#   bazel run -- @pnpm//:pnpm --dir "$PWD/lint/private/cspell" install --lockfile-only
+
+load("@tbhb_rules_cspell_npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules_cspell_npm//lint/private/cspell:cspell/package_json.bzl", cspell_bin = "bin")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+npm_link_all_packages(name = "node_modules")
+
+cspell_bin.cspell_binary(
+    name = "cspell",
+    visibility = ["//visibility:public"],
+)

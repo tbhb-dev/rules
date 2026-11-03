@@ -1,0 +1,7 @@
+#!/usr/bin/env -S uv run --script
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""A planted defect: an extensionless script with an unused import."""
+
+import os

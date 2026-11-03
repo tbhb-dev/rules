@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules_python the way a single-project repository does.
+
+A virtual project whose Python lives in the `tools` namespace package,
+under every check of the module, a clean mutation run, and proofs that
+the checks fail on planted defects.
+"""
+
+module(name = "tbhb_rules_python_e2e_single")
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../../..",
+)
+
+bazel_dep(name = "tbhb_rules_python")
+local_path_override(
+    module_name = "tbhb_rules_python",
+    path = "../..",
+)
+
+python = use_extension("@tbhb_rules_python//:extensions.bzl", "python")
+python.project()

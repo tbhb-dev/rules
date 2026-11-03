@@ -1,0 +1,100 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load(
+    "@tbhb_rules_python//:defs.bzl",
+    "import_linter_test",
+    "mutmut_test",
+    "pyrefly_test",
+    "pytest_test",
+    "ruff_test",
+)
+
+repo_files()
+
+CLEAN = glob(
+    ["**"],
+    exclude = [
+        "weak/**",
+        "*.importlinter.toml",
+    ],
+)
+
+ruff_test(
+    name = "ruff_test",
+    srcs = CLEAN,
+)
+
+pyrefly_test(
+    name = "pyrefly_test",
+    srcs = CLEAN,
+)
+
+pytest_test(
+    name = "pytest_test",
+    srcs = CLEAN,
+    coverage = ["tools"],
+)
+
+import_linter_test(
+    name = "import_linter_test",
+    srcs = CLEAN,
+)
+
+mutmut_test(
+    name = "mutmut_test",
+    srcs = CLEAN,
+    cpus = 2,
+)
+
+# Proofs: each target must fail, for the reason expect_failure_test states.
+# They are manual so `bazel test //...` runs them only through the proofs.
+PROOF_TAGS = ["manual"]
+
+mutmut_test(
+    name = "proof_mutmut_survivor",
+    srcs = glob(["weak/**"]),
+    chdir = "weak",
+    cpus = 2,
+    tags = PROOF_TAGS,
+)
+
+import_linter_test(
+    name = "proof_import_linter_broken",
+    srcs = CLEAN + ["broken.importlinter.toml"],
+    config = "broken.importlinter.toml",
+    tags = PROOF_TAGS,
+)
+
+import_linter_test(
+    name = "proof_import_linter_no_contracts",
+    srcs = CLEAN + ["none.importlinter.toml"],
+    config = "none.importlinter.toml",
+    tags = PROOF_TAGS,
+)
+
+pytest_test(
+    name = "proof_pytest_coverage",
+    # Without test_report.py, nothing runs report.score.
+    srcs = [f for f in CLEAN if f != "tools/test_report.py"],
+    coverage = ["tools"],
+    tags = PROOF_TAGS,
+)
+
+PROOF_REASONS = {
+    "proof_import_linter_broken": "report must not use calc BROKEN",
+    "proof_import_linter_no_contracts": "import_linter: FAIL: no contract is defined",
+    "proof_mutmut_survivor": "survived: lib\\.half\\.x_half__mutmut_",
+    "proof_pytest_coverage": "Required test coverage of 100(\\.0)?% not reached",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

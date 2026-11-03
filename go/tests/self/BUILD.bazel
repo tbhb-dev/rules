@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# This module's own Go code (the packages driver, the report tool and the
+# gomutants runner) under the checks it ships.
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("//:defs.bzl", "go_deadcode_test", "go_mod_tidy_test")
+load(":linters.bzl", "self_lint_test")
+
+repo_files()
+
+GO_TARGETS = [
+    "//private/driver",
+    "//private/driver:driver_test",
+    "//private/gomutants",
+    "//private/gomutants:gomutants_test",
+    "//private/report",
+    "//private/report:report_test",
+]
+
+GO_SRCS = [
+    "//private/driver:main.go",
+    "//private/driver:main_test.go",
+    "//private/gomutants:main.go",
+    "//private/gomutants:main_test.go",
+    "//private/report:main.go",
+    "//private/report:main_test.go",
+]
+
+self_lint_test(
+    name = "golangci_lint_test",
+    srcs = GO_TARGETS,
+)
+
+go_deadcode_test(
+    name = "deadcode_test",
+    srcs = GO_TARGETS,
+)
+
+go_mod_tidy_test(
+    name = "go_mod_tidy_test",
+    srcs = GO_SRCS,
+    go_mod = "//:go.mod",
+    go_sum = "//:go.sum",
+    proxy = "@self_go_mod_proxy//:proxy",
+)
+
+bzl_library(
+    name = "linters_bzl",
+    srcs = ["linters.bzl"],
+    deps = ["//:defs"],
+)

@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//lint:defs.bzl", "gitleaks_history")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+load(":cspell_tests.bzl", "cspell_test_suite")
+load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
+load(":tree_check_tests.bzl", "tree_check_test_suite")
+
+repo_files()
+
+tree_check_test_suite(name = "tree_check_tests")
+
+cspell_test_suite(name = "cspell_tests")
+
+# gitleaks_history against throwaway repositories.
+
+PROOF_TAGS = ["manual"]
+
+gitleaks_history(
+    name = "history_subject",
+    tags = ["manual"],
+)
+
+gitleaks_history_scenario_test(
+    name = "history_clean_test",
+    scenario = "clean",
+    subject = ":history_subject",
+)
+
+gitleaks_history_scenario_test(
+    name = "history_no_content_test",
+    scenario = "no_content",
+    subject = ":history_subject",
+)
+
+[
+    gitleaks_history_scenario_test(
+        name = "proof_history_" + scenario,
+        scenario = scenario,
+        subject = ":history_subject",
+        tags = PROOF_TAGS,
+    )
+    for scenario in [
+        "corrupt",
+        "no_commits",
+        "secret",
+    ]
+]
+
+PROOF_REASONS = {
+    "proof_history_corrupt": "gitleaks_history: FAIL: git cannot read the history",
+    "proof_history_no_commits": "gitleaks_history: FAIL: the repository has no commits",
+    "proof_history_secret": "leaks found: [1-9]",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

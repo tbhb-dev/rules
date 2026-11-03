@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(
+    glob(["*.go"]),
+    visibility = ["//tests:__subpackages__"],
+)
+
+go_library(
+    name = "gomutants_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/tbhb-dev/rules/go/private/gomutants",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "gomutants",
+    embed = [":gomutants_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "gomutants_test",
+    srcs = ["main_test.go"],
+    embed = [":gomutants_lib"],
+    visibility = ["//tests:__subpackages__"],
+)

@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+go_binary(
+    name = "a",
+    embed = [":a_lib"],
+    visibility = ["//visibility:public"],
+)
+
+# The same binary over the shared package with its planted defects.
+go_binary(
+    name = "a_planted",
+    srcs = ["main.go"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/feature1",
+        "//internal/shared:planted_dead",
+    ],
+)
+
+go_library(
+    name = "a_lib",
+    srcs = ["main.go"],
+    importpath = "example.com/smoke/cmd/a",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//internal/feature1",
+        "//internal/shared",
+    ],
+)

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "base": "1111111111111111111111111111111111111111",
+  "files": {
+    "elsewhere/x.py": [[3, 4]],
+    "quality/tests/testdata/slice/unit/a.py": [[2, 2]],
+    "quality/tests/testdata/slice/unit/b.txt": []
+  }
+}

@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules the way another repository would.
+
+The positive tests run each rule over clean fixtures. Each proof target
+must fail, and an expect_failure_test around it checks that it fails for the
+stated reason, so `bazel test //...` here runs both.
+"""
+
+module(name = "tbhb_rules_smoke")
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../..",
+)
+
+# A consumer that refers to a tool label itself (here the guard proof; in a
+# real repository, its bazel_env shims) uses tbhb_rules' hub repositories.
+tools = use_extension("@tbhb_rules//pins:extensions.bzl", "tools")
+use_repo(tools, "tbhb_rules_gitleaks")

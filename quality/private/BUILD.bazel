@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files([
+    "mutation_changes.sh.tpl",
+    "mutation_gate.sh.tpl",
+    "slice.awk",
+])
+
+bzl_library(
+    name = "mutation_gate",
+    srcs = ["mutation_gate.bzl"],
+    visibility = ["//quality:__subpackages__"],
+    deps = ["@bazel_skylib//lib:shell"],
+)
+
+bzl_library(
+    name = "mutation_changes",
+    srcs = ["mutation_changes.bzl"],
+    visibility = ["//quality:__subpackages__"],
+    deps = ["//shell:defs"],
+)
+
+bzl_library(
+    name = "slice",
+    srcs = ["slice.bzl"],
+    visibility = ["//quality:__subpackages__"],
+)

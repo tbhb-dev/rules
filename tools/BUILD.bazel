@@ -1,0 +1,245 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# This repository's own gates that consumers never load: the Python checks
+# (from the dev-only tbhb_rules_python) and Vale. tools/ is left out of
+# release archives.
+
+load("@bazel_env.bzl", "bazel_env")
+load(
+    "@tbhb_rules_python//:defs.bzl",
+    "bandit_test",
+    "complexipy_test",
+    "mutmut_test",
+    "pip_audit",
+    "pylint_test",
+    "pyrefly_test",
+    "pytest_test",
+    "python_tool",
+    "ruff_test",
+    "vulture_test",
+)
+load("//lint:defs.bzl", "vale_sync", "vale_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+# For targets that run only on the macOS and Linux agent hosts.
+NOT_WINDOWS = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+# Prose and spelling, offline, with the same configs the PR script uses.
+VALE_PACKAGES = {
+    "Google": "@vale_google//file",
+    "ai-tells": "@vale_ai_tells//file",
+    "ai-tells-experimental": "@vale_ai_tells_experimental//file",
+    "proselint": "@vale_proselint//file",
+    "write-good": "@vale_write_good//file",
+}
+
+vale_test(
+    name = "vale_test",
+    srcs = ["//:repo_files"],
+    config = "//:.vale.ini",
+    packages = VALE_PACKAGES,
+)
+
+# `bazel run //:vale_sync` writes the same packages into .vale/, for editors
+# and for running vale by hand.
+vale_sync(
+    name = "vale_sync",
+    config = "//:.vale.ini",
+    packages = VALE_PACKAGES,
+)
+
+# The Python gates for this repository's own Python: tools/, the shared
+# runtime (runtime/private) and the docs checker (lint/private/okf_docs).
+# Each runs over a copy of the tree with pyproject.toml as its
+# configuration, from the environment the root uv.lock pins.
+PYTHON_SRCS = ["//:repo_files"]
+
+# Fixtures are content under test, not this repository's Python. The
+# interim tooling is a copy of ascm's, which tests and checks it.
+PYTHON_EXCLUDE = [
+    "**/testdata/**",
+    "tools/interim/**",
+]
+
+ruff_test(
+    name = "ruff_test",
+    srcs = PYTHON_SRCS,
+    exclude = PYTHON_EXCLUDE,
+)
+
+# pyrefly's verdict depends only on the platform it analyses for, not the
+# host, so both runs work on every host. The main run analyses as Linux; the
+# second analyses as Windows, so the `sys.platform == "win32"` branches are
+# type-checked too.
+
+PYREFLY_LINUX = [
+    "--python-platform",
+    "linux",
+]
+
+PYREFLY_WINDOWS = [
+    "--python-platform",
+    "win32",
+]
+
+pyrefly_test(
+    name = "pyrefly_test",
+    srcs = PYTHON_SRCS,
+    args = PYREFLY_LINUX,
+    exclude = PYTHON_EXCLUDE,
+)
+
+pyrefly_test(
+    name = "pyrefly_windows_test",
+    srcs = PYTHON_SRCS,
+    args = PYREFLY_WINDOWS,
+    exclude = PYTHON_EXCLUDE,
+)
+
+# Proofs of the two analyses, over planted files and the real config: an
+# error in a win32-only branch fails the Windows run and passes the Linux
+# one, and an error on the Linux path still fails the Linux run.
+pyrefly_test(
+    name = "pyrefly_linux_skips_win32_branch_test",
+    srcs = [
+        "testdata/pyrefly/win32_branch.py",
+        "//:pyproject.toml",
+    ],
+    args = PYREFLY_LINUX,
+)
+
+pyrefly_test(
+    name = "proof_pyrefly_win32_branch",
+    srcs = [
+        "testdata/pyrefly/win32_branch.py",
+        "//:pyproject.toml",
+    ],
+    args = PYREFLY_WINDOWS,
+    tags = ["manual"],
+)
+
+pyrefly_test(
+    name = "proof_pyrefly_linux_branch",
+    srcs = [
+        "testdata/pyrefly/linux_branch.py",
+        "//:pyproject.toml",
+    ],
+    args = PYREFLY_LINUX,
+    tags = ["manual"],
+)
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in {
+        "proof_pyrefly_linux_branch": "linux_branch.py:12:16",
+        "proof_pyrefly_win32_branch": "win32_branch.py:12:16",
+    }.items()
+]
+
+pylint_test(
+    name = "pylint_test",
+    srcs = PYTHON_SRCS,
+    exclude = PYTHON_EXCLUDE,
+)
+
+vulture_test(
+    name = "vulture_test",
+    srcs = PYTHON_SRCS,
+    exclude = PYTHON_EXCLUDE,
+)
+
+complexipy_test(
+    name = "complexipy_test",
+    srcs = PYTHON_SRCS,
+    exclude = PYTHON_EXCLUDE,
+)
+
+# Tests are excluded: B101 flags every assert, and asserts are pytest's API.
+bandit_test(
+    name = "bandit_test",
+    srcs = PYTHON_SRCS,
+    exclude = PYTHON_EXCLUDE + ["**/test_*.py"],
+)
+
+pytest_test(
+    name = "pytest_test",
+    srcs = PYTHON_SRCS,
+    args = [
+        "lint/private/okf_docs",
+        "runtime/private",
+    ],
+    coverage = [
+        "lint/private/okf_docs",
+        "runtime/private",
+    ],
+)
+
+# Every mutant of this repository's Python killed ([tool.mutmut]); a cached
+# action, rerun only when its inputs change.
+mutmut_test(
+    name = "mutmut_test",
+    srcs = PYTHON_SRCS,
+    cpus = 4,
+)
+
+# Advisories change without any input changing, so the audit is a `bazel
+# run` target for the CI repo job, not a cached test.
+pip_audit(
+    name = "pip_audit",
+)
+
+# The locked Python tools as executables, for the bazel_env shims (git hooks
+# and editors). Each runs from the current directory.
+[
+    python_tool(
+        name = tool,
+        tool = tool,
+    )
+    for tool in [
+        "pyrefly",
+        "python",
+        "ruff",
+        "uv",
+    ]
+]
+
+# `bazel run //tools:bazel_env` puts shims for the Bazel-pinned tools in
+# .bazel_env/bin, which mise adds to PATH. Git hooks call them directly, so a
+# commit never waits on the Bazel server. It lives here, not in the root
+# package, because consumers load the root package and bazel_env is a dev
+# dependency. bazel_env.bzl builds its bin directory with POSIX tools that
+# fail under Windows' Bash, so the shims are for macOS and Linux.
+bazel_env(
+    name = "bazel_env",
+    target_compatible_with = NOT_WINDOWS,
+    tools = {
+        "actionlint": "@tbhb_rules_actionlint//:actionlint",
+        "buildifier": "@tbhb_rules_buildifier//:buildifier",
+        "cog": "@tbhb_rules_cog//:cog",
+        "editorconfig-checker": "@tbhb_rules_editorconfig_checker//:editorconfig-checker",
+        "git": "@tbhb_rules_git//:git",
+        "gitleaks": "@tbhb_rules_gitleaks//:gitleaks",
+        "pyrefly": ":pyrefly",
+        "python": ":python",
+        "ruff": ":ruff",
+        "rumdl": "@tbhb_rules_rumdl//:rumdl",
+        "ryl": "@tbhb_rules_ryl//:ryl",
+        "shellcheck": "@tbhb_rules_shellcheck//:shellcheck",
+        "shfmt": "@tbhb_rules_shfmt//:shfmt",
+        "tombi": "@tbhb_rules_tombi//:tombi",
+        "uv": ":uv",
+        "vale": "@tbhb_rules_vale//:vale",
+        "zizmor": "@tbhb_rules_zizmor//:zizmor",
+    },
+)

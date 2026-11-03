@@ -1,0 +1,177 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load(":linters.bzl", "broken_lint_test", "fixture_lint_test", "golangci_lint_parity_test", "outside_lint_test", "outside_parity_test")
+load(":oracle.bzl", "golangci_lint_oracle")
+
+repo_files()
+
+# A parity test rule is defined where its factory is called, in a consumer's
+# .bzl (the e2e smoke module), so its runner files must be visible there.
+# The oracle's build action runs this script; sh_binary gives it a
+# launcher Windows can execute.
+sh_binary(
+    name = "oracle_runner",
+    srcs = ["oracle.sh"],
+    visibility = ["//visibility:public"],
+)
+
+exports_files(
+    [
+        "oracle.sh",
+        "parity_test.sh.tpl",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+FIXTURE = "//tests/golangci/fixture"
+
+FIXTURE_TARGETS = [
+    FIXTURE + "/a",
+    FIXTURE + "/a:a_test",
+    FIXTURE + "/b",
+    FIXTURE + "/b:b_test",
+    FIXTURE + "/clean",
+]
+
+# golangci-lint run the ordinary way over the fixture module.
+golangci_lint_oracle(
+    name = "oracle",
+    testonly = True,
+    srcs = FIXTURE_TARGETS,
+    config = FIXTURE + ":.golangci.yml",
+    go_mod = FIXTURE + ":go.mod",
+)
+
+# The aspect, one action per package, must report what the oracle reports.
+golangci_lint_parity_test(
+    name = "parity_test",
+    srcs = FIXTURE_TARGETS,
+    oracle = ":oracle",
+    strip_prefix = "tests/golangci/fixture/",
+)
+
+bzl_library(
+    name = "linters_bzl",
+    srcs = ["linters.bzl"],
+    visibility = ["//tests:__subpackages__"],
+    deps = [
+        ":oracle_bzl",
+        "//:defs",
+    ],
+)
+
+bzl_library(
+    name = "oracle_bzl",
+    srcs = ["oracle.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:defs",
+        "//private:go_srcs",
+        "//private:golangci_lint",
+        "@bazel_skylib//lib:shell",
+    ],
+)
+
+# A clean package passes.
+fixture_lint_test(
+    name = "clean_test",
+    srcs = [FIXTURE + "/clean"],
+)
+
+# Proofs. Each wrapped test is manual and must fail for the stated reason.
+PROOF_TAGS = ["manual"]
+
+# Planted findings fail the test; the pattern needs one from a dependency
+# (package a, reached from b_test through deps and embed).
+fixture_lint_test(
+    name = "proof_planted_findings",
+    srcs = [FIXTURE + "/b:b_test"],
+    tags = PROOF_TAGS,
+)
+
+# A test variant decides for the library's files: testOnly is unused in
+# package a alone, but not once a's test is linted with it.
+fixture_lint_test(
+    name = "proof_library_alone",
+    srcs = [FIXTURE + "/a"],
+    tags = PROOF_TAGS,
+)
+
+# A package srcs do not reach is unlinted; with expect_linted, the test
+# says so. Here only clean is linted, so a.go (among others) is not.
+fixture_lint_test(
+    name = "proof_unreached",
+    srcs = [FIXTURE + "/clean"],
+    expect_linted = [FIXTURE + ":repo_files"],
+    tags = PROOF_TAGS,
+)
+
+# A run that does not complete (here, a config golangci-lint rejects) is a
+# failure, not a clean report.
+broken_lint_test(
+    name = "proof_broken_config",
+    srcs = [FIXTURE + "/clean"],
+    tags = PROOF_TAGS,
+)
+
+# The parity test compares: given only some of the fixture's packages, the
+# aspect's findings fall short of the oracle's, and the test must say so.
+golangci_lint_parity_test(
+    name = "proof_parity_divergence",
+    srcs = [FIXTURE + "/clean"],
+    oracle = ":oracle",
+    strip_prefix = "tests/golangci/fixture/",
+    tags = PROOF_TAGS,
+)
+
+# Nothing outside the action's inputs is read. outside/go.mod sits next to
+# the config and the package in the source tree, but the aspect is not
+# given it. Its Go version (1.21) turns intrange off, so the finding below
+# appears only if the action did not read it.
+outside_lint_test(
+    name = "proof_outside_go_mod",
+    srcs = ["//tests/golangci/outside"],
+    tags = PROOF_TAGS,
+)
+
+# The control: golangci-lint run the ordinary way, which does read that
+# go.mod, finds nothing, so reading it would change the aspect's result.
+golangci_lint_oracle(
+    name = "outside_oracle",
+    testonly = True,
+    srcs = ["//tests/golangci/outside"],
+    config = "//tests/golangci/outside:.golangci.yml",
+    go_mod = "//tests/golangci/outside:go.mod",
+)
+
+outside_parity_test(
+    name = "proof_outside_parity",
+    srcs = ["//tests/golangci/outside"],
+    oracle = ":outside_oracle",
+    strip_prefix = "tests/golangci/outside/",
+    tags = PROOF_TAGS,
+)
+
+PROOF_REASONS = {
+    "proof_broken_config": "golangci-lint did not complete: exit status [0-9]+",
+    "proof_library_alone": "func testOnly is unused \\(unused\\)",
+    "proof_outside_go_mod": "^tests/golangci/outside/outside.go:[0-9]+:[0-9]+: for loop can be changed to use an integer range",
+    "proof_outside_parity": "^--- oracle findings \\(0\\) ---$",
+    "proof_parity_divergence": "differ from the oracle's",
+    "proof_planted_findings": "a/a.go:21:11: Error return value of `os.Remove` is not checked \\(errcheck\\)",
+    "proof_unreached": "^not linted: tests/golangci/fixture/a/a.go$",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

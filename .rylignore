@@ -1,0 +1,4 @@
+tmp/
+.venv/
+.mise/
+lint/private/cspell/pnpm-lock.yaml

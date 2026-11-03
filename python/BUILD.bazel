@@ -1,0 +1,110 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@tbhb_rules//format:defs.bzl", "format", "format_test", "formatter")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("//private:tool.bzl", "python_tool")
+
+repo_files(
+    exclude = [
+        ".DS_Store",
+        "**/.DS_Store",
+        ".bazelrc.user",
+    ],
+)
+
+# This module is released on its own (strip_prefix python/), so it carries
+# its own copies of the parent module's configs. Each copy must match the
+# parent's byte for byte; a change goes to both.
+CONFIGS = [
+    ".editorconfig",
+    ".rumdl.toml",
+    "tombi.toml",
+]
+
+[
+    diff_test(
+        name = "config_matches_parent_" + config.lstrip(".").replace(".", "_").replace("-", "_"),
+        file1 = config,
+        file2 = "@tbhb_rules//:" + config,
+    )
+    for config in CONFIGS
+]
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//private:checks",
+        "//private:library",
+        "//private:mutmut",
+        "//private:tool",
+        "@tbhb_rules//runtime:defs",
+    ],
+)
+
+bzl_library(
+    name = "extensions",
+    srcs = ["extensions.bzl"],
+    visibility = ["//visibility:public"],
+    deps = ["//private:extension"],
+)
+
+# ruff from the root module's locked environment, for formatters.
+python_tool(
+    name = "ruff.tool",
+    allow_empty = True,
+    filter = True,
+    tool = "ruff",
+)
+
+# `ruff format` as a tbhb_rules formatter. Every file is offered and the
+# launcher keeps the Python ones (by suffix or shebang), so extensionless
+# scripts are formatted too. ruff reads pyproject.toml from the root it
+# runs at.
+formatter(
+    name = "ruff",
+    include = ["*"],
+    check_args = [
+        "format",
+        "--no-cache",
+        "--force-exclude",
+        "--check",
+        "--diff",
+    ],
+    fix_args = [
+        "format",
+        "--no-cache",
+        "--force-exclude",
+    ],
+    tool = ":ruff.tool",
+    visibility = ["//visibility:public"],
+)
+
+# This module's own formatting, separate from the root module's: `bazel run
+# //:format` here rewrites, and //:format_test fails on, any unformatted
+# file of this module. Its Python is formatted with the ruff pinned in the
+# root module's lock, and so with the root's ruff settings when run inside
+# tbhb-dev/rules.
+FORMATTERS = [
+    "@tbhb_rules//format:buildifier",
+    "@tbhb_rules//format:rumdl",
+    "@tbhb_rules//format:ryl",
+    "@tbhb_rules//format:shfmt",
+    "@tbhb_rules//format:tombi",
+    ":ruff",
+]
+
+format(
+    name = "format",
+    formatters = FORMATTERS,
+)
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    formatters = FORMATTERS,
+)

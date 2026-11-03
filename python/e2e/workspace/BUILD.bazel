@@ -1,0 +1,237 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load(
+    "@tbhb_rules_python//:defs.bzl",
+    "import_linter_test",
+    "mutmut_test",
+    "pyrefly_test",
+    "pytest_test",
+    "python_library",
+    "ruff_test",
+)
+
+repo_files()
+
+PLANTED = [
+    "planted/run-check",
+    "tools/interim/leak.py",
+]
+
+CLEAN = glob(
+    ["**"],
+    exclude = PLANTED,
+)
+
+# ruff and pyrefly select tools/check-layout by its `uv run --script`
+# shebang, and pyrefly resolves its `clipkg` import through the member's
+# source root (cli/src), not an installed copy.
+ruff_test(
+    name = "ruff_test",
+    srcs = CLEAN,
+)
+
+pyrefly_test(
+    name = "pyrefly_test",
+    srcs = CLEAN,
+)
+
+pytest_test(
+    name = "pytest_test",
+    srcs = CLEAN,
+    coverage = [
+        "clipkg",
+        "tools",
+    ],
+)
+
+# Root packages: the `tools` namespace package (no __init__.py) and the
+# src-layout member's `clipkg`. tools/check-layout has no .py suffix, so
+# it is not a module and its imports are not analysed.
+import_linter_test(
+    name = "import_linter_test",
+    srcs = CLEAN,
+)
+
+# Mutation units, one per member, with the root config they read. app
+# imports corepkg, so it depends on core: a change in core reruns core's
+# and app's mutation reports, and cli's and weak's stay cached
+# (incremental_test.sh proves it).
+CONFIG = ["pyproject.toml"]
+
+python_library(
+    name = "core",
+    srcs = glob(["core/**"]),
+    data = CONFIG,
+)
+
+python_library(
+    name = "app",
+    srcs = glob(["app/**"]),
+    deps = [":core"],
+)
+
+python_library(
+    name = "cli",
+    srcs = glob(["cli/**"]),
+    data = CONFIG,
+)
+
+python_library(
+    name = "weak",
+    srcs = glob(["weak/**"]),
+    data = CONFIG,
+)
+
+# cli's mutants, from its own directory. Its tests check the member is
+# installed (metadata and console script) from the copy, which a clean
+# mutmut run needs.
+mutmut_test(
+    name = "mutmut_test",
+    srcs = [":cli"],
+    chdir = "cli",
+    cpus = 2,
+)
+
+mutmut_test(
+    name = "mutmut_core_test",
+    srcs = [":core"],
+    chdir = "core",
+    cpus = 2,
+)
+
+mutmut_test(
+    name = "mutmut_app_test",
+    srcs = [":app"],
+    chdir = "app",
+    cpus = 2,
+)
+
+# Diff-scoped: weak's half() has survivors, but a change set that touches
+# only double() runs only double()'s mutants, so this passes. The full run
+# (proof_mutmut_member_survivor) fails.
+mutmut_test(
+    name = "mutmut_diff_outside_survivor_test",
+    srcs = [":weak"],
+    changes = "changes/double.json",
+    chdir = "weak",
+    cpus = 2,
+)
+
+# A change in a file weak's copy does not hold is no input of weak: its
+# slice is empty, mutmut doesn't run, and the diff run passes.
+mutmut_test(
+    name = "mutmut_diff_unrelated_test",
+    srcs = [":weak"],
+    changes = "changes/core.json",
+    chdir = "weak",
+    cpus = 2,
+)
+
+# A change in core, which app depends on, can change app's verdicts: app's
+# run is full, so this full-scope gate passes.
+mutmut_test(
+    name = "mutmut_app_dependency_changed_test",
+    srcs = [":app"],
+    changes = "changes/core.json",
+    chdir = "app",
+    cpus = 2,
+    require_scope = "full",
+)
+
+# The change set CI writes with `bazel run @tbhb_rules//quality:mutation_changes`,
+# for `--@tbhb_rules//quality:changes=//:mutation_changes`.
+filegroup(
+    name = "mutation_changes",
+    srcs = glob(
+        [".mutation/*.json"],
+        allow_empty = True,
+    ),
+)
+
+# Proofs: each target must fail, for the reason expect_failure_test states.
+PROOF_TAGS = ["manual"]
+
+ruff_test(
+    name = "proof_ruff_script",
+    srcs = CLEAN + ["planted/run-check"],
+    tags = PROOF_TAGS,
+)
+
+import_linter_test(
+    name = "proof_import_linter_leak",
+    srcs = CLEAN + ["tools/interim/leak.py"],
+    tags = PROOF_TAGS,
+)
+
+mutmut_test(
+    name = "proof_mutmut_member_survivor",
+    srcs = [":weak"],
+    chdir = "weak",
+    cpus = 2,
+    tags = PROOF_TAGS,
+)
+
+# A diff that changes the line with the survivor fails.
+mutmut_test(
+    name = "proof_mutmut_diff_survivor",
+    srcs = [":weak"],
+    changes = "changes/half.json",
+    chdir = "weak",
+    cpus = 2,
+    tags = PROOF_TAGS,
+)
+
+# A change to an input outside the unit (here the root config) can change
+# any verdict, so the run is full and finds half()'s survivors.
+mutmut_test(
+    name = "proof_mutmut_diff_input_changed",
+    srcs = [":weak"],
+    changes = "changes/config.json",
+    chdir = "weak",
+    cpus = 2,
+    tags = PROOF_TAGS,
+)
+
+# A file new to the unit (as if weakpkg were added) has no old lines to
+# compare, so the run is full and finds half()'s survivors.
+mutmut_test(
+    name = "proof_mutmut_diff_added_file",
+    srcs = [":weak"],
+    changes = "changes/added.json",
+    chdir = "weak",
+    cpus = 2,
+    tags = PROOF_TAGS,
+)
+
+# A diff run never satisfies a gate that requires a full one.
+mutmut_test(
+    name = "proof_mutmut_diff_where_full_required",
+    srcs = [":weak"],
+    changes = "changes/double.json",
+    chdir = "weak",
+    cpus = 2,
+    require_scope = "full",
+    tags = PROOF_TAGS,
+)
+
+PROOF_REASONS = {
+    "proof_import_linter_leak": "interim code stays out of clipkg BROKEN",
+    "proof_mutmut_diff_added_file": "survived: weakpkg\\.x_half__mutmut_",
+    "proof_mutmut_diff_input_changed": "survived: weakpkg\\.x_half__mutmut_",
+    "proof_mutmut_diff_survivor": "survived: weakpkg\\.x_half__mutmut_",
+    "proof_mutmut_diff_where_full_required": "1 diff-scoped report\\(s\\), but a full run is required",
+    "proof_mutmut_member_survivor": "survived: weakpkg\\.x_half__mutmut_",
+    "proof_ruff_script": "F401 .*`os` imported but unused",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]

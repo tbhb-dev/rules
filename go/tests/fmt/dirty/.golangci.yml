@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+version: "2"
+
+formatters:
+  enable:
+    - gci
+    - gofumpt
+    - goimports
+    - golines

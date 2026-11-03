@@ -1,0 +1,97 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//format:defs.bzl", "format", "format_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+load(":format_tests.bzl", "format_test_suite")
+load(":outside_git_test.bzl", "outside_git_test")
+
+repo_files()
+
+PROOF_TAGS = ["manual"]
+
+ROOT_FORMATTERS = [
+    "//format:buildifier",
+    "//format:rumdl",
+    "//format:ryl",
+    "//format:shfmt",
+    "//format:tombi",
+]
+
+format_test(
+    name = "clean_test",
+    srcs = glob(["testdata/clean/**"]),
+    formatters = ROOT_FORMATTERS,
+    strip_prefix = "format/tests/testdata/clean",
+)
+
+format_test(
+    name = "proof_messy",
+    srcs = glob(["testdata/messy/**"]),
+    formatters = ROOT_FORMATTERS,
+    strip_prefix = "format/tests/testdata/messy",
+    tags = PROOF_TAGS,
+)
+
+# Both the shell and the TOML file are reported, so one formatter's failure
+# does not stop the others.
+expect_failure_test(
+    name = "proof_messy_fails",
+    pattern = "not formatted according to: //format:shfmt //format:tombi$",
+    test = ":proof_messy",
+)
+
+format_test(
+    name = "proof_no_files",
+    srcs = [],
+    formatters = ROOT_FORMATTERS,
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_no_files_fails",
+    pattern = "format: FAIL: no files to check",
+    test = ":proof_no_files",
+)
+
+format_test_suite(name = "format_tests")
+
+# Excluded files are left alone, even when unformatted.
+format_test(
+    name = "messy_excluded_test",
+    srcs = glob(["testdata/messy/**"]),
+    exclude = [
+        "bad.sh",
+        "*.toml",
+    ],
+    formatters = ROOT_FORMATTERS,
+    strip_prefix = "format/tests/testdata/messy",
+)
+
+# Outside a git checkout, `format.check` must fail rather than check nothing.
+format(
+    name = "subject_format",
+    formatters = ROOT_FORMATTERS,
+    tags = ["manual"],
+)
+
+outside_git_test(
+    name = "proof_outside_git",
+    subject = ":subject_format.check",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_outside_git_fails",
+    pattern = "not a git repository",
+    test = ":proof_outside_git",
+)
+
+# In a clean checkout, `format.check` runs every formatter, buildifier's
+# runfiles-located binary included, and passes.
+outside_git_test(
+    name = "workspace_check_test",
+    git_checkout = True,
+    subject = ":subject_format.check",
+)

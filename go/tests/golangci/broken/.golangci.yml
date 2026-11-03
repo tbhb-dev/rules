@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# A config golangci-lint rejects: the linter does not exist.
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - nosuchlinter

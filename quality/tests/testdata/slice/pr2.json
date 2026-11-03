@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "base": "2222222222222222222222222222222222222222",
+  "files": {
+    "quality/tests/testdata/slice/unit/a.py": [[2, 2]],
+    "quality/tests/testdata/slice/unit/b.txt": [],
+    "more/y.go": "added",
+    "zzz/z.txt": "deleted"
+  }
+}

@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//lint:defs.bzl", "reuse_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+PREFIX = "lint/tests/reuse/testdata/tree"
+
+PLANTED = "testdata/tree/src/bare.txt"
+
+CLEAN = glob(
+    ["testdata/tree/**"],
+    exclude = [PLANTED],
+)
+
+reuse_test(
+    name = "clean_test",
+    srcs = CLEAN,
+    strip_prefix = PREFIX,
+)
+
+reuse_test(
+    name = "proof_missing_header",
+    srcs = CLEAN + [PLANTED],
+    strip_prefix = PREFIX,
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_missing_header_fails",
+    pattern = "MISSING COPYRIGHT AND LICENSING INFORMATION",
+    test = ":proof_missing_header",
+)

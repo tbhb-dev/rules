@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(["expect_failure.sh.tpl"])
+
+bzl_library(
+    name = "expect_failure",
+    srcs = ["expect_failure.bzl"],
+    visibility = ["//testing:__subpackages__"],
+    deps = ["@bazel_skylib//lib:shell"],
+)

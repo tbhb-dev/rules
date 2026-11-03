@@ -1,0 +1,17 @@
+---
+name: bad
+
+on:
+  push:
+
+permissions: {}
+
+jobs:
+  unpinned:
+    name: unpinned
+    runs-on: ubuntu-24.04
+    steps:
+      # A tag pin, which the pedantic persona's unpinned-uses audit rejects.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false

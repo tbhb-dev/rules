@@ -1,0 +1,20 @@
+* text=auto eol=lf
+MODULE.bazel.lock -diff linguist-generated
+uv.lock -diff linguist-generated
+mise.lock -diff linguist-generated
+
+# Release archives carry the module only: the rule families, the root build
+# files and the tool pins. This repository's own tooling, tests and CI stay
+# out of what consumers download. e2e/smoke stays: the BCR presubmit runs it
+# from the archive as the test module.
+.agents/ export-ignore
+.claude/ export-ignore
+.codex/ export-ignore
+.github/ export-ignore
+.pre-commit-config.yaml export-ignore
+docs/ export-ignore
+tools/ export-ignore
+pyproject.toml export-ignore
+uv.lock export-ignore
+mise.toml export-ignore
+mise.lock export-ignore

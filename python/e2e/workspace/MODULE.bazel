@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules_python the way a uv workspace repository does.
+
+A virtual root, a src-layout member (`cli`, the `clipkg` package), the
+`tools` namespace package with tests alongside the code (tools/interim),
+and an extensionless PEP 723 script that depends on the member by path.
+"""
+
+module(name = "tbhb_rules_python_e2e_workspace")
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../../..",
+)
+
+bazel_dep(name = "tbhb_rules_python")
+local_path_override(
+    module_name = "tbhb_rules_python",
+    path = "../..",
+)
+
+python = use_extension("@tbhb_rules_python//:extensions.bzl", "python")
+python.project()

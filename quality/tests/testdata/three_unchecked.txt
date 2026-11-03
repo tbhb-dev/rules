@@ -1,0 +1,8 @@
+total=10
+killed=7
+skipped=0
+lived=0
+timeout=0
+not_covered=0
+errored=0
+interrupted=0

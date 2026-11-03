@@ -1,0 +1,99 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+load(":expect_failure_tests.bzl", "expect_failure_test_suite")
+load(":script_test.bzl", "script_test")
+
+repo_files()
+
+PROOF_TAGS = ["manual"]
+
+# Subjects. Tagged manual: some fail on purpose, and only the tests below
+# should run them.
+
+script_test(
+    name = "passes",
+    script = "subject.sh",
+    tags = ["manual"],
+)
+
+script_test(
+    name = "proof_right_reason",
+    env = {
+        "SUBJECT_MESSAGE": "the right reason",
+        "SUBJECT_STATUS": "3",
+    },
+    script = "subject.sh",
+    tags = PROOF_TAGS,
+)
+
+script_test(
+    name = "proof_wrong_reason",
+    env = {
+        "SUBJECT_MESSAGE": "some other reason",
+        "SUBJECT_STATUS": "1",
+    },
+    script = "subject.sh",
+    tags = PROOF_TAGS,
+)
+
+# The wrapped test fails for the stated reason, with the environment it
+# declares, so this passes.
+expect_failure_test(
+    name = "proof_right_reason_fails",
+    pattern = "^the right reason$",
+    test = ":proof_right_reason",
+)
+
+# The wrapped test gets its own scratch directory.
+expect_failure_test(
+    name = "proof_own_tmpdir_fails",
+    pattern = "^TEST_TMPDIR=.*/expect_failure/tmp$",
+    test = ":proof_right_reason",
+)
+
+# Proofs of the proof: each inner expect_failure_test must fail, and the
+# outer one checks it fails for the stated reason.
+
+expect_failure_test(
+    name = "proof_wrapped_passes",
+    pattern = "anything",
+    tags = PROOF_TAGS,
+    test = ":passes",
+)
+
+expect_failure_test(
+    name = "proof_wrapped_passes_fails",
+    pattern = "FAIL: the wrapped test passed, but it must fail",
+    test = ":proof_wrapped_passes",
+)
+
+expect_failure_test(
+    name = "proof_wrapped_wrong_reason",
+    pattern = "the right reason",
+    tags = PROOF_TAGS,
+    test = ":proof_wrong_reason",
+)
+
+expect_failure_test(
+    name = "proof_wrapped_wrong_reason_fails",
+    pattern = "FAIL: the wrapped test failed \\(exit status 1\\), but its output does not match",
+    test = ":proof_wrapped_wrong_reason",
+)
+
+expect_failure_test(
+    name = "proof_invalid_pattern",
+    pattern = "(",
+    tags = PROOF_TAGS,
+    test = ":proof_right_reason",
+)
+
+expect_failure_test(
+    name = "proof_invalid_pattern_fails",
+    pattern = "is not a valid extended regular expression",
+    test = ":proof_invalid_pattern",
+)
+
+expect_failure_test_suite(name = "expect_failure_tests")

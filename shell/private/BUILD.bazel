@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+bzl_library(
+    name = "launcher",
+    srcs = ["launcher.bzl"],
+    visibility = ["//visibility:public"],
+)
