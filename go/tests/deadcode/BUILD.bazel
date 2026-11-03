@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("//:defs.bzl", "go_deadcode_test")
+
+repo_files()
+
+FIXTURE = "//tests/deadcode/fixture"
+
+# Everything is reached: lib.Used by the binary, lib.OnlyTests by the test.
+go_deadcode_test(
+    name = "clean_test",
+    srcs = [
+        FIXTURE + "/app",
+        FIXTURE + "/lib:lib_test",
+    ],
+)
+
+# Proofs. Each wrapped test is manual and must fail for the stated reason.
+
+# dead.Dead is reached by nothing.
+go_deadcode_test(
+    name = "dead_function",
+    srcs = [FIXTURE + "/deadapp"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "dead_function_proof",
+    pattern = "tests/deadcode/fixture/dead/dead.go:[0-9]+:[0-9]+: unreachable func: Dead",
+    test = ":dead_function",
+)
+
+# Without the test, lib.OnlyTests is dead: the test main is what reaches it.
+go_deadcode_test(
+    name = "without_tests",
+    srcs = [FIXTURE + "/app"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "without_tests_proof",
+    pattern = "unreachable func: OnlyTests",
+    test = ":without_tests",
+)

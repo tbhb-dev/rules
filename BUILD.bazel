@@ -9,6 +9,7 @@ load(
     "actionlint_test",
     "bats_test",
     "editorconfig_checker_test",
+    "gitleaks_history",
     "gitleaks_test",
     "rumdl_test",
     "ryl_test",
@@ -86,6 +87,12 @@ buildifier_test(
 )
 
 # This repository's own gates, built on its own rules.
+# Scans the git history: `bazel run //:gitleaks_history`, in CI.
+gitleaks_history(
+    name = "gitleaks_history",
+    config = ".gitleaks.toml",
+)
+
 gitleaks_test(
     name = "gitleaks_test",
     srcs = [":repo_files"],
@@ -135,7 +142,15 @@ zizmor_test(
 # Shell scripts. A shebang-based selection rule is planned for lint/; until
 # it lands, the scripts are listed here.
 SHELL_SCRIPTS = [
+    "format/private/format.sh.tpl",
+    "lint/private/codeowners.sh",
+    "lint/private/gitleaks_history.sh.tpl",
+    "lint/private/shell_select.sh",
     "lint/private/tree_check.sh.tpl",
+    "lint/private/vale.sh",
+    "lint/private/vale_sync.sh.tpl",
+    "lint/tests/fake_tool.sh",
+    "quality/private/mutation_gate.sh.tpl",
     "testing/private/expect_failure.sh.tpl",
     "testing/tests/subject.sh",
     "tools/interim/install.bats",

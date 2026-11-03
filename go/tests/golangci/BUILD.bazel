@@ -113,3 +113,19 @@ expect_failure_test(
     pattern = "golangci-lint did not complete: exit status [0-9]+",
     test = ":broken_config",
 )
+
+# The parity test compares: given only some of the fixture's packages, the
+# aspect's findings fall short of the oracle's, and the test must say so.
+golangci_lint_parity_test(
+    name = "parity_divergence",
+    srcs = [FIXTURE + "/clean"],
+    oracle = ":oracle",
+    strip_prefix = "tests/golangci/fixture/",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "parity_divergence_proof",
+    pattern = "differ from the oracle's",
+    test = ":parity_divergence",
+)

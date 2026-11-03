@@ -40,6 +40,7 @@ python_tool(
 # runs at.
 formatter(
     name = "ruff",
+    include = ["*"],
     check_args = [
         "format",
         "--no-cache",
@@ -52,7 +53,6 @@ formatter(
         "--no-cache",
         "--force-exclude",
     ],
-    include = ["*"],
     tool = ":ruff.tool",
     visibility = ["//visibility:public"],
 )

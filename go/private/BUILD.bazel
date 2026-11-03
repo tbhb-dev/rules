@@ -8,9 +8,11 @@ repo_files()
 
 exports_files(
     [
+        "deadcode.sh",
         "golangci_lint.sh",
         "golangci_lint_merge.sh",
         "golangci_lint_test.sh.tpl",
+        "report_test.sh.tpl",
     ],
     visibility = ["//visibility:public"],
 )
@@ -21,6 +23,16 @@ bzl_library(
     visibility = ["//:__subpackages__"],
     deps = [
         "@bazel_skylib//rules:common_settings",
+        "@rules_go//go:def",
+    ],
+)
+
+bzl_library(
+    name = "deadcode",
+    srcs = ["deadcode.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":golangci_lint",
         "@rules_go//go:def",
     ],
 )

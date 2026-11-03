@@ -15,7 +15,8 @@ load(
     _ruff_test = "ruff_test",
     _vulture_test = "vulture_test",
 )
-load("//private:env.bzl", _PyEnvInfo = "PyEnvInfo", _python_tool = "python_tool")
+load("//private:env.bzl", _python_tool = "python_tool")
+load("//private:env_info.bzl", _PyEnvInfo = "PyEnvInfo")
 load("//private:mutmut.bzl", _mutmut_report = "mutmut_report", _mutmut_test = "mutmut_test")
 
 PyEnvInfo = _PyEnvInfo

@@ -46,7 +46,7 @@ def _path(f):
 def _pkg_json_line(f):
     return "pkg_json=" + f.path
 
-def driver_config(ctx, out, pkg_info, roots, stdlib):
+def driver_config(ctx, out, pkg_info, roots, stdlib, test_main = False):
     """Writes the static driver's config file.
 
     Args:
@@ -56,6 +56,8 @@ def driver_config(ctx, out, pkg_info, roots, stdlib):
         pkg_info: GoPkgInfo of the roots, which covers their dependencies.
         roots: Package IDs (labels) to answer with.
         stdlib: The GoStdLib provider.
+        test_main: Also answer with the generated main package of each root
+            that is a go_test.
     """
     toolchain = ctx.toolchains[GO_TOOLCHAIN]
     args = ctx.actions.args()
@@ -67,6 +69,8 @@ def driver_config(ctx, out, pkg_info, roots, stdlib):
     args.add_all(ctx.attr._go_tags[BuildSettingInfo].value, format_each = "tag=%s")
     args.add_all(stdlib.libs, map_each = _path, format_each = "stdlib_pkg_dir=%s", expand_directories = False)
     args.add_all(roots, format_each = "root=%s")
+    if test_main:
+        args.add("test_main=1")
     if pkg_info.stdlib_json_file:
         args.add("pkg_json=" + pkg_info.stdlib_json_file.path)
     args.add_all(pkg_info.pkg_json_files, map_each = _pkg_json_line)
@@ -231,6 +235,10 @@ def golangci_lint_aspect_factory(
     Returns:
         An aspect.
     """
+
+    # Two aspects can lint the same target (two configs), so each names its
+    # outputs by a key derived from its settings.
+    key = str(hash(repr([str(config), str(go_mod), str(tool), data, args, rule_kinds]))).replace("-", "n")
     attrs = {
         "_args": attr.string_list(default = args),
         "_config": attr.label(default = config, allow_single_file = True),
@@ -244,6 +252,7 @@ def golangci_lint_aspect_factory(
         "_go_stdlib": attr.label(default = Label("@rules_go//:stdlib")),
         "_go_tags": attr.label(default = Label("@rules_go//go/config:tags")),
         "_golangci_lint": attr.label(default = tool, executable = True, cfg = "exec"),
+        "_key": attr.string(default = key),
         "_report": attr.label(
             default = Label("//private/report"),
             executable = True,

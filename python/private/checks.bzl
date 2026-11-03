@@ -25,7 +25,7 @@ visibility("//...")
 
 _ENV = Label("@tbhb_python//:env")
 
-def _check(name, srcs, tool, tool_args, select = True, exclude = [], chdir = "", env = _ENV, main = None, **kwargs):
+def _check(name, srcs, tool, tool_args, select = True, exclude = [], chdir = "", python_env = _ENV, main = None, **kwargs):
     python_tool(
         name = name + ".tool",
         tool = tool,
@@ -33,7 +33,7 @@ def _check(name, srcs, tool, tool_args, select = True, exclude = [], chdir = "",
         select = select,
         exclude = exclude,
         chdir = chdir,
-        env = env,
+        python_env = python_env,
         tags = ["manual"],
         visibility = ["//visibility:private"],
         testonly = True,
@@ -46,7 +46,7 @@ def _check(name, srcs, tool, tool_args, select = True, exclude = [], chdir = "",
         **kwargs
     )
 
-def ruff_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
+def ruff_test(name, srcs, args = [], exclude = [], python_env = _ENV, **kwargs):
     """Lints the Python files in `srcs` with `ruff check`.
 
     Formatting is checked by `format_test` with `@tbhb_rules_python//:ruff`
@@ -57,12 +57,12 @@ def ruff_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
         srcs: Files to search, usually a `repo_files` target.
         args: Extra ruff options.
         exclude: fnmatch patterns of tree-relative paths to skip.
-        env: The Python environment.
+        python_env: The Python environment.
         **kwargs: Passed to `tree_check_test`.
     """
-    _check(name, srcs, "ruff", ["check", "--no-cache", "--force-exclude"] + args, exclude = exclude, env = env, **kwargs)
+    _check(name, srcs, "ruff", ["check", "--no-cache", "--force-exclude"] + args, exclude = exclude, python_env = python_env, **kwargs)
 
-def pyrefly_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
+def pyrefly_test(name, srcs, args = [], exclude = [], python_env = _ENV, **kwargs):
     """Type-checks the Python files in `srcs` with `pyrefly check`.
 
     pyrefly finds the locked environment's packages and the workspace
@@ -74,12 +74,12 @@ def pyrefly_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
         srcs: Files to search, usually a `repo_files` target.
         args: Extra pyrefly options.
         exclude: fnmatch patterns of tree-relative paths to skip.
-        env: The Python environment.
+        python_env: The Python environment.
         **kwargs: Passed to `tree_check_test`.
     """
-    _check(name, srcs, "pyrefly", ["check"] + args, exclude = exclude, env = env, **kwargs)
+    _check(name, srcs, "pyrefly", ["check"] + args, exclude = exclude, python_env = python_env, **kwargs)
 
-def pylint_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
+def pylint_test(name, srcs, args = [], exclude = [], python_env = _ENV, **kwargs):
     """Runs pylint over the Python files in `srcs`, configured by pyproject.toml.
 
     All files go to one pylint run, so cross-file checks such as
@@ -90,12 +90,12 @@ def pylint_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
         srcs: Files to search, usually a `repo_files` target.
         args: Extra pylint options.
         exclude: fnmatch patterns of tree-relative paths to skip.
-        env: The Python environment.
+        python_env: The Python environment.
         **kwargs: Passed to `tree_check_test`.
     """
-    _check(name, srcs, "pylint", args, exclude = exclude, env = env, **kwargs)
+    _check(name, srcs, "pylint", args, exclude = exclude, python_env = python_env, **kwargs)
 
-def vulture_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
+def vulture_test(name, srcs, args = [], exclude = [], python_env = _ENV, **kwargs):
     """Finds dead code in the Python files in `srcs` with vulture.
 
     The whole program goes to one run, so a use in one file keeps a
@@ -108,12 +108,12 @@ def vulture_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
         srcs: Files to search, usually a `repo_files` target.
         args: Extra vulture options.
         exclude: fnmatch patterns of tree-relative paths to skip.
-        env: The Python environment.
+        python_env: The Python environment.
         **kwargs: Passed to `tree_check_test`.
     """
-    _check(name, srcs, "vulture", args, exclude = exclude, env = env, **kwargs)
+    _check(name, srcs, "vulture", args, exclude = exclude, python_env = python_env, **kwargs)
 
-def complexipy_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
+def complexipy_test(name, srcs, args = [], exclude = [], python_env = _ENV, **kwargs):
     """Fails on functions over the cognitive complexity ceiling, with complexipy.
 
     `[tool.complexipy]` in pyproject.toml sets the ceiling.
@@ -123,12 +123,12 @@ def complexipy_test(name, srcs, args = [], exclude = [], env = _ENV, **kwargs):
         srcs: Files to search, usually a `repo_files` target.
         args: Extra complexipy options.
         exclude: fnmatch patterns of tree-relative paths to skip.
-        env: The Python environment.
+        python_env: The Python environment.
         **kwargs: Passed to `tree_check_test`.
     """
-    _check(name, srcs, "complexipy", args, exclude = exclude, env = env, **kwargs)
+    _check(name, srcs, "complexipy", args, exclude = exclude, python_env = python_env, **kwargs)
 
-def bandit_test(name, srcs, args = ["-q"], exclude = [], env = _ENV, **kwargs):
+def bandit_test(name, srcs, args = ["-q"], exclude = [], python_env = _ENV, **kwargs):
     """Scans the Python files in `srcs` for security issues with bandit.
 
     Args:
@@ -138,10 +138,10 @@ def bandit_test(name, srcs, args = ["-q"], exclude = [], env = _ENV, **kwargs):
             `[tool.bandit]` table should apply.
         exclude: fnmatch patterns of tree-relative paths to skip, such as
             `**/test_*.py` (asserts are pytest's API).
-        env: The Python environment.
+        python_env: The Python environment.
         **kwargs: Passed to `tree_check_test`.
     """
-    _check(name, srcs, "bandit", args, exclude = exclude, env = env, **kwargs)
+    _check(name, srcs, "bandit", args, exclude = exclude, python_env = python_env, **kwargs)
 
 def pytest_test(
         name,
@@ -150,7 +150,7 @@ def pytest_test(
         coverage = [],
         coverage_floor = 100,
         chdir = "",
-        env = _ENV,
+        python_env = _ENV,
         **kwargs):
     """Runs pytest over a copy of the tree, optionally with a coverage floor.
 
@@ -170,7 +170,7 @@ def pytest_test(
             turns coverage off.
         coverage_floor: The minimum total coverage, in percent.
         chdir: Directory, relative to the tree root, to run pytest from.
-        env: The Python environment.
+        python_env: The Python environment.
         **kwargs: Passed to `tree_check_test`.
     """
     cov_args = []
@@ -187,11 +187,11 @@ def pytest_test(
         ["-p", "no:cacheprovider", "--junitxml={env:XML_OUTPUT_FILE}"] + cov_args + args,
         select = False,
         chdir = chdir,
-        env = env,
+        python_env = python_env,
         **kwargs
     )
 
-def pip_audit_test(name, srcs, args = [], env = _ENV, tags = [], **kwargs):
+def pip_audit_test(name, srcs, args = [], python_env = _ENV, tags = [], **kwargs):
     """Audits the locked dependencies against the advisory database.
 
     Needs the network and gives a different answer as advisories are
@@ -203,7 +203,7 @@ def pip_audit_test(name, srcs, args = [], env = _ENV, tags = [], **kwargs):
         srcs: Files including the root pyproject.toml and uv.lock, and each
             member's pyproject.toml.
         args: Extra pip-audit options.
-        env: The Python environment, which must provide pip-audit.
+        python_env: The Python environment, which must provide pip-audit.
         tags: More tags.
         **kwargs: Passed to `tree_check_test`.
     """
@@ -214,24 +214,24 @@ def pip_audit_test(name, srcs, args = [], env = _ENV, tags = [], **kwargs):
         args,
         select = False,
         main = Label(":pip_audit.py"),
-        env = env,
+        python_env = python_env,
         tags = ["requires-network", "external", "manual"] + tags,
         **kwargs
     )
 
-def pip_audit(name, args = [], env = _ENV, **kwargs):
+def pip_audit(name, args = [], python_env = _ENV, **kwargs):
     """`bazel run` target that audits the workspace's uv.lock.
 
     Args:
         name: Target name.
         args: Extra pip-audit options.
-        env: The Python environment, which must provide pip-audit.
+        python_env: The Python environment, which must provide pip-audit.
         **kwargs: Passed to the underlying `python_tool`.
     """
     python_tool(
         name = name,
         main = Label(":pip_audit.py"),
-        env = env,
+        python_env = python_env,
         args = args,
         **kwargs
     )

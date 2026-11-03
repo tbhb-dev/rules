@@ -42,10 +42,13 @@ if [[ $source == copy ]]; then
     tar -C "$runfiles/$strip_prefix" -chf - -T "$manifest" | tar -C "$root" -xf -
   fi
   cd "$root"
+  listing=$(find . -type f)
+  listing=$(LC_ALL=C sort <<<"$listing")
   while IFS= read -r file; do
+    [[ -n $file ]] || continue
     file=${file#./}
     excluded "$file" || files+=("$file")
-  done < <(find . -type f | LC_ALL=C sort)
+  done <<<"$listing"
   if ((${#files[@]} == 0)); then
     echo "format: FAIL: no files to check, which proves nothing" >&2
     exit 1
@@ -53,12 +56,17 @@ if [[ $source == copy ]]; then
 else
   root=${BUILD_WORKSPACE_DIRECTORY:?run this target with bazel run}
   cd "$root"
+  listing=$(mktemp)
+  trap 'rm -f "$listing"' EXIT
+  # To a file first, so a failing git (outside a checkout) fails the run
+  # rather than formatting nothing.
+  git ls-files -z --cached --others --exclude-standard >"$listing"
   while IFS= read -r -d '' file; do
     # Deleted but still tracked files and symlinks are left alone.
     if [[ -f $file && ! -L $file ]] && ! excluded "$file"; then
       files+=("$file")
     fi
-  done < <(git ls-files -z --cached --others --exclude-standard)
+  done <"$listing"
 fi
 
 failed=()

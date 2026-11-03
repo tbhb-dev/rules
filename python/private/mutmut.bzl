@@ -79,7 +79,7 @@ in `<name>.report` (MutationReportInfo) and mutmut's output in
     },
 )
 
-def mutmut_test(name, srcs, chdir = "", env = Label("@tbhb_python//:env"), cpus = 0, **kwargs):
+def mutmut_test(name, srcs, chdir = "", python_env = Label("@tbhb_python//:env"), cpus = 0, **kwargs):
     """Mutation-tests the tree with mutmut and fails unless every mutant was killed.
 
     Creates `<name>.report` (the cached mutmut run) and `<name>`, a
@@ -94,7 +94,7 @@ def mutmut_test(name, srcs, chdir = "", env = Label("@tbhb_python//:env"), cpus 
         chdir: Directory, relative to the tree root, to run mutmut from; its
             pyproject.toml holds `[tool.mutmut]`. mutmut maps source files to
             module names only for a src layout or the run directory itself.
-        env: The Python environment, which must provide mutmut and pytest.
+        python_env: The Python environment, which must provide mutmut and pytest.
         cpus: CPUs to reserve for the mutmut action.
         **kwargs: Passed to the gate test.
     """
@@ -102,7 +102,7 @@ def mutmut_test(name, srcs, chdir = "", env = Label("@tbhb_python//:env"), cpus 
         name = name + ".runner",
         main = Label(":mutmut_report.py"),
         chdir = chdir,
-        env = env,
+        python_env = python_env,
         tags = ["manual"],
         visibility = ["//visibility:private"],
     )

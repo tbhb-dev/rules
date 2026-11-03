@@ -35,6 +35,9 @@ while IFS= read -r report; do
   else
     # A finding is `path:line:col: text`; keep it unless a test variant
     # covers its path.
-    awk -F: 'NR == FNR { tested[$0] = 1; next } !($1 in tested)' "$tested" "$report"
+    awk -F: -v tested="$tested" '
+      BEGIN { while ((getline line <tested) > 0) covered[line] = 1 }
+      !($1 in covered)
+    ' "$report"
   fi
 done <"$manifest" | LC_ALL=C sort -u

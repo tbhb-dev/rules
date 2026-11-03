@@ -17,7 +17,7 @@ load(":versions.bzl", "UV_ASSETS", "UV_VERSION")
 visibility("//...")
 
 _UNCONFIGURED_BUILD = """\
-load("@tbhb_rules_python//private:env.bzl", "python_env_unconfigured")
+load("@tbhb_rules_python//private:env_info.bzl", "python_env_unconfigured")
 
 python_env_unconfigured(
     name = "env",
@@ -26,7 +26,7 @@ python_env_unconfigured(
 """
 
 _BUILD = """\
-load("@tbhb_rules_python//private:env.bzl", "python_env")
+load("@tbhb_rules_python//private:env_info.bzl", "python_env")
 
 exports_files(["uv"])
 
@@ -49,6 +49,17 @@ python_env(
     uv = "uv",
     visibility = ["//visibility:public"],
 )
+"""
+
+_PRUNE = """
+import sys
+from pathlib import Path
+
+NAMES = {"BUILD", "BUILD.bazel", "WORKSPACE", "WORKSPACE.bazel", "MODULE.bazel", "REPO.bazel"}
+for top in sys.argv[1:]:
+    for path in Path(top).rglob("*"):
+        if path.name in NAMES and path.is_file() and not path.is_symlink():
+            path.unlink()
 """
 
 def _uv(rctx):
@@ -145,6 +156,11 @@ def _python_env_repo_impl(rctx):
     rctx.delete("uv-cache")
     rctx.delete("home")
 
+    # Files that would make a directory a Bazel package or repository
+    # boundary (python-build-standalone ships a BUILD file) would cut it out
+    # of the globs below.
+    _run(rctx, [interpreter, "-c", _PRUNE, "python", "venv"], env, "pruning Bazel files")
+
     # The interpreter's install directory and its version directory under
     # lib/, both named by uv.
     install = str(interpreter.dirname.dirname.basename)
@@ -172,8 +188,8 @@ python_env_repo = repository_rule(
 _project = tag_class(
     doc = "The root module's uv project or workspace.",
     attrs = {
-        "lock": attr.label(default = "//:uv.lock", doc = "The committed uv.lock."),
-        "pyproject": attr.label(default = "//:pyproject.toml", doc = "The root pyproject.toml."),
+        "lock": attr.label(doc = "The committed uv.lock; defaults to the root module's //:uv.lock."),
+        "pyproject": attr.label(doc = "The root pyproject.toml; defaults to the root module's //:pyproject.toml."),
         "python_version": attr.string(doc = "Overrides .python-version."),
     },
 )
@@ -190,13 +206,17 @@ def _python_impl(mctx):
         project = projects[0]
         python_env_repo(
             name = "tbhb_python",
-            lock = project.lock,
-            pyproject = project.pyproject,
+            lock = project.lock or Label("@@//:uv.lock"),
+            pyproject = project.pyproject or Label("@@//:pyproject.toml"),
             python_version = project.python_version,
         )
     else:
         python_env_repo(name = "tbhb_python")
-    return mctx.extension_metadata(reproducible = False)
+
+    # The environment is a function of the committed lock and pyproject
+    # files (uv verifies every download against their hashes), so nothing
+    # about it needs recording in MODULE.bazel.lock.
+    return mctx.extension_metadata(reproducible = True)
 
 python = module_extension(
     implementation = _python_impl,

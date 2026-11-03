@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-load("//format:defs.bzl", "format_test")
+load("//format:defs.bzl", "format", "format_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":format_tests.bzl", "format_test_suite")
+load(":outside_git_test.bzl", "outside_git_test")
 
 repo_files()
 
@@ -64,4 +65,23 @@ format_test(
     ],
     formatters = ROOT_FORMATTERS,
     strip_prefix = "format/tests/testdata/messy",
+)
+
+# Outside a git checkout, `format.check` must fail rather than check nothing.
+format(
+    name = "subject_format",
+    formatters = ROOT_FORMATTERS,
+    tags = ["manual"],
+)
+
+outside_git_test(
+    name = "outside_git",
+    subject = ":subject_format.check",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "outside_git_fails",
+    pattern = "not a git repository",
+    test = ":outside_git",
 )

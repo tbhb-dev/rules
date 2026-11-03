@@ -18,5 +18,8 @@ bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],
     visibility = ["//visibility:public"],
-    deps = ["//private:golangci_lint"],
+    deps = [
+        "//private:deadcode",
+        "//private:golangci_lint",
+    ],
 )
