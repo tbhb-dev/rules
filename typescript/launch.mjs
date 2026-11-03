@@ -260,6 +260,11 @@ async function vitest(args) {
   if (!ctx || ran.length === 0) {
     process.exitCode = 1;
   }
+  // When the Workers runtime fails to start, @cloudflare/vitest-plugin
+  // drops its Miniflare without disposing it, and the Miniflare's loopback
+  // server would keep node running until the test timeout. (Vitest's own
+  // CLI forces an exit too, after its teardown timeout.)
+  process.exit();
 }
 
 const [command, ...args] = process.argv.slice(2);

@@ -256,3 +256,22 @@ expect_failure_test(
     pattern = "supports compatibility dates up to [0-9-]+, but proof/future_date/wrangler.jsonc \\(2099-01-01\\)",
     test = ":proof_future_date",
 )
+
+# Planted: a Worker the Workers runtime refuses to start, for a reason the
+# date check above doesn't catch. The plugin leaves the failed Miniflare
+# running; the check still fails at once instead of hanging until the
+# timeout, and "short" bounds it at a minute.
+workers_vitest_test(
+    name = "proof_runtime_start",
+    srcs = WORKER + ["proof/runtime_start/vitest.config.mjs"],
+    config = "proof/runtime_start/vitest.config.mjs",
+    node_modules = [":node_modules"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_runtime_start_fails",
+    timeout = "short",
+    pattern = "MiniflareCoreError \\[ERR_RUNTIME_FAILURE\\]: The Workers runtime failed to start",
+    test = ":proof_runtime_start",
+)
