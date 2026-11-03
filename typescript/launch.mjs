@@ -23,7 +23,8 @@ import {
   realpathSync,
   symlinkSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -34,7 +35,8 @@ const pinned = Object.keys(
 // Pinned packages whose consumer copy, at another version, would split one
 // tool into two instances: the test runners load the consumer's copy of
 // these through its imports while running their own.
-const MUST_MATCH = /^(vitest|@vitest\/.*|@stryker-mutator\/.*)$/;
+const MUST_MATCH =
+  /^(vitest|@vitest\/.*|@stryker-mutator\/.*|@cloudflare\/vitest-plugin)$/;
 
 function pinnedDir(name) {
   const dir = join(here, "node_modules", name);
@@ -121,6 +123,61 @@ function linkPackages() {
   }
 }
 
+// The wrangler configs in the tree, outside node_modules and dot
+// directories.
+function wranglerConfigs(dir) {
+  const found = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name.startsWith(".") || entry.name === "node_modules") {
+      continue;
+    }
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...wranglerConfigs(path));
+    } else if (/^wrangler\.(json|jsonc|toml)$/.test(entry.name)) {
+      found.push(path);
+    }
+  }
+  return found;
+}
+
+// workerd refuses a Worker whose compatibility date is newer than its own,
+// and inside Bazel the test then hangs until its timeout instead of
+// failing. Each wrangler config's dates must be no newer than the pinned
+// workerd's, which the plugin reaches through miniflare.
+async function checkCompatibilityDates() {
+  const plugin = pinnedDir("@cloudflare/vitest-plugin");
+  const miniflare = createRequire(join(plugin, "package.json")).resolve(
+    "miniflare",
+  );
+  const workerd = createRequire(miniflare).resolve("workerd");
+  const { compatibilityDate, version: workerdVersion } = await import(
+    pathToFileURL(workerd).href
+  );
+  const late = [];
+  for (const file of wranglerConfigs(process.cwd())) {
+    const text = readFileSync(file, "utf8");
+    for (const [, date] of text.matchAll(
+      /compatibility_date["']?\s*[:=]\s*["'](\d{4}-\d{2}-\d{2})["']/g,
+    )) {
+      if (date > compatibilityDate) {
+        // Forward slashes on every OS, so the message reads the same.
+        late.push(
+          `${relative(process.cwd(), file).split(sep).join("/")} (${date})`,
+        );
+      }
+    }
+  }
+  if (late.length > 0) {
+    console.error(
+      `launch.mjs: the pinned workerd ${workerdVersion} supports compatibility dates up to ${compatibilityDate}, ` +
+        `but ${late.join(", ")} asks for a later one. Set compatibility_date to ${compatibilityDate} or earlier, ` +
+        "or wait for this module's next workerd.",
+    );
+    process.exit(1);
+  }
+}
+
 async function runBin(name, bin, args) {
   const path = join(pinnedDir(name), bin);
   process.argv = [process.argv[0], path, ...args];
@@ -152,24 +209,44 @@ async function eslint(args) {
 
 async function vitest(args) {
   let coverage = false;
+  let workers = false;
   let config;
   for (const arg of args) {
     if (arg === "--coverage") {
       coverage = true;
+    } else if (arg === "--workers") {
+      workers = true;
     } else if (arg.startsWith("--config=")) {
       config = arg.slice("--config=".length);
     } else {
       throw new Error(`launch.mjs: unknown vitest argument ${arg}`);
     }
   }
+  if (workers) {
+    await checkCompatibilityDates();
+  }
   const { startVitest } = await import(
     pathToFileURL(join(pinnedDir("vitest"), "dist", "node.js")).href
   );
   const options = { run: true, watch: false, coverage: { enabled: coverage } };
+  // V8 coverage can't see into workerd, and a Workers check links only
+  // Istanbul; without this, Vitest would report a missing package instead.
+  const istanbulOnly = {
+    name: "tbhb-workers-coverage",
+    configureVitest({ vitest: ctx }) {
+      const provider = ctx.config.coverage.provider ?? "v8";
+      if (coverage && provider !== "istanbul") {
+        throw new Error(
+          `launch.mjs: a workers check needs test.coverage.provider "istanbul" in the Vitest config, not "${provider}"`,
+        );
+      }
+    },
+  };
   const ctx = await startVitest(
     "test",
     [],
     config ? { ...options, config } : options,
+    workers ? { plugins: [istanbulOnly] } : undefined,
   );
   const files = ctx?.state.getFiles() ?? [];
   // Tests that ran: skipped and todo tests prove nothing.
@@ -186,6 +263,11 @@ async function vitest(args) {
   if (!ctx || ran.length === 0) {
     process.exitCode = 1;
   }
+  // When the Workers runtime fails to start, @cloudflare/vitest-plugin
+  // drops its Miniflare without disposing it, and the Miniflare's loopback
+  // server would keep node running until the test timeout. (Vitest's own
+  // CLI forces an exit too, after its teardown timeout.)
+  process.exit();
 }
 
 const [command, ...args] = process.argv.slice(2);
@@ -219,6 +301,10 @@ switch (tool) {
     await runBin("pnpm", "bin/pnpm.cjs", ["audit", ...args]);
     break;
   case "stryker":
+    if (args[0] === "--workers") {
+      args.shift();
+      await checkCompatibilityDates();
+    }
     await runBin("@stryker-mutator/core", "bin/stryker.js", args);
     break;
   case "tsc":

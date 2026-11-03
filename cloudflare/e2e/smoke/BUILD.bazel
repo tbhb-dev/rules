@@ -4,11 +4,20 @@
 load("@bazel_lib//lib:copy_file.bzl", "copy_file")
 load("@bazel_lib//lib:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
-load("@tbhb_rules_cloudflare//:defs.bzl", "worker_bundle", "worker_deploy", "worker_types_test")
-load("@tbhb_rules_typescript//:defs.bzl", "tsc_test")
+load(
+    "@tbhb_rules_cloudflare//:defs.bzl",
+    "worker_bundle",
+    "worker_deploy",
+    "worker_types_test",
+    "workers_stryker_test",
+    "workers_tsc_test",
+    "workers_vitest_test",
+)
 
 repo_files()
 
@@ -108,7 +117,7 @@ worker_types_test(
 )
 
 # The generated types are what tsc checks the Worker against.
-tsc_test(
+workers_tsc_test(
     name = "tsc_test",
     srcs = WORKER,
     node_modules = [":node_modules"],
@@ -167,4 +176,104 @@ expect_failure_test(
     name = "proof_types_body_fails",
     pattern = "committed: \tplanted\\(\\): void;",
     test = ":proof_types_body",
+)
+
+# The Worker's tests run inside workerd, against a local R2 bucket.
+workers_vitest_test(
+    name = "vitest_test",
+    srcs = WORKER + ["vitest.config.mjs"],
+    node_modules = [":node_modules"],
+)
+
+workers_stryker_test(
+    name = "stryker_test",
+    srcs = WORKER + [
+        "stryker.config.mjs",
+        "vitest.config.mjs",
+    ],
+    node_modules = [":node_modules"],
+    tags = ["cpu:1"],
+)
+
+# The converse of typescript/e2e/smoke's plain_launchers_no_workerd_test: a
+# workers check's launcher does reach workerd, so that query can find it.
+genquery(
+    name = "workers_launcher_workerd",
+    expression = "filter('workerd', deps(:vitest_test_launcher))",
+    scope = [":vitest_test_launcher"],
+)
+
+write_file(
+    name = "nothing",
+    out = "nothing.txt",
+    content = [],
+)
+
+diff_test(
+    name = "proof_workers_launcher_no_workerd",
+    file1 = ":workers_launcher_workerd",
+    file2 = ":nothing",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_workers_launcher_no_workerd_fails",
+    # diff_test prints the differing lines on POSIX but only this line on
+    # Windows; either way the files differ only if workerd was found.
+    pattern = "workers_launcher_workerd.* differ",
+    test = ":proof_workers_launcher_no_workerd",
+)
+
+# Planted: a workers check whose Vitest config asks for V8 coverage.
+workers_vitest_test(
+    name = "proof_workers_v8",
+    srcs = WORKER + ["proof/workers_v8/vitest.config.mjs"],
+    config = "proof/workers_v8/vitest.config.mjs",
+    node_modules = [":node_modules"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_workers_v8_fails",
+    pattern = "a workers check needs test.coverage.provider \"istanbul\"",
+    test = ":proof_workers_v8",
+)
+
+# Planted: a wrangler config whose compatibility date the pinned workerd
+# doesn't support. The check fails at once, naming the date, instead of
+# hanging until the timeout; "short" bounds it at a minute.
+workers_vitest_test(
+    name = "proof_future_date",
+    srcs = WORKER + [
+        "proof/future_date/wrangler.jsonc",
+        "vitest.config.mjs",
+    ],
+    node_modules = [":node_modules"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_future_date_fails",
+    timeout = "short",
+    pattern = "supports compatibility dates up to [0-9-]+, but proof/future_date/wrangler.jsonc \\(2099-01-01\\)",
+    test = ":proof_future_date",
+)
+
+# Planted: a Worker the Workers runtime refuses to start, for a reason the
+# date check above doesn't catch. The plugin leaves the failed Miniflare
+# running; the check still fails at once instead of hanging until the
+# timeout, and "short" bounds it at a minute.
+workers_vitest_test(
+    name = "proof_runtime_start",
+    srcs = WORKER + ["proof/runtime_start/vitest.config.mjs"],
+    config = "proof/runtime_start/vitest.config.mjs",
+    node_modules = [":node_modules"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_runtime_start_fails",
+    timeout = "short",
+    pattern = "MiniflareCoreError \\[ERR_RUNTIME_FAILURE\\]: The Workers runtime failed to start",
+    test = ":proof_runtime_start",
 )

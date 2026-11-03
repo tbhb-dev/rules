@@ -37,6 +37,19 @@ _PACKAGES = {
     "vitest": ["@vitest/coverage-v8", "vitest"],
 }
 
+# The Workers Vitest integration, for checks with `workers`. It brings
+# miniflare and workerd, so only those checks' launchers reference it, and
+# only they fetch workerd. V8 coverage can't see into workerd; Istanbul
+# instruments the code instead.
+_WORKERS = "@cloudflare/vitest-plugin"
+
+def _packages(tool, workers):
+    packages = _PACKAGES[tool]
+    if not workers:
+        return packages
+    swapped = ["@vitest/coverage-istanbul" if p == "@vitest/coverage-v8" else p for p in packages]
+    return [_WORKERS] + swapped
+
 def _runfiles_path(label):
     label = native.package_relative_label(label)
     if label.repo_name != "":
@@ -45,11 +58,11 @@ def _runfiles_path(label):
         fail("node_modules: {} isn't an npm_link_all_packages target; pass the whole tree, such as //:node_modules".format(label))
     return label.package + "/" + label.name if label.package else label.name
 
-def _check(name, tool, srcs, node_modules = [], tool_args = [], tags = [], **kwargs):
+def _check(name, tool, srcs, node_modules = [], tool_args = [], tags = [], workers = False, **kwargs):
     launcher = name + "_launcher"
     js_binary(
         name = launcher,
-        data = [Label("//:launcher_data")] + [Label("//:node_modules/" + p) for p in _PACKAGES[tool]] + node_modules,
+        data = [Label("//:launcher_data")] + [Label("//:node_modules/" + p) for p in _packages(tool, workers)] + node_modules,
         entry_point = Label("//:launcher"),
         env = {
             # The consumer's npm_link_all_packages directories, relative to
@@ -82,7 +95,7 @@ def _check(name, tool, srcs, node_modules = [], tool_args = [], tags = [], **kwa
         **kwargs
     )
 
-def tsc_test(name, srcs, config = "tsconfig.json", node_modules = [], **kwargs):
+def tsc_test(name, srcs, config = "tsconfig.json", node_modules = [], workers = False, **kwargs):
     """Type-checks a TypeScript project with `tsc --noEmit`.
 
     tsc is this module's pinned TypeScript. The project's own packages (type
@@ -101,6 +114,11 @@ def tsc_test(name, srcs, config = "tsconfig.json", node_modules = [], **kwargs):
         srcs: The project's files: sources, tsconfig files, package.json.
         config: The tsconfig file to check, relative to the tree root.
         node_modules: The consumer's `npm_link_all_packages` target, such as `//:node_modules`.
+        workers: The project is a Cloudflare Worker tested with
+            `@cloudflare/vitest-plugin`: link this module's pinned plugin.
+            The plugin brings miniflare and workerd, so the check fetches
+            workerd, even for a check that needs only the plugin's types or
+            its import in the Vitest config.
         **kwargs: Passed to `tree_check_test`.
     """
     _check(
@@ -108,6 +126,7 @@ def tsc_test(name, srcs, config = "tsconfig.json", node_modules = [], **kwargs):
         "tsc",
         srcs,
         node_modules = node_modules,
+        workers = workers,
         tool_args = ["--noEmit", "--pretty", "false", "--project", config],
         **kwargs
     )
@@ -137,7 +156,7 @@ def biome_test(name, srcs, config = None, **kwargs):
         **kwargs
     )
 
-def eslint_test(name, srcs, node_modules = [], **kwargs):
+def eslint_test(name, srcs, node_modules = [], workers = False, **kwargs):
     """Lints with ESLint and the consumer's flat config, typically type-aware typescript-eslint.
 
     The config (`eslint.config.mjs` at the tree root) imports `eslint` and
@@ -151,6 +170,11 @@ def eslint_test(name, srcs, node_modules = [], **kwargs):
         name: Target name.
         srcs: The project's files, the config and tsconfig files among them.
         node_modules: The consumer's `npm_link_all_packages` target, such as `//:node_modules`.
+        workers: The project is a Cloudflare Worker tested with
+            `@cloudflare/vitest-plugin`: link this module's pinned plugin.
+            The plugin brings miniflare and workerd, so the check fetches
+            workerd, even for a check that needs only the plugin's types or
+            its import in the Vitest config.
         **kwargs: Passed to `tree_check_test`.
     """
     _check(
@@ -158,11 +182,12 @@ def eslint_test(name, srcs, node_modules = [], **kwargs):
         "eslint",
         srcs,
         node_modules = node_modules,
+        workers = workers,
         output_guard = "eslint: linted [1-9][0-9]* files",
         **kwargs
     )
 
-def knip_test(name, srcs, config = None, node_modules = [], **kwargs):
+def knip_test(name, srcs, config = None, node_modules = [], workers = False, **kwargs):
     """Finds unused files, exports and dependencies with knip.
 
     knip reads `package.json` and its config (`knip.json` and the other
@@ -178,6 +203,11 @@ def knip_test(name, srcs, config = None, node_modules = [], **kwargs):
         srcs: The project's files, `package.json` among them.
         config: A knip config file, when not one knip finds by itself.
         node_modules: The consumer's `npm_link_all_packages` target, such as `//:node_modules`.
+        workers: The project is a Cloudflare Worker tested with
+            `@cloudflare/vitest-plugin`: link this module's pinned plugin.
+            The plugin brings miniflare and workerd, so the check fetches
+            workerd, even for a check that needs only the plugin's types or
+            its import in the Vitest config.
         **kwargs: Passed to `tree_check_test`.
     """
     _check(
@@ -186,6 +216,7 @@ def knip_test(name, srcs, config = None, node_modules = [], **kwargs):
         srcs,
         config = config,
         node_modules = node_modules,
+        workers = workers,
         tool_args = ["--no-progress", "--no-config-hints"] + (["--config", "{config}"] if config else []),
         # launch.mjs counts the project files knip analysed.
         output_guard = "knip: analysed [1-9][0-9]* project files",
@@ -219,7 +250,7 @@ def depcruise_test(name, srcs, config = ".dependency-cruiser.cjs", dirs = ["src"
         **kwargs
     )
 
-def vitest_test(name, srcs, config = None, coverage = True, node_modules = [], **kwargs):
+def vitest_test(name, srcs, config = None, coverage = True, node_modules = [], workers = False, **kwargs):
     """Runs the project's tests once with Vitest.
 
     Vitest reads its config (`vitest.config.ts` and the other names it looks
@@ -229,12 +260,24 @@ def vitest_test(name, srcs, config = None, coverage = True, node_modules = [], *
     A failing test, a missed threshold, or a run in which no test ran
     (skipped and todo tests don't count) fails the check.
 
+    With `workers`, the tests run inside workerd: the config adds
+    `cloudflareTest({ wrangler: { configPath } })` from
+    `@cloudflare/vitest-plugin` to its plugins. The coverage provider
+    becomes Istanbul, since V8 coverage can't see into workerd: the config
+    must set `test.coverage.provider` to `"istanbul"`, and the check fails
+    with a clear message if it asks for any other provider.
+
     Args:
         name: Target name.
         srcs: The project's files, tests and config among them.
         config: A Vitest config file, when not one Vitest finds by itself.
         coverage: Collect coverage and enforce the config's thresholds.
         node_modules: The consumer's `npm_link_all_packages` target, such as `//:node_modules`.
+        workers: The project is a Cloudflare Worker tested with
+            `@cloudflare/vitest-plugin`: link this module's pinned plugin.
+            The plugin brings miniflare and workerd, so the check fetches
+            workerd, even for a check that needs only the plugin's types or
+            its import in the Vitest config.
         **kwargs: Passed to `tree_check_test`.
     """
     _check(
@@ -243,12 +286,13 @@ def vitest_test(name, srcs, config = None, coverage = True, node_modules = [], *
         srcs,
         config = config,
         node_modules = node_modules,
-        tool_args = (["--coverage"] if coverage else []) + (["--config={config}"] if config else []),
+        workers = workers,
+        tool_args = (["--coverage"] if coverage else []) + (["--workers"] if workers else []) + (["--config={config}"] if config else []),
         output_guard = "vitest: ran [1-9][0-9]* tests",
         **kwargs
     )
 
-def stryker_test(name, srcs, config = None, node_modules = [], **kwargs):
+def stryker_test(name, srcs, config = None, node_modules = [], workers = False, **kwargs):
     """Mutation-tests the project with Stryker and the Vitest runner.
 
     Stryker reads its config (`stryker.config.mjs` and the other names it
@@ -269,6 +313,11 @@ def stryker_test(name, srcs, config = None, node_modules = [], **kwargs):
         srcs: The project's files, tests and configs among them.
         config: A Stryker config file, when not one Stryker finds by itself.
         node_modules: The consumer's `npm_link_all_packages` target, such as `//:node_modules`.
+        workers: The project is a Cloudflare Worker tested with
+            `@cloudflare/vitest-plugin`: link this module's pinned plugin.
+            The plugin brings miniflare and workerd, so the check fetches
+            workerd, even for a check that needs only the plugin's types or
+            its import in the Vitest config.
         **kwargs: Passed to `tree_check_test`.
     """
     _check(
@@ -277,7 +326,8 @@ def stryker_test(name, srcs, config = None, node_modules = [], **kwargs):
         srcs,
         config = config,
         node_modules = node_modules,
-        tool_args = ["run"] + (["{config}"] if config else []),
+        workers = workers,
+        tool_args = (["--workers"] if workers else []) + ["run"] + (["{config}"] if config else []),
         # Stryker reports how many mutants it made; none means nothing was tested.
         output_guard = "with [1-9][0-9]* mutant\\(s\\)",
         **kwargs

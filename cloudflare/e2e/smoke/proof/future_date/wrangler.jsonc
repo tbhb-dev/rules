@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Tony Burns
+// Planted: a compatibility date newer than any workerd supports.
+{
+  "name": "smoke",
+  "main": "src/index.ts",
+  "compatibility_date": "2099-01-01",
+  "workers_dev": false,
+  "vars": { "GREETING": "hello" },
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "smoke" }],
+  "env": {
+    "stg": {
+      "name": "smoke-stg",
+      "workers_dev": false,
+      "vars": { "GREETING": "hello" },
+      "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "smoke-stg" }]
+    }
+  }
+}
