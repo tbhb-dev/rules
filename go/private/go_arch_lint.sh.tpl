@@ -47,8 +47,14 @@ export GOMODCACHE="$TEST_TMPDIR/gopath/pkg/mod"
 export GOCACHE="$TEST_TMPDIR/gocache"
 
 echo "go_arch_lint_test: checking $count Go files"
+# On Windows the tool prints file paths with backslashes; the contracts and
+# their expected messages use slashes.
+status=0
 "$tool" check \
   --output-color=false \
   --project-path "$ws" \
   --arch-file "$config" \
-  "$@"
+  "$@" >"$TEST_TMPDIR/out" 2>"$TEST_TMPDIR/err" || status=$?
+tr '\\' '/' <"$TEST_TMPDIR/out"
+tr '\\' '/' <"$TEST_TMPDIR/err" >&2
+exit "$status"
