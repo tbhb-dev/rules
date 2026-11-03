@@ -2,6 +2,7 @@
 # Copyright Tony Burns
 
 import json
+import re
 import subprocess
 from pathlib import Path, PurePosixPath
 
@@ -97,7 +98,7 @@ def test_load_changes(tmp_path: Path) -> None:
 def test_load_changes_rejects(tmp_path: Path, content: str, message: str) -> None:
     path = tmp_path / "changes.json"
     path.write_text(content)
-    with pytest.raises(mr.ChangesError, match=f"^{path}: {message}"):
+    with pytest.raises(mr.ChangesError, match=f"^{re.escape(str(path))}: {message}"):
         mr.load_changes(path)
 
 

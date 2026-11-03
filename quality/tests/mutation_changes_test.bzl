@@ -21,6 +21,17 @@ same() {{
     exit 1
   fi
 }}
+# index_only NAME < TEXT: stage TEXT as NAME without a file on disk.
+# Windows can't hold a quote in a file name (MSYS2 maps it to a private-use
+# character), so the C-quoted name lives only in the index, skip-worktree,
+# which the working-tree diff takes as is. core.protectNTFS=false lets Git
+# for Windows index a name NTFS can't hold; elsewhere it is the default.
+index_only() {{
+  local sha
+  sha=$(git hash-object -w --stdin)
+  git update-index --add --cacheinfo "100644,$sha,$1"
+  git update-index --skip-worktree "$1"
+}}
 subject="$PWD/{subject}"
 slice="$PWD/{slice}"
 repo="$TEST_TMPDIR/repo"
@@ -28,19 +39,22 @@ mkdir -p "$repo/src" && cd "$repo"
 git init -q -b main
 git config user.email test@example.invalid
 git config user.name test
+git config core.protectNTFS false
 printf 'a\\nb\\nc\\nd\\ne\\n' > src/mod.py
 printf 'x\\n' > gone.txt
-printf 'keep\\n' > 'say "hi".txt'
 printf '\\000\\001' > blob.bin
-git add -A && git commit -q -m base
+git add -A
+index_only 'say "hi".txt' < <(printf 'keep\\n')
+git commit -q -m base
 git switch -q -c topic
 # Line 2 changed, line 4 deleted, a line added at the end.
 printf 'a\\nB\\nc\\ne\\nf\\n' > src/mod.py
 git rm -q gone.txt
 printf 'new\\n' > added.py
-printf 'keep\\nmore\\n' > 'say "hi".txt'
 printf '\\000\\002' > blob.bin
-git add -A && git commit -q -m topic
+git add -A
+index_only 'say "hi".txt' < <(printf 'keep\\nmore\\n')
+git commit -q -m topic
 # An uncommitted edit counts too.
 printf '0\\na\\nB\\nc\\ne\\nf\\n' > src/mod.py
 base=$(git rev-parse main)
