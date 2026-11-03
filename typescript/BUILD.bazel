@@ -30,7 +30,7 @@ repo_files(
 # package.json, then regenerate the lock with the pnpm rules_js pins:
 #   bazel run -- @pnpm//:pnpm --dir "$PWD" install --lockfile-only
 #
-# package.json's pnpm.overrides lift transitive dependencies past published
+# pnpm-workspace.yaml's overrides lift transitive dependencies past published
 # advisories. qs (under @stryker-mutator/core's typed-rest-client) moves
 # within its range. minimatch moves to 11, the only line with the fix for
 # GHSA-g3hv-75wg-m249, past the ~10 or ^10 ranges of @stryker-mutator/core,
