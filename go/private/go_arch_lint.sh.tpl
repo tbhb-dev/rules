@@ -55,6 +55,6 @@ status=0
   --project-path "$ws" \
   --arch-file "$config" \
   "$@" >"$TEST_TMPDIR/out" 2>"$TEST_TMPDIR/err" || status=$?
-tr '\\' '/' <"$TEST_TMPDIR/out"
-tr '\\' '/' <"$TEST_TMPDIR/err" >&2
+tr '\134' '/' <"$TEST_TMPDIR/out"
+tr '\134' '/' <"$TEST_TMPDIR/err" >&2
 exit "$status"
