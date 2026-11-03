@@ -1,9 +1,8 @@
 total=10
 killed=x
 skipped=0
-survived=0
+lived=0
 timeout=0
-suspicious=0
-no_tests=0
-segfault=0
+not_covered=0
+errored=0
 interrupted=0

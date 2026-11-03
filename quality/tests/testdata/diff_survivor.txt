@@ -1,0 +1,12 @@
+total=1
+killed=0
+skipped=0
+lived=1
+timeout=0
+not_covered=0
+errored=0
+interrupted=0
+scope=diff
+selected=1
+changed_units=1
+mutant.survived=pkg.x_g__mutmut_1

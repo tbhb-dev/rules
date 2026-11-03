@@ -1,0 +1,10 @@
+total=2
+killed=2
+skipped=0
+lived=0
+timeout=0
+not_covered=0
+errored=0
+interrupted=0
+scope=diff
+changed_units=1

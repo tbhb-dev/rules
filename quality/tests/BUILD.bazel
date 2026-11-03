@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("//quality:defs.bzl", "mutation_gate_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
+load(":mutation_changes_test.bzl", "mutation_changes_test")
+load(":slice_test.bzl", "changes_slice")
 
 repo_files()
 
@@ -16,17 +19,42 @@ mutation_gate_test(
     ],
 )
 
+# Diff-scoped reports: a pass, an empty diff with no changed units (alone
+# and beside a full report), and a full report with explicit scope.
+mutation_gate_test(
+    name = "diff_ok_test",
+    reports = ["testdata/diff_ok.txt"],
+)
+
+mutation_gate_test(
+    name = "diff_empty_test",
+    reports = ["testdata/diff_empty.txt"],
+)
+
+mutation_gate_test(
+    name = "diff_beside_full_test",
+    reports = [
+        "testdata/all_killed.txt",
+        "testdata/diff_empty.txt",
+    ],
+)
+
 PROOF_TAGS = ["manual"]
 
 # Each case must fail for the stated reason. The wrapped gates are manual so
 # `bazel test //...` runs them only through expect_failure_test.
 PROOF_REASONS = {
+    "proof_diff_bad_scope": "unknown scope=partial",
+    "proof_diff_no_selected": "lacks selected",
+    "proof_diff_selected_mismatch": "selected is 3, total 2",
+    "proof_diff_survivor": "FAIL: 1 lived$",
+    "proof_diff_unmapped": "FAIL: 1 unmapped$",
     "proof_duplicate_key": "sets killed more than once",
     "proof_empty": "FAIL: no mutants were generated",
     "proof_interrupted": "FAIL: run was interrupted",
-    "proof_missing_key": "lacks segfault",
+    "proof_missing_key": "lacks errored",
     "proof_not_a_number": "killed is 'x', not a non-negative integer",
-    "proof_survivor": "FAIL: 1 survived, 2 not checked",
+    "proof_survivor": "FAIL: 1 lived, 2 not checked",
     "proof_three_unchecked": "FAIL: 3 not checked$",
     "proof_unchecked": "FAIL: 3280 not checked",
 }
@@ -49,9 +77,100 @@ PROOF_REASONS = {
     for proof, pattern in PROOF_REASONS.items()
 ]
 
+# A diff report never satisfies a gate that requires a full run.
+mutation_gate_test(
+    name = "proof_diff_where_full_required",
+    reports = ["testdata/diff_ok.txt"],
+    require_scope = "full",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_diff_where_full_required_fails",
+    pattern = "1 diff-scoped report\\(s\\), but a full run is required",
+    test = ":proof_diff_where_full_required",
+)
+
+# Full runs pass a full-scope gate.
+mutation_gate_test(
+    name = "full_where_full_required_test",
+    reports = ["testdata/all_killed.txt"],
+    require_scope = "full",
+)
+
+# Full-scope reports must mutate something even beside a diff report.
+mutation_gate_test(
+    name = "proof_full_empty_beside_diff",
+    reports = [
+        "testdata/empty.txt",
+        "testdata/diff_ok.txt",
+    ],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_full_empty_beside_diff_fails",
+    pattern = "FAIL: no mutants were generated",
+    test = ":proof_full_empty_beside_diff",
+)
+
 # A survivor is named in the failure output.
 expect_failure_test(
     name = "proof_survivor_is_named_fails",
     pattern = "survived: pkg.x_f__mutmut_3",
     test = ":proof_survivor",
 )
+
+# The change set of a branch plus an uncommitted edit (changed, deleted,
+# added, binary and quoted paths; deletion-only and appended hunks), and
+# the slice of it a unit gets.
+mutation_changes_test(
+    name = "mutation_changes_test",
+    subject = "//quality:mutation_changes",
+)
+
+# Slices: a unit's slice of a change set holds the unit's entries without the
+# base, so change sets that differ only outside the unit (another base,
+# other files) give byte-identical slices and the unit's mutation action
+# stays cached. A unit untouched by the change set gets the empty slice, and
+# no change set at all gives no slice (a full run).
+SLICE_UNIT = glob(["testdata/slice/unit/*"])
+
+SLICE_OTHER = glob(["testdata/slice/other/*"])
+
+[
+    changes_slice(
+        name = "{}_{}".format(unit, pr),
+        srcs = files,
+        changes = "testdata/slice/{}.json".format(pr),
+    )
+    for unit, files in {
+        "other": SLICE_OTHER,
+        "unit": SLICE_UNIT,
+    }.items()
+    for pr in [
+        "pr1",
+        "pr2",
+    ]
+]
+
+changes_slice(
+    name = "unit_without_changes",
+    srcs = SLICE_UNIT,
+    changes = "//quality:no_changes",
+)
+
+[
+    diff_test(
+        name = name,
+        file1 = file1,
+        file2 = file2,
+    )
+    for name, file1, file2 in [
+        ("slice_keeps_the_unit_entries_test", ":unit_pr1", "testdata/slice/unit.json"),
+        ("slice_is_stable_across_diffs_test", ":unit_pr1", ":unit_pr2"),
+        ("slice_of_an_untouched_unit_is_empty_test", ":other_pr1", "testdata/slice/empty.json"),
+        ("slice_of_an_untouched_unit_is_stable_test", ":other_pr1", ":other_pr2"),
+        ("slice_without_changes_is_none_test", ":unit_without_changes", "testdata/slice/none.txt"),
+    ]
+]

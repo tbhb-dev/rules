@@ -64,17 +64,22 @@ def test_load_stats(tmp_path: Path) -> None:
 
 def test_report_without_stats_is_an_interrupted_run() -> None:
     assert mr.report(None, "") == (
-        "total=0\nkilled=0\nskipped=0\nsurvived=0\ntimeout=0\nsuspicious=0\n"
-        "no_tests=0\nsegfault=0\ninterrupted=1\n"
+        "total=0\nkilled=0\nlived=0\nnot_covered=0\ntimeout=0\nerrored=0\n"
+        "skipped=0\ninterrupted=1\n"
     )
 
 
 def test_report_lists_counts_and_the_mutants_not_killed() -> None:
     stats: dict[str, object] = ALL_KILLED | {
         "survived": 2,
+        "no_tests": 3,
+        "timeout": 4,
+        "suspicious": 5,
+        "segfault": 6,
+        "caught_by_type_check": 7,
         "check_was_interrupted_by_user": True,
     }
-    del stats["segfault"]
+    del stats["skipped"]
     results = (
         "    tools.a.x__mutmut_1: killed\n"
         "    tools.a.x__mutmut_2: survived\n"
@@ -84,14 +89,15 @@ def test_report_lists_counts_and_the_mutants_not_killed() -> None:
         "    tools.a.y__mutmut_4: suspicious\n"
         "    tools.a.y__mutmut_5: segfault\n"
         "    tools.a.y__mutmut_6: skipped\n"
+        "    tools.a.y__mutmut_7: caught by type check\n"
         "    : survived\n"
         "    tools.b: odd.x__mutmut_1: survived\n"
         "noise without a status\n"
         "    tools.a.z__mutmut_1: something else\n"
     )
     assert mr.report(stats, results) == (
-        "total=4\nkilled=3\nskipped=1\nsurvived=2\ntimeout=0\nsuspicious=0\n"
-        "no_tests=0\nsegfault=0\ninterrupted=1\n"
+        "total=4\nkilled=3\nlived=2\nnot_covered=3\ntimeout=4\nerrored=11\n"
+        "skipped=7\ninterrupted=1\n"
         "mutant.survived=tools.a.x__mutmut_2\n"
         "mutant.no_tests=tools.a.y__mutmut_1\n"
         "mutant.not_checked=tools.a.y__mutmut_2\n"
@@ -99,13 +105,29 @@ def test_report_lists_counts_and_the_mutants_not_killed() -> None:
         "mutant.suspicious=tools.a.y__mutmut_4\n"
         "mutant.segfault=tools.a.y__mutmut_5\n"
         "mutant.skipped=tools.a.y__mutmut_6\n"
+        "mutant.caught_by_type_check=tools.a.y__mutmut_7\n"
         "mutant.survived=tools.b: odd.x__mutmut_1\n"
+    )
+
+
+def test_report_counts_type_check_rejects_as_skipped_not_killed() -> None:
+    stats: dict[str, object] = {"total": 2, "killed": 1, "caught_by_type_check": 1}
+    lines = mr.report(stats, "    m__mutmut_2: caught by type check\n").splitlines()
+    assert "killed=1" in lines
+    assert "skipped=1" in lines
+    assert "mutant.caught_by_type_check=m__mutmut_2" in lines
+
+
+def test_report_counts_missing_stats_as_zero() -> None:
+    assert mr.report({}, "") == (
+        "total=0\nkilled=0\nlived=0\nnot_covered=0\ntimeout=0\nerrored=0\n"
+        "skipped=0\ninterrupted=0\n"
     )
 
 
 def test_report_of_a_clean_run() -> None:
     assert mr.report(ALL_KILLED, "    m__mutmut_1: killed\n").endswith(
-        "segfault=0\ninterrupted=0\n",
+        "skipped=1\ninterrupted=0\n",
     )
 
 
@@ -159,12 +181,11 @@ def test_main_writes_the_report_from_the_stats(
     assert Path("report").read_text().splitlines() == [
         "total=5",
         "killed=3",
-        "skipped=1",
-        "survived=1",
+        "lived=1",
+        "not_covered=0",
         "timeout=0",
-        "suspicious=0",
-        "no_tests=0",
-        "segfault=0",
+        "errored=0",
+        "skipped=1",
         "interrupted=0",
         "mutant.survived=m__mutmut_1",
     ]
@@ -224,12 +245,13 @@ def test_scratch_config_without_a_pyproject(tmp_path: Path) -> None:
     [
         ({}, []),
         ({"timeout": "2"}, ["timeout"]),
-        ({"segfault": "1", "suspicious": "1"}, ["segfault", "suspicious"]),
-        ({"interrupted": "1", "survived": "3"}, ["interrupted"]),
+        ({"errored": "1", "timeout": "1"}, ["timeout", "errored"]),
+        ({"interrupted": "1", "lived": "3"}, ["interrupted"]),
     ],
 )
 def test_unstable(counts: dict[str, str], expected: list[str]) -> None:
-    base = dict.fromkeys(mr.COUNTS, "0") | {"interrupted": "0"} | counts
+    keys = ["total", *mr.STATS_KEYS, "interrupted"]
+    base = dict.fromkeys(keys, "0") | counts
     text = "".join(f"{key}={value}\n" for key, value in base.items())
     assert mr.unstable(text + "mutant.survived=a=b\n") == expected
 
@@ -245,5 +267,5 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
     assert mr.main(["report", "log"]) == 1
     assert len(fake_mutmut) == 3
     assert capsys.readouterr().err == (
-        "mutmut_report: not cacheable: timeout, segfault\n"
+        "mutmut_report: not cacheable: timeout, errored\n"
     )

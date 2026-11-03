@@ -8,9 +8,10 @@ Usage: mutmut_report.py REPORT LOG
 Runs from the directory mutmut should run in (the one whose pyproject.toml
 holds `[tool.mutmut]`), inside the scratch copy the mutmut_report action
 made. Runs `mutmut run`, `mutmut export-cicd-stats` and `mutmut results`,
-and writes REPORT: one `key=value` per line with total, killed, skipped,
-survived, timeout, suspicious, no_tests, segfault and interrupted, plus a
-`mutant.<status>=<name>` line for each mutant not killed. A run that
+and writes REPORT in quality's shared format: one `key=value` per line with
+total, killed, lived, not_covered, timeout, errored, skipped and
+interrupted, plus a `mutant.<status>=<name>` line, in mutmut's own status
+names, for each mutant not killed. A run that
 produced no statistics is reported as interrupted, so the gate fails with
 the log rather than the build. mutmut's own output goes to LOG.
 """
@@ -20,16 +21,18 @@ import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
-COUNTS = (
-    "total",
-    "killed",
-    "skipped",
-    "survived",
-    "timeout",
-    "suspicious",
-    "no_tests",
-    "segfault",
-)
+# The shared report's outcome keys, and the cicd stats keys each one sums.
+# A mutant the type checker rejects is invalid code, not a kill: like a
+# mutant that doesn't compile, it counts as skipped (accounted, not gating)
+# and stays listed with its own status.
+STATS_KEYS = {
+    "killed": ("killed",),
+    "lived": ("survived",),
+    "not_covered": ("no_tests",),
+    "timeout": ("timeout",),
+    "errored": ("suspicious", "segfault"),
+    "skipped": ("skipped", "caught_by_type_check"),
+}
 # The statuses `mutmut results --all true` prints for mutants not killed.
 NOT_KILLED = frozenset(
     {
@@ -40,6 +43,7 @@ NOT_KILLED = frozenset(
         "segfault",
         "not checked",
         "skipped",
+        "caught by type check",
     },
 )
 STATS = Path("mutants/mutmut-cicd-stats.json")
@@ -71,9 +75,13 @@ def load_stats(path: Path) -> dict[str, object] | None:
 def report(stats: dict[str, object] | None, results: str) -> str:
     """Format the report from the cicd stats and `mutmut results` output."""
     if stats is None:
-        lines = [f"{key}=0" for key in COUNTS] + ["interrupted=1"]
+        lines = ["total=0", *(f"{key}=0" for key in STATS_KEYS), "interrupted=1"]
     else:
-        lines = [f"{key}={int(str(stats.get(key, 0)))}" for key in COUNTS]
+        lines = [f"total={int(str(stats.get('total', 0)))}"]
+        lines += [
+            f"{key}={sum(int(str(stats.get(name, 0))) for name in names)}"
+            for key, names in STATS_KEYS.items()
+        ]
         interrupted = 1 if stats.get("check_was_interrupted_by_user") else 0
         lines.append(f"interrupted={interrupted}")
     for line in results.splitlines():
@@ -90,7 +98,7 @@ HEADER = "[tool.mutmut]"
 NO_GIT = "use_git_change_detection = false"
 # Verdicts that depend on the machine (load, signals) rather than the code:
 # the action fails on them, so Bazel never caches one.
-UNSTABLE = ("timeout", "segfault", "suspicious", "interrupted")
+UNSTABLE = ("timeout", "errored", "interrupted")
 
 
 def scratch_config(path: Path) -> None:

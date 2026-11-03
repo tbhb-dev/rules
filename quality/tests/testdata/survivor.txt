@@ -1,10 +1,9 @@
 total=10
 killed=7
 skipped=0
-survived=1
+lived=1
 timeout=0
-suspicious=0
-no_tests=0
-segfault=0
+not_covered=0
+errored=0
 interrupted=0
 mutant.survived=pkg.x_f__mutmut_3

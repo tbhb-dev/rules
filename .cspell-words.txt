@@ -57,6 +57,7 @@ golines
 gomodguard
 govet
 gpgsign
+gsub
 hardwrap
 heapdump
 heredocs

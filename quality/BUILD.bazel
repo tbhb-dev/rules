@@ -2,6 +2,7 @@
 # Copyright Tony Burns
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("//quality/private:mutation_changes.bzl", "mutation_changes")
 load("//repo:defs.bzl", "repo_files")
 
 repo_files()
@@ -10,5 +11,33 @@ bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],
     visibility = ["//visibility:public"],
-    deps = ["//quality/private:mutation_gate"],
+    deps = [
+        "//quality/private:mutation_gate",
+        "//quality/private:slice",
+    ],
+)
+
+# The change set of a diff-scoped mutation run, shared by every mutation
+# runner (the format is in private/mutation_changes.sh.tpl). Unset, it is
+# the empty filegroup below: no change set, and every run is full. CI sets
+# it on PRs:
+#   bazel run @tbhb_rules//quality:mutation_changes -- --base "$BASE" --out .mutation/changes.json
+#   bazel test --@tbhb_rules//quality:changes=//:mutation_changes //...
+# Each mutation action takes only its unit's slice of it (see slice.bzl), so
+# a change elsewhere leaves the action's inputs, and its cache entry, alone.
+label_flag(
+    name = "changes",
+    build_setting_default = ":no_changes",
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "no_changes",
+    srcs = [],
+    visibility = ["//visibility:public"],
+)
+
+mutation_changes(
+    name = "mutation_changes",
+    visibility = ["//visibility:public"],
 )

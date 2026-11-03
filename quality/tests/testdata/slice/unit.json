@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "files": {
+    "quality/tests/testdata/slice/unit/a.py": [[2, 2]],
+    "quality/tests/testdata/slice/unit/b.txt": []
+  }
+}
