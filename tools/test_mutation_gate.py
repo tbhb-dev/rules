@@ -47,6 +47,11 @@ def stats_file(tmp_path: Path, **changes: object) -> Path:
     return path
 
 
+def test_the_fixture_refuses_exports() -> None:
+    with pytest.raises(AssertionError, match="explicit stats file"):
+        gate.export_stats()
+
+
 def test_clean_run_passes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert gate.main([str(stats_file(tmp_path))]) == 0
     captured = capsys.readouterr()
