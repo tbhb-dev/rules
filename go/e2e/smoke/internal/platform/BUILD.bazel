@@ -15,6 +15,7 @@ go_library(
 
 # Planted defect, for a proof: the package plus one bad file.
 go_library(
+    # keep
     name = "planted_leaf",
     srcs = [
         "planted_leaf.go",

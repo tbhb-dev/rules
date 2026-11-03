@@ -3,6 +3,7 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@gazelle//:def.bzl", "gazelle")
 load("@tbhb_rules//format:defs.bzl", "format", "format_test", "formatter")
 load(
     "@tbhb_rules//lint:defs.bzl",
@@ -16,6 +17,14 @@ load(
 )
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("//private:formatter_include.bzl", "formatter_include")
+
+# `bazel run //:gazelle` writes the Go rules of this module's own code
+# (private/). tests/ holds planted fixtures, some deliberately broken, whose
+# BUILD files the tests define; e2e/ is its own module.
+# gazelle:prefix github.com/tbhb-dev/rules/go
+# gazelle:exclude tests
+# gazelle:exclude e2e
+gazelle(name = "gazelle")
 
 exports_files([
     ".golangci.yml",

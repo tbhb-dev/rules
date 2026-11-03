@@ -141,6 +141,13 @@ jobs:
           repository-cache: true
           cache-save: false
 
+      # The Go workspaces' BUILD files, as gazelle would write them.
+      - name: Check that gazelle has nothing to change
+        run: |
+          for workspace in go go/e2e/smoke; do
+            (cd "$workspace" && bazelisk run //:gazelle -- -mode=diff)
+          done
+
       # Each module's MODULE.bazel, as `bazel mod tidy` would write it.
       - name: Check that MODULE.bazel is tidy
         run: |

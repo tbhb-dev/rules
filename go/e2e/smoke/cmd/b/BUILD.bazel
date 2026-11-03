@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-load("@rules_go//go:def.bzl", "go_binary")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 
 repo_files()
@@ -10,14 +10,9 @@ repo_files()
 # than cmd/a's, so the shared package is analyzed (and linted) twice.
 go_binary(
     name = "b",
-    srcs = ["main.go"],
+    embed = [":b_lib"],
     pure = "on",
     visibility = ["//visibility:public"],
-    deps = [
-        "//internal/feature2",
-        "//internal/shared",
-        "//lib",
-    ],
 )
 
 go_binary(
@@ -29,6 +24,18 @@ go_binary(
     deps = [
         "//internal/feature2",
         "//internal/shared:planted_dead",
+        "//lib",
+    ],
+)
+
+go_library(
+    name = "b_lib",
+    srcs = ["main.go"],
+    importpath = "example.com/smoke/cmd/b",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//internal/feature2",
+        "//internal/shared",
         "//lib",
     ],
 )

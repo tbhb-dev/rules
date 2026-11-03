@@ -1,12 +1,25 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@gazelle//:def.bzl", "gazelle")
 load("@tbhb_rules//format:defs.bzl", "format_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test")
 load("@tbhb_rules_go//tests/golangci:oracle.bzl", "golangci_lint_oracle")
 load("//tools/lint:linters.bzl", "golangci_lint_parity_test", "golangci_lint_test")
+
+# `bazel run //:gazelle` writes the Go rules. The planted_*.go files hold
+# defects for the proofs; their hand-written targets carry `# keep`, and
+# because each shares its package's importpath, the resolves below name the
+# real package.
+# gazelle:prefix example.com/smoke
+# gazelle:exclude **/planted_*.go
+# gazelle:resolve go example.com/smoke/internal/core //internal/core
+# gazelle:resolve go example.com/smoke/internal/feature1 //internal/feature1
+# gazelle:resolve go example.com/smoke/internal/platform //internal/platform
+# gazelle:resolve go example.com/smoke/internal/shared //internal/shared
+gazelle(name = "gazelle")
 
 repo_files()
 
