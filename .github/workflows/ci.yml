@@ -64,10 +64,10 @@ jobs:
       # Some runfiles paths pass Windows' 260-character limit under the
       # default output root in the runner's profile. The user bazelrc reaches
       # every workspace the job tests. After setup-bazel, which writes that file
-      # too.
+      # too and leaves its last line unterminated, hence the leading newline.
       - name: Shorten Bazel's output root
         if: runner.os == 'Windows'
-        run: echo 'startup --output_user_root=C:/b' >>"$HOME/.bazelrc"
+        run: printf '\nstartup --output_user_root=C:/b\n' >>"$HOME/.bazelrc"
 
       # //... covers this repository's gates (buildifier, the lint tests, the
       # shell checks, the bats suite and the rule families' proofs) and
