@@ -43,13 +43,21 @@ export GOROOT=$goroot
 export PATH="$goroot/bin:$PATH"
 export HOME="$tmp/home"
 export TMPDIR="$tmp"
+# Go's os.TempDir reads TMP and TEMP on Windows.
+export TMP="$tmp" TEMP="$tmp"
 export GOCACHE="$tmp/gocache"
 export GOLANGCI_LINT_CACHE="$tmp/golangci-lint"
 export GOPATH="$tmp/gopath"
 export GOMODCACHE="$tmp/gopath/pkg/mod"
 export GOPROXY=off
 if [[ -n $proxy ]]; then
-  export GOPROXY="file://$root/$proxy"
+  # The go command wants file:///C:/... on Windows, which cygpath -m gives.
+  if command -v cygpath >/dev/null; then
+    proxy_dir=$(cygpath -m "$root/$proxy")
+    export GOPROXY="file:///$proxy_dir"
+  else
+    export GOPROXY="file://$root/$proxy"
+  fi
   export GOSUMDB=off
 fi
 export GOTOOLCHAIN=local

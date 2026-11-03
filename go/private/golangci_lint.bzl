@@ -132,6 +132,23 @@ def _covered_go_files(target, ctx):
                 break
     return [f for f in files if f.is_source]
 
+def action_binary(ctx):
+    """The golangci-lint file an action runs.
+
+    On Windows the hub's executable is a Bash shim that finds the binary
+    through a runfiles tree an action does not have: run the binary itself.
+
+    Args:
+        ctx: A rule or aspect context with the `_golangci_lint` attribute.
+
+    Returns:
+        The File to run.
+    """
+    for f in ctx.attr._golangci_lint[DefaultInfo].default_runfiles.files.to_list():
+        if f.basename == "golangci-lint.exe":
+            return f
+    return ctx.executable._golangci_lint
+
 def _lint(target, ctx):
     pkg_info = target[GoPkgInfo]
     stdlib = ctx.attr._go_stdlib[GoStdLib]
@@ -158,12 +175,7 @@ def _lint(target, ctx):
         for f in covered + [ctx.file._config] + ([go_mod] if go_mod else []) + ctx.files._data
     ]))
 
-    # On Windows the hub's executable is a Bash shim that finds the binary
-    # through a runfiles tree an action does not have: run the binary.
-    golangci_lint = ctx.executable._golangci_lint
-    for f in ctx.attr._golangci_lint[DefaultInfo].default_runfiles.files.to_list():
-        if f.basename == "golangci-lint.exe":
-            golangci_lint = f
+    golangci_lint = action_binary(ctx)
 
     report = ctx.actions.declare_file(name + ".txt")
     args = ctx.actions.args()

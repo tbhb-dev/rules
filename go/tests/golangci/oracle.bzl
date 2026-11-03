@@ -18,7 +18,7 @@ load("@bazel_skylib//lib:shell.bzl", "shell")
 load("@tbhb_rules//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 load("//:defs.bzl", "GolangciLintInfo")
 load("//private:go_srcs.bzl", "GoSrcsInfo", "go_srcs_aspect")
-load("//private:golangci_lint.bzl", "write_report_manifest")
+load("//private:golangci_lint.bzl", "action_binary", "write_report_manifest")
 
 def _oracle_impl(ctx):
     module_dir = ctx.file.go_mod.dirname
@@ -44,7 +44,7 @@ def _oracle_impl(ctx):
     ctx.actions.run(
         executable = ctx.executable._runner,
         arguments = [
-            ctx.executable._golangci_lint.path,
+            action_binary(ctx).path,
             ctx.executable._report.path,
             sdk.go.path,
             module_dir,
@@ -58,7 +58,7 @@ def _oracle_impl(ctx):
             transitive = [files, sdk.srcs, sdk.headers, sdk.tools, sdk.libs],
         ),
         outputs = [out],
-        tools = [ctx.executable._golangci_lint, ctx.executable._report],
+        tools = [action_binary(ctx), ctx.executable._report],
         mnemonic = "GolangciLintOracle",
         progress_message = "Running the golangci-lint oracle over %{label}",
     )
