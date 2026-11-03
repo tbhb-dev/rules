@@ -299,6 +299,20 @@ func TestCrossCheck(t *testing.T) {
 }
 
 // runFake runs the run mode against the fake gomutants.
+// unsetenv unsets key for the rest of the test and restores it after.
+func unsetenv(t *testing.T, key string) {
+	t.Helper()
+	old, ok := os.LookupEnv(key)
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if ok {
+			_ = os.Setenv(key, old)
+		}
+	})
+}
+
 func runFake(t *testing.T, changes, rc string, js *string) (int, string) {
 	t.Helper()
 	dir := t.TempDir()
@@ -314,6 +328,12 @@ func runFake(t *testing.T, changes, rc string, js *string) (int, string) {
 		t.Setenv("FAKE_GOMUTANTS_JSON", *js)
 	}
 	t.Setenv("GOPROXY", "https://proxy.golang.org") // the runner must not pass it on
+	// The stand-in is this test binary, which rules_go wraps in a second
+	// process when XML_OUTPUT_FILE is set and GO_TEST_WRAP, which the runner
+	// drops with the other GO variables, is not. On Windows that wrapper
+	// starts the test from the temp directory and changes into the runfiles,
+	// so the stand-in would not run in the directory the runner chose.
+	unsetenv(t, "XML_OUTPUT_FILE")
 	report := filepath.Join(dir, "report")
 	args := []string{
 		"-gomutants", self,
