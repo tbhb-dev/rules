@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Tony Burns
 
-// The project's rules, over the proof's own tsconfig.
-const base = require("../../.dependency-cruiser.cjs");
-
+// The project's no-circular rule, for the planted cycle checked as a project
+// of its own (strip_prefix in BUILD.bazel).
+/** @type {import("dependency-cruiser").IConfiguration} */
 module.exports = {
-  ...base,
+  forbidden: [
+    {
+      name: "no-circular",
+      severity: "error",
+      from: {},
+      to: { circular: true },
+    },
+  ],
   options: {
-    ...base.options,
-    tsConfig: { fileName: "proof/depcruise/tsconfig.json" },
+    tsConfig: { fileName: "tsconfig.json" },
   },
 };
