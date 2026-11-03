@@ -2,7 +2,7 @@
 # Copyright Tony Burns
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-load("@tbhb_rules//format:defs.bzl", "formatter")
+load("@tbhb_rules//format:defs.bzl", "format", "format_test", "formatter")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("//private:tool.bzl", "python_tool")
 
@@ -56,4 +56,29 @@ formatter(
     ],
     tool = ":ruff.tool",
     visibility = ["//visibility:public"],
+)
+
+# This module's own formatting, separate from the root module's: `bazel run
+# //:format` here rewrites, and //:format_test fails on, any unformatted
+# file of this module. Its Python is formatted with the ruff pinned in the
+# root module's lock, and so with the root's ruff settings when run inside
+# tbhb-dev/rules.
+FORMATTERS = [
+    "@tbhb_rules//format:buildifier",
+    "@tbhb_rules//format:rumdl",
+    "@tbhb_rules//format:ryl",
+    "@tbhb_rules//format:shfmt",
+    "@tbhb_rules//format:tombi",
+    ":ruff",
+]
+
+format(
+    name = "format",
+    formatters = FORMATTERS,
+)
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    formatters = FORMATTERS,
 )

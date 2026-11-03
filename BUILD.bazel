@@ -246,6 +246,7 @@ repo_layout_test(
         "python",
         "quality",
         "repo",
+        "runtime",
         "testing",
         "tools",
     ],

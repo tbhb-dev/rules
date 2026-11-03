@@ -1,12 +1,17 @@
 # tbhb_rules
 
-Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned tools, and the plumbing around them. One module, `tbhb_rules`, with one package per family:
+Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned tools, formatters, quality gates, and the plumbing around them. The root module, `tbhb_rules`, holds the checks every repository uses, with one package per family:
 
 | Family | Load from | Contents |
 | --- | --- | --- |
-| lint | `@tbhb_rules//lint:defs.bzl` | `gitleaks_test`, `ryl_test`, `tombi_test`, `rumdl_test`, `editorconfig_checker_test`, `actionlint_test`, `zizmor_test`, and the generic `tree_check_test` |
-| repo | `@tbhb_rules//repo:defs.bzl` | `repo_files` |
+| format | `@tbhb_rules//format:defs.bzl` | `formatter`, `format` (fix and `.check` runners), `format_test`, and ready formatters `//format:shfmt`, `:buildifier`, `:tombi`, `:rumdl` and `:ryl` |
+| lint | `@tbhb_rules//lint:defs.bzl` | `gitleaks_test`, `gitleaks_history`, `ryl_test`, `tombi_test`, `rumdl_test`, `editorconfig_checker_test`, `actionlint_test`, `zizmor_test`, `shellcheck_test`, `shfmt_test`, `bats_test`, `codeowners_test`, `vale_test`, `vale_sync`, `cspell_test`, and the generic `tree_check_test` |
+| quality | `@tbhb_rules//quality:defs.bzl` | `mutation_gate_test` and its `MutationReportInfo` |
+| repo | `@tbhb_rules//repo:defs.bzl` | `repo_files`, `repo_layout_test` |
+| runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
 | testing | `@tbhb_rules//testing:defs.bzl` | `expect_failure_test` |
+
+Language rules live in nested modules, so a repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/` and `tbhb_rules_python` in `python/`.
 
 Load only the `defs.bzl` files. Everything under `private/` is internal and can change without notice.
 
@@ -59,7 +64,7 @@ Notes on individual tools:
 - `tombi_test` creates `<name>.format` and `<name>.lint`, with a `<name>` suite. tombi runs offline, and some of its embedded schemas refer to others by URL; pass pinned copies in `schemas = {url: label}` (for example from `http_file` with a `sha256`) or those references become warnings, which fail the lint.
 - `actionlint_test` puts the pinned shellcheck on PATH, so the `run:` block checks can't silently vanish.
 - `zizmor_test` runs the offline audits only. The online audits need the network and a token, so they belong outside the test graph.
-- `gitleaks_test` scans the working tree. Scan Git history outside the test graph, for example with `bazel run @multitool//tools/gitleaks:workspace_root -- git .`.
+- `gitleaks_test` scans the working tree. `gitleaks_history` scans the Git history, with `bazel run` (in CI, after a full-depth checkout); it fails when gitleaks walks no commits of a history with content, which gitleaks itself reports as success.
 
 ### Failure proofs
 
@@ -110,6 +115,8 @@ mise provides bazelisk and uv (`mise install`); Bazel and uv pin everything else
 | --- | --- |
 | `bazelisk test //...` | buildifier, this repository's lint, shell and bats gates, run on its own rules |
 | `(cd e2e/smoke && bazelisk test //...)` | the rules as a consumer sees them, including the failure proofs |
+| `(cd e2e/js_coexist && bazelisk test //...)` | `cspell_test` beside a consumer's own rules_js and Node |
+| `bazelisk run //:format` | rewrites files with the formatters; `//:format.check` only checks |
 | `uv run pytest --cov=tools --cov-branch` | the Python tooling, at 100% branch coverage |
 | `uv run mutmut run; uv run python tools/mutation_gate.py` | every mutant killed |
 
