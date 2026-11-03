@@ -44,8 +44,8 @@ exports_files(
 # Every file of the repository, for the whole-tree checks below. Ignored
 # directories are listed in REPO.bazel; these are the gitignored files that
 # can sit at the root of a working checkout.
-# The nested modules (diagrams/d2/, go/, python/) and the e2e consumers are
-# .bazelignored workspaces of their own, with their own checks.
+# The nested modules (diagrams/d2/, go/, python/, typescript/) and the e2e
+# consumers are .bazelignored workspaces of their own, with their own checks.
 repo_files(
     exclude = [
         ".DS_Store",
@@ -63,6 +63,7 @@ repo_files(
         "e2e/**",
         "go/**",
         "python/**",
+        "typescript/**",
     ],
 )
 
@@ -228,6 +229,7 @@ FORMAT_EXCLUDE = [
     "go/*",
     "pnpm-lock.yaml",
     "python/*",
+    "typescript/*",
 ]
 
 format(
@@ -244,8 +246,8 @@ format_test(
 )
 
 # A new top-level directory is a deliberate change. diagrams/ (diagrams/d2/),
-# e2e/, go/ and python/ hold .bazelignored workspaces outside :repo_files,
-# so they are listed but not seen here.
+# e2e/, go/, python/ and typescript/ hold .bazelignored workspaces outside
+# :repo_files, so they are listed but not seen here.
 repo_layout_test(
     name = "repo_layout_test",
     srcs = [":repo_files"],
@@ -270,6 +272,7 @@ repo_layout_test(
         "shell",
         "testing",
         "tools",
+        "typescript",
     ],
 )
 

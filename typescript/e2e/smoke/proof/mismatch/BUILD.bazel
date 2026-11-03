@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("@tbhb_rules_typescript//:defs.bzl", "vitest_test")
+
+repo_files()
+
+# Planted: a node_modules whose vitest isn't the module's pin. The launcher
+# refuses to run two Vitests in one tree.
+filegroup(
+    name = "node_modules",
+    srcs = glob(["node_modules/**"]),
+)
+
+vitest_test(
+    name = "proof_vitest_version_mismatch",
+    srcs = ["//:src/greeting.test.ts"],
+    coverage = False,
+    node_modules = [":node_modules"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_vitest_version_mismatch_fails",
+    pattern = "the consumer's node_modules has its own vitest 4.0.0 \\(this module pins 4.1.12\\)",
+    test = ":proof_vitest_version_mismatch",
+)

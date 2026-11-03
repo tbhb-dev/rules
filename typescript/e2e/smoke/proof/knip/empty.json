@@ -1,0 +1,4 @@
+{
+  "entry": ["proof/knip/none/*.ts"],
+  "project": ["proof/knip/none/**/*.ts"]
+}

@@ -1,0 +1,7 @@
+{
+  "entry": ["proof/knip/index.ts"],
+  "project": ["proof/knip/**/*.ts"],
+  "typescript": {
+    "config": ["tsconfig.json"]
+  }
+}

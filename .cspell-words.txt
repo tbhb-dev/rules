@@ -170,6 +170,7 @@ unvalidated
 usdhowv
 usefixtures
 usetesting
+vitest
 worktrees
 xdist
 xgenerated
