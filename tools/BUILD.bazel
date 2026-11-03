@@ -262,9 +262,11 @@ pip_audit(
 # .bazel_env/bin, which mise adds to PATH. Git hooks call them directly, so a
 # commit never waits on the Bazel server. It lives here, not in the root
 # package, because consumers load the root package and bazel_env is a dev
-# dependency.
+# dependency. bazel_env.bzl builds its bin directory with POSIX tools that
+# fail under Windows' Bash, so the shims are for macOS and Linux.
 bazel_env(
     name = "bazel_env",
+    target_compatible_with = NOT_WINDOWS,
     tools = {
         "actionlint": "@tbhb_rules_actionlint//:actionlint",
         "buildifier": "@tbhb_rules_buildifier//:buildifier",

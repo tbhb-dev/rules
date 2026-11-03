@@ -69,6 +69,12 @@ jobs:
         if: runner.os == 'Windows'
         run: printf '\nstartup --output_user_root=C:/b\n' >>"$HOME/.bazelrc"
 
+      # Even under that root, a few paths in the Python runtime's packages
+      # pass 260 characters; Python reads them only with long paths enabled.
+      - name: Enable long paths
+        if: runner.os == 'Windows'
+        run: reg add 'HKLM\SYSTEM\CurrentControlSet\Control\FileSystem' //v LongPathsEnabled //t REG_DWORD //d 1 //f
+
       # //... covers this repository's gates (buildifier, the lint tests, the
       # shell checks, the bats suite and the rule families' proofs) and
       # preset.update_test, which fails when preset.bazelrc is stale.

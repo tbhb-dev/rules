@@ -61,6 +61,7 @@ hardwrap
 heapdump
 heredocs
 hermeticity
+HKLM
 hprof
 importlinter
 importpath
