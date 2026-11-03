@@ -9,6 +9,8 @@ import %workspace%/../preset.bazelrc
 # local_path_override, so its lockfile would churn with every change there;
 # it is not committed.
 common --lockfile_mode=off
+# --config=ci (from the preset) would turn it back to error.
+common:ci --lockfile_mode=off
 
 # Fail when a bazel_dep version is lower than what the module graph resolves
 # to, so the declared minimums stay honest.
