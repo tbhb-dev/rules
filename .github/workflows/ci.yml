@@ -78,36 +78,37 @@ jobs:
       # //... covers this repository's gates (buildifier, the lint tests, the
       # shell checks, the bats suite and the rule families' proofs) and
       # preset.update_test, which fails when preset.bazelrc is stale.
+      # Each test step fetches with retries, then tests once.
       - name: Test
-        run: bazelisk test --config=ci //...
+        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
 
       # The smoke module's proofs run here too: each expect_failure_test
       # passes only when its proof fails for the stated reason.
       - name: Test the smoke consumer
         working-directory: e2e/smoke
-        run: bazelisk test --config=ci //...
+        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
 
       # The nested modules are workspaces of their own, each with its own
       # gates and consumers, on the same Bazel versions and platforms.
       - name: Test the Go module
         working-directory: go
-        run: bazelisk test --config=ci //...
+        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
 
       - name: Test the Go consumer
         working-directory: go/e2e/smoke
-        run: bazelisk test --config=ci //...
+        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
 
       - name: Test the Python module
         working-directory: python
-        run: bazelisk test --config=ci //...
+        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
 
       - name: Test the single-project Python consumer
         working-directory: python/e2e/single
-        run: bazelisk test --config=ci //...
+        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
 
       - name: Test the uv workspace Python consumer
         working-directory: python/e2e/workspace
-        run: bazelisk test --config=ci //...
+        run: '"${GITHUB_WORKSPACE}/.github/scripts/test-workspace.sh"'
 
       # Mutation reports rerun along the dependency graph: an edit reruns
       # its unit and the dependents, and the others stay cached. mutmut does
