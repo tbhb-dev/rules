@@ -218,7 +218,9 @@ diff_test(
 
 expect_failure_test(
     name = "proof_workers_launcher_no_workerd_fails",
-    pattern = "workerd@",
+    # diff_test prints the differing lines on POSIX but only this line on
+    # Windows; either way the files differ only if workerd was found.
+    pattern = "workers_launcher_workerd.* differ",
     test = ":proof_workers_launcher_no_workerd",
 )
 

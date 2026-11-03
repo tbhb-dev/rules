@@ -24,7 +24,7 @@ import {
   symlinkSync,
 } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -161,7 +161,10 @@ async function checkCompatibilityDates() {
       /compatibility_date["']?\s*[:=]\s*["'](\d{4}-\d{2}-\d{2})["']/g,
     )) {
       if (date > compatibilityDate) {
-        late.push(`${relative(process.cwd(), file)} (${date})`);
+        // Forward slashes on every OS, so the message reads the same.
+        late.push(
+          `${relative(process.cwd(), file).split(sep).join("/")} (${date})`,
+        );
       }
     }
   }
