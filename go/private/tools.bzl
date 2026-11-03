@@ -14,7 +14,7 @@ binary for the target platform. A consumer replaces one with `override_repo`:
 """
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@tbhb_rules//pins:hub.bzl", "EXPORT", "tool_hub")
+load("@tbhb_rules//pins:hub.bzl", "EXPORT", "PLATFORMS", "tool_hub")
 
 def _tools_impl(module_ctx):
     http_archive(
@@ -99,9 +99,19 @@ def _tools_impl(module_ctx):
         },
     )
 
+    # gomutants has no release for every platform, so rules_go builds it
+    # from the `tool` directive in go.mod, which Renovate's gomod manager
+    # bumps; the hub gives it the same interface as the prebuilt tools.
+    gomutants = str(Label("@com_github_gomutants_gomutants//:gomutants"))
+    tool_hub(
+        name = "tbhb_rules_gomutants",
+        tool = "gomutants",
+        binaries = {platform: gomutants for platform in PLATFORMS},
+    )
+
     return module_ctx.extension_metadata(reproducible = True)
 
 tools = module_extension(
     implementation = _tools_impl,
-    doc = "The prebuilt tools of this module: golangci-lint and go-arch-lint.",
+    doc = "The tools of this module: golangci-lint and go-arch-lint (prebuilt) and gomutants (built from go.mod).",
 )

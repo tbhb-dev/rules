@@ -49,6 +49,7 @@ bzl_library(
         "//private:go_arch_lint",
         "//private:go_mod_tidy",
         "//private:golangci_lint",
+        "//private:gomutants",
     ],
 )
 

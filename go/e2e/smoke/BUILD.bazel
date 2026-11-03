@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@gazelle//:def.bzl", "gazelle")
 load("@tbhb_rules//format:defs.bzl", "format_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
@@ -8,6 +9,7 @@ load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test")
 load("@tbhb_rules_go//tests/golangci:oracle.bzl", "golangci_lint_oracle")
 load("//tools/lint:linters.bzl", "golangci_lint_parity_test", "golangci_lint_test")
+load("//tools/mutation:defs.bzl", "gomutants_test")
 
 # `bazel run //:gazelle` writes the Go rules. The planted_*.go files hold
 # defects for the proofs; their hand-written targets carry `# keep`, and
@@ -36,6 +38,15 @@ CLEAN = [
     "//lib:lib_test",
 ]
 
+# The mutation fixtures: mutation/clean, whose tests kill every mutant,
+# mutation/weak, whose do not, and mutation/nothing, with nothing to
+# mutate. Linted, but outside the module's contracts.
+MUTATION = [
+    "//mutation/clean:clean_test",
+    "//mutation/nothing:nothing_test",
+    "//mutation/weak:weak_test",
+]
+
 # Go files that are planted defects or proof fixtures, not part of the
 # module the clean checks cover.
 NOT_IN_MODULE = [
@@ -46,7 +57,7 @@ NOT_IN_MODULE = [
 
 golangci_lint_test(
     name = "golangci_lint_test",
-    srcs = CLEAN,
+    srcs = CLEAN + MUTATION,
     expect_linted = [":repo_files"],
     expect_linted_exclude = NOT_IN_MODULE,
 )
@@ -225,4 +236,133 @@ expect_failure_test(
     name = "proof_arch_deepscan_fails",
     pattern = "must set allow.deepScan: false",
     test = ":proof_arch_deepscan",
+)
+
+# gomutants. By default the scope is //quality:changes: full.
+
+# Every mutant of mutation/clean is killed by its tests, in a full run.
+gomutants_test(
+    name = "gomutants_test",
+    require_scope = "full",
+    tests = ["//mutation/clean:clean_test"],
+)
+
+# A diff that reaches no function of the packages mutates nothing, and
+# passes.
+gomutants_test(
+    name = "gomutants_nothing_changed_test",
+    changes = "mutation/changes/none.json",
+    tests = [
+        "//mutation/clean:clean_test",
+        "//mutation/weak:weak_test",
+    ],
+)
+
+# A diff that changes only weak's Neg mutates only Neg, whose mutants its
+# test kills: it passes, although the full run (proof_weak) fails.
+gomutants_test(
+    name = "gomutants_outside_survivor_test",
+    changes = "mutation/changes/weak_neg.json",
+    tests = ["//mutation/weak:weak_test"],
+)
+
+# A unit no change reaches gets the same slice whatever the base and the
+# unrelated files changed, and so does a reached unit whose changed lines
+# are the same; the mutation run reads the slice, not the changes file, so
+# it is the same action, a cache hit.
+CACHE_UNITS = ("clean", "weak")
+
+CACHE_CHANGES = ("weak_neg", "weak_neg_other_base")
+
+[
+    gomutants_test(
+        name = "cache_{}_{}".format(unit, changes),
+        changes = "mutation/changes/{}.json".format(changes),
+        tags = ["manual"],
+        tests = ["//mutation/{0}:{0}_test".format(unit)],
+    )
+    for unit in CACHE_UNITS
+    for changes in CACHE_CHANGES
+]
+
+[
+    filegroup(
+        name = "cache_{}_{}_slice".format(unit, changes),
+        testonly = True,
+        srcs = [":cache_{0}_{1}.mutation_{0}".format(unit, changes)],
+        output_group = "changes",
+    )
+    for unit in CACHE_UNITS
+    for changes in CACHE_CHANGES
+]
+
+[
+    diff_test(
+        name = "cache_{}_slice_test".format(unit),
+        file1 = ":cache_{}_{}_slice".format(
+            unit,
+            CACHE_CHANGES[0],
+        ),
+        file2 = ":cache_{}_{}_slice".format(
+            unit,
+            CACHE_CHANGES[1],
+        ),
+    )
+    for unit in CACHE_UNITS
+]
+
+# gomutants proofs, each failing for the stated reason: the test, the
+# changes file (None for full scope) and the expected failure.
+MUTATION_PROOFS = {
+    # A diff in a package-level line, or in a test, runs the unit in full.
+    "proof_diff_package_clause": ("//mutation/weak:weak_test", "weak_package", "FAIL: 3 lived, 4 not_covered$"),
+    # A diff in Pass: its surviving mutants fail the diff run.
+    "proof_diff_survivor": ("//mutation/weak:weak_test", "weak_pass", "FAIL: 3 lived$"),
+    "proof_diff_test_file": ("//mutation/weak:weak_test", "weak_test", "FAIL: 3 lived, 4 not_covered$"),
+    # A full run that tested nothing fails.
+    "proof_no_mutants": ("//mutation/nothing:nothing_test", None, "FAIL: no mutants were generated$"),
+    # mutation/weak in full: its test misses Pass's boundary and calls no
+    # Double.
+    "proof_weak": ("//mutation/weak:weak_test", None, "FAIL: 3 lived, 4 not_covered$"),
+}
+
+[
+    gomutants_test(
+        name = proof,
+        changes = "mutation/changes/{}.json".format(changes) if changes else None,
+        tags = ["manual"],
+        tests = [test],
+    )
+    for proof, (test, changes, _) in MUTATION_PROOFS.items()
+]
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, (_, _, pattern) in MUTATION_PROOFS.items()
+]
+
+# The surviving mutant is named, in gomutants' vocabulary.
+expect_failure_test(
+    name = "proof_weak_names_survivor_fails",
+    pattern = "^  lived: mutation/weak/weak.go:10:15 CONDITIONALS_BOUNDARY ",
+    test = ":proof_weak",
+)
+
+# A diff-scope run fails a gate that requires full scope (main, nightly).
+gomutants_test(
+    name = "proof_diff_on_main",
+    changes = "mutation/changes/weak_neg.json",
+    require_scope = "full",
+    tags = ["manual"],
+    tests = ["//mutation/weak:weak_test"],
+)
+
+expect_failure_test(
+    name = "proof_diff_on_main_fails",
+    pattern = "diff-scoped report\\(s\\), but a full run is required",
+    test = ":proof_diff_on_main",
 )

@@ -12,6 +12,7 @@ load(
     _golangci_lint_aspect_factory = "golangci_lint_aspect_factory",
     _golangci_lint_test_factory = "golangci_lint_test_factory",
 )
+load("//private:gomutants.bzl", _gomutants_report = "gomutants_report", _gomutants_test = "gomutants_test")
 
 GolangciLintInfo = _GolangciLintInfo
 go_arch_lint_test = _go_arch_lint_test
@@ -19,3 +20,5 @@ go_deadcode_test = _go_deadcode_test
 go_mod_tidy_test = _go_mod_tidy_test
 golangci_lint_aspect_factory = _golangci_lint_aspect_factory
 golangci_lint_test_factory = _golangci_lint_test_factory
+gomutants_report = _gomutants_report
+gomutants_test = _gomutants_test
