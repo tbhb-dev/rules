@@ -25,9 +25,10 @@ wrote none of the staged content. ``check`` validates only the ``LLM``
 trailers, the same for every committer: ``Signed-off-by`` and ``Co-authored-by``
 are not checked (agents don't add them as a norm; the operator may sign off).
 
-``stamp-docs`` merges the same identities into the ``generated`` list of each
-staged document's frontmatter (see docs/schemas/frontmatter.schema.json), from
-the same edit receipts, read but not consumed. It rewrites the staged blob and
+``stamp-docs`` sets the ``generated`` list of each staged document's
+frontmatter (see docs/schemas/frontmatter.schema.json) to the same identities,
+from the same edit receipts, read but not consumed. It replaces the previous
+commit's list, so the list names only the latest generation. It rewrites the staged blob and
 the work-tree file together, so prek's modified-files check passes. Only the
 ``generated`` block changes. Root-level files, AGENTS.md, CLAUDE.md, index.md and
 log.md are skipped, as are fixtures under a ``testdata`` directory, files without
@@ -1687,9 +1688,10 @@ def valid_entry(entry: Mapping[str, str]) -> bool:
     )
 
 
-def contributor_key(
-    entry: Mapping[str, str],
-) -> tuple[str, str, str | None, str | None]:
+type ContributorKey = tuple[str, str, str | None, str | None]
+
+
+def contributor_key(entry: Mapping[str, str]) -> ContributorKey:
     """Who a contributor is: harness slug (no version), model, session, subagent."""
     return (
         entry["harness"].partition(":")[0],
@@ -1791,49 +1793,31 @@ def generated_key(lines: list[str], close: int) -> int:
     return found
 
 
-class UnsupportedBlockError(ValueError):
-    """The ``generated`` value is not a plain block list."""
+def latest_generation(entries: Iterable[Entry]) -> list[Entry]:
+    """The valid contributors in ``entries``, each once, generated before assisted.
 
-
-def stamp_entry(lines: list[str], key: int, entry: Entry) -> None:
-    """Merge one contributor into the list under ``key``.
-
-    Raises UnsupportedBlockError when the list is not plain block YAML.
+    Repeat sightings of one contributor are merged with ``merge_entry``.
     """
-    body = takewhile(lambda line: line.startswith((" ", "- ")), lines[key + 1 :])
-    stop = key + 1 + sum(1 for _ in body)
-    parsed = parse_entries(lines[key + 1 : stop])
-    if parsed is None:
-        raise UnsupportedBlockError
-    existing = next(
-        (
-            p
-            for p in parsed
-            if valid_entry(p.fields)
-            and contributor_key(p.fields) == contributor_key(entry)
-        ),
-        None,
-    )
-    if existing is None:
-        indent = parsed[0].indent if parsed else DEFAULT_INDENT
-        lines[stop:stop] = render_entry(entry, indent)
-        return
-    merged = merge_entry(existing.fields, entry)
-    if merged != existing.fields:
-        first, last = key + 1 + existing.first, key + 1 + existing.last
-        lines[first:last] = render_entry(merged, existing.indent)
+    merged: dict[ContributorKey, Entry] = {}
+    for entry in entries:
+        if valid_entry(entry):
+            key = contributor_key(entry)
+            merged[key] = merge_entry(merged[key], entry) if key in merged else entry
+    return sorted(merged.values(), key=lambda e: e["role"] != "generated")
 
 
 def stamp_text(text: str, entries: Iterable[Entry]) -> str:
-    """``text`` with the contributors merged into its frontmatter's ``generated`` list.
+    """``text`` with its frontmatter's ``generated`` list set to ``entries``.
 
-    Only the ``generated`` block changes; every other byte is preserved. The text
-    comes back unchanged when it has no (LF) frontmatter or its ``generated`` value
-    is not a plain block list. Entries that are not valid contributors are dropped.
+    The list names only the latest generation: the contributors of this
+    commit replace whatever it held, so it never grows past one commit's
+    worth. Only the ``generated`` block changes; every other byte is
+    preserved. The text comes back unchanged when there is nothing valid to
+    stamp, when it has no (LF) frontmatter, when its ``generated`` value is
+    not a plain block list, or when the list already holds exactly these
+    contributors.
     """
-    wanted = sorted(
-        (e for e in entries if valid_entry(e)), key=lambda e: e["role"] != "generated"
-    )
+    wanted = latest_generation(entries)
     lines = text.split("\n")
     close = frontmatter_end(lines)
     if not wanted or close is None:
@@ -1844,15 +1828,18 @@ def stamp_text(text: str, entries: Iterable[Entry]) -> str:
         lines[key] = "generated:"
     elif rest:
         return text
-    try:
-        for entry in wanted:
-            stamp_entry(lines, key, entry)
-    except UnsupportedBlockError:
+    body = takewhile(lambda line: line.startswith((" ", "- ")), lines[key + 1 :])
+    stop = key + 1 + sum(1 for _ in body)
+    parsed = parse_entries(lines[key + 1 : stop])
+    if parsed is None:
         return text
+    if [p.fields for p in parsed] == wanted:
+        return text
+    indent = parsed[0].indent if parsed else DEFAULT_INDENT
+    lines[key + 1 : stop] = [
+        line for entry in wanted for line in render_entry(entry, indent)
+    ]
     return "\n".join(lines)
-
-
-type ContributorKey = tuple[str, str, str | None, str | None]
 
 
 def contributor_of(ident: Ident | None, role: str, at: str) -> Entry | None:

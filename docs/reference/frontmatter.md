@@ -2,16 +2,20 @@
 description: The frontmatter fields of a Markdown file, their values, and how they map to commit trailers.
 generated:
   - role: generated
-    harness: claude-code
-    model: anthropic:claude-sonnet-5-5
-    at: "2026-11-03T01:05:27Z"
+    harness: claude-code:2.1.316
+    model: anthropic:claude-opus-5-5
+    effort: medium
+    surface: cli
+    session: sha-256-64:debb814921f029ad
+    subagent: sha-256-64:3e4e1178daf8cb39
+    at: "2026-11-03T03:46:19Z"
   - role: generated
     harness: claude-code:2.1.316
     model: anthropic:claude-opus-5-5
     effort: medium
     surface: cli
     session: sha-256-64:debb814921f029ad
-    at: "2026-11-03T03:45:56Z"
+    at: "2026-11-03T05:10:39Z"
 status: stable
 tags: [docs, frontmatter, schema]
 title: Frontmatter reference
@@ -38,7 +42,7 @@ The `type` values are `Readme`, `Agent Instructions`, `Overview`, `Architecture 
 
 ## Contributor entries
 
-The `generated` list has one entry for each agent contribution. The fields mirror the attributes of the `Generated-by` and `Assisted-by` commit trailers (`<Key>: LLM attr=value;...`), so a commit and a doc name an agent the same way. As in a trailer, you omit a field you can't determine and never guess it.
+The `generated` list names the agents behind the latest change to the file. Each commit an agent contributes to replaces the list with that commit's contributors, so it may name more than one agent but doesn't grow from one commit to the next. The fields mirror the attributes of the `Generated-by` and `Assisted-by` commit trailers (`<Key>: LLM attr=value;...`), so a commit and a doc name an agent the same way. As in a trailer, you omit a field you can't determine and never guess it.
 
 | Field | Required | Value |
 | --- | --- | --- |

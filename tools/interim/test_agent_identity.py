@@ -4543,7 +4543,7 @@ def test_stamp_text_keeps_everything_around_the_block() -> None:
     out = ai.stamp_text(text, [other])
     expected = document(
         "generated:",
-        *listing(entry(), other),
+        *listing(other),
         "verified:",
         "  by: human:tony",
         f'  at: "{AT1}"',
@@ -4552,37 +4552,42 @@ def test_stamp_text_keeps_everything_around_the_block() -> None:
     assert out == expected
 
 
-def test_stamp_text_appends_in_the_existing_indent() -> None:
+def test_stamp_text_replaces_in_the_existing_indent() -> None:
     other = entry(model="openai:gpt-5.6-sol", harness="codex")
     text = document("generated:", *listing(entry(), indent=0))
     out = ai.stamp_text(text, [other])
-    assert out == document("generated:", *listing(entry(), other, indent=0))
+    assert out == document("generated:", *listing(other, indent=0))
     wide = document("generated:", *listing(entry(), indent=4))
     assert ai.stamp_text(wide, [other]) == document(
-        "generated:", *listing(entry(), other, indent=4)
+        "generated:", *listing(other, indent=4)
     )
 
 
-def test_stamp_text_merges_in_place() -> None:
+def test_stamp_text_replaces_rather_than_merges() -> None:
     before = document("generated:", *listing(entry(role="assisted", effort="low")))
-    out = ai.stamp_text(before, [entry(at=AT2, effort="high", surface="cli")])
-    assert out == document(
-        "generated:", *listing(entry(at=AT2, effort="high", surface="cli"))
-    )
+    out = ai.stamp_text(before, [entry(at=AT2, surface="cli")])
+    assert out == document("generated:", *listing(entry(at=AT2, surface="cli")))
 
 
-def test_stamp_text_merges_the_matching_entry_only() -> None:
+def test_stamp_text_keeps_only_the_latest_generation() -> None:
     first = entry(model="openai:gpt-5.6-sol", harness="codex", effort="low")
     second = entry(effort="low")
     third = entry(model="anthropic:other")
     before = document("generated:", *listing(first, second, third))
-    out = ai.stamp_text(before, [entry(at=AT2, effort="high")])
-    assert out == document(
-        "generated:", *listing(first, entry(at=AT2, effort="high"), third)
-    )
+    latest = [entry(at=AT2, effort="high"), entry(at=AT2, model="anthropic:other")]
+    out = ai.stamp_text(before, latest)
+    assert out == document("generated:", *listing(*latest))
 
 
-def test_stamp_text_leaves_unchanged_entries_byte_for_byte() -> None:
+def test_stamp_text_does_not_grow_across_sessions() -> None:
+    text = document()
+    for n in range(5):
+        session = f"sha-256-64:{n:016x}"
+        text = ai.stamp_text(text, [entry(session=session)])
+    assert front_of(text)["generated"] == [entry(session=f"sha-256-64:{4:016x}")]
+
+
+def test_stamp_text_leaves_the_same_generation_byte_for_byte() -> None:
     odd = [
         "generated:",
         '- role: "generated"',
@@ -4592,8 +4597,7 @@ def test_stamp_text_leaves_unchanged_entries_byte_for_byte() -> None:
     ]
     text = document(*odd)
     assert ai.stamp_text(text, [entry()]) == text
-    assert ai.stamp_text(text, [entry(role="assisted", at=AT2)]) == text
-    assert ai.stamp_text(text, [entry(at="2026-11-02T09:00:00Z")]) == text
+    assert ai.stamp_text(text, [entry(role="assisted", at=AT2)]) != text
 
 
 def test_stamp_text_adds_a_changed_field_in_canonical_form() -> None:
@@ -4638,7 +4642,7 @@ def test_stamp_text_leaves_unsupported_generated_values(lines: list[str]) -> Non
     )
 
 
-def test_stamp_text_failure_discards_earlier_merges() -> None:
+def test_stamp_text_leaves_an_unsupported_list_with_several_entries() -> None:
     text = document("generated:", *listing(entry()), "  # note")
     other = entry(model="openai:gpt-5.6-sol", harness="codex")
     assert ai.stamp_text(text, [entry(at=AT2), other]) == text
@@ -4774,9 +4778,9 @@ def test_stamp_text_preserves_bytes_and_validates(
         assert out.startswith("---\n" + HEAD + tail)
         assert out.endswith("---\n" + body.decode(errors="surrogateescape"))
         assert out.encode(errors="surrogateescape").endswith(b"---\n" + body)
-        keys = {
-            ai.contributor_key(e) for e in (first if out is once else first + second)
-        }
+        # Each stamp replaces the list; an empty one leaves it as it was.
+        latest = first if out is once or not second else second
+        keys = {ai.contributor_key(e) for e in latest}
         front = front_of(out)
         assert len(cast("list[object]", front.get("generated", []))) == len(keys)
     assert ai.stamp_text(twice, second) == twice
@@ -5328,7 +5332,7 @@ def test_stamp_text_finds_generated_as_the_first_key() -> None:
     assert (
         out
         == "---\n"
-        + "\n".join(["generated:", *listing(entry(), other)])
+        + "\n".join(["generated:", *listing(other)])
         + "\ntype: x\n---\n"
     )
 
