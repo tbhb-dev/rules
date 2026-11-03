@@ -4,8 +4,8 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
 
-  // tbhb-dev/renovate-config has no release tag yet, so the presets are
-  // pinned to its main commit. Renovate moves these pins itself.
+  // The presets track tbhb-dev/renovate-config's main branch, pinned by
+  // commit; Renovate bumps the pins (the "renovate-config" group).
   extends: [
     "github>tbhb-dev/renovate-config//default.json5#d37a5c70b41eda7cb0bd1b233839251f6b315068", // main
     "github>tbhb-dev/renovate-config//bazel.json5#d37a5c70b41eda7cb0bd1b233839251f6b315068", // main
