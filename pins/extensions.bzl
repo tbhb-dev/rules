@@ -140,22 +140,22 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_rumdl_macos_arm64",
         build_file_content = _EXPORT.format("rumdl"),
-        sha256 = "bc62f4176dd9257547c939fa152b535b6f393365acd352fcfd94e5e19a792bb4",
-        url = "https://github.com/rvben/rumdl/releases/download/v0.3.0/rumdl-v0.3.0-aarch64-apple-darwin.tar.gz",
+        sha256 = "a1eefb1cd2e0cafa42f0ca98d3f8713d7e73f9eba77fc8ef0ed6836875197935",
+        url = "https://github.com/rvben/rumdl/releases/download/v0.3.2/rumdl-v0.3.2-aarch64-apple-darwin.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_rumdl_linux_x86_64",
         build_file_content = _EXPORT.format("rumdl"),
-        sha256 = "1d23c7f8c10d534e53c76b34a22f7dea7f5e5ebe493adbb7e25a401f88620c87",
-        url = "https://github.com/rvben/rumdl/releases/download/v0.3.0/rumdl-v0.3.0-x86_64-unknown-linux-gnu.tar.gz",
+        sha256 = "f527d1374765d826c1627ceab3d1f46e548268731a495b5b12a3af529b3d79e8",
+        url = "https://github.com/rvben/rumdl/releases/download/v0.3.2/rumdl-v0.3.2-x86_64-unknown-linux-gnu.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_rumdl_linux_arm64",
         build_file_content = _EXPORT.format("rumdl"),
-        sha256 = "b0ea55fdbabcc2b86e7ef594c3fd86cfee620844c2d8cea4a3135b9468d2845c",
-        url = "https://github.com/rvben/rumdl/releases/download/v0.3.0/rumdl-v0.3.0-aarch64-unknown-linux-gnu.tar.gz",
+        sha256 = "bdfca7a602f893fbe5d73d5e38f73b31f45a21d3bcf385b6ea819997d0449ec3",
+        url = "https://github.com/rvben/rumdl/releases/download/v0.3.2/rumdl-v0.3.2-aarch64-unknown-linux-gnu.tar.gz",
     )
 
     http_archive(
@@ -230,46 +230,46 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_tombi_macos_arm64",
         build_file_content = _EXPORT.format("tombi"),
-        sha256 = "e3e29db219a07e2e8534735a61c340f1bb3ec1bee845a4fcd6d72f59e0e9383e",
-        strip_prefix = "tombi-cli-1.9.6-aarch64-apple-darwin",
-        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.6/tombi-cli-1.9.6-aarch64-apple-darwin.tar.gz",
+        sha256 = "bfda372442e224febf416a18cdc8099b1188cc1bc70260d1daa4d7ddafc45fa1",
+        strip_prefix = "tombi-cli-1.9.7-aarch64-apple-darwin",
+        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.7/tombi-cli-1.9.7-aarch64-apple-darwin.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_tombi_linux_x86_64",
         build_file_content = _EXPORT.format("tombi"),
-        sha256 = "a845f9275c83ee8ce408cc16fee11a7dbe5009214a4b92f2bbac5c0aa3afafe3",
-        strip_prefix = "tombi-cli-1.9.6-x86_64-unknown-linux-musl",
-        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.6/tombi-cli-1.9.6-x86_64-unknown-linux-musl.tar.gz",
+        sha256 = "4bab30c956cc2defa5966f78e199c4c0a57e9795964142fdd6c007596519787e",
+        strip_prefix = "tombi-cli-1.9.7-x86_64-unknown-linux-musl",
+        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.7/tombi-cli-1.9.7-x86_64-unknown-linux-musl.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_tombi_linux_arm64",
         build_file_content = _EXPORT.format("tombi"),
-        sha256 = "e29f2af283d9c090c7da16468406ffa5b7183d06cefeae19da40ac6d70ffc42c",
-        strip_prefix = "tombi-cli-1.9.6-aarch64-unknown-linux-musl",
-        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.6/tombi-cli-1.9.6-aarch64-unknown-linux-musl.tar.gz",
+        sha256 = "45c14f2aadc1f8122735dd55961b383ea554979d0ba0f3ee3f3c44cd3a5aaeae",
+        strip_prefix = "tombi-cli-1.9.7-aarch64-unknown-linux-musl",
+        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.7/tombi-cli-1.9.7-aarch64-unknown-linux-musl.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_vale_macos_arm64",
         build_file_content = _EXPORT.format("vale"),
-        sha256 = "87b513f26499f6657c15cf7175ba5b058a7c1ff2bb2d4e07265db2dd43451e44",
-        url = "https://github.com/vale-cli/vale/releases/download/v3.24.0/vale_3.24.0_macOS_arm64.tar.gz",
+        sha256 = "fbcaa68d9b9e229b9c8dc918f209e93572ce943039700b7e04a423ff12f684cd",
+        url = "https://github.com/vale-cli/vale/releases/download/v3.25.1/vale_3.25.1_macOS_arm64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_vale_linux_x86_64",
         build_file_content = _EXPORT.format("vale"),
-        sha256 = "867534ddb678abca7f214bc4706ead0922bd5252ffe8035fc227013f66c8b214",
-        url = "https://github.com/vale-cli/vale/releases/download/v3.24.0/vale_3.24.0_Linux_64-bit.tar.gz",
+        sha256 = "4bf5c5176b682b1da0830f471584d3494f1c2e27ee3029e1ad6f6661d4962182",
+        url = "https://github.com/vale-cli/vale/releases/download/v3.25.1/vale_3.25.1_Linux_64-bit.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_vale_linux_arm64",
         build_file_content = _EXPORT.format("vale"),
-        sha256 = "104cbd349279e50c4cb40adb70adf345d93cc4a3a0191f9e68bdccb97086b582",
-        url = "https://github.com/vale-cli/vale/releases/download/v3.24.0/vale_3.24.0_Linux_arm64.tar.gz",
+        sha256 = "2a69755b68118c612c455fc0c5ea1b9438519aa1c852e3fb303b3ad97141bbb0",
+        url = "https://github.com/vale-cli/vale/releases/download/v3.25.1/vale_3.25.1_Linux_arm64.tar.gz",
     )
 
     http_archive(
@@ -332,8 +332,8 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_rumdl_windows_x86_64",
         build_file_content = _EXPORT.format("rumdl.exe"),
-        sha256 = "72ed0bd3912560758cfc66cb439a2804755a858573e605cd3d1e65e8aa79d2a1",
-        url = "https://github.com/rvben/rumdl/releases/download/v0.3.0/rumdl-v0.3.0-x86_64-pc-windows-msvc.zip",
+        sha256 = "87a632668c55969a7d916f214a28a7d365f6a68ec626b547bd1243e035b9c7ff",
+        url = "https://github.com/rvben/rumdl/releases/download/v0.3.2/rumdl-v0.3.2-x86_64-pc-windows-msvc.zip",
     )
 
     http_archive(
@@ -353,15 +353,15 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_tombi_windows_x86_64",
         build_file_content = _EXPORT.format("tombi.exe"),
-        sha256 = "6080696714182be2e35bd89e3bbe4f301f92fb2cb888088fd282c341a4f1e5c1",
-        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.6/tombi-cli-1.9.6-x86_64-pc-windows-msvc.zip",
+        sha256 = "6cd38ddb14c3cecde86becbad22a3e8e4e73aa53c98197e78e68f742096e3585",
+        url = "https://github.com/tombi-toml/tombi/releases/download/v1.9.7/tombi-cli-1.9.7-x86_64-pc-windows-msvc.zip",
     )
 
     http_archive(
         name = "tbhb_rules_vale_windows_x86_64",
         build_file_content = _EXPORT.format("vale.exe"),
-        sha256 = "3a8884774973b6f2826877e1c6388a5feae4704ef88a9a9c912c77ce186990f3",
-        url = "https://github.com/vale-cli/vale/releases/download/v3.24.0/vale_3.24.0_Windows_64-bit.zip",
+        sha256 = "5f4b5cefee5d0f7ee0621d7cc035886515888fd732c4e8add36d3c922f2adc68",
+        url = "https://github.com/vale-cli/vale/releases/download/v3.25.1/vale_3.25.1_Windows_64-bit.zip",
     )
 
     http_archive(
