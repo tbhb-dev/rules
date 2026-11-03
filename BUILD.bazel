@@ -17,7 +17,7 @@ load(
     "tree_check_test",
     "zizmor_test",
 )
-load("//repo:defs.bzl", "repo_files")
+load("//repo:defs.bzl", "repo_files", "repo_layout_test")
 
 exports_files(["multitool.lock.json"])
 
@@ -204,10 +204,13 @@ FORMATTERS = [
 ]
 
 # Test fixtures hold deliberately malformed files, which no formatter may
-# fix, and pnpm writes its own lockfiles.
+# fix, and pnpm writes its own lockfiles. The nested modules are workspaces
+# of their own, which format themselves with these same formatters.
 FORMAT_EXCLUDE = [
     "*/testdata/*",
+    "go/*",
     "pnpm-lock.yaml",
+    "python/*",
 ]
 
 format(
@@ -221,4 +224,29 @@ format_test(
     srcs = [":repo_files"],
     exclude = FORMAT_EXCLUDE,
     formatters = FORMATTERS,
+)
+
+# A new top-level directory is a deliberate change. e2e/, go/ and python/
+# are .bazelignored workspaces outside :repo_files, so they are listed but
+# not seen here.
+repo_layout_test(
+    name = "repo_layout_test",
+    srcs = [":repo_files"],
+    top_level_dirs = [
+        ".agents",
+        ".claude",
+        ".codex",
+        ".github",
+        "LICENSES",
+        "docs",
+        "e2e",
+        "format",
+        "go",
+        "lint",
+        "python",
+        "quality",
+        "repo",
+        "testing",
+        "tools",
+    ],
 )

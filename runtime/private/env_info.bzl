@@ -1,13 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""PyEnvInfo and the rules the generated `tbhb_python` repository calls.
+"""PyEnvInfo and the rules a generated environment repository calls."""
 
-Loadable from anywhere because the repository the `python` extension
-generates loads it; it is still internal, and consumers load //:defs.bzl.
-"""
-
-visibility("public")
+# Internal: load //runtime:defs.bzl.
+visibility("//runtime/...")
 
 PyEnvInfo = provider(
     doc = "A locked Python environment built by the `python` module extension.",
@@ -50,7 +47,7 @@ def _python_env_impl(ctx):
 
 python_env = rule(
     implementation = _python_env_impl,
-    doc = "Wraps the files of the `tbhb_python` repository in a PyEnvInfo.",
+    doc = "Wraps the files of a python_env_repo in a PyEnvInfo.",
     attrs = {
         "bin": attr.label_list(allow_files = True),
         "bin_dir": attr.string(mandatory = True),

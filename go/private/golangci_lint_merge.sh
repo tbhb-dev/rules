@@ -21,16 +21,23 @@ manifest=$1
 tested=$(mktemp)
 trap 'rm -f "$tested"' EXIT
 
+# variant REPORT: the first line of the report's covers file.
+variant() {
+  local line
+  IFS= read -r line <"${1%.txt}.covers"
+  echo "$line"
+}
+
 while IFS= read -r report; do
-  covers="${report%.txt}.covers"
-  if [[ $(head -n 1 "$covers") == variant=test ]]; then
-    tail -n +2 "$covers" >>"$tested"
+  kind=$(variant "$report")
+  if [[ $kind == variant=test ]]; then
+    tail -n +2 "${report%.txt}.covers" >>"$tested"
   fi
 done <"$manifest"
 
 while IFS= read -r report; do
-  covers="${report%.txt}.covers"
-  if [[ $(head -n 1 "$covers") == variant=test ]]; then
+  kind=$(variant "$report")
+  if [[ $kind == variant=test ]]; then
     cat "$report"
   else
     # A finding is `path:line:col: text`; keep it unless a test variant

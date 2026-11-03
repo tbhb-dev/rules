@@ -18,14 +18,14 @@ a script that needs anything else fails the type check on the import.
 """
 
 load("@tbhb_rules//lint:defs.bzl", "tree_check_test")
-load(":env.bzl", "python_tool")
+load(":tool.bzl", "DEFAULT_ENV", "TOOLS_ENV", "python_tool")
 
 # Internal: consumers load //:defs.bzl.
 visibility("//...")
 
-_ENV = Label("@tbhb_python//:env")
+_ENV = DEFAULT_ENV
 
-def _check(name, srcs, tool, tool_args, select = True, exclude = [], chdir = "", python_env = _ENV, main = None, **kwargs):
+def _check(name, srcs, tool, tool_args, select = True, exclude = [], chdir = "", python_env = _ENV, main = None, tool_attrs = {}, **kwargs):
     python_tool(
         name = name + ".tool",
         tool = tool,
@@ -34,6 +34,7 @@ def _check(name, srcs, tool, tool_args, select = True, exclude = [], chdir = "",
         exclude = exclude,
         chdir = chdir,
         python_env = python_env,
+        **tool_attrs
         tags = ["manual"],
         visibility = ["//visibility:private"],
         testonly = True,
@@ -233,5 +234,46 @@ def pip_audit(name, args = [], python_env = _ENV, **kwargs):
         main = Label(":pip_audit.py"),
         python_env = python_env,
         args = args,
+        **kwargs
+    )
+
+def import_linter_test(name, srcs, config = None, chdir = "", python_env = _ENV, **kwargs):
+    """Checks the import contracts of the tree with import-linter.
+
+    import-linter comes from this module's own pins, not the consumer's
+    lock: it parses the sources and imports nothing. The contracts are the
+    consumer's, in `[tool.importlinter]` of the pyproject.toml where it runs
+    or in `.importlinter`; `config` names another file. The root packages
+    resolve against the tree root (so a namespace package such as `tools`
+    works) and the workspace members' source roots from `python_env`, src
+    and flat layouts alike. The test fails when no contract is defined or
+    no module was analysed, as well as on a broken contract.
+
+    Only importable modules are analysed: extensionless scripts (PEP 723
+    scripts among them) are not modules, so their imports are not checked;
+    keep their logic in a module and the script a thin entry point.
+
+    Args:
+        name: Target name.
+        srcs: Files to copy, usually a `repo_files` target.
+        config: A contracts file, relative to where it runs.
+        chdir: Directory, relative to the tree root, to run from.
+        python_env: The environment whose workspace members' source roots
+            are importable.
+        **kwargs: Passed to `tree_check_test`.
+    """
+    _check(
+        name,
+        srcs,
+        "python",
+        ["--config", config] if config else [],
+        select = False,
+        chdir = chdir,
+        main = Label(":import_linter.py"),
+        python_env = TOOLS_ENV,
+        tool_attrs = {
+            "extra_source_roots": ["."],
+            "source_roots_from": python_env,
+        },
         **kwargs
     )

@@ -7,41 +7,24 @@ load("@tbhb_rules//repo:defs.bzl", "repo_files")
 repo_files()
 
 exports_files([
-    "launch.py",
-    "launch.sh.tpl",
-    "lock_info.py",
+    "import_linter.py",
     "mutmut.sh.tpl",
     "mutmut_report.py",
     "pip_audit.py",
 ])
 
 bzl_library(
-    name = "versions",
-    srcs = ["versions.bzl"],
+    name = "extension",
+    srcs = ["extension.bzl"],
     visibility = ["//:__subpackages__"],
+    deps = ["@tbhb_rules//runtime:defs"],
 )
 
 bzl_library(
-    name = "repo",
-    srcs = ["repo.bzl"],
+    name = "tool",
+    srcs = ["tool.bzl"],
     visibility = ["//:__subpackages__"],
-    deps = [":versions"],
-)
-
-bzl_library(
-    name = "env_info",
-    srcs = ["env_info.bzl"],
-    visibility = ["//visibility:public"],
-)
-
-bzl_library(
-    name = "env",
-    srcs = ["env.bzl"],
-    visibility = ["//:__subpackages__"],
-    deps = [
-        ":env_info",
-        "@bazel_skylib//lib:shell",
-    ],
+    deps = ["@tbhb_rules//runtime:defs"],
 )
 
 bzl_library(
@@ -49,7 +32,7 @@ bzl_library(
     srcs = ["checks.bzl"],
     visibility = ["//:__subpackages__"],
     deps = [
-        ":env",
+        ":tool",
         "@tbhb_rules//lint:defs",
     ],
 )
@@ -59,7 +42,7 @@ bzl_library(
     srcs = ["mutmut.bzl"],
     visibility = ["//:__subpackages__"],
     deps = [
-        ":env",
+        ":tool",
         "@tbhb_rules//quality:defs",
     ],
 )

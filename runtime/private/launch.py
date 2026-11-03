@@ -101,7 +101,8 @@ def parse(argv: list[str]) -> tuple[Options, list[str]]:
 
 def execute(argv: list[str]) -> NoReturn:
     """Replace this process with argv."""
-    os.execv(argv[0], argv)  # noqa: S606
+    # The launcher exists to become the tool, so it execs without a shell.
+    os.execv(argv[0], argv)  # noqa: S606 # nosec B606
 
 
 def run(tool: str, args: list[str]) -> int:

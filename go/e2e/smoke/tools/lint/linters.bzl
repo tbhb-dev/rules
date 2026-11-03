@@ -7,7 +7,7 @@ load("@tbhb_rules_go//:defs.bzl", "golangci_lint_aspect_factory", "golangci_lint
 load("@tbhb_rules_go//tests/golangci:oracle.bzl", "golangci_lint_parity_test_factory")
 
 golangci_lint = golangci_lint_aspect_factory(
-    config = Label("//:.golangci.yml"),
+    config = "//:.golangci.yml",
     go_mod = Label("//:go.mod"),
 )
 

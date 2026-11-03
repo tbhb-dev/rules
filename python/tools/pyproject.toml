@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# Tools that tbhb_rules_python pins itself, rather than taking them from the
+# consumer's uv.lock: they analyse the consumer's sources without importing
+# its dependencies. The `python` extension builds @tbhb_python_tools from
+# this project and its uv.lock, which Renovate's uv manager keeps current.
+[project]
+name = "tbhb-rules-python-tools"
+version = "0"
+description = "Pinned tools of tbhb_rules_python"
+requires-python = ">=3.15"
+dependencies = ["import-linter==2.15"]
+
+[tool.uv]
+package = false

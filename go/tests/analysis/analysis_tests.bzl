@@ -7,8 +7,10 @@ rules' validation."""
 load("@rules_go//go:def.bzl", "go_binary")
 load("@rules_testing//lib:analysis_test.bzl", "analysis_test", "test_suite")
 load("@rules_testing//lib:truth.bzl", "matching")
+load("@rules_testing//lib:unit_test.bzl", "unit_test")
 load("@rules_testing//lib:util.bzl", "util")
 load("//:defs.bzl", "GolangciLintInfo", "go_deadcode_test", "go_mod_tidy_test", "golangci_lint_aspect_factory")
+load("//private:golangci_lint.bzl", "main_repo_label")
 load("//tests/golangci:linters.bzl", "fixture_lint")
 
 FIXTURE = "//tests/golangci/fixture"
@@ -122,6 +124,16 @@ def _test_tidy_proxy_not_a_proxy(name):
         expect_failure = True,
     )
 
+def _test_main_repo_label(name):
+    unit_test(name = name, impl = _test_main_repo_label_impl)
+
+def _test_main_repo_label_impl(env):
+    # A //-string is the main repository's, whichever .bzl resolves it.
+    env.expect.that_str(str(main_repo_label("//:.golangci.yml"))).equals("@@//:.golangci.yml")
+    env.expect.that_str(str(main_repo_label("//pkg:go.mod"))).equals("@@//pkg:go.mod")
+    label = Label("//tests/golangci/fixture:go.mod")
+    env.expect.that_bool(main_repo_label(label) == label).equals(True)
+
 def analysis_test_suite(name):
     test_suite(
         name = name,
@@ -130,6 +142,7 @@ def analysis_test_suite(name):
             _test_deadcode_without_go_targets,
             _test_follows_deps_and_embed,
             _test_library,
+            _test_main_repo_label,
             _test_rule_kinds,
             _test_tidy_proxy_not_a_proxy,
             _test_tidy_source_outside_module,

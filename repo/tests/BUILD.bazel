@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+load(":repo_layout_tests.bzl", "ops_layout_test", "repo_layout_test_suite")
+
+repo_files()
+
+repo_layout_test_suite(name = "repo_layout_tests")
+
+ops_layout_test(
+    name = "good_test",
+    fixture = "good",
+)
+
+# Each fixture breaks one rule; each proof names the problem it must report.
+PROOFS = {
+    "extension": "^tools/check\\.py: tools/ scripts carry no file extension$",
+    "metadata": "^tools/check-other: must declare inline script metadata",
+    "shebang": "^tools/check-other: must start with '#!/usr/bin/env -S uv run --script'$",
+    "subdir": "^tools/extra/thing\\.py: tools/ holds no subdirectory extra/$",
+    "unknown_top": "^scratch/: top-level directory is not in the layout$",
+}
+
+[
+    ops_layout_test(
+        name = proof,
+        fixture = proof,
+        tags = ["manual"],
+    )
+    for proof in PROOFS
+]
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOFS.items()
+]
+
+ops_layout_test(
+    name = "no_files",
+    fixture = "",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "no_files_fails",
+    pattern = "repo_layout: FAIL: no files to check",
+    test = ":no_files",
+)

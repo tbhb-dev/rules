@@ -1,23 +1,22 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""The `python` module extension and the `tbhb_python` environment repository.
+"""`python_env_repo`: a Python environment built from a committed uv.lock.
 
-The environment is what `uv sync` gives a developer, built from the root
-module's committed lockfile: the interpreter uv installs for the project's
+The environment is what `uv sync` gives a developer: the interpreter uv installs for the project's
 Python version, and every locked package of every workspace member and
 dependency group, installed without the members themselves (the checks put
 their source trees on the path instead). uv verifies each download against
 the hashes in uv.lock and in its own interpreter metadata.
 """
 
-load(":versions.bzl", "UV_ASSETS", "UV_VERSION")
+load(":versions.bzl", "UV_ASSETS", "UV_PLATFORMS")
 
-# Internal: consumers use //:extensions.bzl.
-visibility("//...")
+# Internal: load //runtime:defs.bzl.
+visibility("//runtime/...")
 
 _UNCONFIGURED_BUILD = """\
-load("@tbhb_rules_python//private:env_info.bzl", "python_env_unconfigured")
+load("@tbhb_rules//runtime:defs.bzl", "python_env_unconfigured")
 
 python_env_unconfigured(
     name = "env",
@@ -26,7 +25,7 @@ python_env_unconfigured(
 """
 
 _BUILD = """\
-load("@tbhb_rules_python//private:env_info.bzl", "python_env")
+load("@tbhb_rules//runtime:defs.bzl", "python_env")
 
 exports_files(["uv"])
 
@@ -64,11 +63,12 @@ for top in sys.argv[1:]:
 
 def _uv(rctx):
     key = (rctx.os.name, rctx.os.arch)
-    if key not in UV_ASSETS:
-        fail("tbhb_rules_python has no pinned uv for {} {}".format(*key))
-    asset, sha256 = UV_ASSETS[key]
+    if key not in UV_PLATFORMS:
+        fail("tbhb_rules has no pinned uv for {} {}".format(*key))
+    asset = UV_PLATFORMS[key]
+    version, sha256 = UV_ASSETS[asset]
     rctx.download_and_extract(
-        url = "https://github.com/astral-sh/uv/releases/download/{}/{}.tar.gz".format(UV_VERSION, asset),
+        url = "https://github.com/astral-sh/uv/releases/download/{}/{}.tar.gz".format(version, asset),
         sha256 = sha256,
         output = "uv-dist",
         strip_prefix = asset,
@@ -79,7 +79,7 @@ def _uv(rctx):
 def _run(rctx, args, env, what, working_directory = ""):
     result = rctx.execute(args, environment = env, working_directory = working_directory, quiet = True)
     if result.return_code != 0:
-        fail("tbhb_python: {} failed ({}):\n{}{}".format(what, result.return_code, result.stdout, result.stderr))
+        fail("{}: {} failed ({}):\n{}{}".format(rctx.name, what, result.return_code, result.stdout, result.stderr))
     return result.stdout
 
 def _python_env_repo_impl(rctx):
@@ -99,7 +99,7 @@ def _python_env_repo_impl(rctx):
     if not version and version_file.exists:
         version = rctx.read(version_file, watch = "yes").strip().splitlines()[0].strip()
     if not version:
-        fail("tbhb_python: set python_version or commit a .python-version next to {}".format(rctx.attr.pyproject))
+        fail("{}: set python_version or commit a .python-version next to {}".format(rctx.name, rctx.attr.pyproject))
 
     env = {
         "HOME": str(rctx.path("home")),
@@ -166,7 +166,7 @@ def _python_env_repo_impl(rctx):
     install = str(interpreter.dirname.dirname.basename)
     lib = [p.basename for p in rctx.path("venv/lib").readdir() if p.basename.startswith("python")]
     if len(lib) != 1:
-        fail("tbhb_python: expected one python* directory under venv/lib, found {}".format(lib))
+        fail("{}: expected one python* directory under venv/lib, found {}".format(rctx.name, lib))
     rctx.file("BUILD.bazel", _BUILD.format(
         install = install,
         interpreter = repr("python/{}/bin/{}".format(install, interpreter.basename)),
@@ -178,48 +178,9 @@ python_env_repo = repository_rule(
     implementation = _python_env_repo_impl,
     doc = "The Python environment of a uv project or workspace. See the module docstring.",
     attrs = {
-        "lock": attr.label(doc = "The project's uv.lock. Unset makes an environment that fails when used."),
+        "lock": attr.label(doc = "The project's uv.lock. Unset makes an environment that fails analysis when used."),
         "pyproject": attr.label(doc = "The root pyproject.toml of the project or workspace."),
         "python_version": attr.string(doc = "The interpreter version; defaults to the first line of .python-version next to pyproject."),
-        "_lock_info": attr.label(default = ":lock_info.py", allow_single_file = True),
+        "_lock_info": attr.label(default = Label(":lock_info.py"), allow_single_file = True),
     },
-)
-
-_project = tag_class(
-    doc = "The root module's uv project or workspace.",
-    attrs = {
-        "lock": attr.label(doc = "The committed uv.lock; defaults to the root module's //:uv.lock."),
-        "pyproject": attr.label(doc = "The root pyproject.toml; defaults to the root module's //:pyproject.toml."),
-        "python_version": attr.string(doc = "Overrides .python-version."),
-    },
-)
-
-def _python_impl(mctx):
-    projects = []
-    for mod in mctx.modules:
-        if mod.tags.project and not mod.is_root:
-            fail("python.project: only the root module may declare the project, not {}".format(mod.name))
-        projects.extend(mod.tags.project)
-    if len(projects) > 1:
-        fail("python.project: declare one project; a uv workspace is one project")
-    if projects:
-        project = projects[0]
-        python_env_repo(
-            name = "tbhb_python",
-            lock = project.lock or Label("@@//:uv.lock"),
-            pyproject = project.pyproject or Label("@@//:pyproject.toml"),
-            python_version = project.python_version,
-        )
-    else:
-        python_env_repo(name = "tbhb_python")
-
-    # The environment is a function of the committed lock and pyproject
-    # files (uv verifies every download against their hashes), so nothing
-    # about it needs recording in MODULE.bazel.lock.
-    return mctx.extension_metadata(reproducible = True)
-
-python = module_extension(
-    implementation = _python_impl,
-    doc = "Declares the root module's uv project, from which `@tbhb_python//:env` is built.",
-    tag_classes = {"project": _project},
 )

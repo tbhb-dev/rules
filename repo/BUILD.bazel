@@ -10,5 +10,8 @@ bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],
     visibility = ["//visibility:public"],
-    deps = ["//repo/private:repo_files_bzl"],
+    deps = [
+        "//repo/private:repo_files_bzl",
+        "//repo/private:repo_layout",
+    ],
 )

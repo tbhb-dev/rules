@@ -12,7 +12,8 @@ report=@@REPORT@@
 
 if [[ -s $report ]]; then
   cat "$report"
-  echo "FAIL: $(grep -c "" "$report") findings" >&2
+  findings=$(grep -c "" "$report")
+  echo "FAIL: $findings findings" >&2
   exit 1
 fi
 echo "ok: no findings"

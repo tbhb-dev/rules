@@ -3,6 +3,6 @@
 
 """Module extensions of tbhb_rules_python."""
 
-load("//private:repo.bzl", _python = "python")
+load("//private:extension.bzl", _python = "python")
 
 python = _python

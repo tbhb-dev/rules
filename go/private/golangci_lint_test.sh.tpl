@@ -21,7 +21,8 @@ findings="$TEST_TMPDIR/findings.txt"
 "$merge" "$manifest" >"$findings"
 if [[ -s $findings ]]; then
   cat "$findings"
-  echo "golangci_lint_test: FAIL: golangci-lint reported $(grep -c "" "$findings") issues in $count linted targets" >&2
+  issues=$(grep -c "" "$findings")
+  echo "golangci_lint_test: FAIL: golangci-lint reported $issues issues in $count linted targets" >&2
   exit 1
 fi
 echo "golangci_lint_test: ok: $count linted targets, no issues"

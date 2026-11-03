@@ -6,8 +6,17 @@ load("//repo:defs.bzl", "repo_files")
 
 repo_files()
 
+exports_files(["repo_layout.sh.tpl"])
+
 bzl_library(
     name = "repo_files_bzl",
     srcs = ["repo_files.bzl"],
     visibility = ["//repo:__subpackages__"],
+)
+
+bzl_library(
+    name = "repo_layout",
+    srcs = ["repo_layout.bzl"],
+    visibility = ["//repo:__subpackages__"],
+    deps = ["@bazel_skylib//lib:shell"],
 )

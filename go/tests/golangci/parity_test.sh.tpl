@@ -18,7 +18,8 @@ oracle_findings=$TEST_TMPDIR/oracle.txt
 "$merge" "$manifest" | sed "s|^$strip||" | LC_ALL=C sort -u >"$aspect_findings"
 LC_ALL=C sort -u "$oracle" >"$oracle_findings"
 
-echo "--- oracle findings ($(grep -c "" "$oracle_findings")) ---"
+count=$(grep -c "" "$oracle_findings" || true)
+echo "--- oracle findings ($count) ---"
 cat "$oracle_findings"
 
 if [[ ! -s $oracle_findings ]]; then
@@ -34,4 +35,4 @@ if ! diff -u "$oracle_findings" "$aspect_findings"; then
   echo "golangci_lint_parity_test: FAIL: the aspect's findings (+) differ from the oracle's (-)" >&2
   exit 1
 fi
-echo "golangci_lint_parity_test: ok: the aspect reports the oracle's $(grep -c "" "$oracle_findings") findings"
+echo "golangci_lint_parity_test: ok: the aspect reports the oracle's $count findings"

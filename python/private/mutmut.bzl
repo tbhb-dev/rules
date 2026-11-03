@@ -4,7 +4,7 @@
 """Mutation testing with mutmut: a cached report action and its gate."""
 
 load("@tbhb_rules//quality:defs.bzl", "MutationReportInfo", "mutation_gate_test")
-load(":env.bzl", "python_tool")
+load(":tool.bzl", "DEFAULT_ENV", "python_tool")
 
 # Internal: consumers load //:defs.bzl.
 visibility("//...")
@@ -79,7 +79,7 @@ in `<name>.report` (MutationReportInfo) and mutmut's output in
     },
 )
 
-def mutmut_test(name, srcs, chdir = "", python_env = Label("@tbhb_python//:env"), cpus = 0, **kwargs):
+def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, **kwargs):
     """Mutation-tests the tree with mutmut and fails unless every mutant was killed.
 
     Creates `<name>.report` (the cached mutmut run) and `<name>`, a

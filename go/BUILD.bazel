@@ -3,6 +3,7 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@tbhb_rules//format:defs.bzl", "formatter")
+load("@tbhb_rules//lint:defs.bzl", "tree_check_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 
 exports_files([
@@ -50,4 +51,40 @@ formatter(
     fix_args = ["fmt"],
     tool = "//private:golangci_fmt_tool",
     visibility = ["//visibility:public"],
+)
+
+# Shell scripts and templates, held to the parent module's bar.
+SHELL_SCRIPTS = [
+    "private/deadcode.sh",
+    "private/go_mod_tidy.sh.tpl",
+    "private/golangci_fmt.sh.tpl",
+    "private/golangci_lint.sh",
+    "private/golangci_lint_merge.sh",
+    "private/golangci_lint_test.sh.tpl",
+    "private/report_test.sh.tpl",
+    "tests/golangci/oracle.sh",
+    "tests/golangci/parity_test.sh.tpl",
+]
+
+tree_check_test(
+    name = "shellcheck_test",
+    srcs = [":repo_files"],
+    tool = "@multitool//tools/shellcheck",
+    tool_args = [
+        "-o",
+        "check-extra-masked-returns",
+    ] + SHELL_SCRIPTS,
+)
+
+# shfmt reads its style from the parent module's .editorconfig, which the
+# copy of this module lacks, so the flags spell it out: 2-space indent.
+tree_check_test(
+    name = "shfmt_test",
+    srcs = [":repo_files"],
+    tool = "@multitool//tools/shfmt",
+    tool_args = [
+        "-i",
+        "2",
+        "-d",
+    ] + SHELL_SCRIPTS,
 )

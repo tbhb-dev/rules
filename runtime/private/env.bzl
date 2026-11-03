@@ -6,8 +6,8 @@
 load("@bazel_skylib//lib:shell.bzl", "shell")
 load(":env_info.bzl", "PyEnvInfo")
 
-# Internal: consumers load //:defs.bzl.
-visibility("//...")
+# Internal: load //runtime:defs.bzl.
+visibility("//runtime/...")
 
 def _python_tool_impl(ctx):
     env = ctx.attr.python_env[PyEnvInfo]
@@ -20,6 +20,11 @@ def _python_tool_impl(ctx):
         options += ["--exclude", pattern]
     if ctx.attr.chdir:
         options += ["--chdir", ctx.attr.chdir]
+
+    source_roots = list(env.source_roots)
+    if ctx.attr.source_roots_from:
+        source_roots.extend(ctx.attr.source_roots_from[PyEnvInfo].source_roots)
+    source_roots.extend(ctx.attr.extra_source_roots)
 
     script = ctx.actions.declare_file(ctx.label.name)
     boot = ctx.file._sitecustomize.short_path.rpartition("/")[0]
@@ -34,7 +39,7 @@ def _python_tool_impl(ctx):
             "@@OPTIONS@@": " ".join([shell.quote(o) for o in options]),
             "@@SELF@@": shell.quote(script.short_path),
             "@@SITE_PACKAGES@@": env.site_packages,
-            "@@SOURCE_ROOTS@@": " ".join([shell.quote(r) for r in env.source_roots]),
+            "@@SOURCE_ROOTS@@": " ".join([shell.quote(r) for r in source_roots]),
             "@@TOOL@@": (
                 'python "$base"/' + shell.quote(ctx.file.main.short_path) if ctx.file.main else shell.quote(ctx.attr.tool)
             ),
@@ -61,16 +66,21 @@ source roots (relative to the current directory) importable.""",
         "allow_empty": attr.bool(doc = "With `select`, finding no Python file is not an error."),
         "chdir": attr.string(doc = "Directory, relative to the current one, to run the tool from."),
         "exclude": attr.string_list(doc = "fnmatch patterns of relative paths `select` skips."),
+        "extra_source_roots": attr.string_list(doc = "More directories, relative to the current one, to put on the path."),
         "main": attr.label(allow_single_file = [".py"], doc = "A Python file to run with the interpreter instead of `tool`."),
         "python_env": attr.label(
-            default = Label("@tbhb_python//:env"),
+            mandatory = True,
             providers = [PyEnvInfo],
-            doc = "The environment.",
+            doc = "The environment whose interpreter and packages run the tool.",
         ),
         "select": attr.bool(doc = "Append the Python files (by suffix or shebang) under the run directory to the arguments."),
+        "source_roots_from": attr.label(
+            providers = [PyEnvInfo],
+            doc = "Another environment whose workspace members' source roots go on the path too, for a tool of one environment that analyses another's sources.",
+        ),
         "tool": attr.string(default = "python", doc = "The tool to run."),
-        "_launch": attr.label(default = ":launch.py", allow_single_file = True),
-        "_sitecustomize": attr.label(default = "//private/boot:sitecustomize.py", allow_single_file = True),
-        "_template": attr.label(default = ":launch.sh.tpl", allow_single_file = True),
+        "_launch": attr.label(default = Label(":launch.py"), allow_single_file = True),
+        "_sitecustomize": attr.label(default = Label("//runtime/private/boot:sitecustomize.py"), allow_single_file = True),
+        "_template": attr.label(default = Label(":launch.sh.tpl"), allow_single_file = True),
     },
 )

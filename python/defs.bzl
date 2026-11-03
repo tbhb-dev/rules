@@ -7,6 +7,7 @@ load(
     "//private:checks.bzl",
     _bandit_test = "bandit_test",
     _complexipy_test = "complexipy_test",
+    _import_linter_test = "import_linter_test",
     _pip_audit = "pip_audit",
     _pip_audit_test = "pip_audit_test",
     _pylint_test = "pylint_test",
@@ -15,13 +16,14 @@ load(
     _ruff_test = "ruff_test",
     _vulture_test = "vulture_test",
 )
-load("//private:env.bzl", _python_tool = "python_tool")
-load("//private:env_info.bzl", _PyEnvInfo = "PyEnvInfo")
+load("@tbhb_rules//runtime:defs.bzl", _PyEnvInfo = "PyEnvInfo")
 load("//private:mutmut.bzl", _mutmut_report = "mutmut_report", _mutmut_test = "mutmut_test")
+load("//private:tool.bzl", _python_tool = "python_tool")
 
 PyEnvInfo = _PyEnvInfo
 bandit_test = _bandit_test
 complexipy_test = _complexipy_test
+import_linter_test = _import_linter_test
 mutmut_report = _mutmut_report
 mutmut_test = _mutmut_test
 pip_audit = _pip_audit

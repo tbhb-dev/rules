@@ -199,6 +199,27 @@ def _golangci_lint_aspect_impl(target, ctx):
         OutputGroupInfo(golangci_lint = reports),
     ]
 
+def main_repo_label(value):
+    """Resolves a label given to a factory in the main repository.
+
+    A string label in an attribute default resolves in the repository of
+    the .bzl that calls `aspect()`, which is tbhb_rules_go, not the
+    consumer: `"//:.golangci.yml"` would silently name this module's own
+    config. So a `//` string is taken as a main-repository label; any other
+    string must be passed as a `Label`.
+
+    Args:
+        value: A Label, or a string starting with `//`.
+
+    Returns:
+        A Label.
+    """
+    if type(value) != "string":
+        return value
+    if not value.startswith("//"):
+        fail("{} is ambiguous here: pass Label(\"{}\") or a //-label of the main repository".format(repr(value), value))
+    return Label("@@" + value)
+
 def golangci_lint_aspect_factory(
         config,
         go_mod = None,
@@ -221,20 +242,25 @@ def golangci_lint_aspect_factory(
     test made by `golangci_lint_test_factory`.
 
     Args:
-        config: Label of the golangci-lint config. Pass a `Label`, so it
-            resolves in the calling repository.
-        go_mod: Label of the module's go.mod. golangci-lint then runs from
-            its directory, as it would outside Bazel, and takes the Go
-            version from it; without it, the version is the SDK's.
-        tool: The golangci-lint binary.
+        config: Label of the golangci-lint config: a `Label`, or a string
+            `//pkg:file` in the main repository.
+        go_mod: Label of the module's go.mod, like `config`. golangci-lint
+            then runs from its directory, as it would outside Bazel, and
+            takes the Go version from it; without it, the version is the
+            SDK's.
+        tool: The golangci-lint binary, a label like `config`.
         data: Files the config refers to (a depguard list, a custom
-            dictionary).
+            dictionary), labels like `config`.
         args: Extra `golangci-lint run` flags.
         rule_kinds: Rule kinds to lint.
 
     Returns:
         An aspect.
     """
+    config = main_repo_label(config)
+    go_mod = main_repo_label(go_mod) if go_mod else None
+    tool = main_repo_label(tool)
+    data = [main_repo_label(d) for d in data]
 
     # Two aspects can lint the same target (two configs), so each names its
     # outputs by a key derived from its settings.

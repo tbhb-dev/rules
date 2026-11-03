@@ -21,9 +21,10 @@ func Kept(path string) {
 	os.Remove(path) //nolint:errcheck // Planted and suppressed on purpose.
 }
 
-// Show passes a cmp.Option where a string verb expects a string (govet).
+// Show prints a string with %d (govet printf). Seeing that cmp.Diff
+// returns a string takes go-cmp's types.
 func Show() {
-	fmt.Printf("%d\n", cmp.AllowUnexported())
+	fmt.Printf("%d\n", cmp.Diff(1, 2))
 }
 
 // Dead is called by nothing (deadcode).

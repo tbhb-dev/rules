@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The Python tools tbhb_rules' own checks run (reuse_test, okf_docs_test),
+# pinned here rather than taken from a consumer. The `runtime` extension
+# builds @tbhb_rules_python_runtime from this project and its uv.lock, which
+# Renovate's uv manager keeps current.
+[project]
+name = "tbhb-rules-runtime"
+version = "0"
+description = "Pinned Python tools of tbhb_rules"
+requires-python = ">=3.15"
+dependencies = [
+  "jsonschema[format]==4.26.0",
+  "pyyaml==6.0.3",
+  "reuse[charset-normalizer]==6.3.0",
+]
+
+[tool.uv]
+package = false

@@ -5,4 +5,8 @@ load("@tbhb_rules//repo:defs.bzl", "repo_files")
 
 repo_files()
 
-exports_files(["sitecustomize.py"])
+exports_files([
+    ".python-version",
+    "pyproject.toml",
+    "uv.lock",
+])

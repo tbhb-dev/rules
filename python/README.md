@@ -1,3 +1,35 @@
+---
+description: The tbhb_rules_python module, which runs Python checks from a repository's own uv.lock.
+status: draft
+tags: [bazel, python, uv]
+title: tbhb_rules_python
+type: Readme
+generated:
+  - role: generated
+    harness: claude-code:2.1.316
+    model: anthropic:claude-opus-5-5
+    effort: medium
+    surface: cli
+    session: sha-256-64:71c761039ac2c7f9
+    subagent: sha-256-64:758b4e14ce107640
+    at: "2026-11-03T03:55:41Z"
+  - role: generated
+    harness: claude-code:2.1.316
+    model: anthropic:claude-opus-5-5
+    effort: medium
+    surface: cli
+    session: sha-256-64:debb814921f029ad
+    subagent: sha-256-64:3e4e1178daf8cb39
+    at: "2026-11-03T04:06:07Z"
+  - role: assisted
+    harness: claude-code:2.1.316
+    model: anthropic:claude-opus-5-5
+    effort: medium
+    surface: cli
+    session: sha-256-64:debb814921f029ad
+    at: "2026-11-03T04:06:07Z"
+---
+
 # tbhb_rules_python
 
 Python checks for tbhb-dev repositories, driven by the repository's own `uv.lock`. A nested module of tbhb-dev/rules, released on its own. It depends on `tbhb_rules` for `tree_check_test`, the formatter API and the mutation gate.

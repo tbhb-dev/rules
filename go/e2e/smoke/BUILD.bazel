@@ -71,7 +71,7 @@ golangci_lint_test(
 
 expect_failure_test(
     name = "dirty_lint_proof",
-    pattern = "dirty/dirty.go:[0-9]+:[0-9]+: printf: fmt.Printf format %d has arg cmp.AllowUnexported\\\\(\\\\) of wrong type",
+    pattern = "dirty/dirty.go:[0-9]+:[0-9]+: printf: fmt.Printf format %d has arg cmp.Diff\\(1, 2\\) of wrong type string",
     test = ":dirty_lint",
 )
 
