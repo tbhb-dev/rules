@@ -127,6 +127,21 @@ def run(tool: str, args: list[str]) -> int:
     return execute([str(binary), *args])
 
 
+def gather(options: Options, args: list[str]) -> list[str] | None:
+    """Apply `filter` and `select` to args; None when no Python file is left."""
+    if options.filter:
+        args = [arg for arg in args if not Path(arg).is_file() or is_python(Path(arg))]
+        if not any(Path(arg).is_file() for arg in args):
+            return None
+    if options.select:
+        files = select(Path.cwd(), options.exclude)
+        if not files:
+            return None
+        print(f"launch.py: {len(files)} Python files", file=sys.stderr)
+        args = [*args, *files]
+    return args
+
+
 def main(argv: list[str]) -> int:
     """Run the tool named in argv and return the exit status."""
     try:
@@ -137,24 +152,14 @@ def main(argv: list[str]) -> int:
     tool, args = command[0], [expand(arg) for arg in command[1:]]
     if options.chdir:
         os.chdir(options.chdir)
-    if options.filter:
-        args = [arg for arg in args if not Path(arg).is_file() or is_python(Path(arg))]
-        if not any(Path(arg).is_file() for arg in args):
-            if options.allow_empty:
-                return 0
-            print("launch.py: no Python files, so nothing was checked", file=sys.stderr)
-            return 1
-    if options.select:
-        files = select(Path.cwd(), options.exclude)
-        if not files:
-            if options.allow_empty:
-                return 0
-            print("launch.py: no Python files, so nothing was checked", file=sys.stderr)
-            return 1
-        print(f"launch.py: {len(files)} Python files", file=sys.stderr)
-        args += files
+    found = gather(options, args)
+    if found is None:
+        if options.allow_empty:
+            return 0
+        print("launch.py: no Python files, so nothing was checked", file=sys.stderr)
+        return 1
     try:
-        return run(tool, args)
+        return run(tool, found)
     except UsageError as error:
         print(f"launch.py: {error}", file=sys.stderr)
         return 2

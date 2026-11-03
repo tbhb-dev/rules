@@ -9,6 +9,9 @@ points both modules at this checkout.
 
 module(name = "tbhb_rules_go_quickstart")
 
+# For //readme's diff_tests only, not part of the quickstart.
+bazel_dep(name = "bazel_skylib", version = "1.9.2", dev_dependency = True)
+
 # README quickstart below, verbatim.
 bazel_dep(name = "rules_go", version = "0.65.0")
 bazel_dep(name = "gazelle", version = "0.54.0")

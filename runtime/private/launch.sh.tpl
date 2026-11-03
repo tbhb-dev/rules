@@ -52,7 +52,13 @@ shims=$(mktemp -d)
 trap 'rm -rf "$shims"' EXIT
 ln -s "$interpreter" "$shims/python"
 ln -s "$interpreter" "$shims/python3"
+ln -s "$TBHB_PYTHON_UV" "$shims/uv"
 export PATH="$shims:$TBHB_PYTHON_BIN:$PATH"
+# A `uv run` inside the tool (a git hook, a script) runs the pinned uv
+# (shimmed above) with this interpreter and its packages rather than
+# downloading one: uv's managed installs live under a HOME the test does
+# not share.
+export UV_PYTHON="$interpreter" UV_PYTHON_DOWNLOADS=never
 
 status=0
 "$interpreter" "$base/@@LAUNCH@@" @@OPTIONS@@ -- @@TOOL@@ "$@" || status=$?

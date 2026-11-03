@@ -66,9 +66,9 @@ def _uv(rctx):
     if key not in UV_PLATFORMS:
         fail("tbhb_rules has no pinned uv for {} {}".format(*key))
     asset = UV_PLATFORMS[key]
-    version, sha256 = UV_ASSETS[asset]
+    url, sha256 = UV_ASSETS[asset]
     rctx.download_and_extract(
-        url = "https://github.com/astral-sh/uv/releases/download/{}/{}.tar.gz".format(version, asset),
+        url = url,
         sha256 = sha256,
         output = "uv-dist",
         strip_prefix = asset,

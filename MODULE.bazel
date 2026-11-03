@@ -74,30 +74,23 @@ bazel_dep(name = "bazelrc-preset.bzl", version = "1.10.0")
 bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
 
 # Pinned copies of the SchemaStore schemas that pyproject.toml's embedded
-# tombi schema refers to by URL, so //:tombi_test validates offline. Pinned
-# to a SchemaStore commit, because www.schemastore.org serves whatever is
-# current and its digests drift.
+# tombi schema refers to by URL, so //:tombi_test validates offline. One
+# archive of a SchemaStore commit, which Renovate can move, because
+# www.schemastore.org serves whatever is current and its digests drift.
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "schemastore",
+    build_file_content = """exports_files(
+    ["src/schemas/json/partial-pytest.json", "src/schemas/json/ruff.json", "src/schemas/json/uv.json"],
+    visibility = ["//visibility:public"],
+)""",
+    sha256 = "ec800fc5dbfcaeb7033f1ca75a4efcb631e22a4e03803cd9866c8400270f3ac4",
+    strip_prefix = "schemastore-f0e072bb85076fcae82bebf058cf86520d4ea450",
+    url = "https://github.com/SchemaStore/schemastore/archive/f0e072bb85076fcae82bebf058cf86520d4ea450.tar.gz",
+)
+
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
-
-_SCHEMASTORE = "https://raw.githubusercontent.com/SchemaStore/schemastore/f0e072bb85076fcae82bebf058cf86520d4ea450/src/schemas/json/"
-
-http_file(
-    name = "schemastore_uv",
-    sha256 = "accd72042015703861297d12c682e0d9c35f435506acf942874927bb367ccdf7",
-    url = _SCHEMASTORE + "uv.json",
-)
-
-http_file(
-    name = "schemastore_partial_pytest",
-    sha256 = "15894b3b37e0ae60b79869da43b9e26790bc1198d645586ca8447246c23f9ac4",
-    url = _SCHEMASTORE + "partial-pytest.json",
-)
-
-http_file(
-    name = "schemastore_ruff",
-    sha256 = "d543216c52a7bd33325de767ebba8b410162302bce2cdc8980662e0bc06984be",
-    url = _SCHEMASTORE + "ruff.json",
-)
 
 # Vale style packages, one per `Packages` URL in .vale.ini and in the same
 # order, pinned by digest. //:vale_test syncs from these instead of the

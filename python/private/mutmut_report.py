@@ -83,6 +83,9 @@ def report(stats: dict[str, object] | None, results: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+# Module-level, where mutmut leaves names alone: a mutated case still
+# resolves on a case-insensitive filesystem.
+PYPROJECT = "pyproject.toml"
 HEADER = "[tool.mutmut]"
 NO_GIT = "use_git_change_detection = false"
 # Verdicts that depend on the machine (load, signals) rather than the code:
@@ -110,8 +113,8 @@ def scratch_config(path: Path) -> None:
 
 def unstable(text: str) -> list[str]:
     """Return the machine-dependent verdicts a report records."""
-    counts = dict(line.split("=", 1) for line in text.splitlines())
-    return [key for key in UNSTABLE if counts[key] != "0"]
+    lines = text.splitlines()
+    return [key for key in UNSTABLE if f"{key}=0" not in lines]
 
 
 def main(argv: list[str]) -> int:
@@ -125,7 +128,7 @@ def main(argv: list[str]) -> int:
         return 2
     out, log = Path(argv[0]), Path(argv[1])
     log.write_text("")
-    scratch_config(Path("pyproject.toml"))
+    scratch_config(Path(PYPROJECT))
     mutmut(["run"], log)
     stats = None
     if mutmut(["export-cicd-stats"], log).returncode == 0:

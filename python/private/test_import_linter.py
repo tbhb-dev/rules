@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from python.private import import_linter
+from private import import_linter
 
 KEPT = "Analyzed 11 files, 7 dependencies.\n\nContracts: 3 kept, 0 broken.\n"
 

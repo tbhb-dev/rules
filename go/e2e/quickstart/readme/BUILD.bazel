@@ -19,7 +19,7 @@ repo_files()
         ),
         genrule(
             name = name + "_file_block",
-            srcs = ["//:" + path],
+            srcs = ["//" + path.rpartition("/")[0] + ":" + path.rpartition("/")[2]],
             outs = [name + ".file"],
             cmd = "awk 'found {{ print }} $$0 == \"# README quickstart below, verbatim.\" {{ found = 1 }}' $< > $@",
         ),

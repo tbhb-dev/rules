@@ -14,7 +14,6 @@ The three files below are a complete consumer. `e2e/quickstart` holds them verba
 ```starlark
 bazel_dep(name = "rules_go", version = "0.65.0")
 bazel_dep(name = "gazelle", version = "0.54.0")
-
 bazel_dep(name = "tbhb_rules")
 git_override(
     module_name = "tbhb_rules",
@@ -41,7 +40,10 @@ use_repo(go_deps, "com_github_google_go_cmp")
 
 # The same modules as a GOPROXY directory, for go_mod_tidy_test.
 go_mod_proxy = use_extension("@tbhb_rules_go//:extensions.bzl", "go_mod_proxy")
-go_mod_proxy.from_file(name = "go_mod_proxy", go_sum = "//:go.sum")
+go_mod_proxy.from_file(
+    name = "go_mod_proxy",
+    go_sum = "//:go.sum",
+)
 use_repo(go_mod_proxy, "go_mod_proxy")
 ```
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from python.private import pip_audit
+from private import pip_audit
 
 
 def test_commands_export_the_lock_and_audit_it(
@@ -16,19 +16,10 @@ def test_commands_export_the_lock_and_audit_it(
 ) -> None:
     monkeypatch.setenv("TBHB_PYTHON_UV", "/env/uv")
     export, audit = pip_audit.commands(Path("/work"), ["--strict"])
-    assert export == [
-        "/env/uv",
-        "export",
-        "--quiet",
-        "--frozen",
-        "--all-packages",
-        "--all-groups",
-        "--no-emit-workspace",
-        "--format",
-        "pylock.toml",
-        "-o",
-        "/work/pylock.toml",
-    ]
+    assert " ".join(export) == (
+        "/env/uv export --quiet --frozen --all-packages --all-groups"
+        " --no-emit-workspace --format pylock.toml -o /work/pylock.toml"
+    )
     assert audit == [
         sys.executable,
         "-m",

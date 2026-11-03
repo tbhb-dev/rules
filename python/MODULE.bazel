@@ -30,3 +30,8 @@ use_repo(python, "tbhb_python", "tbhb_python_tools")
 
 bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
 bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
+
+# This module's own Python (private/*.py) is checked from its own project:
+# pyproject.toml and uv.lock here, used only when this module is the root.
+python_dev = use_extension("//:extensions.bzl", "python", dev_dependency = True)
+python_dev.project()

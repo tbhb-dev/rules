@@ -596,7 +596,10 @@ def test_main_help_describes_the_tool(capsys: pytest.CaptureFixture[str]) -> Non
     with pytest.raises(SystemExit) as caught:
         check_docs.main(["--help"])
     assert caught.value.code == 0
-    assert "\n\nCheck docs and Markdown frontmatter.\n\n" in capsys.readouterr().out
+    out = " ".join(capsys.readouterr().out.split())
+    assert " Check docs and Markdown frontmatter. " in out
+    assert f"--bundle BUNDLE {check_docs.BUNDLE_HELP}" in out
+    assert f"--schemas SCHEMAS {check_docs.SCHEMAS_HELP}" in out
 
 
 def test_main_takes_another_bundle_and_schemas(

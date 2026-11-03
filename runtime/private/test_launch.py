@@ -308,18 +308,18 @@ def test_main_filters_the_arguments_to_python_files(
     monkeypatch.chdir(tmp_path)
     argv = ["--filter", "--", "ruff", "format", "a.py", "notes.md", "run", "gone.py"]
     assert launch.main(argv) == 7
-    assert recorded == [("ruff", ["format", "a.py", "run", "gone.py"], "")]
+    assert recorded == [("ruff", ["format", "a.py", "run", "gone.py"], tmp_path.name)]
 
 
-@pytest.mark.parametrize(("flags", "code"), [([], 1), (["--allow-empty"], 0)])
+@pytest.mark.parametrize("case", [([], 1), (["--allow-empty"], 0)])
 def test_main_filtering_to_nothing(
     recorded: list[tuple[str, list[str], str]],
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    flags: list[str],
-    code: int,
+    case: tuple[list[str], int],
 ) -> None:
+    flags, code = case
     write(tmp_path / "notes.md", "")
     monkeypatch.chdir(tmp_path)
     assert (

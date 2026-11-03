@@ -46,6 +46,8 @@ INDEX = "index.md"
 # so they are never OKF documents and carry no frontmatter.
 AGENT_FILES = frozenset({"AGENTS.md", "CLAUDE.md"})
 BUNDLE = "docs"
+BUNDLE_HELP = "the bundle, under ROOT"
+SCHEMAS_HELP = "the schemas, under ROOT (BUNDLE/schemas)"
 SCHEMAS = "schemas"
 TESTDATA = "testdata"
 MARKDOWN = ".md"
@@ -256,8 +258,8 @@ def check_repo(
 def main(argv: list[str] | None = None) -> int:
     """Run both checks over ROOT and report."""
     parser = argparse.ArgumentParser(description="Check docs and Markdown frontmatter.")
-    parser.add_argument("--bundle", default=BUNDLE, help="the bundle, under ROOT")
-    parser.add_argument("--schemas", help="the schemas, under ROOT (BUNDLE/schemas)")
+    parser.add_argument("--bundle", default=BUNDLE, help=BUNDLE_HELP)
+    parser.add_argument("--schemas", help=SCHEMAS_HELP)
     parser.add_argument("root", nargs="?", type=Path, default=Path())
     args = parser.parse_args(argv)
     root: Path = args.root

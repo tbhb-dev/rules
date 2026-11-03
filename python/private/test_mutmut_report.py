@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from python.private import mutmut_report as mr
+from private import mutmut_report as mr
 
 ALL_KILLED: dict[str, object] = {
     "total": 4,
@@ -240,8 +240,10 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
 ) -> None:
     stats = Path("mutants/mutmut-cicd-stats.json")
     stats.parent.mkdir()
-    stats.write_text(json.dumps(ALL_KILLED | {"timeout": 1}))
+    stats.write_text(json.dumps(ALL_KILLED | {"timeout": 1, "segfault": 2}))
     Path("pyproject.toml").write_text("")
     assert mr.main(["report", "log"]) == 1
     assert len(fake_mutmut) == 3
-    assert capsys.readouterr().err == "mutmut_report: not cacheable: timeout\n"
+    assert capsys.readouterr().err == (
+        "mutmut_report: not cacheable: timeout, segfault\n"
+    )

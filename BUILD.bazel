@@ -124,9 +124,9 @@ tombi_test(
     srcs = [":repo_files"],
     config = "tombi.toml",
     schemas = {
-        "https://www.schemastore.org/partial-pytest.json": "@schemastore_partial_pytest//file",
-        "https://www.schemastore.org/ruff.json": "@schemastore_ruff//file",
-        "https://www.schemastore.org/uv.json": "@schemastore_uv//file",
+        "https://www.schemastore.org/partial-pytest.json": "@schemastore//:src/schemas/json/partial-pytest.json",
+        "https://www.schemastore.org/ruff.json": "@schemastore//:src/schemas/json/ruff.json",
+        "https://www.schemastore.org/uv.json": "@schemastore//:src/schemas/json/uv.json",
     },
 )
 

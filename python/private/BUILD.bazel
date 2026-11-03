@@ -3,6 +3,17 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load(
+    "//:defs.bzl",
+    "bandit_test",
+    "complexipy_test",
+    "mutmut_test",
+    "pylint_test",
+    "pyrefly_test",
+    "pytest_test",
+    "ruff_test",
+    "vulture_test",
+)
 
 repo_files()
 
@@ -45,4 +56,53 @@ bzl_library(
         ":tool",
         "@tbhb_rules//quality:defs",
     ],
+)
+
+# The gates for this module's own Python, from its dev project
+# (pyproject.toml and uv.lock at the module root), when it is the root
+# module. Interim-free, so the mutation gate covers every source file.
+
+SRCS = ["//:repo_files"]
+
+ruff_test(
+    name = "ruff_test",
+    srcs = SRCS,
+)
+
+pyrefly_test(
+    name = "pyrefly_test",
+    srcs = SRCS,
+)
+
+pylint_test(
+    name = "pylint_test",
+    srcs = SRCS,
+)
+
+vulture_test(
+    name = "vulture_test",
+    srcs = SRCS,
+)
+
+complexipy_test(
+    name = "complexipy_test",
+    srcs = SRCS,
+)
+
+bandit_test(
+    name = "bandit_test",
+    srcs = SRCS,
+    exclude = ["**/test_*.py"],
+)
+
+pytest_test(
+    name = "pytest_test",
+    srcs = SRCS,
+    coverage = ["private"],
+)
+
+mutmut_test(
+    name = "mutmut_test",
+    srcs = SRCS,
+    cpus = 4,
 )

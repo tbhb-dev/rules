@@ -85,3 +85,11 @@ expect_failure_test(
     pattern = "not a git repository",
     test = ":outside_git",
 )
+
+# In a clean checkout, `format.check` runs every formatter, buildifier's
+# runfiles-located binary included, and passes.
+outside_git_test(
+    name = "workspace_check_test",
+    git_checkout = True,
+    subject = ":subject_format.check",
+)
