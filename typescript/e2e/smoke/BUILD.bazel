@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
@@ -272,4 +274,36 @@ expect_failure_test(
     name = "proof_tsc_dependency_types_fails",
     pattern = "proof/types_dep/index.ts\\([0-9]+,[0-9]+\\): error TS2322: Type 'string' is not assignable to type 'number'",
     test = ":proof_tsc_dependency_types",
+)
+
+# A check without `workers` never references @cloudflare/vitest-plugin, so
+# it never fetches miniflare or workerd. The query lists any such target in
+# the launchers' dependencies; the list must be empty.
+PLAIN_LAUNCHERS = [
+    ":biome_test_launcher",
+    ":depcruise_test_launcher",
+    ":eslint_test_launcher",
+    ":knip_test_launcher",
+    ":pnpm_audit_test_launcher",
+    ":stryker_test_launcher",
+    ":tsc_test_launcher",
+    ":vitest_test_launcher",
+]
+
+genquery(
+    name = "plain_launchers_workerd",
+    expression = "filter('workerd|miniflare|vitest-plugin', deps({}))".format(" + ".join(PLAIN_LAUNCHERS)),
+    scope = PLAIN_LAUNCHERS,
+)
+
+write_file(
+    name = "nothing",
+    out = "nothing.txt",
+    content = [],
+)
+
+diff_test(
+    name = "plain_launchers_no_workerd_test",
+    file1 = ":plain_launchers_workerd",
+    file2 = ":nothing",
 )

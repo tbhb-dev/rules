@@ -15,3 +15,10 @@ bzl_library(
         "@tbhb_rules//lint:defs",
     ],
 )
+
+bzl_library(
+    name = "workers_checks",
+    srcs = ["workers_checks.bzl"],
+    visibility = ["//:__pkg__"],
+    deps = ["@tbhb_rules_typescript//:defs"],
+)

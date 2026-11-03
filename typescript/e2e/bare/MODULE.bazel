@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules_typescript from a package.json with no dependencies.
+
+Such a package's npm_link_all_packages target holds no package, so its
+`node_modules` directory never exists. The checks given it must still run.
+"""
+
+module(name = "tbhb_rules_typescript_bare")
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../../..",
+)
+
+bazel_dep(name = "tbhb_rules_typescript")
+local_path_override(
+    module_name = "tbhb_rules_typescript",
+    path = "../..",
+)
+
+bazel_dep(name = "aspect_rules_js", version = "3.5.2")
+
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "npm",
+    data = ["//:package.json"],
+    lifecycle_hooks = {"*": []},
+    pnpm_lock = "//:pnpm-lock.yaml",
+)
+use_repo(npm, "npm")
+
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm")
+use_repo(pnpm, "pnpm")

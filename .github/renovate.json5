@@ -30,10 +30,15 @@
       allowedVersions: "<6.1",
     },
     {
-      description: "@cloudflare/vitest-pool-workers supports Vitest 4.1 (peer ^4.1.0)",
-      matchFileNames: ["typescript/**/package.json"],
-      matchPackageNames: ["vitest", "@vitest/**"],
-      allowedVersions: "<4.2",
+      // The coverage packages require Vitest's exact version, and each
+      // @cloudflare/vitest-plugin release depends on one exact wrangler,
+      // whose workerd runs the tests; the Cloudflare module's wrangler
+      // generates the Worker types and deploys, from its own workerd. One
+      // group keeps them all on one Vitest and one workerd.
+      description: "Vitest, its plugins and wrangler move together",
+      matchFileNames: ["typescript/**/package.json", "cloudflare/**/package.json"],
+      matchPackageNames: ["vitest", "@vitest/**", "@cloudflare/vitest-plugin", "wrangler"],
+      groupName: "vitest and workerd",
     },
     {
       // A wrangler bump that moves workerd changes every Worker's generated
