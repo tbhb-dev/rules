@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Tony Burns
+
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  // tbhb-dev/renovate-config has no release tag yet, so the presets are
+  // pinned to its main commit. Renovate moves these pins itself.
+  extends: [
+    "github>tbhb-dev/renovate-config//default.json5#d37a5c70b41eda7cb0bd1b233839251f6b315068", // main
+    "github>tbhb-dev/renovate-config//bazel.json5#d37a5c70b41eda7cb0bd1b233839251f6b315068", // main
+    "github>tbhb-dev/renovate-config//go.json5#d37a5c70b41eda7cb0bd1b233839251f6b315068", // main
+    "github>tbhb-dev/renovate-config//python.json5#d37a5c70b41eda7cb0bd1b233839251f6b315068", // main
+  ],
+
+  // The presets cover the rest of this tree: the bazel manager the literal
+  // http_archive and http_file pins (pins/extensions.bzl, go/private/tools.bzl,
+  // MODULE.bazel) and dugite's git, gomod the go.mod requirements, tool
+  // directives and toolchain lines that go_sdk.from_file reads, python.json5
+  // the pyproject and uv.lock pins and uv's required-version, and bazelisk
+  // every .bazelversion as one group.
+  customManagers: [
+    {
+      // The runtime downloads uv at repository-fetch time from this dict, so
+      // it isn't an http_archive call the bazel manager sees. Each entry
+      // holds a literal (url, sha256) pair on one line. python.json5 groups
+      // these with the required-version pin.
+      customType: "regex",
+      description: "uv release assets in runtime/private/versions.bzl, one (url, sha256) pair per entry",
+      managerFilePatterns: ["/^runtime/private/versions\\.bzl$/"],
+      matchStrings: [
+        "\"https://github\\.com/(?<packageName>astral-sh/uv)/releases/download/(?<currentValue>[^/\"]+)/[^\"]+\",\\s*\"(?<currentDigest>[0-9a-f]{64})\"",
+      ],
+      depNameTemplate: "uv",
+      datasourceTemplate: "github-release-attachments",
+    },
+  ],
+}

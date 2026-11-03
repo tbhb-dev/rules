@@ -55,6 +55,7 @@ gofumpt
 goheader
 golangci
 golines
+gomod
 gomodguard
 gomutants
 govet
