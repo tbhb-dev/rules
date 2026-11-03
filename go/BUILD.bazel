@@ -27,6 +27,7 @@ bzl_library(
     visibility = ["//visibility:public"],
     deps = [
         "//private:deadcode",
+        "//private:go_arch_lint",
         "//private:go_mod_tidy",
         "//private:golangci_lint",
     ],
@@ -56,6 +57,7 @@ formatter(
 # Shell scripts and templates, held to the parent module's bar.
 SHELL_SCRIPTS = [
     "private/deadcode.sh",
+    "private/go_arch_lint.sh.tpl",
     "private/go_mod_tidy.sh.tpl",
     "private/golangci_fmt.sh.tpl",
     "private/golangci_lint.sh",

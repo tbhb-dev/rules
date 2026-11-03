@@ -17,7 +17,6 @@ import json
 import sys
 import tomllib
 from pathlib import Path
-from typing import cast
 
 KINDS = ("virtual", "editable")
 
@@ -28,7 +27,7 @@ class LockError(Exception):
 
 def table(value: object) -> dict[str, object]:
     """Return value as a TOML table, or an empty one if it is not a table."""
-    return cast("dict[str, object]", value) if isinstance(value, dict) else {}
+    return value if isinstance(value, dict) else {}
 
 
 def members(lock: dict[str, object]) -> list[dict[str, str]]:
@@ -39,11 +38,12 @@ def members(lock: dict[str, object]) -> list[dict[str, str]]:
         raise LockError(message)
     names = table(lock.get("manifest")).get("members")
     found: list[dict[str, str]] = []
-    for value in cast("list[object]", packages):
+    rows: list[object] = packages
+    for value in rows:
         package = table(value)
         source = table(package.get("source"))
         name = str(package.get("name"))
-        if isinstance(names, list) and name not in cast("list[object]", names):
+        if isinstance(names, list) and name not in names:
             continue
         found.extend(
             {"name": name, "path": str(source[kind]), "kind": kind}

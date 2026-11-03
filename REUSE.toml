@@ -16,8 +16,8 @@ version = 1
 path = [
   "mise.lock",
   "MODULE.bazel.lock",
-  "uv.lock",
-  "lint/private/cspell/pnpm-lock.yaml",
+  "**/uv.lock",
+  "**/pnpm-lock.yaml",
   ".mise/locks/**",
   # Go module files, which go mod tidy rewrites.
   "**/go.mod",
@@ -31,7 +31,7 @@ SPDX-License-Identifier = "Apache-2.0"
 [[annotations]]
 path = [
   "**/.bazelversion",
-  ".python-version",
+  "**/.python-version",
   "**/.bazelignore",
   ".rylignore",
   ".cspell-words.txt",
@@ -59,6 +59,8 @@ SPDX-License-Identifier = "Apache-2.0"
 path = [
   "LICENSE",
   "README.md",
+  "go/README.md",
+  "go/docs/*.md",
   ".github/CODEOWNERS",
   ".github/PULL_REQUEST_TEMPLATE.md",
   ".gitattributes",

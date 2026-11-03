@@ -19,7 +19,17 @@ load(
 )
 load("//repo:defs.bzl", "repo_files", "repo_layout_test")
 
-exports_files(["multitool.lock.json"])
+# The lint configs, so the nested modules can prove their own copies match
+# (a diff_test against @tbhb_rules//:<config>).
+exports_files([
+    ".editorconfig",
+    ".editorconfig-checker.json",
+    ".gitleaks.toml",
+    ".rumdl.toml",
+    ".ryl.toml",
+    "multitool.lock.json",
+    "tombi.toml",
+])
 
 # Every file of the repository, for the whole-tree checks below. Ignored
 # directories are listed in REPO.bazel; these are the gitignored files that

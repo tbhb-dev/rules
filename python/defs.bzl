@@ -3,6 +3,7 @@
 
 """Public API of tbhb_rules_python."""
 
+load("@tbhb_rules//runtime:defs.bzl", _PyEnvInfo = "PyEnvInfo")
 load(
     "//private:checks.bzl",
     _bandit_test = "bandit_test",
@@ -16,7 +17,6 @@ load(
     _ruff_test = "ruff_test",
     _vulture_test = "vulture_test",
 )
-load("@tbhb_rules//runtime:defs.bzl", _PyEnvInfo = "PyEnvInfo")
 load("//private:mutmut.bzl", _mutmut_report = "mutmut_report", _mutmut_test = "mutmut_test")
 load("//private:tool.bzl", _python_tool = "python_tool")
 

@@ -18,7 +18,10 @@ import sys
 
 ANALYZED = re.compile(r"^Analyzed (\d+) files", re.MULTILINE)
 CONTRACTS = re.compile(r"^Contracts: (\d+) kept, (\d+) broken", re.MULTILINE)
-COMMAND = "import sys; from importlinter.cli import lint_imports_command; sys.exit(lint_imports_command())"
+COMMAND = (
+    "import sys; from importlinter.cli import lint_imports_command;"
+    " sys.exit(lint_imports_command())"
+)
 
 
 def problems(output: str) -> list[str]:

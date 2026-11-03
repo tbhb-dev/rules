@@ -7,6 +7,41 @@ load(":golangci_fmt.bzl", "golangci_fmt_tool")
 
 repo_files()
 
+# go-arch-lint for this platform (MODULE.bazel pins one archive each).
+alias(
+    name = "go_arch_lint",
+    actual = select({
+        ":darwin_arm64": "@go_arch_lint_darwin_arm64//:go-arch-lint",
+        ":linux_amd64": "@go_arch_lint_linux_amd64//:go-arch-lint",
+        ":linux_arm64": "@go_arch_lint_linux_arm64//:go-arch-lint",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "darwin_arm64",
+    constraint_values = [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+)
+
+config_setting(
+    name = "linux_amd64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+config_setting(
+    name = "linux_arm64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+)
+
 # The tool behind //:golangci_fmt.
 golangci_fmt_tool(
     name = "golangci_fmt_tool",
@@ -16,6 +51,7 @@ golangci_fmt_tool(
 exports_files(
     [
         "deadcode.sh",
+        "go_arch_lint.sh.tpl",
         "golangci_lint.sh",
         "golangci_lint_merge.sh",
         "go_mod_tidy.sh.tpl",
@@ -62,4 +98,21 @@ bzl_library(
     name = "golangci_fmt",
     srcs = ["golangci_fmt.bzl"],
     visibility = ["//:__subpackages__"],
+)
+
+bzl_library(
+    name = "go_srcs",
+    srcs = ["go_srcs.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = ["@rules_go//go:def"],
+)
+
+bzl_library(
+    name = "go_arch_lint",
+    srcs = ["go_arch_lint.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":go_srcs",
+        "@bazel_skylib//lib:shell",
+    ],
 )

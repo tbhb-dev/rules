@@ -73,8 +73,8 @@ def test_a_workspace_lists_only_its_manifest_members() -> None:
         "manifest": {"members": ["root", "lib"]},
         "package": [
             {"name": "root", "source": {"virtual": "."}},
-            {"name": "lib", "source": {"editable": "cli"}},
             {"name": "other", "source": {"editable": "elsewhere"}},
+            {"name": "lib", "source": {"editable": "cli"}},
         ],
     }
     assert lock_info.members(lock) == [

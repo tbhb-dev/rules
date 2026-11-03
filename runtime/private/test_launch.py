@@ -70,7 +70,8 @@ def test_select_skips_excluded_paths(tmp_path: Path) -> None:
     write(tmp_path / "keep.py", "")
     write(tmp_path / "tools" / "test_x.py", "")
     write(tmp_path / "skip.py", "")
-    assert launch.select(tmp_path, ["**/test_*.py", "skip.py"]) == ["keep.py"]
+    write(tmp_path / "zz.py", "")
+    assert launch.select(tmp_path, ["**/test_*.py", "skip.py"]) == ["keep.py", "zz.py"]
 
 
 def test_expand_replaces_environment_references(

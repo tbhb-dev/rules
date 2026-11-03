@@ -85,6 +85,7 @@ def test_report_lists_counts_and_the_mutants_not_killed() -> None:
         "    tools.a.y__mutmut_5: segfault\n"
         "    tools.a.y__mutmut_6: skipped\n"
         "    : survived\n"
+        "    tools.b: odd.x__mutmut_1: survived\n"
         "noise without a status\n"
         "    tools.a.z__mutmut_1: something else\n"
     )
@@ -98,6 +99,7 @@ def test_report_lists_counts_and_the_mutants_not_killed() -> None:
         "mutant.suspicious=tools.a.y__mutmut_4\n"
         "mutant.segfault=tools.a.y__mutmut_5\n"
         "mutant.skipped=tools.a.y__mutmut_6\n"
+        "mutant.survived=tools.b: odd.x__mutmut_1\n"
     )
 
 
@@ -111,7 +113,10 @@ def test_report_of_a_clean_run() -> None:
 def test_main_needs_a_report_and_a_log(
     argv: list[str],
     capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # Calling mutmut would raise, so a usage error must stop before it.
+    monkeypatch.setattr(mr, "mutmut", None)
     assert mr.main(argv) == 2
     assert capsys.readouterr().err == "usage: mutmut_report.py REPORT LOG\n"
 

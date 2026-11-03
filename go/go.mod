@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Tony Burns
+
 module github.com/tbhb-dev/rules/go
 
 go 1.27.0

@@ -11,7 +11,7 @@ Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned 
 | runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
 | testing | `@tbhb_rules//testing:defs.bzl` | `expect_failure_test` |
 
-Language rules live in nested modules, so a repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/` and `tbhb_rules_python` in `python/`.
+Language rules live in nested modules, so a repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/` (documented in `go/README.md`) and `tbhb_rules_python` in `python/`.
 
 Load only the `defs.bzl` files. Everything under `private/` is internal and can change without notice.
 

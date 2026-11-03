@@ -4,6 +4,7 @@
 """Public API of tbhb_rules_go."""
 
 load("//private:deadcode.bzl", _go_deadcode_test = "go_deadcode_test")
+load("//private:go_arch_lint.bzl", _go_arch_lint_test = "go_arch_lint_test")
 load("//private:go_mod_tidy.bzl", _go_mod_tidy_test = "go_mod_tidy_test")
 load(
     "//private:golangci_lint.bzl",
@@ -13,6 +14,7 @@ load(
 )
 
 GolangciLintInfo = _GolangciLintInfo
+go_arch_lint_test = _go_arch_lint_test
 go_deadcode_test = _go_deadcode_test
 go_mod_tidy_test = _go_mod_tidy_test
 golangci_lint_aspect_factory = _golangci_lint_aspect_factory

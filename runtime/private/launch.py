@@ -73,7 +73,7 @@ def select(root: Path, excludes: list[str]) -> list[str]:
 
 def expand(arg: str) -> str:
     """Replace each {env:NAME} in arg with that environment variable."""
-    return ENV_REFERENCE.sub(lambda match: os.environ.get(match.group(1), ""), arg)
+    return ENV_REFERENCE.sub(lambda match: os.environ.get(match.group(1)) or "", arg)
 
 
 def parse(argv: list[str]) -> tuple[Options, list[str]]:
