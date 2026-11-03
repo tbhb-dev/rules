@@ -34,7 +34,10 @@ exports_files([
 
 # For //tools's vale_test and vale_sync.
 exports_files(
-    [".vale.ini"],
+    [
+        ".vale.ini",
+        "pyproject.toml",
+    ],
     visibility = ["//tools:__pkg__"],
 )
 

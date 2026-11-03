@@ -70,9 +70,32 @@ ruff_test(
     srcs = SRCS,
 )
 
+# As in the root //tools: pyrefly's verdict depends only on the platform it
+# analyses for, so both runs are Linux-host only, one as Linux and one as
+# Windows (the `sys.platform == "win32"` branches).
+LINUX_ONLY = select({
+    "@platforms//os:linux": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+})
+
 pyrefly_test(
     name = "pyrefly_test",
     srcs = SRCS,
+    args = [
+        "--python-platform",
+        "linux",
+    ],
+    target_compatible_with = LINUX_ONLY,
+)
+
+pyrefly_test(
+    name = "pyrefly_windows_test",
+    srcs = SRCS,
+    args = [
+        "--python-platform",
+        "win32",
+    ],
+    target_compatible_with = LINUX_ONLY,
 )
 
 pylint_test(
