@@ -27,7 +27,7 @@ go=$4
 report_out=$5
 shift 5
 
-root=$PWD
+root=$(pwd -P)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 mkdir "$tmp/home"

@@ -26,7 +26,7 @@ mirror_files=$8
 report_out=$9
 shift 9
 
-root=$PWD
+root=$(pwd -P)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 # golangci-lint resolves symlinks in its working directory and config path

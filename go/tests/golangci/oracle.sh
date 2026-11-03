@@ -26,7 +26,7 @@ files=$6
 out=$7
 proxy=${8:-}
 
-root=$PWD
+root=$(pwd -P)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 tmp=$(cd "$tmp" && pwd -P)

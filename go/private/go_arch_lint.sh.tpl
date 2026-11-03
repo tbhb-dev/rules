@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-root=$PWD
+root=$(pwd -P)
 tool="$root/@@TOOL@@"
 manifest=@@MANIFEST@@
 config=@@CONFIG@@

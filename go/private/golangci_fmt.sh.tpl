@@ -22,7 +22,7 @@ elif [[ -n ${TEST_SRCDIR:-} ]]; then
 elif [[ $0 == *"/@@SELF@@" ]]; then
   runfiles=${0%"/@@SELF@@"}
   if [[ $runfiles != /* ]]; then
-    runfiles="$PWD/$runfiles"
+    runfiles="$(pwd -P)/$runfiles"
   fi
 else
   echo "golangci_fmt: cannot find the runfiles of $0" >&2

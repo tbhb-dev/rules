@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-root=$PWD
+root=$(pwd -P)
 go="$root/@@GO@@"
 manifest=@@MANIFEST@@
 proxy="$root/"@@PROXY@@
