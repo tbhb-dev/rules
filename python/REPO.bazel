@@ -7,6 +7,7 @@
 ignore_directories([
     "bazel-*",
     "**/.bazel_env",
+    ".claude/worktrees",
     "**/.venv",
     "mutants",
     "tmp",
