@@ -1,3 +1,4 @@
+afakt
 ascm
 Bazel
 bazel_env
@@ -10,9 +11,12 @@ dereferenced
 [Ff]ormatters
 [Ff]rontmatter
 gitleaks
+gomutants
 [Ll]ockfiles?
+mutmut
 npm
 prek
+pyrefly
 repo
 rules_js
 rules_multitool
