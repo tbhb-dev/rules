@@ -61,6 +61,10 @@ def shell_executable(ctx, script, runfiles):
             # Bash started from cmd would otherwise find Windows' find and
             # sort ahead of its own.
             'set "PATH={};%PATH%"'.format(bash.rpartition("\\")[0]),
+            # Bazel's test runner exports PWD in Windows form (C:\...), and
+            # MSYS2's Bash keeps it, so "$PWD/..." on a colon-separated PATH
+            # splits at the drive. Unset, Bash takes the POSIX form.
+            'set "PWD="',
             '"{}" "%~dp0{}" %*'.format(bash, script.basename),
             "exit /b %ERRORLEVEL%",
             "",
