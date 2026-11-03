@@ -30,7 +30,7 @@ import argparse
 import json
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import yaml
 from jsonschema import Draft202012Validator
@@ -123,7 +123,12 @@ def problems(data: object, validator: Draft202012Validator) -> list[str]:
     return [f"{error.json_path}: {error.message}" for error in found]
 
 
-def _read(path: Path, rel: Path) -> tuple[object, str, list[str]]:
+def relative(path: Path, root: Path) -> PurePosixPath:
+    """Return path relative to root with / separators, as messages show it."""
+    return PurePosixPath(path.relative_to(root).as_posix())
+
+
+def _read(path: Path, rel: PurePosixPath) -> tuple[object, str, list[str]]:
     """Parse a file, reporting an unreadable block as an error line."""
     try:
         data, body = parse(path.read_text())
@@ -132,7 +137,7 @@ def _read(path: Path, rel: Path) -> tuple[object, str, list[str]]:
     return data, body, []
 
 
-def _bare(path: Path, rel: Path) -> list[str]:
+def _bare(path: Path, rel: PurePosixPath) -> list[str]:
     """Report frontmatter on a file that must have none."""
     if path.read_text().startswith("---\n"):
         return [f"{rel}: must have no frontmatter"]
@@ -140,7 +145,7 @@ def _bare(path: Path, rel: Path) -> list[str]:
 
 
 def _check_index(  # noqa: PLR0913  # one call site; the pieces come from the walk
-    rel: Path,
+    rel: PurePosixPath,
     *,
     is_root: bool,
     data: object,
@@ -178,13 +183,14 @@ def check_bundle(
     bundle = root / name
     errors: list[str] = []
     if not (bundle / INDEX).is_file():
-        errors.append(
-            f"{(bundle / INDEX).relative_to(root)}: missing bundle-root index"
-        )
+        errors.append(f"{relative(bundle / INDEX, root)}: missing bundle-root index")
     listed: set[Path] = set()
-    documents: list[tuple[Path, Path]] = []
-    for path in sorted(bundle.rglob("*.md")):
-        rel = path.relative_to(root)
+    documents: list[tuple[Path, PurePosixPath]] = []
+    # The key only matters on Windows, where paths compare case-insensitively
+    # and by "\\" separators; on POSIX it orders as plain sorting does, so
+    # mutating it is equivalent there.
+    for path in sorted(bundle.rglob("*.md"), key=Path.as_posix):  # pragma: no mutate
+        rel = relative(path, root)
         if path.name in AGENT_FILES:
             errors.extend(_bare(path, rel))
             continue
@@ -227,8 +233,10 @@ def repo_markdown(root: Path, bundle: str = BUNDLE) -> list[Path]:
     content under test rather than documents, as in Go's tooling.
     """
     found: list[Path] = []
-    for path in sorted(root.rglob(f"*{MARKDOWN}")):
-        rel = path.relative_to(root)
+    # Ordered as in check_bundle; the key only matters on Windows.
+    markdown = root.rglob(f"*{MARKDOWN}")
+    for path in sorted(markdown, key=Path.as_posix):  # pragma: no mutate
+        rel = relative(path, root)
         if rel.parts[0] == bundle or not path.is_file():
             continue
         if any(part.startswith(".") or part == TESTDATA for part in rel.parts):
@@ -248,7 +256,7 @@ def check_repo(
     """
     errors: list[str] = []
     for path in repo_markdown(root, bundle):
-        rel = path.relative_to(root)
+        rel = relative(path, root)
         if len(rel.parts) == 1 or path.name in AGENT_FILES:
             errors.extend(_bare(path, rel))
             continue

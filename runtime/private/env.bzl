@@ -4,7 +4,7 @@
 """The launcher that runs the tools of the locked Python environment."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
-load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "is_windows", "shell_executable")
 load(":env_info.bzl", "PyEnvInfo")
 
 # Internal: load //runtime:defs.bzl.
@@ -49,6 +49,7 @@ def _python_tool_impl(ctx):
                 'python "$base"/' + shell.quote(ctx.file.main.short_path) if ctx.file.main else shell.quote(ctx.attr.tool)
             ),
             "@@UV@@": env.uv.short_path,
+            "@@WINDOWS@@": "1" if is_windows(ctx) else "",
         },
         is_executable = True,
     )

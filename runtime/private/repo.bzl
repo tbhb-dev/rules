@@ -27,26 +27,27 @@ python_env_unconfigured(
 _BUILD = """\
 load("@tbhb_rules//runtime:defs.bzl", "python_env")
 
-exports_files(["uv"])
+exports_files(["{uv}"])
 
 python_env(
     name = "env",
     bin = glob(
-        ["venv/bin/*"],
+        ["{bin}/*"],
         exclude = [
-            "venv/bin/activate*",
-            "venv/bin/deactivate*",
-            "venv/bin/python*",
+            "{bin}/activate*",
+            "{bin}/deactivate*",
+            "{bin}/python*",
+            "{bin}/*.ps1",
         ],
     ),
-    bin_dir = "venv/bin",
+    bin_dir = "{bin}",
     interpreter = {interpreter},
     members = {members},
     python = glob(["python/{install}/**"], exclude = ["**/__pycache__/**"]),
     site_packages = glob(["{site_packages}/**"], exclude = ["**/__pycache__/**"]),
     site_packages_dir = "{site_packages}",
     source_roots = {source_roots},
-    uv = "uv",
+    uv = "{uv}",
     visibility = ["//visibility:public"],
 )
 """
@@ -168,18 +169,34 @@ def _python_env_repo_impl(rctx):
     # of the globs below.
     _run(rctx, [interpreter, "-c", _PRUNE, "python", "venv"], env, "pruning Bazel files")
 
-    # The interpreter's install directory and its version directory under
-    # lib/, both named by uv.
-    install = str(interpreter.dirname.dirname.basename)
-    lib = [p.basename for p in rctx.path("venv/lib").readdir() if p.basename.startswith("python")]
-    if len(lib) != 1:
-        fail("{}: expected one python* directory under venv/lib, found {}".format(rctx.name, lib))
+    # The interpreter's install directory, named by uv, and the venv's
+    # layout: python.exe at the install root, venv/Scripts and
+    # venv/Lib/site-packages on Windows; bin/python3.X, venv/bin and
+    # venv/lib/python3.X/site-packages elsewhere.
+    windows = rctx.os.name.startswith("windows")
+    if windows:
+        install = str(interpreter.dirname.basename)
+        executable = "python/{}/{}".format(install, interpreter.basename)
+        bin = "venv/Scripts"
+        site_packages = "venv/Lib/site-packages"
+    else:
+        install = str(interpreter.dirname.dirname.basename)
+        executable = "python/{}/bin/{}".format(install, interpreter.basename)
+        bin = "venv/bin"
+        lib = [p.basename for p in rctx.path("venv/lib").readdir() if p.basename.startswith("python")]
+        if len(lib) != 1:
+            fail("{}: expected one python* directory under venv/lib, found {}".format(rctx.name, lib))
+        site_packages = "venv/lib/{}/site-packages".format(lib[0])
+    if not rctx.path(executable).exists:
+        fail("{}: the interpreter is not at {}".format(rctx.name, executable))
     rctx.file("BUILD.bazel", _BUILD.format(
+        bin = bin,
         install = install,
-        interpreter = repr("python/{}/bin/{}".format(install, interpreter.basename)),
-        site_packages = "venv/lib/{}/site-packages".format(lib[0]),
+        interpreter = repr(executable),
+        site_packages = site_packages,
         source_roots = repr(source_roots),
         members = repr(members),
+        uv = "uv-dist/uv.exe" if windows else "uv",
     ))
 
 python_env_repo = repository_rule(

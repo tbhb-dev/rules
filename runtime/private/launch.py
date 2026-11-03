@@ -68,6 +68,7 @@ class Options:
 # Module-level, where mutmut leaves names alone: a mutated case still
 # resolves on a case-insensitive filesystem.
 PYPROJECT = "pyproject.toml"
+WINDOWS = os.name == "nt"
 # The entry-point groups a [project] table declares as tables of its own.
 SCRIPT_GROUPS = (("scripts", "console_scripts"), ("gui-scripts", "gui_scripts"))
 WHEEL = (
@@ -227,7 +228,14 @@ def parse(argv: list[str]) -> tuple[Options, list[str]]:
 
 
 def execute(argv: list[str]) -> NoReturn:
-    """Replace this process with argv."""
+    """Replace this process with argv.
+
+    Windows has no exec: os.execv there starts the program and ends this
+    process at once with status 0, so the launcher waits and passes the
+    status on instead.
+    """
+    if WINDOWS:
+        sys.exit(subprocess.run(argv, check=False).returncode)  # nosec B603
     # The launcher exists to become the tool, so it execs without a shell.
     os.execv(argv[0], argv)  # noqa: S606 # nosec B606
 
@@ -245,6 +253,8 @@ def run(tool: str, args: list[str]) -> int:
             return 0
         return result if isinstance(result, int) else 1
     binary = Path(os.environ["TBHB_PYTHON_BIN"]) / tool
+    if WINDOWS and not binary.is_file():
+        binary = binary.with_name(tool + ".exe")
     if not binary.is_file():
         message = f"{tool!r} is neither a console script nor in the environment's bin"
         raise UsageError(message)

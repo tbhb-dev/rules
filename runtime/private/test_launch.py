@@ -2,6 +2,7 @@
 # Copyright Tony Burns
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -149,9 +150,28 @@ def test_execute_replaces_the_process(monkeypatch: pytest.MonkeyPatch) -> None:
         raise Executed
 
     monkeypatch.setattr(os, "execv", fake_execv)
+    monkeypatch.setattr(launch, "WINDOWS", False)
     with pytest.raises(Executed):
         launch.execute(["/bin/tool", "a"])
     assert calls == [("/bin/tool", ["/bin/tool", "a"])]
+
+
+def test_execute_on_windows_waits_and_passes_the_status_on(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(argv: list[str], *, check: bool) -> subprocess.CompletedProcess[str]:
+        assert check is False
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 3)
+
+    monkeypatch.setattr(launch, "WINDOWS", True)
+    monkeypatch.setattr(launch.subprocess, "run", fake_run)
+    with pytest.raises(SystemExit) as exited:
+        launch.execute(["C:/env/tool.exe", "a"])
+    assert exited.value.code == 3
+    assert calls == [["C:/env/tool.exe", "a"]]
 
 
 def test_run_python_execs_the_interpreter(executed: list[list[str]]) -> None:
@@ -212,6 +232,26 @@ def test_run_execs_a_binary_from_the_environment(
     with pytest.raises(Executed):
         launch.run("ruff", ["check"])
     assert executed == [[str(tmp_path / "ruff"), "check"]]
+
+
+@pytest.mark.parametrize("windows", [True, False])
+def test_run_finds_an_exe_only_on_windows(
+    executed: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    windows: bool,
+) -> None:
+    monkeypatch.setattr(launch, "entry_points", no_entry_points)
+    monkeypatch.setattr(launch, "WINDOWS", windows)
+    monkeypatch.setenv("TBHB_PYTHON_BIN", str(tmp_path))
+    write(tmp_path / "ruff.exe", "")
+    if windows:
+        with pytest.raises(Executed):
+            launch.run("ruff", ["check"])
+        assert executed == [[str(tmp_path / "ruff.exe"), "check"]]
+    else:
+        with pytest.raises(launch.UsageError):
+            launch.run("ruff", ["check"])
 
 
 def test_run_rejects_an_unknown_tool(

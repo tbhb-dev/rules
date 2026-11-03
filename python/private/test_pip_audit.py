@@ -15,19 +15,18 @@ def test_commands_export_the_lock_and_audit_it(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("TBHB_PYTHON_UV", "/env/uv")
-    export, audit = pip_audit.commands(Path("/work"), ["--strict"])
+    work = Path("/work")
+    export, audit = pip_audit.commands(work, ["--strict"])
     assert " ".join(export) == (
         "/env/uv export --quiet --frozen --all-packages --all-groups"
-        " --no-emit-workspace --format pylock.toml -o /work/pylock.toml"
+        f" --no-emit-workspace --format pylock.toml -o {work / 'pylock.toml'}"
     )
-    assert audit == [
-        sys.executable,
-        "-m",
-        "pip_audit",
+    assert audit[:3] == [sys.executable, "-m", "pip_audit"]
+    assert audit[3:] == [
         "--cache-dir",
-        "/work/cache",
+        str(work / "cache"),
         "--locked",
-        "/work",
+        str(work),
         "--strict",
     ]
 
