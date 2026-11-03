@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-# Ported from devtools' tombi config (tombi 1.9.6). Gate commands run via `mise run lint-toml`:
+# Ported from devtools' tombi config (tombi 1.9.6). `bazelisk test //:tombi_test` runs the gates:
 #   tombi format --check --diff             (non-mutating format gate)
 #   tombi lint --offline --error-on-warnings
 # Re-verify the tombi pin whenever the version literals move.
