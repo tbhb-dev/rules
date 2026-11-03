@@ -116,6 +116,21 @@ jobs:
         if: runner.os != 'Windows'
         run: python/e2e/incremental.sh
 
+      # A failed run's test logs, so a failure that does not recur can still
+      # be read. Every workspace shares setup-bazel's output base, so each
+      # one's bazel-testlogs is the same directory, holding the last tested
+      # workspace's logs; a failed step skips the rest, so that is the failing
+      # one.
+      - name: Keep the test logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: testlogs-${{ matrix.os }}
+          path: |
+            bazel-testlogs/**/test.log
+            bazel-testlogs/**/test.xml
+          if-no-files-found: ignore
+
   # Checks that need Git history or the GitHub API, which no sandboxed test
   # can see.
   repo:
