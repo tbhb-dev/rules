@@ -71,6 +71,8 @@ export GOPACKAGESDRIVER_MIRROR="$ws"
 # action.
 export HOME="$tmp/home"
 export TMPDIR="$tmp"
+# Go's os.TempDir reads TMP and TEMP on Windows.
+export TMP="$tmp" TEMP="$tmp"
 export GOCACHE="$tmp/gocache"
 export GOLANGCI_LINT_CACHE="$tmp/golangci-lint"
 export GOPATH="$tmp/gopath"

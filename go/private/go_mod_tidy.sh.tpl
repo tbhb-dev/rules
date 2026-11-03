@@ -33,7 +33,8 @@ export GOMODCACHE="$work/gopath/pkg/mod"
 # The go command wants a file URL with a drive letter on Windows
 # (file:///C:/...), where `cygpath -m` gives C:/...
 if command -v cygpath >/dev/null; then
-  export GOPROXY="file:///$(cygpath -m "$proxy")"
+  proxy=$(cygpath -m "$proxy")
+  export GOPROXY="file:///$proxy"
 else
   export GOPROXY="file://$proxy"
 fi
