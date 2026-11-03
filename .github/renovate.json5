@@ -34,25 +34,6 @@
       matchPackageNames: ["vitest", "@vitest/**"],
       allowedVersions: "<4.2",
     },
-  ],
-  customManagers: [
-    {
-      // The runtime downloads uv at repository-fetch time from this dict, so
-      // it isn't an http_archive call the bazel manager sees. Each entry
-      // holds a literal (url, sha256) pair on one line. python.json5 groups
-      // these with the required-version pin.
-      customType: "regex",
-      description: "uv release assets in runtime/private/versions.bzl, one (url, sha256) pair per entry",
-      managerFilePatterns: ["/^runtime/private/versions\\.bzl$/"],
-      matchStrings: [
-        "\"https://github\\.com/(?<packageName>astral-sh/uv)/releases/download/(?<currentValue>[^/\"]+)/[^\"]+\",\\s*\"(?<currentDigest>[0-9a-f]{64})\"",
-      ],
-      depNameTemplate: "uv",
-      datasourceTemplate: "github-release-attachments",
-    },
-  ],
-
-  packageRules: [
     {
       // tbhb_rules_d2's PNG font. 2.045R-ro/1.095R-it is the last Source
       // Sans Pro release; later ones are Source Sans 3, another family name
@@ -68,6 +49,22 @@
       description: "Source Code Pro moves by hand",
       matchPackageNames: ["adobe-fonts/source-code-pro"],
       enabled: false,
+    },
+  ],
+  customManagers: [
+    {
+      // The runtime downloads uv at repository-fetch time from this dict, so
+      // it isn't an http_archive call the bazel manager sees. Each entry
+      // holds a literal (url, sha256) pair on one line. python.json5 groups
+      // these with the required-version pin.
+      customType: "regex",
+      description: "uv release assets in runtime/private/versions.bzl, one (url, sha256) pair per entry",
+      managerFilePatterns: ["/^runtime/private/versions\\.bzl$/"],
+      matchStrings: [
+        "\"https://github\\.com/(?<packageName>astral-sh/uv)/releases/download/(?<currentValue>[^/\"]+)/[^\"]+\",\\s*\"(?<currentDigest>[0-9a-f]{64})\"",
+      ],
+      depNameTemplate: "uv",
+      datasourceTemplate: "github-release-attachments",
     },
   ],
 }
