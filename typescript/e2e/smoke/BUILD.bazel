@@ -166,19 +166,15 @@ expect_failure_test(
 
 depcruise_test(
     name = "proof_depcruise_cycle",
-    srcs = [
-        ".dependency-cruiser.cjs",
-        "tsconfig.json",
-    ] + glob(["proof/depcruise/**"]),
-    config = "proof/depcruise/.dependency-cruiser.cjs",
-    dirs = ["proof/depcruise"],
-    node_modules = [":node_modules"],
+    srcs = glob(["proof/depcruise/**"]),
+    dirs = ["."],
+    strip_prefix = "proof/depcruise",
     tags = PROOF_TAGS,
 )
 
 expect_failure_test(
     name = "proof_depcruise_cycle_fails",
-    pattern = "error no-circular: proof[/\\\\]depcruise[/\\\\]a.ts",
+    pattern = "error no-circular: a.ts",
     test = ":proof_depcruise_cycle",
 )
 
