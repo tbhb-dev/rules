@@ -34,7 +34,8 @@ const pinned = Object.keys(
 // Pinned packages whose consumer copy, at another version, would split one
 // tool into two instances: the test runners load the consumer's copy of
 // these through its imports while running their own.
-const MUST_MATCH = /^(vitest|@vitest\/.*|@stryker-mutator\/.*)$/;
+const MUST_MATCH =
+  /^(vitest|@vitest\/.*|@stryker-mutator\/.*|@cloudflare\/vitest-plugin)$/;
 
 function pinnedDir(name) {
   const dir = join(here, "node_modules", name);
@@ -152,10 +153,13 @@ async function eslint(args) {
 
 async function vitest(args) {
   let coverage = false;
+  let workers = false;
   let config;
   for (const arg of args) {
     if (arg === "--coverage") {
       coverage = true;
+    } else if (arg === "--workers") {
+      workers = true;
     } else if (arg.startsWith("--config=")) {
       config = arg.slice("--config=".length);
     } else {
@@ -166,10 +170,24 @@ async function vitest(args) {
     pathToFileURL(join(pinnedDir("vitest"), "dist", "node.js")).href
   );
   const options = { run: true, watch: false, coverage: { enabled: coverage } };
+  // V8 coverage can't see into workerd, and a Workers check links only
+  // Istanbul; without this, Vitest would report a missing package instead.
+  const istanbulOnly = {
+    name: "tbhb-workers-coverage",
+    configureVitest({ vitest: ctx }) {
+      const provider = ctx.config.coverage.provider ?? "v8";
+      if (coverage && provider !== "istanbul") {
+        throw new Error(
+          `launch.mjs: a workers check needs test.coverage.provider "istanbul" in the Vitest config, not "${provider}"`,
+        );
+      }
+    },
+  };
   const ctx = await startVitest(
     "test",
     [],
     config ? { ...options, config } : options,
+    workers ? { plugins: [istanbulOnly] } : undefined,
   );
   const files = ctx?.state.getFiles() ?? [];
   // Tests that ran: skipped and todo tests prove nothing.

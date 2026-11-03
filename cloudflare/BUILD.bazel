@@ -91,7 +91,10 @@ bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],
     visibility = ["//visibility:public"],
-    deps = ["//private:worker"],
+    deps = [
+        "//private:worker",
+        "//private:workers_checks",
+    ],
 )
 
 # This module is released on its own (strip_prefix cloudflare/), so it carries its
