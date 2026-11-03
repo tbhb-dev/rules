@@ -66,6 +66,7 @@ exceptions:
   - REB
   - REPL
   - REST
+  - REUSE
   - RSA
   - SCA
   - SCM
@@ -79,6 +80,7 @@ exceptions:
   - TBD
   - TCP
   - TODO
+  - TOML
   - UPD
   - URI
   - URL
