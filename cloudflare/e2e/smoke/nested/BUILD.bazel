@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_cloudflare//:defs.bzl", "worker_bundle", "worker_types_test")
+
+repo_files()
+
+# A Worker in a subdirectory of the repository: its paths are relative to
+# this package, as they would be at the root.
+NESTED = glob(["src/**"]) + [
+    "worker-configuration.d.ts",
+    "wrangler.jsonc",
+]
+
+worker_bundle(
+    name = "bundle",
+    srcs = NESTED,
+)
+
+build_test(
+    name = "bundle_test",
+    targets = [":bundle"],
+)
+
+worker_types_test(
+    name = "worker_types_test",
+    srcs = NESTED,
+)

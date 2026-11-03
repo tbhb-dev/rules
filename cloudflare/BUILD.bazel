@@ -1,0 +1,169 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("@bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@tbhb_rules//format:defs.bzl", "format", "format_test")
+load(
+    "@tbhb_rules//lint:defs.bzl",
+    "editorconfig_checker_test",
+    "gitleaks_test",
+    "rumdl_test",
+    "ryl_test",
+    "tombi_test",
+)
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_cloudflare_npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules_cloudflare_npm//:wrangler/package_json.bzl", wrangler_bin = "bin")
+load("@tbhb_rules_typescript//:defs.bzl", "biome_test")
+
+repo_files(
+    exclude = [
+        ".DS_Store",
+        "**/.DS_Store",
+        ".bazelrc.user",
+    ],
+)
+
+# The pinned toolchain (package.json, pnpm-lock.yaml). To move a pin, edit
+# package.json, then regenerate the lock with the pnpm rules_js pins:
+#   bazel run -- @pnpm//:pnpm --dir "$PWD" install --lockfile-only
+npm_link_all_packages(name = "node_modules")
+
+# wrangler itself, for build actions and checks that run it in their own
+# tree (private/worker.bzl).
+wrangler_bin.wrangler_binary(
+    name = "wrangler",
+    visibility = ["//visibility:public"],
+)
+
+# worker_types_test's tool: regenerates the types and compares the whole
+# file, which `wrangler types --check` doesn't.
+js_binary(
+    name = "check_types",
+    data = [":node_modules/wrangler"],
+    entry_point = ":check_types_bin",
+    visibility = ["//visibility:public"],
+)
+
+copy_to_bin(
+    name = "check_types_bin",
+    srcs = ["check_types.mjs"],
+)
+
+# worker_bundle's tool: wrangler, then the README it writes removed.
+js_binary(
+    name = "bundle",
+    data = [":node_modules/wrangler"],
+    entry_point = ":bundle_bin",
+    visibility = ["//visibility:public"],
+)
+
+copy_to_bin(
+    name = "bundle_bin",
+    srcs = ["bundle.mjs"],
+)
+
+# worker_deploy's launcher.
+copy_to_bin(
+    name = "deploy",
+    srcs = ["deploy.mjs"],
+    visibility = ["//visibility:public"],
+)
+
+# The `bazel run` launcher: wrangler in the consumer's package directory.
+copy_to_bin(
+    name = "run",
+    srcs = ["run.mjs"],
+    visibility = ["//visibility:public"],
+)
+
+# This module's own JavaScript (bundle.mjs, check_types.mjs, deploy.mjs and
+# run.mjs) and JSON, under Biome.
+biome_test(
+    name = "biome_test",
+    srcs = [":repo_files"],
+)
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    visibility = ["//visibility:public"],
+    deps = ["//private:worker"],
+)
+
+# This module is released on its own (strip_prefix cloudflare/), so it carries its
+# own copies of the parent module's lint configs. Each copy must match the
+# parent's byte for byte; a change goes to both. .gitignore and .rylignore
+# are this module's own (.ryl.toml reads them).
+LINT_CONFIGS = [
+    ".editorconfig",
+    ".editorconfig-checker.json",
+    ".gitleaks.toml",
+    ".rumdl.toml",
+    ".ryl.toml",
+    "tombi.toml",
+]
+
+[
+    diff_test(
+        name = "config_matches_parent_" + config.lstrip(".").replace(".", "_").replace("-", "_"),
+        file1 = config,
+        file2 = "@tbhb_rules//:" + config,
+    )
+    for config in LINT_CONFIGS
+]
+
+# The parent module's whole-tree checks, over this module's files.
+gitleaks_test(
+    name = "gitleaks_test",
+    srcs = [":repo_files"],
+    config = ".gitleaks.toml",
+)
+
+ryl_test(
+    name = "ryl_test",
+    srcs = [":repo_files"],
+    config = ".ryl.toml",
+)
+
+tombi_test(
+    name = "tombi_test",
+    srcs = [":repo_files"],
+    config = "tombi.toml",
+)
+
+rumdl_test(
+    name = "rumdl_test",
+    srcs = [":repo_files"],
+    config = ".rumdl.toml",
+)
+
+editorconfig_checker_test(
+    name = "editorconfig_checker_test",
+    srcs = [":repo_files"],
+    config = ".editorconfig-checker.json",
+)
+
+# This module's own formatting: `bazel run //:format` rewrites the tree,
+# `//:format.check` and `format_test` check it, with the parent module's
+# formatters.
+FORMATTERS = [
+    "@tbhb_rules//format:buildifier",
+    "@tbhb_rules//format:rumdl",
+    "@tbhb_rules//format:ryl",
+    "@tbhb_rules//format:shfmt",
+]
+
+format(
+    name = "format",
+    formatters = FORMATTERS,
+)
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    formatters = FORMATTERS,
+)

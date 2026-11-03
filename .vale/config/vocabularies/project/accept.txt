@@ -30,4 +30,5 @@ tbhb_rules
 tombi
 toolchains
 uv
+workerd
 x_defs

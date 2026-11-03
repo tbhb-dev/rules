@@ -12,7 +12,8 @@ default_stages: [pre-commit]
 
 # Never touch Vale's synced style packages, build output, scratch work, agent
 # worktrees, mutation output, test fixtures (failure-proof fixtures are
-# deliberately malformed), or D2 renders, which must match a fresh render
+# deliberately malformed), D2 renders, which must match a fresh render byte
+# for byte, or wrangler's generated Worker types, which must match its output
 # byte for byte.
 exclude: |
   (?x)^(
@@ -20,6 +21,7 @@ exclude: |
     |bazel-.*/|tmp/|\.worktrees/
     |(.*/)?(mutants|testdata)/
     |.*\.d2\.(svg|png|sha256)$
+    |(.*/)?worker-configuration\.d\.ts$
   )
 
 repos:

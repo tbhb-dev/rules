@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Cloudflare Workers rules for tbhb-dev repositories: a pinned wrangler,
+the bundle it deploys, checks of a Worker's config and generated types, and
+run targets that deploy a bundle.
+
+Consumers load only `@tbhb_rules_cloudflare//:defs.bzl`.
+"""
+
+module(
+    name = "tbhb_rules_cloudflare",
+    version = "0.0.0",
+    bazel_compatibility = [">=9.0.0"],
+)
+
+bazel_dep(name = "tbhb_rules")
+
+# The released module resolves tbhb_rules from the registry; inside this
+# repository it is the enclosing module.
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "..",
+)
+
+# The TypeScript checks: Biome for this module's own files, and the Vitest
+# and Stryker checks a Worker's tests run under. Released with tbhb_rules;
+# inside this repository it is the sibling module.
+bazel_dep(name = "tbhb_rules_typescript")
+local_path_override(
+    module_name = "tbhb_rules_typescript",
+    path = "../typescript",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "aspect_rules_js", version = "3.5.2")
+bazel_dep(name = "bazel_lib", version = "3.7.0")
+
+# wrangler, with its esbuild and workerd binaries as their per-platform
+# optional packages, installed by rules_js from this module's pnpm lock
+# under a private hub. Every package is pinned by integrity hash and no
+# lifecycle script runs.
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "tbhb_rules_cloudflare_npm",
+    data = ["//:package.json"],
+    lifecycle_hooks = {"*": []},
+    pnpm_lock = "//:pnpm-lock.yaml",
+)
+use_repo(npm, "tbhb_rules_cloudflare_npm")
+
+# Dev dependencies: this module's own tests.
+bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
+
+# The pnpm that rules_js pins, for maintainers regenerating the lock:
+# bazel run -- @pnpm//:pnpm --dir "$PWD" install --lockfile-only
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm", dev_dependency = True)
+use_repo(pnpm, "pnpm")

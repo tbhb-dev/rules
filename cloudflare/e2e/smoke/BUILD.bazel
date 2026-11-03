@@ -1,0 +1,170 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_lib//lib:copy_file.bzl", "copy_file")
+load("@bazel_lib//lib:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("@tbhb_rules_cloudflare//:defs.bzl", "worker_bundle", "worker_deploy", "worker_types_test")
+load("@tbhb_rules_typescript//:defs.bzl", "tsc_test")
+
+repo_files()
+
+npm_link_all_packages(name = "node_modules")
+
+WORKER = glob(["src/**"]) + [
+    "package.json",
+    "tsconfig.json",
+    "worker-configuration.d.ts",
+    "wrangler.jsonc",
+]
+
+# One bundle per environment; ms comes from the consumer's node_modules.
+worker_bundle(
+    name = "bundle",
+    srcs = WORKER,
+    node_modules = ":node_modules",
+)
+
+worker_bundle(
+    name = "bundle_stg",
+    srcs = WORKER,
+    env = "stg",
+    node_modules = ":node_modules",
+)
+
+# //deploy:deploy_test runs these against a fake wrangler; the real one
+# would need Cloudflare credentials. The tests may see SMOKE_READ_TOKENS
+# but not SMOKE_MAIN_TOKEN or the credentials.
+worker_deploy(
+    name = "deploy_stg",
+    srcs = WORKER,
+    config = "wrangler.jsonc",
+    env = "stg",
+    node_modules = ":node_modules",
+    pass_env = ["SMOKE_READ_TOKENS"],
+    post_deploy = ["//deploy:check"],
+    pre_deploy = ["//deploy:check"],
+    secrets = {
+        "MAIN_TOKEN": "SMOKE_MAIN_TOKEN",
+        "READ_TOKENS": "SMOKE_READ_TOKENS",
+    },
+    tags = ["manual"],
+    url = "https://smoke-stg.example",
+    visibility = ["//deploy:__pkg__"],
+)
+
+worker_deploy(
+    name = "deploy_stg_no_rollback",
+    srcs = WORKER,
+    config = "wrangler.jsonc",
+    env = "stg",
+    node_modules = ":node_modules",
+    pass_env = ["SMOKE_READ_TOKENS"],
+    post_deploy = ["//deploy:check"],
+    pre_deploy = ["//deploy:check"],
+    rollback = False,
+    secrets = {
+        "MAIN_TOKEN": "SMOKE_MAIN_TOKEN",
+        "READ_TOKENS": "SMOKE_READ_TOKENS",
+    },
+    tags = ["manual"],
+    url = "https://smoke-stg.example",
+    visibility = ["//deploy:__pkg__"],
+)
+
+worker_deploy(
+    name = "deploy_stg_timeout",
+    srcs = WORKER,
+    config = "wrangler.jsonc",
+    env = "stg",
+    node_modules = ":node_modules",
+    pass_env = ["SMOKE_READ_TOKENS"],
+    post_deploy = ["//deploy:check"],
+    pre_deploy = ["//deploy:check"],
+    secrets = {
+        "MAIN_TOKEN": "SMOKE_MAIN_TOKEN",
+        "READ_TOKENS": "SMOKE_READ_TOKENS",
+    },
+    tags = ["manual"],
+    test_timeout = 2,
+    url = "https://smoke-stg.example",
+    visibility = ["//deploy:__pkg__"],
+)
+
+build_test(
+    name = "bundle_test",
+    targets = [
+        ":bundle",
+        ":bundle_stg",
+    ],
+)
+
+worker_types_test(
+    name = "worker_types_test",
+    srcs = WORKER,
+)
+
+# The generated types are what tsc checks the Worker against.
+tsc_test(
+    name = "tsc_test",
+    srcs = WORKER,
+    node_modules = [":node_modules"],
+)
+
+# Planted: the config gains a binding the checked-in types lack. The first
+# difference is the header's config hash, so this proves the header check;
+# proof_types_body below proves the full-file comparison.
+worker_types_test(
+    name = "proof_types_stale",
+    srcs = WORKER + ["proof/types_stale/wrangler.jsonc"],
+    config = "proof/types_stale/wrangler.jsonc",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_types_stale_fails",
+    pattern = "check_types: worker-configuration.d.ts differs from what wrangler types writes",
+    test = ":proof_types_stale",
+)
+
+# Planted: a line in the runtime types, below the header. The header still
+# matches, so `wrangler types --check` alone would pass. The proof copies the
+# Worker under proof/types_body/ and checks that copy as the tree's root.
+[
+    copy_file(
+        name = "types_body_" + f.replace("/", "_").replace(".", "_"),
+        src = f,
+        out = "proof/types_body/" + f,
+    )
+    for f in [
+        "src/index.ts",
+        "wrangler.jsonc",
+    ]
+]
+
+expand_template(
+    name = "types_body_planted",
+    out = "proof/types_body/worker-configuration.d.ts",
+    substitutions = {"interface R2Bucket {": "interface R2Bucket {\n\tplanted(): void;"},
+    template = "worker-configuration.d.ts",
+)
+
+worker_types_test(
+    name = "proof_types_body",
+    srcs = [
+        ":types_body_planted",
+        ":types_body_src_index_ts",
+        ":types_body_wrangler_jsonc",
+    ],
+    strip_prefix = "proof/types_body",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_types_body_fails",
+    pattern = "committed: \tplanted\\(\\): void;",
+    test = ":proof_types_body",
+)

@@ -2,5 +2,7 @@ tmp/
 .venv/
 .mise/
 lint/private/cspell/pnpm-lock.yaml
+cloudflare/pnpm-lock.yaml
+cloudflare/e2e/*/pnpm-lock.yaml
 typescript/pnpm-lock.yaml
 typescript/e2e/*/pnpm-lock.yaml

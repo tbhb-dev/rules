@@ -44,8 +44,9 @@ exports_files(
 # Every file of the repository, for the whole-tree checks below. Ignored
 # directories are listed in REPO.bazel; these are the gitignored files that
 # can sit at the root of a working checkout.
-# The nested modules (diagrams/d2/, go/, python/, typescript/) and the e2e
-# consumers are .bazelignored workspaces of their own, with their own checks.
+# The nested modules (cloudflare/, diagrams/d2/, go/, python/, typescript/)
+# and the e2e consumers are .bazelignored workspaces of their own, with their
+# own checks.
 repo_files(
     exclude = [
         ".DS_Store",
@@ -59,6 +60,7 @@ repo_files(
         "mise.local.toml",
     ],
     exclude_subpackages = [
+        "cloudflare/**",
         "diagrams/d2/**",
         "e2e/**",
         "go/**",
@@ -225,6 +227,7 @@ FORMATTERS = [
 # of their own, which format themselves with these same formatters.
 FORMAT_EXCLUDE = [
     "*/testdata/*",
+    "cloudflare/*",
     "diagrams/d2/*",
     "go/*",
     "pnpm-lock.yaml",
@@ -245,9 +248,9 @@ format_test(
     formatters = FORMATTERS,
 )
 
-# A new top-level directory is a deliberate change. diagrams/ (diagrams/d2/),
-# e2e/, go/, python/ and typescript/ hold .bazelignored workspaces outside
-# :repo_files, so they are listed but not seen here.
+# A new top-level directory is a deliberate change. cloudflare/, diagrams/
+# (diagrams/d2/), e2e/, go/, python/ and typescript/ hold .bazelignored
+# workspaces outside :repo_files, so they are listed but not seen here.
 repo_layout_test(
     name = "repo_layout_test",
     srcs = [":repo_files"],
@@ -258,6 +261,7 @@ repo_layout_test(
         ".github",
         ".vale",
         "LICENSES",
+        "cloudflare",
         "diagrams",
         "docs",
         "e2e",
