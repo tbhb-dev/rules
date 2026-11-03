@@ -294,8 +294,7 @@ def golangci_lint_aspect_factory(
         ),
         "_rule_kinds": attr.string_list(default = rule_kinds),
         "_runner": attr.label(
-            default = Label("//private:golangci_lint.sh"),
-            allow_single_file = True,
+            default = Label("//private:golangci_lint_runner"),
             executable = True,
             cfg = "exec",
         ),

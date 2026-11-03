@@ -81,8 +81,7 @@ golangci_lint_oracle = rule(
         ),
         "_report": attr.label(default = Label("//private/report"), executable = True, cfg = "exec"),
         "_runner": attr.label(
-            default = Label(":oracle.sh"),
-            allow_single_file = True,
+            default = Label(":oracle_runner"),
             executable = True,
             cfg = "exec",
         ),

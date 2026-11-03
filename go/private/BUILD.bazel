@@ -2,6 +2,7 @@
 # Copyright Tony Burns
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load(":golangci_fmt.bzl", "golangci_fmt_tool")
 
@@ -12,6 +13,20 @@ golangci_fmt_tool(
     name = "golangci_fmt_tool",
     visibility = ["//:__pkg__"],
 )
+
+# The aspects' build actions run these scripts; sh_binary gives each a
+# launcher Windows can execute.
+[
+    sh_binary(
+        name = name + "_runner",
+        srcs = [name + ".sh"],
+        visibility = ["//visibility:public"],
+    )
+    for name in [
+        "deadcode",
+        "golangci_lint",
+    ]
+]
 
 exports_files(
     [
