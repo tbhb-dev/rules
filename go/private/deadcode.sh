@@ -6,9 +6,19 @@
 # writes its findings, with paths relative to the execution root. Run by
 # go_deadcode_test (deadcode.bzl) from the execution root.
 #
-# Usage: deadcode.sh DEADCODE DRIVER DRIVER_CONFIG GO REPORT_OUT [deadcode flags...]
+# Usage: deadcode.sh @PARAMS
+#
+# PARAMS holds one argument per line: DEADCODE DRIVER DRIVER_CONFIG GO
+# REPORT_OUT [deadcode flags...]. The flags can hold shell metacharacters,
+# which the Windows launcher would not survive on a command line.
 
 set -euo pipefail
+
+params=()
+while IFS= read -r line || [[ -n $line ]]; do
+  params+=("${line%$'\r'}")
+done <"${1#@}"
+set -- "${params[@]}"
 
 deadcode=$1
 driver=$2

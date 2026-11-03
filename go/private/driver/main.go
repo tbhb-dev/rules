@@ -346,13 +346,13 @@ var placeholders = []string{"__BAZEL_EXECROOT__", workspacePlaceholder, "__BAZEL
 func resolvePaths(p *flatPackage, root, mirror string) {
 	resolve := func(path string) string {
 		if rel, ok := strings.CutPrefix(path, workspacePlaceholder); ok && mirror != "" {
-			if _, err := os.Stat(mirror + rel); err == nil {
-				return mirror + rel
+			if _, err := os.Stat(mirror + filepath.FromSlash(rel)); err == nil {
+				return mirror + filepath.FromSlash(rel)
 			}
 		}
 		for _, ph := range placeholders {
 			if rel, ok := strings.CutPrefix(path, ph); ok {
-				return root + rel
+				return root + filepath.FromSlash(rel)
 			}
 		}
 		return path

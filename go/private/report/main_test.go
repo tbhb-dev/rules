@@ -6,11 +6,23 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 )
 
+// drive stands for {D} in the fixtures: an absolute path needs a drive
+// letter on Windows.
+func drive() string {
+	if runtime.GOOS == "windows" {
+		return "C:"
+	}
+	return ""
+}
+
 func report(t *testing.T, json string, exit int, log string) string {
 	t.Helper()
+	json = strings.ReplaceAll(json, "{D}", drive())
 	dir := t.TempDir()
 	in := filepath.Join(dir, "issues.json")
 	if json != "" {
@@ -23,7 +35,7 @@ func report(t *testing.T, json string, exit int, log string) string {
 		t.Fatal(err)
 	}
 	out := filepath.Join(dir, "report.txt")
-	if err := run(in, exit, logFile, "/ws", out); err != nil {
+	if err := run(in, exit, logFile, drive()+"/ws", out); err != nil {
 		t.Fatal(err)
 	}
 	data, err := os.ReadFile(out)
@@ -47,8 +59,8 @@ func TestReport(t *testing.T) {
 		{
 			name: "issues sorted, relative to the base",
 			json: `{"Issues":[
-				{"FromLinter":"unused","Text":"func f is unused","Pos":{"Filename":"/ws/p/b.go","Line":3,"Column":6}},
-				{"FromLinter":"errcheck","Text":"unchecked","Pos":{"Filename":"/ws/p/a.go","Line":10,"Column":2}}
+				{"FromLinter":"unused","Text":"func f is unused","Pos":{"Filename":"{D}/ws/p/b.go","Line":3,"Column":6}},
+				{"FromLinter":"errcheck","Text":"unchecked","Pos":{"Filename":"{D}/ws/p/a.go","Line":10,"Column":2}}
 			]}`,
 			exit: 1,
 			want: "p/a.go:10:2: unchecked (errcheck)\np/b.go:3:6: func f is unused (unused)\n",
@@ -56,9 +68,9 @@ func TestReport(t *testing.T) {
 		{
 			name: "findings outside the base (dependencies) dropped",
 			json: `{"Issues":[
-				{"FromLinter":"errcheck","Text":"unchecked","Pos":{"Filename":"/ws/p/a.go","Line":10,"Column":2}},
-				{"FromLinter":"errcheck","Text":"unchecked","Pos":{"Filename":"/execroot/external/dep/d.go","Line":4,"Column":2}},
-				{"FromLinter":"govet","Text":"bad","Pos":{"Filename":"/ws2/x.go","Line":1,"Column":1}}
+				{"FromLinter":"errcheck","Text":"unchecked","Pos":{"Filename":"{D}/ws/p/a.go","Line":10,"Column":2}},
+				{"FromLinter":"errcheck","Text":"unchecked","Pos":{"Filename":"{D}/execroot/external/dep/d.go","Line":4,"Column":2}},
+				{"FromLinter":"govet","Text":"bad","Pos":{"Filename":"{D}/ws2/x.go","Line":1,"Column":1}}
 			]}`,
 			exit: 1,
 			want: "p/a.go:10:2: unchecked (errcheck)\n",
@@ -66,10 +78,10 @@ func TestReport(t *testing.T) {
 		{
 			name: "dependency that did not type-check",
 			json: `{"Issues":[
-				{"FromLinter":"typecheck","Text":"undefined: rand.New","Pos":{"Filename":"/execroot/external/dep/d.go","Line":122,"Column":21}}
+				{"FromLinter":"typecheck","Text":"undefined: rand.New","Pos":{"Filename":"{D}/execroot/external/dep/d.go","Line":122,"Column":21}}
 			]}`,
 			exit: 1,
-			want: "golangci-lint did not complete: a dependency did not type-check: /execroot/external/dep/d.go:122:21: undefined: rand.New\n",
+			want: "golangci-lint did not complete: a dependency did not type-check: {D}/execroot/external/dep/d.go:122:21: undefined: rand.New\n",
 		},
 		{
 			name: "failed run",
@@ -93,6 +105,7 @@ func TestReport(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := report(t, tc.json, tc.exit, tc.log)
+			tc.want = strings.ReplaceAll(tc.want, "{D}", drive())
 			if tc.name == "no output" {
 				if len(got) < len(tc.want) || got[:len(tc.want)] != tc.want {
 					t.Errorf("report = %q, want prefix %q", got, tc.want)

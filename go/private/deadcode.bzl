@@ -86,7 +86,13 @@ def _go_deadcode_test_impl(ctx):
     driver_config(ctx, config, pkg_info, roots, stdlib, test_main = ctx.attr.test)
 
     report = ctx.actions.declare_file(ctx.label.name + ".deadcode.txt")
+
+    # The filter holds shell metacharacters, and the runner's Windows launcher
+    # passes its arguments through `bash -c`; a params file carries them
+    # untouched. deadcode.sh reads it.
     args = ctx.actions.args()
+    args.set_param_file_format("multiline")
+    args.use_param_file("@%s", use_always = True)
     args.add(ctx.executable._deadcode)
     args.add(ctx.executable._driver)
     args.add(config)
