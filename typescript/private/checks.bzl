@@ -19,13 +19,20 @@ visibility("//...")
 # The pinned packages each tool needs in its tree. tsc and ESLint take
 # vitest too, for the types of the consumer's tests, and knip for its Vitest
 # plugin, which loads the consumer's Vitest config.
+#
+# A list also names every pinned package that a tool's packages import
+# without depending on it, such as an optional peer that pnpm leaves
+# unlinked. Such an import resolves from this module's top node_modules,
+# which holds only the packages some built target listed: without its
+# entry here, the check passes after another check has run and fails
+# alone. Stryker's core imports typescript to rewrite tsconfig files.
 _PACKAGES = {
     "biome": ["@biomejs/biome"],
     "depcruise": ["dependency-cruiser", "typescript"],
     "eslint": ["eslint", "typescript", "typescript-eslint", "vitest"],
     "knip": ["knip", "typescript", "vitest"],
     "pnpm-audit": ["pnpm"],
-    "stryker": ["@stryker-mutator/core", "@stryker-mutator/vitest-runner", "@vitest/coverage-v8", "vitest"],
+    "stryker": ["@stryker-mutator/core", "@stryker-mutator/vitest-runner", "@vitest/coverage-v8", "typescript", "vitest"],
     "tsc": ["typescript", "vitest"],
     "vitest": ["@vitest/coverage-v8", "vitest"],
 }
@@ -251,7 +258,7 @@ def stryker_test(name, srcs, config = None, node_modules = [], **kwargs):
     `thresholds.break` score; a mutation score below it fails the check, and
     so does a run that made no mutant. Set `concurrency` to the CPUs the
     test may use, and tag the test `cpu:N` to match. This module links its
-    pinned Stryker, Vitest runner and Vitest into the tree.
+    pinned Stryker, Vitest runner, Vitest and TypeScript into the tree.
 
     On Windows, Stryker's Babel packages have store paths close to the
     260-character limit, and under Bazel's default output root they pass
