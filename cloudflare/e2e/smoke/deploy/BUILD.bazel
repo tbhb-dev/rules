@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+# A stand-in for a pre- and post-deploy test.
+js_binary(
+    name = "check",
+    entry_point = "fake_check.mjs",
+    visibility = ["//:__pkg__"],
+)
+
+# Runs the deploy targets against a fake wrangler.
+js_test(
+    name = "deploy_test",
+    data = [
+        "fake_wrangler.mjs",
+        "//:deploy_stg",
+        "//:deploy_stg_no_rollback",
+        "//:deploy_stg_timeout",
+    ],
+    entry_point = "deploy_test.mjs",
+    env = {
+        "deploy_stg": "$(rootpath //:deploy_stg)",
+        "deploy_stg_no_rollback": "$(rootpath //:deploy_stg_no_rollback)",
+        "deploy_stg_timeout": "$(rootpath //:deploy_stg_timeout)",
+        "fake_wrangler": "$(rootpath fake_wrangler.mjs)",
+    },
+)

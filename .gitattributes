@@ -11,6 +11,9 @@ mise.lock -diff linguist-generated
 *.d2.svg linguist-generated
 *.d2.png binary linguist-generated
 *.d2.sha256 linguist-generated
+# wrangler types output, which a Worker commits and worker_types_test checks
+# byte for byte, trailing whitespace included.
+worker-configuration.d.ts linguist-generated
 
 # Release archives carry the module only: the rule families, the root build
 # files and the tool pins. This repository's own tooling, tests and CI stay

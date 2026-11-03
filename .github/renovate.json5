@@ -19,8 +19,9 @@
   // go.mod requirements, tool directives and toolchain lines that
   // go_sdk.from_file reads, python.json5 the pyproject and uv.lock pins and
   // uv's required-version, npm the package.json and pnpm-lock.yaml pins
-  // (lint/private/cspell, typescript/package.json with Biome's binaries, e2e
-  // consumers), and bazelisk every .bazelversion as one group.
+  // (lint/private/cspell, typescript/package.json with Biome's binaries,
+  // cloudflare/package.json with wrangler, e2e consumers), and bazelisk every
+  // .bazelversion as one group.
   packageRules: [
     {
       description: "typescript-eslint 8 supports TypeScript below 6.1 (peer >=4.8.4 <6.1.0)",
@@ -33,6 +34,17 @@
       matchFileNames: ["typescript/**/package.json"],
       matchPackageNames: ["vitest", "@vitest/**"],
       allowedVersions: "<4.2",
+    },
+    {
+      // A wrangler bump that moves workerd changes every Worker's generated
+      // types, which worker_types_test then fails on until they're
+      // regenerated on the bump's branch.
+      description: "wrangler bumps need regenerated Worker types",
+      matchFileNames: ["cloudflare/**/package.json"],
+      matchPackageNames: ["wrangler"],
+      prBodyNotes: [
+        "Regenerate the smoke Worker's types on this branch before merging: `cd cloudflare/e2e/smoke && bazel run //:worker_types_test.update`, then commit `worker-configuration.d.ts`. Until then `worker_types_test` fails, as expected.",
+      ],
     },
     {
       // tbhb_rules_d2's PNG font. 2.045R-ro/1.095R-it is the last Source

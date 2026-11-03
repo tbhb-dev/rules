@@ -60,4 +60,6 @@ run = [
   "cd python/e2e/workspace && bazelisk test //...",
   "cd typescript && bazelisk test //...",
   "cd typescript/e2e/smoke && bazelisk test //...",
+  "cd cloudflare && bazelisk test //...",
+  "cd cloudflare/e2e/smoke && bazelisk test //...",
 ]

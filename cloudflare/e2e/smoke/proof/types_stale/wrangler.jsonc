@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Tony Burns
+{
+  "name": "smoke",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "vars": { "GREETING": "hello" },
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "smoke" }],
+  "kv_namespaces": [{ "binding": "PLANTED", "id": "0123456789abcdef0123456789abcdef" }],
+  "env": {
+    "stg": {
+      "name": "smoke-stg",
+      "workers_dev": false,
+      "vars": { "GREETING": "hello" },
+      "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "smoke-stg" }]
+    }
+  }
+}

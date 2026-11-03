@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Tony Burns
+{
+  "name": "smoke-nested",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "kv_namespaces": [
+    { "binding": "NOTES", "id": "0123456789abcdef0123456789abcdef" }
+  ]
+}

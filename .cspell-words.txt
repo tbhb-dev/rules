@@ -171,6 +171,7 @@ usdhowv
 usefixtures
 usetesting
 vitest
+workerd
 worktrees
 xdist
 xgenerated

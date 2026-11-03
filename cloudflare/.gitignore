@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+bazel-*
+.bazelrc.user
+
+# A local `pnpm install`; the checks use the npm_link_all_packages tree.
+/node_modules/
+
+# wrangler's local state.
+.wrangler/
