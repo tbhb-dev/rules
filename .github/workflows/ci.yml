@@ -109,7 +109,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-26.04, macos-26, windows-2025]
+        os: [ubuntu-26.04, ubuntu-26.04-arm, macos-26, windows-2025]
         workspace: ${{ fromJSON(needs.plan.outputs.workspaces) }}
     defaults:
       run:
