@@ -36,8 +36,12 @@ def repo_files(name = "repo_files", exclude = [], exclude_subpackages = [], visi
     # root. Unless REPO.bazel ignores them, glob() follows them into the
     # output tree, and `subpackages()` lists them even when it does; loading
     # one fails as a deleted package.
+    #
+    # In a linked worktree or a submodule, `.git` is a file, which
+    # REPO.bazel's ignore_directories can't name, and copied into a check's
+    # tree it would pose as a repository. It is never a source file.
     skip = (["bazel-*"] if not package else []) + exclude_subpackages
-    exclude = exclude + ["bazel-*/**"] if not package else exclude
+    exclude = exclude + ["bazel-*/**", ".git"] if not package else exclude
     subpackages = [
         "//{}:{}".format(package + "/" + sub if package else sub, name)
         for sub in native.subpackages(include = ["**"], exclude = skip, allow_empty = True)

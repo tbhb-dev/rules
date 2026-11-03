@@ -5,7 +5,9 @@ or "Low risk". Word limits count prose only: code blocks and links are free.
 
 Agents don't use this form. They draft .github/PULL_REQUEST_DRAFT.md, which is
 gitignored. Its frontmatter carries the metadata and its H1 is the title, and
-the PR script lints the draft and opens the PR from it.
+the PR script lints the draft and opens the PR from it. The script also
+appends the Generated-by and Assisted-by trailers as the body's last paragraph,
+from the branch's commits and the posting agent's identity. Never write them.
 -->
 
 ## Why
@@ -45,11 +47,7 @@ flags, rollback, and anything irreversible. -->
 with their results, or output from the command log. Leave out what CI already
 reports. -->
 
-## Provenance
+## Human steering
 
-<!-- Agents: the PR script fills this section from the session's identity, in
-the same fields as the commit trailers (harness, model, effort, hashed
-session), and never with a raw session ID. People: say who steered the work,
-or remove the section. -->
-
-- **Human steering:**
+<!-- Optional, at most 40 words. Who steered the work and how, when a person
+did. Leave the section out for an autonomous run. -->

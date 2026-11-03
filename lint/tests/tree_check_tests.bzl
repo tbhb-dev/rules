@@ -6,7 +6,7 @@
 load("@rules_testing//lib:analysis_test.bzl", "analysis_test", "test_suite")
 load("@rules_testing//lib:truth.bzl", "matching")
 load("@rules_testing//lib:util.bzl", "util")
-load("//lint:defs.bzl", "bats_test", "gitleaks_test", "tombi_test", "tree_check_test")
+load("//lint:defs.bzl", "bats_test", "gitleaks_test", "rumdl_test", "tombi_test", "tree_check_test")
 
 _ROOT = "lint/tests/testdata/root"
 
@@ -159,6 +159,21 @@ def _test_bats_uses_pinned_git_impl(env, target):
         "GIT_TEMPLATE_DIR": "",
     })
 
+def _test_rumdl_owns_its_root(name):
+    util.helper_target(
+        rumdl_test,
+        name = name + "_subject",
+        srcs = ["testdata/root/a.txt"],
+        tool = ":fake_tool.sh",
+        tags = ["manual"],
+    )
+    analysis_test(name = name, impl = _test_rumdl_owns_its_root_impl, target = name + "_subject")
+
+def _test_rumdl_owns_its_root_impl(env, target):
+    env.expect.that_target(target).action_named("TemplateExpand").substitutions().contains_at_least({
+        "@@GIT_ROOT@@": "1",
+    })
+
 def tree_check_test_suite(name):
     test_suite(
         name = name,
@@ -174,5 +189,6 @@ def tree_check_test_suite(name):
             _test_gitleaks_guard,
             _test_tombi_schemas,
             _test_bats_uses_pinned_git,
+            _test_rumdl_owns_its_root,
         ],
     )

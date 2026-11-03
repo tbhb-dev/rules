@@ -30,5 +30,19 @@
         ]
       }
     ]
+  },
+  "pull-request": {
+    "PostToolUse": [
+      {
+        "matcher": "write_file|edit_file|write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd .. && uv run --quiet python -m tools.interim.pull_request hook antigravity",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
   }
 }

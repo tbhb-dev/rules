@@ -64,6 +64,11 @@ def ryl_test(name, srcs, config = None, tool = Label("@multitool//tools/ryl"), *
 def rumdl_test(name, srcs, config = None, tool = Label("@multitool//tools/rumdl"), **kwargs):
     """Lints Markdown with `rumdl check`.
 
+    rumdl takes the nearest directory holding `.git` as the project root, for
+    its reported paths, per-file ignores and cache. The copy gets its own
+    `.git`, so a repository above the test's sandbox (such as a `~/.cache`
+    under version control, around Bazel's output base) can't capture it.
+
     Args:
         name: Target name.
         srcs: Files to check.
@@ -77,6 +82,7 @@ def rumdl_test(name, srcs, config = None, tool = Label("@multitool//tools/rumdl"
         config = config,
         tool = tool,
         tool_args = ["check"] + _config_args(config, "--config") + ["."],
+        git_root = True,
         **kwargs
     )
 

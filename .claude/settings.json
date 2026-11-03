@@ -1,11 +1,17 @@
 {
   "includeCoAuthoredBy": false,
-  "attribution": { "commit": "", "pr": "" },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
-          { "type": "command", "command": "uv run --project \"$CLAUDE_PROJECT_DIR\" --quiet bash \"$CLAUDE_PROJECT_DIR/tools/interim/install.sh\"" },
+          {
+            "type": "command",
+            "command": "uv run --project \"$CLAUDE_PROJECT_DIR\" --quiet bash \"$CLAUDE_PROJECT_DIR/tools/interim/install.sh\""
+          },
           {
             "type": "command",
             "command": "uv run --no-project --quiet --python '>=3.15' python \"$CLAUDE_PROJECT_DIR/tools/interim/agent_identity.py\" record claude"
@@ -41,6 +47,15 @@
           {
             "type": "command",
             "command": "uv run --no-project --quiet --python '>=3.15' python \"$CLAUDE_PROJECT_DIR/tools/interim/agent_identity.py\" record claude"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && uv run --quiet python -m tools.interim.pull_request hook claude"
           }
         ]
       }

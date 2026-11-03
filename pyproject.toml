@@ -280,7 +280,7 @@ source_paths = ["tools"]
 # is held to the static gates and 100% branch coverage, not mutation.
 do_not_mutate = ["tools/test_*.py", "tools/interim/*"]
 # Tests read these at paths relative to themselves.
-also_copy = ["tools/interim/testdata", "tools/interim/install.sh", "tools/testdata", "docs/schemas", ".pre-commit-config.yaml", ".codex"]
+also_copy = ["tools/interim/testdata", "tools/interim/install.sh", "tools/testdata", "docs/schemas", ".pre-commit-config.yaml", ".codex", ".github/schemas", ".github/pull-request-sections.toml", ".github/PULL_REQUEST_TEMPLATE.md"]
 pytest_add_cli_args_test_selection = ["tools"]
 
 [tool.ruff]
