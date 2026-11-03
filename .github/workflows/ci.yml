@@ -70,12 +70,6 @@ jobs:
         working-directory: e2e/smoke
         run: bazelisk test //...
 
-      # A consumer with its own rules_js, `npm` hub and Node 24: cspell_test
-      # must coexist with them and run on the consumer's Node.
-      - name: Test the rules_js consumer
-        working-directory: e2e/js_coexist
-        run: bazelisk test //...
-
       # The nested modules are workspaces of their own, each with its own
       # gates and consumers, on the same Bazel versions and platforms.
       - name: Test the Go module

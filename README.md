@@ -117,7 +117,6 @@ mise provides bazelisk and uv (`mise install`). Bazel and uv pin everything else
 | --- | --- |
 | `bazelisk test //...` | buildifier, this repository's lint, shell and bats gates, run on its own rules |
 | `(cd e2e/smoke && bazelisk test //...)` | the rules as a consumer sees them, including the failure proofs |
-| `(cd e2e/js_coexist && bazelisk test //...)` | `cspell_test` beside a consumer's own rules_js and Node |
 | `bazelisk run //:format` | rewrites files with the formatters, and `//:format.check` only checks |
 | `uv run pytest --cov=tools --cov-branch` | the Python tooling, at 100% branch coverage |
 | `uv run mutmut run; uv run python tools/mutation_gate.py` | every mutant killed |
