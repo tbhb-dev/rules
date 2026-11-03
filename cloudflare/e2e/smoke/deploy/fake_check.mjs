@@ -5,8 +5,15 @@
 // was given in FAKE_LOG. FAKE_FAIL=pre|post fails that phase;
 // FAKE_SLEEP=pre pauses the pre-deploy test after writing FAKE_STARTED;
 // FAKE_INTERFERE=pre rewrites the deployment as another deploy would;
-// FAKE_STUBBORN=pre ignores SIGTERM and never finishes.
-import { appendFileSync, writeFileSync } from "node:fs";
+// FAKE_STUBBORN=pre ignores SIGTERM and never finishes;
+// FAKE_FLAKY=pre:2 fails the first 2 attempts of that phase, counted in
+// FAKE_ATTEMPTS, and passes after.
+import {
+  appendFileSync,
+  existsSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 
 const env = process.env;
 const headers = JSON.parse(env.WORKER_REQUEST_HEADERS);
@@ -30,6 +37,14 @@ appendFileSync(
     ),
   })}\n`,
 );
+const [flaky, fails] = (env.FAKE_FLAKY ?? ":").split(":");
+if (flaky === phase) {
+  const attempts = existsSync(env.FAKE_ATTEMPTS)
+    ? Number(readFileSync(env.FAKE_ATTEMPTS, "utf8"))
+    : 0;
+  writeFileSync(env.FAKE_ATTEMPTS, String(attempts + 1));
+  process.exit(attempts < Number(fails) ? 1 : 0);
+}
 if (env.FAKE_INTERFERE === phase) {
   writeFileSync(
     env.FAKE_STATE,

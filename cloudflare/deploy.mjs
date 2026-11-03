@@ -11,6 +11,8 @@
 //    Cloudflare-Workers-Version-Overrides header.
 // 5. Checks the deployment is still the one step 3 made, moves the new
 //    version to 100%, and runs the post-deploy tests against the live URL.
+//    A failing test of either phase is rerun for up to a minute, since a
+//    deployment takes effect a few seconds after the API returns.
 // 6. Puts the previous version back at 100% when anything fails after
 //    step 3 (a post-deploy test only when rollback is on), and exits
 //    non-zero.
@@ -19,9 +21,10 @@
 // failure: the signal goes on to the running child's process group, then
 // the restore and the cleanup run, and no signal interrupts the restore.
 // Children run asynchronously so the handlers can run while one is busy,
-// and a child that outlives its timeout gets SIGTERM, then SIGKILL. The
-// rules_js launcher passes on SIGINT and SIGTERM but not SIGHUP. SIGKILL
-// can't be handled; after one, check the deployment by hand.
+// and a child that outlives its timeout gets SIGTERM, then SIGKILL. A
+// signal also ends the pause between test attempts. The rules_js launcher
+// passes on SIGINT and SIGTERM but not SIGHUP. SIGKILL can't be handled;
+// after one, check the deployment by hand.
 //
 // The settings come from the macro as TBHB_DEPLOY; the Cloudflare
 // credentials from CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, and each
@@ -59,9 +62,12 @@ function exitWith(message) {
 let current = null;
 let restoring = false;
 let interrupted = null;
+// Ends the pause between test attempts, while there is one.
+let wake = null;
 for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
   process.on(signal, () => {
     interrupted ??= signal;
+    wake?.();
     if (!restoring && current !== null) {
       stop(current, signal);
     }
@@ -165,6 +171,18 @@ const wranglerBin =
 const wranglerTimeout = settings.wrangler_timeout * 1000;
 const testTimeout = settings.test_timeout * 1000;
 let calls = 0;
+
+// A deployment takes effect a few seconds after the API returns, so the old
+// version can keep answering after `wrangler versions deploy` has exited. A
+// failing test is rerun, RETRY_PAUSE after each failure, until it passes or
+// SETTLE has passed since its phase began. Tests set
+// TBHB_DEPLOY_SETTLE_SCALE to shrink or stretch both; outside a test it's
+// ignored.
+const scale =
+  (process.env.TEST_TMPDIR && Number(process.env.TBHB_DEPLOY_SETTLE_SCALE)) ||
+  1;
+const SETTLE = 60_000 * scale;
+const RETRY_PAUSE = 5_000 * scale;
 
 // Milliseconds a timed-out child gets between SIGTERM and SIGKILL.
 const GRACE = 10_000;
@@ -315,19 +333,30 @@ async function runTests(phase, targets, env) {
   const hidden = [...NEVER, ...CREDENTIALS].filter(
     (name) => !settings.pass_env.includes(name),
   );
+  const began = Date.now();
   for (const target of targets) {
     console.log(`worker_deploy: ${phase}-deploy test ${target}`);
-    const result = await spawn(runfile(target), [], {
-      env: {
-        ...without(process.env, hidden),
-        ...env,
-        RUNFILES_DIR: runfiles,
-      },
-      timeout: testTimeout,
-    });
-    checkInterrupted();
-    if (result.status !== 0) {
-      return `${target} ${describe(result)}`;
+    for (;;) {
+      const result = await spawn(runfile(target), [], {
+        env: {
+          ...without(process.env, hidden),
+          ...env,
+          RUNFILES_DIR: runfiles,
+        },
+        timeout: testTimeout,
+      });
+      checkInterrupted();
+      if (result.status === 0) {
+        break;
+      }
+      if (Date.now() - began >= SETTLE) {
+        return `${target} ${describe(result)}`;
+      }
+      console.error(
+        `worker_deploy: ${phase}-deploy test ${target} failed (${describe(result)}); retrying in ${RETRY_PAUSE / 1000}s`,
+      );
+      await pause(RETRY_PAUSE);
+      checkInterrupted();
     }
   }
   return null;
@@ -347,6 +376,19 @@ function summary(line) {
 
 function sleep(ms) {
   return new Promise((done) => setTimeout(done, ms));
+}
+
+// Resolves after ms, or at once when a signal arrives.
+function pause(ms) {
+  return new Promise((done) => {
+    const timer = setTimeout(finish, ms);
+    function finish() {
+      clearTimeout(timer);
+      wake = null;
+      done();
+    }
+    wake = finish;
+  });
 }
 
 const message = settings.message || "worker_deploy";
