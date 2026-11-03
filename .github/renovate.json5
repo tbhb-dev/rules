@@ -18,7 +18,23 @@
   // diagrams/d2/private/tools.bzl, MODULE.bazel) and dugite's git, gomod the
   // go.mod requirements, tool directives and toolchain lines that
   // go_sdk.from_file reads, python.json5 the pyproject and uv.lock pins and
-  // uv's required-version, and bazelisk every .bazelversion as one group.
+  // uv's required-version, npm the package.json and pnpm-lock.yaml pins
+  // (lint/private/cspell, typescript/package.json with Biome's binaries, e2e
+  // consumers), and bazelisk every .bazelversion as one group.
+  packageRules: [
+    {
+      description: "typescript-eslint 8 supports TypeScript below 6.1 (peer >=4.8.4 <6.1.0)",
+      matchFileNames: ["typescript/**/package.json"],
+      matchPackageNames: ["typescript"],
+      allowedVersions: "<6.1",
+    },
+    {
+      description: "@cloudflare/vitest-pool-workers supports Vitest 4.1 (peer ^4.1.0)",
+      matchFileNames: ["typescript/**/package.json"],
+      matchPackageNames: ["vitest", "@vitest/**"],
+      allowedVersions: "<4.2",
+    },
+  ],
   customManagers: [
     {
       // The runtime downloads uv at repository-fetch time from this dict, so

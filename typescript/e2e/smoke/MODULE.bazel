@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules_typescript the way a Worker repository would.
+
+A small Worker module whose own packages come from its pnpm lock
+(`@cloudflare/workers-types`, and `debug` with its own dependency), under
+every check of the module, with proofs that each check fails on a planted
+defect and that a check which scanned nothing fails.
+"""
+
+module(name = "tbhb_rules_typescript_smoke")
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../../..",
+)
+
+bazel_dep(name = "tbhb_rules_typescript")
+local_path_override(
+    module_name = "tbhb_rules_typescript",
+    path = "../..",
+)
+
+bazel_dep(name = "aspect_rules_js", version = "3.5.2")
+
+# The project's own packages, as a consumer installs them.
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "npm",
+    data = ["//:package.json"],
+    lifecycle_hooks = {"*": []},
+    pnpm_lock = "//:pnpm-lock.yaml",
+)
+use_repo(npm, "npm")
+
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm")
+use_repo(pnpm, "pnpm")

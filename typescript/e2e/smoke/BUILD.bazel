@@ -1,0 +1,279 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("@tbhb_rules_typescript//:defs.bzl", "biome_test", "depcruise_test", "eslint_test", "knip_test", "pnpm_audit_test", "stryker_test", "tsc_test", "vitest_test")
+
+repo_files()
+
+npm_link_all_packages(name = "node_modules")
+
+# The project as a consumer checks it: everything but the planted proofs.
+PROJECT = glob(
+    ["**"],
+    exclude = [
+        "node_modules/**",
+        "proof/**",
+    ],
+)
+
+exports_files(["src/greeting.test.ts"])
+
+tsc_test(
+    name = "tsc_test",
+    srcs = PROJECT,
+    node_modules = [":node_modules"],
+)
+
+biome_test(
+    name = "biome_test",
+    srcs = PROJECT,
+)
+
+eslint_test(
+    name = "eslint_test",
+    srcs = PROJECT,
+    node_modules = [":node_modules"],
+)
+
+knip_test(
+    name = "knip_test",
+    srcs = PROJECT,
+    node_modules = [":node_modules"],
+)
+
+depcruise_test(
+    name = "depcruise_test",
+    srcs = PROJECT,
+    node_modules = [":node_modules"],
+)
+
+vitest_test(
+    name = "vitest_test",
+    srcs = PROJECT,
+    node_modules = [":node_modules"],
+)
+
+# The configs set concurrency 2; the tag gives the test those CPUs.
+stryker_test(
+    name = "stryker_test",
+    srcs = PROJECT,
+    node_modules = [":node_modules"],
+    tags = ["cpu:2"],
+)
+
+# Manual: needs the network.
+pnpm_audit_test(
+    name = "pnpm_audit_test",
+    srcs = [
+        "package.json",
+        "pnpm-lock.yaml",
+    ],
+)
+
+# Proofs: each target must fail, for the reason expect_failure_test states.
+# They are manual so `bazel test //...` runs them only through the proofs.
+PROOF_TAGS = ["manual"]
+
+tsc_test(
+    name = "proof_tsc_type_error",
+    srcs = ["tsconfig.json"] + glob(["proof/type_error/**"]),
+    config = "proof/type_error/tsconfig.json",
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_tsc_type_error_fails",
+    pattern = "proof/type_error/index.ts\\([0-9]+,[0-9]+\\): error TS2322: Type 'number' is not assignable to type 'string'",
+    test = ":proof_tsc_type_error",
+)
+
+# Without the workers types, the handler's Request and Response don't
+# resolve: the check reads the consumer's node_modules, not only the sources.
+tsc_test(
+    name = "proof_tsc_no_node_modules",
+    srcs = PROJECT,
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_tsc_no_node_modules_fails",
+    pattern = "error TS2688: Cannot find type definition file for '@cloudflare/workers-types'",
+    test = ":proof_tsc_no_node_modules",
+)
+
+# Biome prints paths with the platform's separator.
+biome_test(
+    name = "proof_biome_lint",
+    srcs = ["biome.json"] + glob(["proof/lint/**"]),
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_biome_lint_fails",
+    pattern = "proof[/\\\\]lint[/\\\\]index.ts:[0-9]+:[0-9]+ lint/suspicious/noDoubleEquals",
+    test = ":proof_biome_lint",
+)
+
+biome_test(
+    name = "proof_biome_format",
+    srcs = ["biome.json"] + glob(["proof/format/**"]),
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_biome_format_fails",
+    pattern = "proof[/\\\\]format[/\\\\]index.ts format",
+    test = ":proof_biome_format",
+)
+
+eslint_test(
+    name = "proof_eslint_floating_promise",
+    srcs = [
+        "eslint.config.mjs",
+        "package.json",
+        "tsconfig.json",
+    ] + glob(["proof/eslint/**"]),
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_eslint_floating_promise_fails",
+    pattern = "error +Promises must be awaited.*@typescript-eslint/no-floating-promises",
+    test = ":proof_eslint_floating_promise",
+)
+
+knip_test(
+    name = "proof_knip_unused_file",
+    srcs = [
+        "package.json",
+        "tsconfig.json",
+    ] + glob(["proof/knip/**"]),
+    config = "proof/knip/knip.json",
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_knip_unused_file_fails",
+    pattern = "^proof[/\\\\]knip[/\\\\]orphan.ts",
+    test = ":proof_knip_unused_file",
+)
+
+depcruise_test(
+    name = "proof_depcruise_cycle",
+    srcs = [
+        ".dependency-cruiser.cjs",
+        "tsconfig.json",
+    ] + glob(["proof/depcruise/**"]),
+    config = "proof/depcruise/.dependency-cruiser.cjs",
+    dirs = ["proof/depcruise"],
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_depcruise_cycle_fails",
+    pattern = "error no-circular: proof[/\\\\]depcruise[/\\\\]a.ts",
+    test = ":proof_depcruise_cycle",
+)
+
+vitest_test(
+    name = "proof_vitest_failing_test",
+    srcs = ["proof/vitest_fail/sum.test.ts"],
+    config = "proof/vitest_fail/vitest.config.mjs",
+    coverage = False,
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_vitest_failing_test_fails",
+    pattern = "AssertionError: expected 2 to be 3",
+    test = ":proof_vitest_failing_test",
+)
+
+vitest_test(
+    name = "proof_vitest_coverage",
+    srcs = glob(
+        ["proof/vitest_coverage/**"],
+        exclude = ["proof/vitest_coverage/vitest.config.mjs"],
+    ),
+    config = "proof/vitest_coverage/vitest.config.mjs",
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_vitest_coverage_fails",
+    pattern = "Coverage for (lines|branches|statements) \\([0-9.]+%\\) does not meet global threshold \\(100%\\)",
+    test = ":proof_vitest_coverage",
+)
+
+stryker_test(
+    name = "proof_stryker_survivor",
+    srcs = glob(
+        ["proof/stryker/**"],
+        exclude = ["proof/stryker/stryker.config.mjs"],
+    ),
+    config = "proof/stryker/stryker.config.mjs",
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS + ["cpu:2"],
+)
+
+expect_failure_test(
+    name = "proof_stryker_survivor_fails",
+    pattern = "Final mutation score [0-9.]+ under breaking threshold 100",
+    test = ":proof_stryker_survivor",
+)
+
+# Guard proofs: a check that scanned nothing fails, even when the tool
+# itself would pass.
+vitest_test(
+    name = "proof_vitest_no_tests",
+    srcs = [],
+    config = "proof/vitest_none/vitest.config.mjs",
+    coverage = False,
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_vitest_no_tests_fails",
+    pattern = "tree_check: FAIL: tool output did not match the guard 'vitest: ran \\[1-9\\]",
+    test = ":proof_vitest_no_tests",
+)
+
+knip_test(
+    name = "proof_knip_nothing_analysed",
+    srcs = ["package.json"],
+    config = "proof/knip/empty.json",
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_knip_nothing_analysed_fails",
+    pattern = "tree_check: FAIL: tool output did not match the guard 'knip: analysed \\[1-9\\]",
+    test = ":proof_knip_nothing_analysed",
+)
+
+# @types/debug's types come partly from its own dependency, @types/ms. The
+# planted error is found only when that dependency resolves in the tree.
+tsc_test(
+    name = "proof_tsc_dependency_types",
+    srcs = ["tsconfig.json"] + glob(["proof/types_dep/**"]),
+    config = "proof/types_dep/tsconfig.json",
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_tsc_dependency_types_fails",
+    pattern = "proof/types_dep/index.ts\\([0-9]+,[0-9]+\\): error TS2322: Type 'string' is not assignable to type 'number'",
+    test = ":proof_tsc_dependency_types",
+)

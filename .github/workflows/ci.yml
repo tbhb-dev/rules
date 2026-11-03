@@ -56,7 +56,9 @@ jobs:
               {"id": "go-smoke", "dir": "go/e2e/smoke", "deps": ["root", "go"]},
               {"id": "python", "dir": "python", "deps": ["root"]},
               {"id": "python-single", "dir": "python/e2e/single", "deps": ["root", "python"]},
-              {"id": "python-workspace", "dir": "python/e2e/workspace", "deps": ["root", "python"]}
+              {"id": "python-workspace", "dir": "python/e2e/workspace", "deps": ["root", "python"]},
+              {"id": "typescript", "dir": "typescript", "deps": ["root"]},
+              {"id": "typescript-smoke", "dir": "typescript/e2e/smoke", "deps": ["root", "typescript"]}
             ]
         run: |
           files="${RUNNER_TEMP}/changed"
@@ -220,10 +222,11 @@ jobs:
       # Each module's MODULE.bazel, as `bazel mod tidy` would write it.
       - name: Check that MODULE.bazel is tidy
         run: |
-          for module in . diagrams/d2 go python; do
+          for module in . diagrams/d2 go python typescript; do
             (cd "$module" && bazelisk mod tidy)
           done
-          git diff --exit-code -- MODULE.bazel diagrams/d2/MODULE.bazel go/MODULE.bazel python/MODULE.bazel
+          git diff --exit-code -- MODULE.bazel diagrams/d2/MODULE.bazel go/MODULE.bazel python/MODULE.bazel \
+            typescript/MODULE.bazel
 
       # Git history is not a declared input, so the history scan runs
       # outside the test graph; //:gitleaks_test covers the working tree.
@@ -234,6 +237,11 @@ jobs:
       # a cached test.
       - name: Audit the locked Python dependencies
         run: bazelisk run //tools:pip_audit
+
+      # The TypeScript module's own toolchain lock, the same way.
+      - name: Audit the locked TypeScript toolchain
+        working-directory: typescript
+        run: bazelisk run //:pnpm_audit -- --dir "${GITHUB_WORKSPACE}/typescript"
 
       # //:zizmor_test runs the offline audits; a token turns on the online
       # ones, which need the network.
