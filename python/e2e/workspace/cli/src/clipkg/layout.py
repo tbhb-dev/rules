@@ -5,7 +5,7 @@
 
 import sys
 
-from tbhbops import gitfiles
+from clipkg import gitfiles
 
 
 def count(listing: str) -> int:
@@ -14,5 +14,5 @@ def count(listing: str) -> int:
 
 
 def main() -> None:
-    """Print the count for the listing on stdin (the tbhbops-layout script)."""
+    """Print the count for the listing on stdin (the clipkg-layout script)."""
     print(count(sys.stdin.read()))

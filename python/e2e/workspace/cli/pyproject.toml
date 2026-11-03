@@ -2,13 +2,13 @@
 # Copyright Tony Burns
 
 [project]
-name = "tbhbops"
+name = "clipkg"
 version = "0.1.0"
 requires-python = ">=3.15"
 dependencies = []
 
 [project.scripts]
-tbhbops-layout = "tbhbops.layout:main"
+clipkg-layout = "clipkg.layout:main"
 
 [build-system]
 requires = ["uv_build>=0.13.0,<0.14"]

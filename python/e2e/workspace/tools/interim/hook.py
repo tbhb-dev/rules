@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""An interim hook, kept apart from tbhbops."""
+"""An interim hook, kept apart from clipkg."""
 
 
 def trailer(name: str) -> str:

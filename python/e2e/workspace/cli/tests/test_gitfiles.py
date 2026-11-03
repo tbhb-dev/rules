@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-from tbhbops import gitfiles
+from clipkg import gitfiles
 
 
 def test_tracked() -> None:

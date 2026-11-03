@@ -3,10 +3,9 @@
 
 """Consumes tbhb_rules_python the way a uv workspace repository does.
 
-Shaped like tbhb-dev/ops: a virtual root, a src-layout member (`cli`, the
-`tbhbops` package), the `tools` namespace package with tests alongside the
-code (tools/interim), and an extensionless PEP 723 script that depends on
-the member by path.
+A virtual root, a src-layout member (`cli`, the `clipkg` package), the
+`tools` namespace package with tests alongside the code (tools/interim),
+and an extensionless PEP 723 script that depends on the member by path.
 """
 
 module(name = "tbhb_rules_python_e2e_workspace")

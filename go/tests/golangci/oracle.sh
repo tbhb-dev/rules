@@ -4,7 +4,7 @@
 
 # The parity oracle: runs golangci-lint the ordinary way, with the go command
 # loading packages, over a copy of a Go module, and writes a findings report
-# in the aspect's format. Sandboxed and offline, as afakt's vendor-mode gate:
+# in the aspect's format. Sandboxed and offline, as a vendor-mode gate is:
 # vendored modules only (-mod=vendor when vendor/ exists), no proxy, no
 # toolchain switch, empty caches.
 #

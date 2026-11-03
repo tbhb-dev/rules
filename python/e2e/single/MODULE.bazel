@@ -3,8 +3,8 @@
 
 """Consumes tbhb_rules_python the way a single-project repository does.
 
-A virtual project whose Python lives in the `tools` namespace package, as in
-ascm, under every check of the module, a clean mutation run, and proofs that
+A virtual project whose Python lives in the `tools` namespace package,
+under every check of the module, a clean mutation run, and proofs that
 the checks fail on planted defects.
 """
 

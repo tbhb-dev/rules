@@ -5,8 +5,8 @@
 
 `golangci_lint_oracle` copies a Go module's files, collected through the
 build graph by `go_srcs_aspect`, and runs golangci-lint over the copy with
-the go command loading packages, offline (afakt's vendor-mode gate; with
-`proxy`, modules come from a go_mod_proxy directory instead of vendor/).
+the go command loading packages, offline (a vendor-mode gate; with `proxy`,
+modules come from a go_mod_proxy directory instead of vendor/).
 Its report has the aspect's format, and a test made by
 `golangci_lint_parity_test_factory` compares the two.
 

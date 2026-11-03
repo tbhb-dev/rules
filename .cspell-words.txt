@@ -149,7 +149,7 @@ subtests
 surrogateescape
 takewhile
 tbhb
-tbhbops
+clipkg
 testifylint
 testonly
 testpaths

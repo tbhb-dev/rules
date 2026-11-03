@@ -32,6 +32,8 @@ sed -i.orig \
   -e "s|path = \"../..\"|path = \"$rules/python\"|" \
   "$ws/MODULE.bazel"
 rm "$ws/MODULE.bazel.orig"
+sed -i.orig "s|%workspace%/../../../preset.bazelrc|$rules/preset.bazelrc|" "$ws/.bazelrc"
+rm "$ws/.bazelrc.orig"
 cd "$ws"
 
 units=(core app cli)
@@ -117,7 +119,7 @@ changes() {
 
 edit core/src/corepkg/__init__.py core app
 edit app/src/apppkg/__init__.py app
-edit cli/src/tbhbops/layout.py cli
+edit cli/src/clipkg/layout.py cli
 edit weak/src/weakpkg/__init__.py
 
 # Diff mode: each report action takes only its unit's slice of the change

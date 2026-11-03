@@ -3,13 +3,13 @@
 
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
-load(":repo_layout_tests.bzl", "ops_layout_test", "repo_layout_test_suite")
+load(":repo_layout_tests.bzl", "repo_layout_test_suite", "scripts_layout_test")
 
 repo_files()
 
 repo_layout_test_suite(name = "repo_layout_tests")
 
-ops_layout_test(
+scripts_layout_test(
     name = "good_test",
     fixture = "good",
 )
@@ -26,7 +26,7 @@ PROOF_REASONS = {
 }
 
 [
-    ops_layout_test(
+    scripts_layout_test(
         name = proof,
         fixture = proof.removeprefix("proof_"),
         tags = PROOF_TAGS,
@@ -43,7 +43,7 @@ PROOF_REASONS = {
     for proof, pattern in PROOF_REASONS.items()
 ]
 
-ops_layout_test(
+scripts_layout_test(
     name = "proof_no_files",
     fixture = "",
     tags = PROOF_TAGS,

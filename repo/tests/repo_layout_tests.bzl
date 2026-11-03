@@ -8,8 +8,8 @@ load("@rules_testing//lib:truth.bzl", "matching")
 load("@rules_testing//lib:util.bzl", "util")
 load("//repo:defs.bzl", "repo_layout_test")
 
-def ops_layout_test(name, fixture, **kwargs):
-    """The layout ops uses, over a fixture tree: tools/ holds uv scripts, plus tools/interim/."""
+def scripts_layout_test(name, fixture, **kwargs):
+    """A layout whose tools/ holds uv scripts, plus tools/interim/, over a fixture tree."""
     repo_layout_test(
         name = name,
         srcs = native.glob(["testdata/layout/{}/**".format(fixture)]) if fixture else [],

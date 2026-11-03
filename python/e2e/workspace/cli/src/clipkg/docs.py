@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""The mutation command."""
+"""The docs command."""
 
-from tbhbops import gitfiles
+from clipkg import gitfiles
 
 
 def count(listing: str) -> int:
-    """Return how many files the mutation command looks at."""
+    """Return how many files the docs command looks at."""
     return len(gitfiles.tracked(listing))

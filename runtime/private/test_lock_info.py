@@ -15,7 +15,7 @@ SINGLE = """\
 version = 1
 
 [[package]]
-name = "ascm-workspace"
+name = "example-workspace"
 version = "0"
 source = { virtual = "." }
 
@@ -29,15 +29,15 @@ WORKSPACE = """\
 version = 1
 
 [manifest]
-members = ["ops-workspace", "tbhbops"]
+members = ["members-workspace", "clipkg"]
 
 [[package]]
-name = "ops-workspace"
+name = "members-workspace"
 version = "0"
 source = { virtual = "." }
 
 [[package]]
-name = "tbhbops"
+name = "clipkg"
 version = "0"
 source = { editable = "cli" }
 
@@ -57,14 +57,14 @@ def test_table_keeps_tables_and_drops_anything_else() -> None:
 def test_a_single_project_is_its_local_package() -> None:
     lock: dict[str, object] = {
         "package": [
-            {"name": "ascm-workspace", "source": {"virtual": "."}},
+            {"name": "example-workspace", "source": {"virtual": "."}},
             {"name": "pyyaml", "source": {"registry": "https://pypi.org/simple"}},
             {"name": "nosource"},
             "not a table",
         ],
     }
     assert lock_info.members(lock) == [
-        {"name": "ascm-workspace", "path": ".", "kind": "virtual"},
+        {"name": "example-workspace", "path": ".", "kind": "virtual"},
     ]
 
 
@@ -126,14 +126,14 @@ def test_main_prints_the_members_as_json(
     assert lock_info.main([str(path)]) == 0
     assert json.loads(capsys.readouterr().out) == {
         "members": [
-            {"name": "ops-workspace", "path": ".", "kind": "virtual"},
-            {"name": "tbhbops", "path": "cli", "kind": "editable"},
+            {"name": "members-workspace", "path": ".", "kind": "virtual"},
+            {"name": "clipkg", "path": "cli", "kind": "editable"},
         ],
     }
     path.write_text(SINGLE)
     assert lock_info.main([str(path)]) == 0
     assert capsys.readouterr().out == (
-        '{"members": [{"name": "ascm-workspace", "path": ".", "kind": "virtual"}]}\n'
+        '{"members": [{"name": "example-workspace", "path": ".", "kind": "virtual"}]}\n'
     )
 
 

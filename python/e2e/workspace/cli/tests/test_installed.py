@@ -6,16 +6,16 @@ import subprocess
 from importlib import metadata
 
 import pytest
-from tbhbops import layout
+from clipkg import layout
 
 
 def test_the_member_is_installed() -> None:
-    assert metadata.version("tbhbops") == "0.1.0"
+    assert metadata.version("clipkg") == "0.1.0"
 
 
 def test_its_console_script_runs() -> None:
     done = subprocess.run(
-        ["tbhbops-layout"], input="b\n\na\n", capture_output=True, text=True, check=True
+        ["clipkg-layout"], input="b\n\na\n", capture_output=True, text=True, check=True
     )
     assert done.stdout == "2\n"
 

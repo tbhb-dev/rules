@@ -5,7 +5,7 @@
 name = "e2e-workspace"
 version = "0"
 requires-python = ">=3.15"
-dependencies = ["apppkg", "corepkg", "tbhbops", "weakpkg"]
+dependencies = ["apppkg", "corepkg", "clipkg", "weakpkg"]
 
 [dependency-groups]
 dev = [
@@ -25,7 +25,7 @@ members = ["app", "cli", "core", "weak"]
 [tool.uv.sources]
 apppkg = { workspace = true }
 corepkg = { workspace = true }
-tbhbops = { workspace = true }
+clipkg = { workspace = true }
 weakpkg = { workspace = true }
 
 [tool.pytest]
@@ -36,26 +36,26 @@ testpaths = ["app/tests", "cli/tests", "core/tests", "tools", "weak/tests"]
 branch = true
 
 [tool.importlinter]
-root_packages = ["tools", "tbhbops"]
+root_packages = ["tools", "clipkg"]
 
 [[tool.importlinter.contracts]]
 name = "the commands build on gitfiles"
 type = "layers"
-layers = ["tbhbops.docs | tbhbops.layout | tbhbops.mutation", "tbhbops.gitfiles"]
+layers = ["clipkg.docs | clipkg.layout | clipkg.mutation", "clipkg.gitfiles"]
 
 [[tool.importlinter.contracts]]
 name = "the commands are independent"
 type = "independence"
-modules = ["tbhbops.docs", "tbhbops.layout", "tbhbops.mutation"]
+modules = ["clipkg.docs", "clipkg.layout", "clipkg.mutation"]
 
 [[tool.importlinter.contracts]]
-name = "interim code stays out of tbhbops"
+name = "interim code stays out of clipkg"
 type = "forbidden"
 source_modules = ["tools.interim"]
-forbidden_modules = ["tbhbops"]
+forbidden_modules = ["clipkg"]
 
 [[tool.importlinter.contracts]]
-name = "tbhbops does not use the repository tools"
+name = "clipkg does not use the repository tools"
 type = "forbidden"
-source_modules = ["tbhbops"]
+source_modules = ["clipkg"]
 forbidden_modules = ["tools"]
