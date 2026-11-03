@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules_typescript//:defs.bzl", "biome_test", "tsc_test")
+
+# Links nothing: package.json has no dependencies.
+npm_link_all_packages(name = "node_modules")
+
+PROJECT = glob(
+    ["**"],
+    exclude = ["node_modules/**"],
+)
+
+tsc_test(
+    name = "tsc_test",
+    srcs = PROJECT,
+    node_modules = [":node_modules"],
+)
+
+biome_test(
+    name = "biome_test",
+    srcs = PROJECT,
+    node_modules = [":node_modules"],
+)

@@ -1,0 +1,8 @@
+{
+  "name": "tbhb-rules-typescript-bare",
+  "private": true,
+  "type": "module",
+  "pnpm": {
+    "onlyBuiltDependencies": []
+  }
+}

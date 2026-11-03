@@ -80,6 +80,12 @@ function linkPackages() {
   const mismatches = [];
   for (const rel of consumerDirs) {
     const dir = join(runfiles, workspace, rel);
+    // A package.json without dependencies links no package, so its tree has
+    // no directory. A label naming no such tree fails in checks.bzl or in
+    // Bazel's analysis, before this runs.
+    if (!existsSync(dir)) {
+      continue;
+    }
     for (const name of packagesIn(dir)) {
       const source = realpathSync(join(dir, name));
       const target = MUST_MATCH.test(name) ? pinnedDir(name) : null;
