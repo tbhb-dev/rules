@@ -8,6 +8,19 @@ load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "path_dir", "shell_e
 _DRIVER = """#!/usr/bin/env bash
 set -euo pipefail
 export PATH="$PWD/{git_dir}:$PATH" GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TEMPLATE_DIR=
+# same TEXT FILE: fail unless FILE holds TEXT plus a final newline. Only
+# bash and coreutils: Windows CI's MSYS2 has no diff or cmp.
+same() {{
+  local got
+  got=$(cat "$2" && printf x)
+  if [[ "$1"$'\\n' != "${{got%x}}" ]]; then
+    echo "expected:" >&2
+    printf '%s\\n' "$1" | cat -A >&2
+    echo "got ($2):" >&2
+    cat -A "$2" >&2
+    exit 1
+  fi
+}}
 subject="$PWD/{subject}"
 slice="$PWD/{slice}"
 repo="$TEST_TMPDIR/repo"
@@ -43,7 +56,7 @@ expected='{{
     "src/mod.py": [[1, 1], [3, 3], [5, 5], [6, 6]]
   }}
 }}'
-diff <(printf '%s\\n' "$expected") "$TEST_TMPDIR/changes.json"
+same "$expected" "$TEST_TMPDIR/changes.json"
 # quality's slice keeps a unit's entries and drops the base.
 printf '%s\\n' 'src/mod.py' 'say \\"hi\\".txt' 'absent.py' > "$TEST_TMPDIR/unit"
 awk -f "$slice" "$TEST_TMPDIR/unit" "$TEST_TMPDIR/changes.json" > "$TEST_TMPDIR/slice.json"
@@ -54,10 +67,10 @@ sliced='{{
     "src/mod.py": [[1, 1], [3, 3], [5, 5], [6, 6]]
   }}
 }}'
-diff <(printf '%s\\n' "$sliced") "$TEST_TMPDIR/slice.json"
+same "$sliced" "$TEST_TMPDIR/slice.json"
 printf '%s\\n' 'other.py' > "$TEST_TMPDIR/none"
 awk -f "$slice" "$TEST_TMPDIR/none" "$TEST_TMPDIR/changes.json" > "$TEST_TMPDIR/empty.json"
-diff <(printf '{{\\n  "version": 1,\\n  "files": {{}}\\n}}\\n') "$TEST_TMPDIR/empty.json"
+same "$(printf '{{\\n  "version": 1,\\n  "files": {{}}\\n}}')" "$TEST_TMPDIR/empty.json"
 # Anything but mutation_changes' layout is refused.
 printf '{{"version": 1, "files": {{}}}}\\n' > "$TEST_TMPDIR/one_line.json"
 if awk -f "$slice" "$TEST_TMPDIR/none" "$TEST_TMPDIR/one_line.json" 2>/dev/null; then

@@ -23,6 +23,19 @@ def no_real_exec(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(launch.os, "execv", None)
 
 
+def refuse_entry_points(**kwargs: str) -> list[SimpleNamespace]:
+    message = f"a test looked up a real console script: {kwargs}"
+    raise AssertionError(message)
+
+
+@pytest.fixture(autouse=True)
+def no_real_tools(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Likewise for console scripts: a test whose arguments a mutant misreads
+    # must fail, not load the real tool. `pytest` there runs this whole suite
+    # again inside the test, which mutmut then times out.
+    monkeypatch.setattr(launch, "entry_points", refuse_entry_points)
+
+
 @pytest.fixture
 def executed(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
     calls: list[list[str]] = []
@@ -381,3 +394,8 @@ def test_main_reports_an_unknown_tool(
     assert capsys.readouterr().err == (
         "launch.py: 'nope' is neither a console script nor in the environment's bin\n"
     )
+
+
+def test_tests_cannot_reach_a_real_console_script() -> None:
+    with pytest.raises(AssertionError, match=r"^a test looked up a real console"):
+        launch.run("pytest", [])

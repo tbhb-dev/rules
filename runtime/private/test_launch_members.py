@@ -14,6 +14,19 @@ import pytest
 
 from runtime.private import launch
 
+
+@pytest.fixture(autouse=True)
+def no_real_tools(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A test whose launcher arguments a mutant misreads must fail rather
+    # than run the real tool: `pytest` would run this suite again inside the
+    # test, which mutmut then times out.
+    def refuse(tool: str, args: list[str]) -> int:
+        message = f"a test ran the real {tool} {args}"
+        raise AssertionError(message)
+
+    monkeypatch.setattr(launch, "run", refuse)
+
+
 PYPROJECT = """\
 [project]
 name = "Demo.Pkg_x"
@@ -233,3 +246,8 @@ def test_main_without_members_installs_nothing(
     monkeypatch.setattr(launch, "use_members", None)
     monkeypatch.setattr(launch, "run", fake_run)
     assert launch.main(["--", "pytest"]) == 5
+
+
+def test_tests_cannot_run_a_real_tool() -> None:
+    with pytest.raises(AssertionError, match=r"^a test ran the real pytest \['-q'\]$"):
+        launch.main(["--", "pytest", "-q"])
