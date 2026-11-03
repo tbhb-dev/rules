@@ -80,8 +80,6 @@ class Tools:
 
     def calls(self) -> list[dict[str, object]]:
         log = self.bin / "gh.log"
-        if not log.exists():
-            return []
         return [json.loads(line) for line in log.read_text().splitlines()]
 
 
@@ -99,9 +97,6 @@ def tools(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Tools:
     for name in list(os.environ):
         if name.startswith(("CLAUDE", "CODEX", "ANTIGRAVITY", "GIT_")):
             monkeypatch.delenv(name)
-    config = tmp_path / "gitconfig"
-    config.write_text("[user]\n\tname = Tony B\n\temail = t@example.com\n")
-    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(config))
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{git_dir}")
     made = Tools(bin_dir)
@@ -302,21 +297,8 @@ def test_an_invalid_trailer_value_is_refused() -> None:
 
 @pytest.mark.parametrize("key", ["Signed-off-by", "Co-authored-by", "signed-off-by"])
 def test_human_trailers_in_the_body_are_refused(key: str) -> None:
-    with pytest.raises(SystemExit, match="reserved for the person"):
+    with pytest.raises(SystemExit, match="do not belong in the description"):
         message_of(f"## Why\n\nw\n\n{key}: A <a@b.c>\n")
-
-
-def test_signoff_follows_the_llm_trailers() -> None:
-    signoff = "Signed-off-by: T <t@e.c>"
-    message = sm.build_message("fix: x", 7, f"## Why\n\nw\n\n{GEN}\n", signoff).text()
-    assert message.endswith(f"{GEN}\n{signoff}\n")
-    assert read_back(message) == f"{GEN}\n{signoff}\n"
-
-
-def test_signoff_without_llm_trailers() -> None:
-    signoff = "Signed-off-by: T <t@e.c>"
-    message = sm.build_message("fix: x", 7, "## Why\n\nw\n", signoff).text()
-    assert message == f"fix: x (#7)\n\nWhy\nw\n\n{signoff}\n"
 
 
 def test_a_trailer_git_cannot_read_back_fails(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -401,11 +383,9 @@ def test_the_passing_draft_becomes_a_clean_message(tools: Tools) -> None:
 # ------------------------------------------------------------------- the CLI
 
 
-def run_main(
-    *argv: str, env: dict[str, str] | None = None
-) -> tuple[int | str | None, str]:
+def run_main(*argv: str) -> tuple[int | str | None, str]:
     try:
-        return sm.main(list(argv), {} if env is None else env), ""
+        return sm.main(list(argv)), ""
     except SystemExit as exc:
         return exc.code, ""
 
@@ -516,39 +496,12 @@ def test_null_body_is_empty(tools: Tools) -> None:
     assert run_main("3")[0] == 0
 
 
-# ----------------------------------------------------------------- the human
-
-
-@pytest.mark.usefixtures("tools")
-def test_signoff_appends_the_configured_identity(
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    assert run_main("12", "--dry-run", "--signoff")[0] == 0
-    assert capsys.readouterr().out.endswith("\nSigned-off-by: Tony B <t@example.com>\n")
-
-
-@pytest.mark.usefixtures("tools")
-def test_signoff_needs_a_git_identity(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    empty = tmp_path / "empty"
-    empty.write_text("")
-    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(empty))
-    monkeypatch.setattr(sm.pr, "ROOT", tmp_path)
-    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
-    monkeypatch.setenv("GIT_CONFIG_KEY_0", "user.useConfigOnly")
-    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "true")
-
-    def no_config(*_args: object, **_kwargs: object) -> tuple[int, str]:
-        return 1, ""
-
-    monkeypatch.setattr(agent_identity, "git", no_config)
-    assert run_main("12", "--dry-run", "--signoff")[0] == (
-        "--signoff needs git config user.name and user.email"
-    )
-
-
 # ------------------------------------------------------------------ the agent
+
+
+def test_there_is_no_signoff_flag() -> None:
+    with pytest.raises(SystemExit):
+        sm.main(["12", "--dry-run", "--signoff"])
 
 
 @pytest.mark.parametrize(
@@ -559,24 +512,28 @@ def test_signoff_needs_a_git_identity(
         {"ANTIGRAVITY_CONVERSATION_ID": "c"},
     ],
 )
-def test_an_agent_cannot_merge(tools: Tools, env: dict[str, str]) -> None:
-    code, _ = run_main("12", env=env)
-    assert code == "agents may not merge; rerun with --dry-run and ask Tony to merge"
-    assert tools.calls() == []
+def test_an_agent_environment_changes_nothing(
+    tools: Tools, env: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert run_main("12")[0] == 0
+    plain = tools.calls()
+    (tools.bin / "gh.log").unlink()
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    assert run_main("12")[0] == 0
+    assert tools.calls() == plain
+    assert [call["argv"][1] for call in plain] == ["view", "merge"]  # type: ignore[index]
 
 
-def test_an_agent_may_dry_run(tools: Tools, capsys: pytest.CaptureFixture[str]) -> None:
-    assert run_main("12", "--dry-run", env=HARNESS_ENV)[0] == 0
-    assert "Why\n" in capsys.readouterr().out
-    assert [call["argv"][1] for call in tools.calls()] == ["view"]  # type: ignore[index]
-
-
-@pytest.mark.parametrize("flags", [("--signoff",), ("--signoff", "--dry-run")])
-def test_an_agent_cannot_sign_off(tools: Tools, flags: tuple[str, ...]) -> None:
-    code, _ = run_main("12", *flags, env=HARNESS_ENV)
-    assert isinstance(code, str)
-    assert code.startswith("--signoff is for a human run")
-    assert tools.calls() == []
+def test_a_dry_run_is_the_same_in_an_agent_environment(
+    tools: Tools, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert run_main("12", "--dry-run")[0] == 0
+    plain = capsys.readouterr().out
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "raw")
+    assert run_main("12", "--dry-run")[0] == 0
+    assert capsys.readouterr().out == plain
+    assert [call["argv"][1] for call in tools.calls()] == ["view", "view"]  # type: ignore[index]
 
 
 def test_the_script_never_adds_human_trailers(tools: Tools) -> None:
@@ -608,3 +565,12 @@ def test_the_fallback_identity_block_is_kept_and_passes_the_check() -> None:
     assert message.endswith(f"\n\n{block}\n")
     assert read_back(message) == f"{block}\n"
     assert agent_identity.check_message(message) == []
+
+
+def test_one_line_paragraphs_still_wrap_at_72() -> None:
+    sentence = " ".join(["word"] * 60)
+    out = message_of(f"## Why\n\n{sentence}\n\n- {sentence}\n").splitlines()
+    assert len(out) > 8
+    assert all(len(line) <= sm.WIDTH for line in out)
+    assert out[3].startswith("word word")
+    assert any(line.startswith("  word") for line in out)

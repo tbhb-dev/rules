@@ -11,7 +11,15 @@ generated:
     effort: medium
     surface: cli
     session: sha-256-64:debb814921f029ad
-    at: "2026-11-03T04:30:46Z"
+    subagent: sha-256-64:3e4e1178daf8cb39
+    at: "2026-11-03T04:31:04Z"
+  - role: generated
+    harness: claude-code:2.1.316
+    model: anthropic:claude-opus-5-5
+    effort: medium
+    surface: cli
+    session: sha-256-64:debb814921f029ad
+    at: "2026-11-03T05:02:02Z"
 status: draft
 tags: [pull-request, tooling]
 title: Open a pull request
@@ -30,9 +38,11 @@ Write the draft to `.github/PULL_REQUEST_DRAFT.md`, which git ignores, starting 
 - One H1 as the first line after the frontmatter. That line becomes the pull request title, a Conventional Commit header of at most 72 characters.
 - The sections from the template, in the template order. The script requires `Why`, `Behavior change`, and `Verification`. Leave out an optional section rather than leaving it empty.
 
+Write each paragraph and list item on one line. GitHub renders a newline in a description as a line break, so a paragraph wrapped at 72 columns shows as ragged short lines. The check reports a wrapped paragraph and the line it starts on. Code blocks, tables, and headings are exempt, and each list item stays on its own line. The squash merge wraps the commit message at 72 columns, so the draft doesn't need to.
+
 Each section has a word limit. `.github/pull-request-sections.toml` holds those limits along with the required sections, and the template comments repeat the numbers. Fenced code, inline code, link URLs, and HTML comments don't count. Remove every template comment and placeholder before you check.
 
-Never write `Generated-by`, `Assisted-by`, or `Signed-off-by` lines. The script adds the first two.
+Never write `Generated-by`, `Assisted-by`, `Signed-off-by`, or `Co-authored-by` lines. The script adds the first two and rejects a draft with any of the four.
 
 ## Check the draft
 

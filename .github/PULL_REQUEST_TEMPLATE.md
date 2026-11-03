@@ -1,7 +1,10 @@
 <!--
 Fill in each section in plain prose and delete the guidance comments. Leave out
 any section marked optional when there is nothing to say; don't write "None"
-or "Low risk". Word limits count prose only: code blocks and links are free.
+or "Low risk". Write each paragraph and list item on one line: GitHub
+renders a newline as a line break, so a hard-wrapped paragraph shows ragged
+short lines. The squash merge wraps the commit message. Word limits count
+prose only: code blocks and links are free.
 
 Agents don't use this form. They draft .github/PULL_REQUEST_DRAFT.md, which is
 gitignored. Its frontmatter carries the metadata and its H1 is the title, and

@@ -21,8 +21,9 @@ omitted rather than guessed:
 The key states the role. ``Generated-by`` goes to an agent holding an
 unconsumed edit receipt for a staged path, or to the committer when no receipt
 matches. ``Assisted-by`` goes to the committer or the root agent when they
-wrote none of the staged content. Agents never add ``Signed-off-by``: ``check``
-rejects it whenever a harness environment is present.
+wrote none of the staged content. ``check`` validates only the ``LLM``
+trailers, the same for every committer: ``Signed-off-by`` and ``Co-authored-by``
+are not checked (agents don't add them as a norm; the operator may sign off).
 
 ``stamp-docs`` merges the same identities into the ``generated`` list of each
 staged document's frontmatter (see docs/schemas/frontmatter.schema.json), from
@@ -2055,8 +2056,8 @@ def check_value(value: str) -> str | None:
     return problem
 
 
-def check_message(text: str, *, agent_env: bool = False) -> list[str]:
-    """Every problem in a commit message's LLM trailers (and agent sign-off)."""
+def check_message(text: str) -> list[str]:
+    """Every problem in a commit message's LLM trailers."""
     errs: list[str] = []
     keys_seen: list[str] = []
     for line in text.splitlines():
@@ -2068,18 +2069,13 @@ def check_message(text: str, *, agent_env: bool = False) -> list[str]:
             if match.group(1) == KEY_GEN and KEY_ASSIST in keys_seen:
                 errs.append(f"{line}: Generated-by must come before Assisted-by")
             keys_seen.append(match.group(1))
-        elif agent_env and line.startswith("Signed-off-by:"):
-            errs.append(
-                "Signed-off-by is reserved for the human: agents must not sign off "
-                "(commit without -s and remove the trailer)"
-            )
     return errs
 
 
-def cmd_check(msgfile: str, env: Mapping[str, str]) -> int:
-    """commit-msg and CI: validate trailers; reject sign-off in agent environments."""
+def cmd_check(msgfile: str) -> int:
+    """commit-msg and CI: validate the LLM trailers, the same for every committer."""
     text = Path(msgfile).read_text()
-    errs = check_message(text, agent_env=detect(env) is not None)
+    errs = check_message(text)
     for err in errs:
         print(f"agent_identity: {err}", file=sys.stderr)
     return 1 if errs else 0
@@ -2103,7 +2099,7 @@ def main(argv: list[str], env: Mapping[str, str]) -> int:
         case ["stamp-docs", *_]:
             return cmd_stamp_docs(env)
         case ["check", msgfile, *_]:
-            return cmd_check(msgfile, env)
+            return cmd_check(msgfile)
         case _:
             print(USAGE, file=sys.stderr)
             return 2

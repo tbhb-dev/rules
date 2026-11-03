@@ -38,6 +38,7 @@ FALLBACK = (
     "LLM effort=medium;harness=claude-code:2.1.316;"
     "session=sha-256-64:71c761039ac2c7f9;surface=cli"
 )
+GEN_LINE = "Generated-by: LLM harness=claude-code;model=anthropic:m1"
 GEN = "LLM harness=claude-code;model=anthropic:m1"
 OTHER = "LLM harness=codex;model=openai:gpt-6.1-sol"
 
@@ -146,13 +147,13 @@ def no_title_problems(_title: str) -> list[str]:
     return []
 
 
-def structure(text: str, env: dict[str, str] | None = None) -> list[pr.Problem]:
+def structure(text: str) -> list[pr.Problem]:
     """Check a draft without the external tools."""
     with (
         patch.object(pr, "lint", no_lint),
         patch.object(pr, "title_problems", no_title_problems),
     ):
-        return pr.check_text(text, env or {}).problems
+        return pr.check_text(text).problems
 
 
 # ----------------------------------------------------------- source of truth
@@ -557,11 +558,15 @@ def test_title_may_follow_blank_lines() -> None:
     assert structure("---\nbase: main\n---\n\n" + BASE) == []
 
 
-def test_signed_off_by_only_rejected_for_agents() -> None:
-    text = BASE + "\nSigned-off-by: A <a@example.com>\n"
-    assert structure(text) == []
-    agent = structure(text, {"CLAUDE_CODE_SESSION_ID": "raw"})
-    assert agent == [(15, "Signed-off-by is reserved for the human; remove it")]
+@pytest.mark.parametrize("key", ["Signed-off-by", "Co-authored-by", "co-authored-by"])
+@pytest.mark.parametrize("env", [{}, {"CLAUDE_CODE_SESSION_ID": "raw"}])
+def test_human_trailers_are_rejected_for_everyone(
+    key: str, env: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    text = BASE + f"\n{key}: A <a@example.com>\n"
+    assert structure(text) == [(15, pr.HUMAN_TRAILER_MESSAGE)]
 
 
 # ------------------------------------------------------------- frontmatter
@@ -671,7 +676,7 @@ def test_title_length() -> None:
 
 def test_title_problem_lands_on_the_title_line(world: World) -> None:
     world.fake("cog", rc=1, stderr="bad")
-    found = pr.check_text("---\nbase: main\n---\n\n" + BASE, {}).problems
+    found = pr.check_text("---\nbase: main\n---\n\n" + BASE).problems
     assert found == [(5, "title is not a Conventional Commit header (cog verify): bad")]
 
 
@@ -694,7 +699,7 @@ def test_real_cog(title: str, *, ok: bool) -> None:
 
 def lint_checked(world: World, text: str) -> list[pr.Problem]:
     del world
-    return pr.check_text(text, {}).problems
+    return pr.check_text(text).problems
 
 
 def test_lint_runs_each_tool_in_a_mirrored_tree(world: World) -> None:
@@ -841,14 +846,14 @@ class TestRealLinters:
     def test_fixture_passes(self) -> None:
         # The title is a lowercase Conventional Commit header, which the
         # sentence-case rule would flag if it were not filtered.
-        assert pr.check_text(FIXTURE.read_text(), {}).problems == []
+        assert pr.check_text(FIXTURE.read_text()).problems == []
 
     def test_findings_map_to_draft_lines(self) -> None:
         # cspell:ignore recieve
         text = FIXTURE.read_text()
         text = replace(text, "Running `ascm stamp`", "Running ascm recieve")
         text = replace(text, "## Why\n\n", "## Why\n")
-        found = pr.check_text(text, {}).problems
+        found = pr.check_text(text).problems
         assert any(line == 15 and "recieve" in why for line, why in found)
         assert any(line == 14 and "rumdl" in why for line, why in found)
 
@@ -1008,7 +1013,7 @@ def test_branch_trailers_need_a_known_base(world: World) -> None:
 
 
 def checked_for(text: str = BASE) -> pr.Checked:
-    return pr.check_text(text, {})
+    return pr.check_text(text)
 
 
 def test_description_without_trailers_is_the_body(world: World) -> None:
@@ -1750,7 +1755,47 @@ def test_description_for_one_identity_ends_in_one_generated_by(
     world.git("update-ref", "refs/remotes/origin/main", "HEAD")
     world.git("switch", "-q", "-c", "topic")
     world.commit(f"feat: x\n\nGenerated-by: {posting}")
-    checked = pr.check_text(BASE, agent)
+    checked = pr.check_text(BASE)
     body = pr.description(checked, agent)
     assert body.endswith(f"\nGenerated-by: {posting}\n")
     assert "Assisted-by" not in body
+
+
+@pytest.mark.parametrize(
+    ("body", "lines"),
+    [
+        ("One line.\n\nNext paragraph.\n", []),
+        ("First line\nsecond line\n", [1]),
+        ("a\nb\nc\n\nd\ne\n", [1, 5]),
+        ("- item one\n- item two\n", []),
+        ("- item one\n  continues\n- item two\n", [1]),
+        ("1. one\n2) two\n", []),
+        ("Intro:\n- a\n- b\n", []),
+        ("text\n```\ncode\nmore\n```\ntail\n", []),
+        ("| a | b |\n| - | - |\n| 1 | 2 |\n", []),
+        ("### Heading\ntext\n", []),
+        ("text\n<!-- note -->\nmore\n", []),
+        (f"text\n{GEN_LINE}\n", []),
+        ("text\nSigned-off-by: A <a@b.c>\n", []),
+    ],
+)
+def test_wrap_problems(body: str, lines: list[int]) -> None:
+    scanned, _ = pr.scan(body.splitlines(), 1)
+    assert pr.wrap_problems(scanned) == [(no, pr.WRAPPED) for no in lines]
+
+
+def test_a_wrapped_draft_fails_the_check() -> None:
+    text = BASE.replace("\nw\n", "\nline one\nline two\n")
+    assert (5, pr.WRAPPED) in structure(text)
+
+
+def test_the_passing_draft_has_no_wrapped_paragraphs() -> None:
+    _, body = pr.parse_frontmatter(FIXTURE.read_text())
+    scanned, _ = pr.scan(body.splitlines(), 1)
+    assert pr.wrap_problems(scanned) == []
+
+
+def test_rumdl_line_length_is_off_for_drafts() -> None:
+    assert (
+        "MD013" in (REAL / ".rumdl.toml").read_text().split("disable")[1].split("]")[0]
+    )

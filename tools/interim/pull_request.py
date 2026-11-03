@@ -97,7 +97,16 @@ REF_DEF = re.compile(r"^ {0,3}\[[^\]]+\]:.*$", re.MULTILINE)
 URL = re.compile(r"<?https?://[^\s>]*>?")
 RUMDL_LINE = re.compile(r"\S+?:(\d+):\d+: (.+)")
 CSPELL_LINE = re.compile(r"\S+?:(\d+):\d+ - (.+)")
-SIGNED_OFF = "Signed-off-by:"
+HUMAN_TRAILER = re.compile(r"(?:Signed-off-by|Co-authored-by):", re.IGNORECASE)
+LIST_ITEM = re.compile(r" *(?:[-*+]|\d+[.)]) +\S")
+HUMAN_TRAILER_MESSAGE = (
+    "Signed-off-by and Co-authored-by do not belong in the description; "
+    "remove this line"
+)
+WRAPPED = (
+    "paragraph is hard-wrapped; write each paragraph on one line "
+    "(GitHub renders newlines as line breaks)"
+)
 
 
 @dataclass(frozen=True)
@@ -337,8 +346,40 @@ def block_problems(
     return problems
 
 
-def trailer_problems(lines: Sequence[Line], *, agent_env: bool) -> list[Problem]:
-    """Reject trailers in the draft: the script writes them."""
+def wrap_problems(lines: Sequence[Line]) -> list[Problem]:
+    """Flag each paragraph or list item that continues onto a second line.
+
+    GitHub renders a newline in a description as a line break, so wrapped prose
+    shows as ragged short lines. Code, tables, headings, blank lines, and the
+    start of a list item end a run, so each list item stays on its own line.
+    """
+    problems: list[Problem] = []
+    start: Line | None = None  # first line of the prose run being read
+    reported = False
+    for line in lines:
+        text = "" if line.code else line.text.strip()
+        if (
+            not text
+            or HEADING.fullmatch(line.text)
+            or text.startswith("|")
+            or HUMAN_TRAILER.match(text)
+            or agent_identity.LINE.match(text)
+        ):
+            start = None
+        elif start is None or LIST_ITEM.match(line.text):
+            start, reported = line, False
+        elif not reported:
+            problems.append((start.no, WRAPPED))
+            reported = True
+    return problems
+
+
+def trailer_problems(lines: Sequence[Line]) -> list[Problem]:
+    """Reject trailers in the draft: the script writes the LLM ones.
+
+    Signed-off-by and Co-authored-by are rejected for everyone: the merge
+    commit's author is the person who merges, and the script never writes them.
+    """
     problems: list[Problem] = []
     for line in lines:
         if line.code:
@@ -350,10 +391,8 @@ def trailer_problems(lines: Sequence[Line], *, agent_env: bool) -> list[Problem]
                     "the script writes Generated-by and Assisted-by; remove this line",
                 )
             )
-        elif agent_env and line.text.startswith(SIGNED_OFF):
-            problems.append(
-                (line.no, "Signed-off-by is reserved for the human; remove it")
-            )
+        elif HUMAN_TRAILER.match(line.text):
+            problems.append((line.no, HUMAN_TRAILER_MESSAGE))
     return problems
 
 
@@ -503,9 +542,7 @@ def lint(rendered: Sequence[str], first: int) -> list[Problem]:
     return problems
 
 
-def body_problems(
-    lines: Sequence[Line], title: Line, *, agent_env: bool
-) -> list[Problem]:
+def body_problems(lines: Sequence[Line], title: Line) -> list[Problem]:
     """Check what follows the title: sections, stray text, trailers."""
     preamble, blocks, problems = split_blocks(lines)
     stray = next((line for line in preamble if not is_blank(line)), None)
@@ -515,16 +552,17 @@ def body_problems(
         )
     sections = load_sections()
     problems += block_problems(blocks, sections)
+    problems += wrap_problems(lines)
     present = {block.heading for block in blocks}
     problems += [
         (title.no, f"missing required section '{section.heading}'")
         for section in sections
         if section.required and section.heading not in present
     ]
-    return problems + trailer_problems(lines, agent_env=agent_env)
+    return problems + trailer_problems(lines)
 
 
-def check_text(text: str, env: Mapping[str, str]) -> Checked:
+def check_text(text: str) -> Checked:
     """Validate and lint a draft. The linters run only once there is a title."""
     try:
         data, body = parse_frontmatter(text)
@@ -547,9 +585,7 @@ def check_text(text: str, env: Mapping[str, str]) -> Checked:
         return Checked(sorted(problems))
     title = lines[start]
     problems += [(title.no, why) for why in title_problems(found[1])]
-    problems += body_problems(
-        lines[start + 1 :], title, agent_env=agent_identity.detect(env) is not None
-    )
+    problems += body_problems(lines[start + 1 :], title)
     rendered = [line.raw for line in lines[start:]]
     problems += lint(rendered, title.no)
     return Checked(sorted(set(problems)), found[1], rendered, meta)
@@ -668,18 +704,18 @@ def gh_args(meta: Mapping[str, object]) -> list[str]:
     return args
 
 
-def load_checked(path: Path, env: Mapping[str, str]) -> Checked:
+def load_checked(path: Path) -> Checked:
     """Check a draft file."""
     try:
         text = path.read_text()
     except OSError as exc:
         return Checked([(1, f"cannot read the draft: {exc.strerror}")])
-    return check_text(text, env)
+    return check_text(text)
 
 
-def read_checked(path: Path, env: Mapping[str, str]) -> Checked:
+def read_checked(path: Path) -> Checked:
     """Check a draft file and print its problems."""
-    checked = load_checked(path, env)
+    checked = load_checked(path)
     for line, why in checked.problems:
         print(f"{path}:{line}: {why}")
     return checked
@@ -701,7 +737,7 @@ def invoke_gh(argv: list[str], body: str, *, dry_run: bool = False) -> int:
 
 def command(args: argparse.Namespace, env: Mapping[str, str]) -> int:
     """Run the chosen subcommand."""
-    checked = read_checked(args.draft, env)
+    checked = read_checked(args.draft)
     if checked.problems:
         return 1
     if args.command == "check":
@@ -742,7 +778,7 @@ def touched_paths(harness: str, data: agent_identity.Json) -> list[str]:
     return [path] if isinstance(path, str) and path else []
 
 
-def hook(harness: str, env: Mapping[str, str]) -> int:
+def hook(harness: str) -> int:
     """PostToolUse entry point: check the draft when the tool call wrote it.
 
     Exit 2 with the problems on stderr is what each harness feeds back to the
@@ -756,7 +792,7 @@ def hook(harness: str, env: Mapping[str, str]) -> int:
         target = (ROOT / DRAFT).resolve()
         if not any((cwd / p).resolve() == target for p in touched_paths(harness, data)):
             return 0
-        problems = load_checked(target, env).problems
+        problems = load_checked(target).problems
     except (Exception, SystemExit) as exc:  # noqa: BLE001  # fail open on any crash
         print(f"pull request hook skipped: {exc}", file=sys.stderr)
         return 0
@@ -790,7 +826,7 @@ def main(
     args = build_parser().parse_args(argv)
     env = os.environ if env is None else env
     if args.command == "hook":
-        return hook(args.harness, env)
+        return hook(args.harness)
     return command(args, env)
 
 

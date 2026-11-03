@@ -4,14 +4,14 @@ generated:
   - role: generated
     harness: claude-code
     model: anthropic:claude-sonnet-5-5
-    at: "2026-11-03T03:00:00Z"
+    at: "2026-11-03T05:00:00Z"
   - role: generated
     harness: claude-code:2.1.316
     model: anthropic:claude-opus-5-5
     effort: medium
     surface: cli
     session: sha-256-64:debb814921f029ad
-    at: "2026-11-03T04:41:52Z"
+    at: "2026-11-03T05:02:02Z"
 status: draft
 tags: [pull-request, tooling]
 title: Merge a pull request
@@ -22,7 +22,7 @@ type: How-to
 
 GitHub's default squash message pastes the pull request description into the commit as written, Markdown included. The interim script `tools/interim/squash_merge.py` builds a plain-text message from the pull request instead and merges with it. A real tool replaces the script later.
 
-Agents may not merge. Only a person runs the script without `--dry-run`.
+Agents run this script to merge once the pull request has its required approval. Branch rulesets require that approval and GitHub enforces it.
 
 ## Preview the message
 
@@ -32,7 +32,7 @@ Run the preview from the repository root. It merges nothing and prints the `gh` 
 mise run merge -- 12 --dry-run
 ```
 
-An agent can run this command and hand the output to the person who merges.
+Run it before merging to check the message.
 
 ## Merge
 
@@ -61,8 +61,6 @@ A word, an inline code span, or a URL always stays on one line.
 
 ## Trailers
 
-The final Generated-by and Assisted-by paragraph of the description becomes the commit's trailer block. The script copies it as written, never wraps it, and keeps it as the last paragraph. Then `git interpret-trailers --parse` must read the same block back.
+The final Generated-by and Assisted-by paragraph of the description becomes the commit's trailer block. The script copies it as written, never wraps it, and keeps it as the last paragraph. A failed `git interpret-trailers --parse` round-trip stops the script.
 
-The script never adds Co-authored-by. A description with a Signed-off-by or Co-authored-by line gets refused.
-
-A person may pass `--signoff` to append `Signed-off-by:` after the LLM trailers, with the name and email from `git config`. An agent environment gets a refusal for `--signoff`.
+Signed-off-by and Co-authored-by lines are out. The script never writes them, and a description containing either one stops the merge before it starts.

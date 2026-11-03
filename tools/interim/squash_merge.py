@@ -8,7 +8,7 @@ and merges with it.
 
 Usage, from the repository root:
 
-    uv run python -m tools.interim.squash_merge PR [--dry-run] [--signoff]
+    uv run python -m tools.interim.squash_merge PR [--dry-run]
 
 The subject is the PR title plus ` (#N)`. It must still pass ``cog verify`` and
 fit 72 characters, or the script stops. The body comes from the PR body:
@@ -27,20 +27,19 @@ fit 72 characters, or the script stops. The body comes from the PR body:
   ``git interpret-trailers --parse`` reads it back unchanged.
 
 The script never adds Signed-off-by or Co-authored-by, and it refuses a PR body
-that already holds one. ``--signoff`` appends the person's own Signed-off-by to
-the trailer block, and only a human run may use it.
+that already holds one, whoever runs it.
 
-Agents may not merge: when an agent environment is detected, the script refuses
-to run without ``--dry-run``. It also refuses a draft PR, one that is not open
-or not mergeable, and one whose merge state gh reports as blocked, behind, or
-dirty (which includes failing required checks). It leaves the rules themselves
-to GitHub. The merge passes ``--match-head-commit`` so that a push after the
-preview cannot slip in.
+Agents run this script to merge once the PR is approved. Branch rulesets keep
+GitHub enforcing the human review. The script refuses a draft PR, one that is
+not open or not mergeable, and one whose merge state gh reports as blocked,
+behind, dirty or unknown (which includes failing required checks), and it names
+any failing checks. It leaves the rules themselves to GitHub. The merge passes
+``--match-head-commit`` so that a push after the preview cannot slip in.
+``--dry-run`` previews the message and the command and merges nothing.
 """
 
 import argparse
 import json
-import os
 import re
 import shlex
 import sys
@@ -51,7 +50,7 @@ from tools.interim import agent_identity
 from tools.interim import pull_request as pr
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Sequence
 
 WIDTH = 72
 CODE_INDENT = "    "
@@ -74,7 +73,6 @@ AUTOLINK = re.compile(r"<(https?://[^>\s]+)>")
 STRONG = re.compile(r"(\*\*|__)(?=\S)(.+?)(?<=\S)\1")
 EMPHASIS = re.compile(r"(?<![\w*])\*(?=[^\s*])(.+?)(?<=[^\s*])\*(?![\w*])")
 PLACEHOLDER = re.compile("\x00(\\d+)\x00")
-HUMAN_ONLY = re.compile(r"(?:Signed-off-by|Co-authored-by):", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -270,13 +268,8 @@ def body_blocks(lines: Sequence[pr.Line], refs: dict[str, int]) -> list[str]:
 
 
 def check_trailers(trailers: Sequence[str], text_lines: Sequence[pr.Line]) -> None:
-    """Refuse a PR body whose trailers are wrong or reserved for the human."""
-    problems = [why for _, why in pr.trailer_problems(text_lines, agent_env=False)]
-    problems += [
-        f"{line.text.split(':')[0]} is reserved for the person who merges"
-        for line in text_lines
-        if not line.code and HUMAN_ONLY.match(line.text)
-    ]
+    """Refuse a PR body with stray trailer lines or an invalid trailer block."""
+    problems = [why for _, why in pr.trailer_problems(text_lines)]
     for trailer in trailers:
         # split_trailers kept only lines that match agent_identity.LINE.
         why = agent_identity.check_value(trailer.partition(":")[2].strip())
@@ -295,9 +288,7 @@ def check_round_trip(message: str, trailers: Sequence[str]) -> None:
         stop(f"the trailer block did not survive the message: {reason}")
 
 
-def build_message(
-    title: str, number: int, body: str, signoff: str | None = None
-) -> Message:
+def build_message(title: str, number: int, body: str) -> Message:
     """The squash commit message for a PR.
 
     Raises:
@@ -320,8 +311,6 @@ def build_message(
     parts = body_blocks(rest, refs)
     if refs:
         parts.append("\n".join(f"[{number}]: {url}" for url, number in refs.items()))
-    if signoff:
-        trailers = [*trailers, signoff]
     if trailers:
         parts.append("\n".join(trailers))
     message = Message(subject, "\n\n".join(parts) + "\n" if parts else "")
@@ -389,21 +378,6 @@ def fetch(number: int) -> PullRequest:
     )
 
 
-def signoff_line() -> str:
-    """The person's Signed-off-by from git config.
-
-    Raises:
-        SystemExit: git has no user name or email.
-    """
-    found = {
-        key: agent_identity.git("config", key, cwd=pr.ROOT)[1]
-        for key in ("user.name", "user.email")
-    }
-    if not all(found.values()):
-        stop("--signoff needs git config user.name and user.email")
-    return f"Signed-off-by: {found['user.name']} <{found['user.email']}>"
-
-
 def build_parser() -> argparse.ArgumentParser:
     """The command line."""
     parser = argparse.ArgumentParser(
@@ -411,30 +385,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("number", type=int, metavar="PR")
     parser.add_argument("--dry-run", action="store_true", help="show it, merge nothing")
-    parser.add_argument("--signoff", action="store_true", help="human runs only")
     return parser
 
 
-def main(
-    argv: Sequence[str] | None = None, env: Mapping[str, str] | None = None
-) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     """Preview or perform the squash merge."""
     args = build_parser().parse_args(argv)
-    env = os.environ if env is None else env
-    agent = agent_identity.detect(env) is not None
-    if agent and args.signoff:
-        stop("--signoff is for a human run; an agent environment was detected")
-    if agent and not args.dry_run:
-        stop("agents may not merge; rerun with --dry-run and ask Tony to merge")
     request = fetch(args.number)
     if reasons := refusals(request):
         stop(f"not merging PR #{args.number}: " + "; ".join(reasons))
-    message = build_message(
-        request.title,
-        args.number,
-        request.body,
-        signoff_line() if args.signoff else None,
-    )
+    message = build_message(request.title, args.number, request.body)
     argv_gh = [
         GH, "pr", "merge", str(args.number), "--squash", "--subject", message.subject,
         "--body-file", "-", "--match-head-commit", request.head,

@@ -35,9 +35,9 @@ description = "Check a PR draft and open or update the PR from it (interim)"
 run = "uv run python -m tools.interim.pull_request"
 
 # Interim until the real PR tooling lands; see tools/interim/squash_merge.py.
-# Usage: mise run merge -- PR [--dry-run] [--signoff]. Agents may only --dry-run.
+# Usage: mise run merge -- PR [--dry-run].
 [tasks.merge]
-description = "Squash-merge a PR with a plain-text commit message (interim)"
+description = "Squash-merge an approved PR with a plain-text commit message (interim)"
 run = "uv run python -m tools.interim.squash_merge"
 
 # The Bazel suites CI runs, in the same order, for one local or peer run

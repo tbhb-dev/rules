@@ -2883,13 +2883,13 @@ def test_check_message_orders_and_signoff() -> None:
     assert ai.check_message("s\n\nGenerated-by: nope\n") == [
         "Generated-by: nope: must start with literal LLM"
     ]
-    assert ai.check_message("s\n\nSigned-off-by: H <h@x>\n") == []
-    errs = ai.check_message(
-        "s\n\nSigned-off-by: H <h@x>\nsigned-off-by: n\n", agent_env=True
+    # Sign-off and co-author trailers are not checked, for anyone.
+    assert (
+        ai.check_message(
+            f"s\n\n{gen}\nSigned-off-by: H <h@x>\nCo-authored-by: C <c@x>\n"
+        )
+        == []
     )
-    assert len(errs) == 1
-    assert errs[0].startswith("Signed-off-by is reserved for the human")
-    assert ai.check_message("s\n\nSigned-off-by: H\n", agent_env=False) == []
     assert ai.check_message("Generated-by:LLM harness=codex\n") == []
     assert ai.check_message("  Generated-by: nope\n") == []
     assert ai.check_message("") == []
@@ -2924,22 +2924,18 @@ def test_check_value_order_property(keys: list[str]) -> None:
 
 def test_cmd_check(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     good = msg_file(tmp_path, f"s\n\nGenerated-by: LLM {GOOD}\n")
-    assert ai.cmd_check(str(good), {}) == 0
+    assert ai.cmd_check(str(good)) == 0
     assert capsys.readouterr().err == ""
     bad = msg_file(tmp_path, "s\n\nGenerated-by: nope\nSigned-off-by: A <a@x>\n")
-    assert ai.cmd_check(str(bad), {}) == 1
-    assert (
-        capsys.readouterr().err
-        == "agent_identity: Generated-by: nope: must start with literal LLM\n"
+    assert ai.cmd_check(str(bad)) == 1
+    assert capsys.readouterr().err == (
+        "agent_identity: Generated-by: nope: must start with literal LLM\n"
     )
-    assert ai.cmd_check(str(bad), CLAUDE_COMMIT_ENV) == 1
-    err = capsys.readouterr().err.splitlines()
-    assert len(err) == 2
-    assert all(line.startswith("agent_identity: ") for line in err)
-    assert "Signed-off-by is reserved" in err[1]
-    signoff = msg_file(tmp_path, "s\n\nSigned-off-by: A <a@x>\n")
-    assert ai.cmd_check(str(signoff), {}) == 0
-    assert ai.cmd_check(str(signoff), {"CODEX_SESSION_ID": "x"}) == 1
+    signed = msg_file(
+        tmp_path, f"s\n\nGenerated-by: LLM {GOOD}\nSigned-off-by: A <a@x>\n"
+    )
+    assert ai.cmd_check(str(signed)) == 0
+    assert capsys.readouterr().err == ""
 
 
 # -------------------------------------------------------------------- main
@@ -3114,9 +3110,11 @@ def test_install_writes_plain_identity_hooks(wired: Path) -> None:
         ("post-commit", "consume"),
     ):
         text = (hooks / hook).read_text(encoding="utf-8")
-        assert "prek" not in text
-        assert text.endswith(f'tools/interim/agent_identity.py {command} "$@"\n')
+        assert "hook-impl" not in text
+        assert f'tools/interim/agent_identity.py {command} "$@"\n' in text
         assert os.access(hooks / hook, os.X_OK)
+        # The live config has no hooks for these stages: nothing to chain.
+        assert not (hooks / f"{hook}.prek").exists()
     assert "prek" in (hooks / "pre-commit").read_text(encoding="utf-8")
 
 
@@ -3259,13 +3257,15 @@ def test_e2e_hook_works_from_a_subdirectory(wired: Path) -> None:
 
 
 @needs_prek
-def test_e2e_agent_signoff_is_rejected(wired: Path) -> None:
+@pytest.mark.parametrize("env", [None, CLAUDE_E2E], ids=["human", "agent"])
+def test_e2e_signoff_passes_the_check_for_everyone(
+    wired: Path, env: dict[str, str] | None
+) -> None:
+    """`git commit -s` passes, human or agent: sign-off is not checked."""
     stage(wired, "a.txt")
-    head = run_git(wired, "rev-parse", "HEAD")
-    done = git_commit(wired, "feat: a", CLAUDE_E2E, "-s")
-    assert done.returncode != 0
-    assert "Signed-off-by is reserved for the human" in done.stderr
-    assert run_git(wired, "rev-parse", "HEAD") == head
+    done = git_commit(wired, "feat: a", env, "-s")
+    assert done.returncode == 0, done.stderr
+    assert "Signed-off-by: Test <test@example.invalid>" in last_message(wired)
 
 
 @needs_prek
@@ -3408,7 +3408,9 @@ def test_e2e_failed_commit_then_retry_keeps_the_subagent_trailer(
     claude_write(wired, "b.txt", agent_id="agent-raw")
     run_git(wired, "add", "a.txt", "b.txt")
     head = run_git(wired, "rev-parse", "HEAD")
-    failed = git_commit(wired, "feat: ab", CLAUDE_E2E, "-s")
+    failed = git_commit(
+        wired, "feat: ab", CLAUDE_E2E, "--trailer", "Generated-by: robot"
+    )
     assert failed.returncode != 0
     assert run_git(wired, "rev-parse", "HEAD") == head
     done = git_commit(wired, "feat: ab", CLAUDE_E2E)
@@ -3515,6 +3517,86 @@ def test_e2e_amend_with_new_root_edit_orders_generated_first(wired: Path) -> Non
     assert done.returncode == 0, done.stderr
     assert sorted(generated_subagents(wired), key=str) == [None, SUB_E2E]
     assert not any(t.startswith("Assisted-by") for t in trailers(wired))
+
+
+COG_LIKE = """#!/bin/sh
+echo ran >> cog.log
+grep -qE '^(feat|fix|chore): ' "$1" && exit 0
+echo "cog: not a conventional commit" >&2
+exit 1
+"""
+
+
+@pytest.fixture
+def with_msg_linter(wired: Path) -> Path:
+    """``wired`` plus a prek commit-msg hook (a cog-like linter), reinstalled."""
+    (wired / "cog.sh").write_text(COG_LIKE, encoding="utf-8")
+    config = wired / ".pre-commit-config.yaml"
+    loaded_config = cast("dict[str, list[object]]", yaml.safe_load(config.read_text()))
+    loaded_config["repos"].append(
+        {
+            "repo": "local",
+            "hooks": [
+                {
+                    "id": "cog",
+                    "name": "cog verify",
+                    "language": "system",
+                    "entry": "sh cog.sh",
+                    "stages": ["commit-msg"],
+                }
+            ],
+        }
+    )
+    config.write_text(yaml.safe_dump(loaded_config), encoding="utf-8")
+    subprocess.run(
+        ["bash", str(INSTALL)], check=True, capture_output=True, env=hook_env()
+    )
+    run_git(wired, "add", "cog.sh", ".pre-commit-config.yaml")
+    run_git(wired, "commit", "-q", "--no-verify", "-m", "chore: linter")
+    (wired / "cog.log").unlink(missing_ok=True)
+    return wired
+
+
+@needs_prek
+def test_e2e_prek_commit_msg_hook_still_rejects_a_message(
+    with_msg_linter: Path,
+) -> None:
+    """Regression: the plain commit-msg hook stopped running prek's hooks."""
+    repo = with_msg_linter
+    assert (repo / ".git" / "hooks" / "commit-msg.prek").is_file()
+    claude_write(repo, "a.txt")
+    run_git(repo, "add", "a.txt")
+    head = run_git(repo, "rev-parse", "HEAD")
+    done = git_commit(repo, "not conventional", CLAUDE_E2E)
+    assert done.returncode != 0
+    assert "cog: not a conventional commit" in done.stdout + done.stderr
+    assert run_git(repo, "rev-parse", "HEAD") == head
+
+
+@needs_prek
+def test_e2e_prek_commit_msg_hook_passes_and_trailers_land(
+    with_msg_linter: Path,
+) -> None:
+    repo = with_msg_linter
+    claude_write(repo, "a.txt")
+    run_git(repo, "add", "a.txt")
+    done = git_commit(repo, "feat: a", CLAUDE_E2E)
+    assert done.returncode == 0, done.stderr
+    assert generated_subagents(repo) == [None]
+    assert (repo / "cog.log").read_text(encoding="utf-8") == "ran\n"
+
+
+@needs_prek
+def test_e2e_identity_check_fails_even_when_prek_passes(
+    with_msg_linter: Path,
+) -> None:
+    repo = with_msg_linter
+    stage(repo, "a.txt")
+    done = git_commit(repo, "feat: a", CLAUDE_E2E, "--trailer", "Generated-by: robot")
+    assert done.returncode != 0
+    assert "must start with literal LLM" in done.stderr
+    # prek's hooks still ran after the identity step failed.
+    assert (repo / "cog.log").read_text(encoding="utf-8") == "ran\n"
 
 
 # ------------------------------------------------- pinning exact behavior
@@ -3983,13 +4065,8 @@ def test_check_value_splits_keys_at_the_first_equals_sign() -> None:
 
 
 def test_check_messages_are_exact() -> None:
-    assert ai.check_message("Signed-off-by: A <a@b.c>\n", agent_env=True) == [
-        (
-            "Signed-off-by is reserved for the human: agents must not sign off "
-            "(commit without -s and remove the trailer)"
-        )
-    ]
-    assert ai.check_message("Signed-off-by: A <a@b.c>\n") == []
+    for line in ("Signed-off-by: A <a@b.c>", "Co-authored-by: A <a@b.c>"):
+        assert ai.check_message(f"{line}\n") == []
     assert ai.check_value("LLM harness=codex") is None
 
 
