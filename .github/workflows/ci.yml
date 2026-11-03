@@ -61,6 +61,14 @@ jobs:
           repository-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
 
+      # Some runfiles paths pass Windows' 260-character limit under the
+      # default output root in the runner's profile. The user bazelrc reaches
+      # every workspace the job tests. After setup-bazel, which writes that file
+      # too.
+      - name: Shorten Bazel's output root
+        if: runner.os == 'Windows'
+        run: echo 'startup --output_user_root=C:/b' >>"$HOME/.bazelrc"
+
       # //... covers this repository's gates (buildifier, the lint tests, the
       # shell checks, the bats suite and the rule families' proofs) and
       # preset.update_test, which fails when preset.bazelrc is stale.
