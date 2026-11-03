@@ -17,10 +17,12 @@ load(
     _ruff_test = "ruff_test",
     _vulture_test = "vulture_test",
 )
+load("//private:library.bzl", _PyUnitInfo = "PyUnitInfo", _python_library = "python_library")
 load("//private:mutmut.bzl", _mutmut_report = "mutmut_report", _mutmut_test = "mutmut_test")
 load("//private:tool.bzl", _python_tool = "python_tool")
 
 PyEnvInfo = _PyEnvInfo
+PyUnitInfo = _PyUnitInfo
 bandit_test = _bandit_test
 complexipy_test = _complexipy_test
 import_linter_test = _import_linter_test
@@ -31,6 +33,7 @@ pip_audit_test = _pip_audit_test
 pylint_test = _pylint_test
 pyrefly_test = _pyrefly_test
 pytest_test = _pytest_test
+python_library = _python_library
 python_tool = _python_tool
 ruff_test = _ruff_test
 vulture_test = _vulture_test

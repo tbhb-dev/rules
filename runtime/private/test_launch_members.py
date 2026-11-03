@@ -159,6 +159,26 @@ def test_install_members(uv_runs: list[tuple[list[str], dict[str, str]]]) -> Non
     assert scripts == sysconfig.get_path("scripts", vars=paths)
 
 
+def test_install_members_leaves_out_members_the_tree_lacks(
+    uv_runs: list[tuple[list[str], dict[str, str]]],
+) -> None:
+    launch.install_members(["m", "absent"])
+    [(command, _)] = uv_runs
+    assert command[-1].endswith("demo_pkg_x-1.2.3-py3-none-any.whl")
+    assert command[-2] != command[-1]
+    assert sum(arg.endswith(".whl") for arg in command) == 1
+
+
+def test_install_members_with_none_present_runs_nothing(
+    uv_runs: list[tuple[list[str], dict[str, str]]],
+) -> None:
+    site, scripts = launch.install_members(["absent"])
+    assert uv_runs == []
+    tmp = Path(os.environ["TEST_TMPDIR"])
+    for path in (site, scripts):
+        assert Path(path).relative_to(tmp).parts[0].startswith("members-")
+
+
 def test_install_members_reports_a_failed_install(
     uv_runs: list[tuple[list[str], dict[str, str]]],
 ) -> None:

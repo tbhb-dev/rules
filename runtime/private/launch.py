@@ -142,19 +142,23 @@ def install_members(members: list[str]) -> tuple[str, str]:
     """Install the members' metadata and scripts; return (site dir, scripts dir).
 
     uv installs the wheels offline, without dependencies, into a scratch
-    prefix, and writes the console scripts for this platform.
+    prefix, and writes the console scripts for this platform. A member the
+    tree does not hold (a unit's copy has only the members it depends on)
+    is left out: nothing in the tree can import it.
     """
     prefix = Path(
         tempfile.mkdtemp(prefix="members-", dir=os.environ.get("TEST_TMPDIR"))
     )
-    wheels = [str(member_wheel(Path(member), prefix)) for member in members]
+    present = [Path(m) for m in members if (Path(m) / PYPROJECT).is_file()]
+    wheels = [str(member_wheel(member, prefix)) for member in present]
     command = [os.environ["TBHB_PYTHON_UV"], "pip", "install", "--quiet", "--offline"]
     command += ["--no-deps", "--python", sys.executable, "--prefix", str(prefix)]
     env = os.environ | {"UV_CACHE_DIR": str(prefix / "cache"), "UV_NO_CONFIG": "1"}
-    done = subprocess.run([*command, *wheels], env=env, check=False)  # nosec B603
-    if done.returncode != 0:
-        message = f"installing the workspace members failed ({done.returncode})"
-        raise UsageError(message)
+    if wheels:
+        done = subprocess.run([*command, *wheels], env=env, check=False)  # nosec B603
+        if done.returncode != 0:
+            message = f"installing the workspace members failed ({done.returncode})"
+            raise UsageError(message)
     paths = {"base": str(prefix)}
     return sysconfig.get_path("purelib", vars=paths), sysconfig.get_path(
         "scripts", vars=paths

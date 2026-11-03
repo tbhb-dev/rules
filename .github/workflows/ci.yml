@@ -109,6 +109,13 @@ jobs:
         working-directory: python/e2e/workspace
         run: bazelisk test //...
 
+      # Mutation reports rerun along the dependency graph: an edit reruns
+      # its unit and the dependents, and the others stay cached. mutmut does
+      # not run on Windows.
+      - name: Prove incremental mutation
+        if: runner.os != 'Windows'
+        run: python/e2e/incremental.sh
+
   # Checks that need Git history or the GitHub API, which no sandboxed test
   # can see.
   repo:

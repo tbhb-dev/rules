@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-# A planted defect, only in //:proof_mutmut_member_survivor: the test runs
-# the code but checks nothing, so its mutants survive.
+# A planted defect: the test runs half() but checks nothing, so its mutants
+# survive; double() is tested. The full run fails, and so does a diff run
+# that changes half(); one that changes only double() passes.
 [project]
 name = "weakpkg"
 version = "2.0.0"

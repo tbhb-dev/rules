@@ -5,7 +5,7 @@
 name = "e2e-workspace"
 version = "0"
 requires-python = ">=3.15"
-dependencies = ["tbhbops", "weakpkg"]
+dependencies = ["apppkg", "corepkg", "tbhbops", "weakpkg"]
 
 [dependency-groups]
 dev = [
@@ -20,15 +20,17 @@ dev = [
 package = false
 
 [tool.uv.workspace]
-members = ["cli", "weak"]
+members = ["app", "cli", "core", "weak"]
 
 [tool.uv.sources]
+apppkg = { workspace = true }
+corepkg = { workspace = true }
 tbhbops = { workspace = true }
 weakpkg = { workspace = true }
 
 [tool.pytest]
 addopts = ["-ra", "--strict-markers", "--import-mode=importlib"]
-testpaths = ["cli/tests", "tools", "weak/tests"]
+testpaths = ["app/tests", "cli/tests", "core/tests", "tools", "weak/tests"]
 
 [tool.coverage.run]
 branch = true

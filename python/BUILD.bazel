@@ -39,6 +39,7 @@ bzl_library(
     visibility = ["//visibility:public"],
     deps = [
         "//private:checks",
+        "//private:library",
         "//private:mutmut",
         "//private:tool",
         "@tbhb_rules//runtime:defs",

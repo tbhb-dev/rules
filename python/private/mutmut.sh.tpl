@@ -12,6 +12,7 @@ set -euo pipefail
 execroot=$PWD
 launcher="$execroot/@@LAUNCHER@@"
 report="$execroot/@@REPORT@@"
+changes=@@CHANGES@@
 log="$execroot/@@LOG@@"
 manifest="$execroot/@@MANIFEST@@"
 
@@ -28,4 +29,9 @@ chmod -R u+w "$tree"
 cd "$tree"
 export HOME="$tree/.home"
 mkdir -p "$HOME"
-"$launcher" "$report" "$log"
+# With no change set the run is full; with one, the runner scopes it.
+if [[ -n $changes ]]; then
+  "$launcher" "$report" "$log" "$execroot/$changes" "@@CHDIR@@"
+else
+  "$launcher" "$report" "$log"
+fi

@@ -65,7 +65,7 @@ def test_load_stats(tmp_path: Path) -> None:
 def test_report_without_stats_is_an_interrupted_run() -> None:
     assert mr.report(None, "") == (
         "total=0\nkilled=0\nlived=0\nnot_covered=0\ntimeout=0\nerrored=0\n"
-        "skipped=0\ninterrupted=1\n"
+        "skipped=0\ninterrupted=1\nscope=full\n"
     )
 
 
@@ -97,7 +97,7 @@ def test_report_lists_counts_and_the_mutants_not_killed() -> None:
     )
     assert mr.report(stats, results) == (
         "total=4\nkilled=3\nlived=2\nnot_covered=3\ntimeout=4\nerrored=11\n"
-        "skipped=7\ninterrupted=1\n"
+        "skipped=7\ninterrupted=1\nscope=full\n"
         "mutant.survived=tools.a.x__mutmut_2\n"
         "mutant.no_tests=tools.a.y__mutmut_1\n"
         "mutant.not_checked=tools.a.y__mutmut_2\n"
@@ -107,6 +107,7 @@ def test_report_lists_counts_and_the_mutants_not_killed() -> None:
         "mutant.skipped=tools.a.y__mutmut_6\n"
         "mutant.caught_by_type_check=tools.a.y__mutmut_7\n"
         "mutant.survived=tools.b: odd.x__mutmut_1\n"
+        "mutant.something_else=tools.a.z__mutmut_1\n"
     )
 
 
@@ -119,15 +120,22 @@ def test_report_counts_type_check_rejects_as_skipped_not_killed() -> None:
 
 
 def test_report_counts_missing_stats_as_zero() -> None:
-    assert mr.report({}, "") == (
-        "total=0\nkilled=0\nlived=0\nnot_covered=0\ntimeout=0\nerrored=0\n"
-        "skipped=0\ninterrupted=0\n"
-    )
+    assert mr.report({}, "").splitlines()[:9] == [
+        "total=0",
+        "killed=0",
+        "lived=0",
+        "not_covered=0",
+        "timeout=0",
+        "errored=0",
+        "skipped=0",
+        "interrupted=0",
+        "scope=full",
+    ]
 
 
 def test_report_of_a_clean_run() -> None:
     assert mr.report(ALL_KILLED, "    m__mutmut_1: killed\n").endswith(
-        "skipped=1\ninterrupted=0\n",
+        "skipped=1\ninterrupted=0\nscope=full\n",
     )
 
 
@@ -140,7 +148,10 @@ def test_main_needs_a_report_and_a_log(
     # Calling mutmut would raise, so a usage error must stop before it.
     monkeypatch.setattr(mr, "mutmut", None)
     assert mr.main(argv) == 2
-    assert capsys.readouterr().err == "usage: mutmut_report.py REPORT LOG\n"
+    assert (
+        capsys.readouterr().err
+        == "usage: mutmut_report.py REPORT LOG [CHANGES PREFIX]\n"
+    )
 
 
 @pytest.fixture
@@ -177,7 +188,7 @@ def test_main_writes_the_report_from_the_stats(
     assert Path("pyproject.toml").read_text() == (
         "[tool.mutmut]\nuse_git_change_detection = false\nsource_paths = []\n"
     )
-    assert Path("log").read_text() == ""
+    assert Path("log").read_text() == "mutmut_report: full: no change set\n"
     assert Path("report").read_text().splitlines() == [
         "total=5",
         "killed=3",
@@ -187,6 +198,7 @@ def test_main_writes_the_report_from_the_stats(
         "errored=0",
         "skipped=1",
         "interrupted=0",
+        "scope=full",
         "mutant.survived=m__mutmut_1",
     ]
 
@@ -250,7 +262,7 @@ def test_scratch_config_without_a_pyproject(tmp_path: Path) -> None:
     ],
 )
 def test_unstable(counts: dict[str, str], expected: list[str]) -> None:
-    keys = ["total", *mr.STATS_KEYS, "interrupted"]
+    keys = ["total", *mr.OUTCOMES, "interrupted"]
     base = dict.fromkeys(keys, "0") | counts
     text = "".join(f"{key}={value}\n" for key, value in base.items())
     assert mr.unstable(text + "mutant.survived=a=b\n") == expected
@@ -268,4 +280,5 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
     assert len(fake_mutmut) == 3
     assert capsys.readouterr().err == (
         "mutmut_report: not cacheable: timeout, errored\n"
+        "mutmut_report: full: no change set\n"
     )
