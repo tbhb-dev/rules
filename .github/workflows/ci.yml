@@ -20,33 +20,90 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Which workspaces a change can affect. Each changed file belongs to the
+  # deepest workspace directory that holds it, and anything outside the
+  # nested ones belongs to the root (workflows, shared rules and configs
+  # included). A workspace runs when it owns a changed file or `deps` names
+  # the owner: the ids of the local modules its MODULE.bazel overrides
+  # (root's python is a dev dependency, which only root's own tests see).
+  # Pushes to main and any other event run every workspace.
+  plan:
+    name: plan
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: read  # the pull request's changed files, from the GitHub API
+    outputs:
+      workspaces: ${{ steps.plan.outputs.workspaces }}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Choose the workspaces to test
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          WORKSPACES: |
+            [
+              {"id": "root", "dir": ".", "deps": ["python"]},
+              {"id": "smoke", "dir": "e2e/smoke", "deps": ["root"]},
+              {"id": "go", "dir": "go", "deps": ["root"]},
+              {"id": "go-smoke", "dir": "go/e2e/smoke", "deps": ["root", "go"]},
+              {"id": "python", "dir": "python", "deps": ["root"]},
+              {"id": "python-single", "dir": "python/e2e/single", "deps": ["root", "python"]},
+              {"id": "python-workspace", "dir": "python/e2e/workspace", "deps": ["root", "python"]}
+            ]
+        run: |
+          files="${RUNNER_TEMP}/changed"
+          if [ "${EVENT}" = pull_request ]; then
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" \
+              --jq '.[] | .filename, (.previous_filename // empty)' >"${files}"
+          else
+            : >"${files}"
+          fi
+          # The files API lists at most 3000; past that, test everything.
+          count="$(wc -l <"${files}")"
+          if [ "${EVENT}" != pull_request ] || [ "${count}" -ge 3000 ]; then
+            printf '.github/workflows/ci.yml\n' >"${files}"
+          fi
+          selected="$(jq -c --rawfile files "${files}" '
+            . as $ws
+            | ($files | split("\n") | map(select(length > 0))) as $paths
+            | def owner($p):
+                ([$ws[] | select(.dir as $d | $d != "." and ($p | startswith($d + "/")))]
+                  | max_by(.dir | length) // {id: "root"}) | .id;
+              ($paths | map(owner(.)) | unique) as $owners
+            | [$ws[]
+                | select(.id as $id | .deps as $deps
+                    | $owners | any(. == $id or (. as $o | $deps | index($o) != null)))
+                | {id, dir}]
+          ' <<<"${WORKSPACES}")"
+          echo "workspaces=${selected}" >>"${GITHUB_OUTPUT}"
+          ids="$(jq -r 'map(.id) | join(", ")' <<<"${selected}")"
+          echo "Testing: ${ids}" >>"${GITHUB_STEP_SUMMARY}"
+
   # tbhb_rules targets Bazel 9.x only (bazel_compatibility >= 9.0.0, and
-  # .bazelversion pins the release), so the matrix varies only the platform:
-  # one runner for each platform the tool pins cover that GitHub hosts. It
-  # runs this repository's own gates, including the Python ones, on its own
-  # rules, the nested modules and the e2e consumers.
-  # One job per platform and workspace, so the workspaces test at once.
-  # The root covers this repository's gates (buildifier, the lint tests,
-  # the shell checks, the bats suite and the rule families' proofs) and
-  # preset.update_test, which fails when preset.bazelrc is stale. The smoke
-  # consumer's expect_failure_tests pass only when each proof fails for the
-  # stated reason. The nested modules are workspaces of their own, each with
-  # its own gates and consumers, on the same Bazel versions and platforms.
+  # .bazelversion pins the release), so the matrix varies only the platform
+  # and the workspace: one job per pair, on each platform the tool pins cover
+  # that GitHub hosts, for the workspaces the plan chose. The root covers
+  # this repository's gates (buildifier, the lint tests, the shell checks,
+  # the bats suite and the rule families' proofs) and preset.update_test,
+  # which fails when preset.bazelrc is stale. The smoke consumer's
+  # expect_failure_tests pass only when each proof fails for the stated
+  # reason. The nested modules are workspaces of their own, each with its
+  # own gates and consumers.
   bazel:
     name: "bazel (${{ matrix.os }}, ${{ matrix.workspace.id }})"
+    needs: [plan]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-15, windows-2025]
-        workspace:
-          - {id: root, dir: .}
-          - {id: smoke, dir: e2e/smoke}
-          - {id: go, dir: go}
-          - {id: go-smoke, dir: go/e2e/smoke}
-          - {id: python, dir: python}
-          - {id: python-single, dir: python/e2e/single}
-          - {id: python-workspace, dir: python/e2e/workspace}
+        workspace: ${{ fromJSON(needs.plan.outputs.workspaces) }}
     defaults:
       run:
         shell: bash
@@ -211,7 +268,7 @@ jobs:
   conclusion:
     name: conclusion
     if: always()
-    needs: [bazel, repo]
+    needs: [plan, bazel, repo]
     runs-on: ubuntu-24.04
     steps:
       - name: Harden the runner

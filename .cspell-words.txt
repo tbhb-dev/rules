@@ -119,6 +119,7 @@ PYTHONDONTWRITEBYTECODE
 pythonista
 PYTHONNOUSERSITE
 PYTHONSTARTUP
+rawfile
 rctx
 recvcheck
 rlocation
