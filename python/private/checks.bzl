@@ -25,6 +25,18 @@ visibility("//...")
 
 _ENV = DEFAULT_ENV
 
+def _missing_coverage_impl(ctx):
+    fail("{}: pytest_test needs `coverage`, the packages or paths whose branch coverage it measures, such as coverage = [\"mypkg\"]. Set coverage = None only for a test with no first-party code to measure.".format(ctx.label))
+
+# Stands in for a pytest_test that names nothing to measure. A macro's fail()
+# is a loading error that aborts the whole package; failing in a rule's
+# implementation is an analysis error of this one target, which a test can
+# expect.
+_missing_coverage_test = rule(
+    implementation = _missing_coverage_impl,
+    test = True,
+)
+
 def _check(name, srcs, tool, tool_args, select = True, exclude = [], chdir = "", python_env = _ENV, main = None, tool_attrs = {}, **kwargs):
     python_tool(
         name = name + ".tool",
@@ -149,29 +161,34 @@ def pytest_test(
         srcs,
         args = [],
         coverage = [],
-        coverage_floor = 100,
         chdir = "",
         python_env = _ENV,
         vale_config = ".vale.ini",
         vale_packages = {},
         **kwargs):
-    """Runs pytest over a copy of the tree, optionally with a coverage floor.
+    """Runs pytest over a copy of the tree, with branch coverage at 100%.
 
     pytest reads its configuration (testpaths, addopts) from the
     pyproject.toml of the directory it runs from, `chdir` relative to the
     tree root. The workspace members' source roots are importable, and the
     copy keeps the repository layout, so tests that find data by walking up
-    from their own file still do. Coverage is measured in the test with
-    pytest-cov, which the environment must provide, with branch coverage
-    on, and fails below `coverage_floor` percent.
+    from their own file still do.
+
+    Coverage is measured in the test with pytest-cov, which the environment
+    must provide, and the floor is 100% branch coverage (branches and
+    lines). Consumers don't configure the floor. A test must say what to
+    measure: with no `coverage`, the target fails at analysis time, naming
+    this argument.
 
     Args:
         name: Target name.
         srcs: Files to copy, usually a `repo_files` target.
         args: Extra pytest arguments.
-        coverage: Packages or paths to measure (`--cov` values). Empty
-            turns coverage off.
-        coverage_floor: The minimum total coverage, in percent.
+        coverage: Packages or paths to measure (`--cov` values), required:
+            list every first-party package or path the tests cover. Set it
+            to `None` only for a test with no first-party code to measure,
+            such as one that drives an external tool against fixture files.
+            An empty list fails like an omitted argument.
         chdir: Directory, relative to the tree root, to run pytest from.
         python_env: The Python environment.
         vale_config: With `vale_packages`, the Vale config whose StylesPath
@@ -182,12 +199,15 @@ def pytest_test(
             PATH (`path_tools`).
         **kwargs: Passed to `tree_check_test`.
     """
+    if coverage == []:
+        _missing_coverage_test(name = name, tags = kwargs.get("tags", []), testonly = True)
+        return
     cov_args = []
     if coverage:
         cov_args = ["--cov=" + c for c in coverage] + [
             "--cov-branch",
             "--cov-report=term-missing",
-            "--cov-fail-under={}".format(coverage_floor),
+            "--cov-fail-under=100",
         ]
     pytest_args = ["-p", "no:cacheprovider", "--junitxml={env:XML_OUTPUT_FILE}"] + cov_args + args
     if not vale_packages:
