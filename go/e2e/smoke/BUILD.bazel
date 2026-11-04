@@ -8,6 +8,7 @@ load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test")
 load("@tbhb_rules_go//tests/golangci:oracle.bzl", "golangci_lint_oracle")
+load("//tools/coverage:defs.bzl", "gobco_test")
 load("//tools/lint:linters.bzl", "golangci_lint_parity_test", "golangci_lint_test")
 load("//tools/mutation:defs.bzl", "gomutants_test")
 
@@ -47,6 +48,15 @@ MUTATION = [
     "//mutation/weak:weak_test",
 ]
 
+# The coverage fixtures: coverage/full, whose tests reach both outcomes of
+# every condition, and coverage/branch and coverage/condition, whose do not.
+# Linted, but outside the module's contracts.
+COVERAGE = [
+    "//coverage/branch:branch_test",
+    "//coverage/condition:condition_test",
+    "//coverage/full:full_test",
+]
+
 # Go files that are planted defects or proof fixtures, not part of the
 # module the clean checks cover.
 NOT_IN_MODULE = [
@@ -57,7 +67,7 @@ NOT_IN_MODULE = [
 
 golangci_lint_test(
     name = "golangci_lint_test",
-    srcs = CLEAN + MUTATION,
+    srcs = CLEAN + COVERAGE + MUTATION,
     expect_linted = [":repo_files"],
     expect_linted_exclude = NOT_IN_MODULE,
 )
@@ -365,4 +375,73 @@ expect_failure_test(
     name = "proof_diff_on_main_fails",
     pattern = "diff-scoped report\\(s\\), but a full run is required",
     test = ":proof_diff_on_main",
+)
+
+# gobco. Every condition of coverage/full has both outcomes reached.
+gobco_test(
+    name = "gobco_test",
+    tests = ["//coverage/full:full_test"],
+)
+
+# A package with a dependency from the module proxy and no conditions of its
+# own has nothing to cover, and passes.
+gobco_test(
+    name = "gobco_no_conditions_test",
+    tests = ["//lib:lib_test"],
+)
+
+# coverage/branch reaches 3 of 4 outcomes: a floor of 75 passes.
+gobco_test(
+    name = "gobco_floor_test",
+    floor = 75,
+    tests = ["//coverage/branch:branch_test"],
+)
+
+# gobco proofs, each failing for the stated reason. Their tests run every
+# line, so Go's statement coverage would pass them.
+
+# An if whose zero branch no test reaches.
+gobco_test(
+    name = "proof_untested_branch",
+    tags = PROOF_TAGS,
+    tests = ["//coverage/branch:branch_test"],
+)
+
+expect_failure_test(
+    name = "proof_untested_branch_fails",
+    pattern = "^  coverage/branch/branch.go:13:5: condition \"n == 0\" was once false but never true$",
+    test = ":proof_untested_branch",
+)
+
+# An operand of || that is never true, and one of && that is never false.
+gobco_test(
+    name = "proof_untested_condition",
+    tags = PROOF_TAGS,
+    tests = ["//coverage/condition:condition_test"],
+)
+
+[
+    expect_failure_test(
+        name = "proof_untested_condition_{}_fails".format(name),
+        pattern = pattern,
+        test = ":proof_untested_condition",
+    )
+    for name, pattern in [
+        ("or", "^  coverage/condition/condition.go:11:21: condition \"day == 7\" was once false but never true$"),
+        ("and", "^  coverage/condition/condition.go:16:19: condition \"n <= 10\" was once true but never false$"),
+    ]
+]
+
+# The floor is a floor: 3 of 4 outcomes is 75%, below 76.
+gobco_test(
+    name = "proof_floor",
+    floor = 76,
+    tags = PROOF_TAGS,
+    tests = ["//coverage/branch:branch_test"],
+)
+
+expect_failure_test(
+    name = "proof_floor_fails",
+    pattern = "FAIL: coverage/branch: 3 of 4 outcomes covered \\(75.0%\\), floor 76%$",
+    test = ":proof_floor",
 )

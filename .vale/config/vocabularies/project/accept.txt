@@ -11,6 +11,7 @@ dereferenced
 [Ff]ormatters
 [Ff]rontmatter
 gitleaks
+gobco
 gomutants
 [Ll]ockfiles?
 mutmut

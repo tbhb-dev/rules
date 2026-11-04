@@ -35,6 +35,7 @@ exports_files(
         "golangci_lint.sh",
         "golangci_lint_merge.sh",
         "go_mod_tidy.sh.tpl",
+        "gobco_test.sh.tpl",
         "golangci_lint_test.sh.tpl",
         "report_test.sh.tpl",
     ],
@@ -88,6 +89,23 @@ bzl_library(
 )
 
 bzl_library(
+    name = "go_unit",
+    srcs = ["go_unit.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [":go_srcs"],
+)
+
+bzl_library(
+    name = "gobco",
+    srcs = ["gobco.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":go_unit",
+        "@bazel_skylib//lib:shell",
+    ],
+)
+
+bzl_library(
     name = "go_arch_lint",
     srcs = ["go_arch_lint.bzl"],
     visibility = ["//:__subpackages__"],
@@ -102,7 +120,7 @@ bzl_library(
     srcs = ["gomutants.bzl"],
     visibility = ["//:__subpackages__"],
     deps = [
-        ":go_srcs",
+        ":go_unit",
         "@tbhb_rules//quality:defs",
     ],
 )

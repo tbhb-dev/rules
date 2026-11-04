@@ -48,6 +48,7 @@ bzl_library(
         "//private:deadcode",
         "//private:go_arch_lint",
         "//private:go_mod_tidy",
+        "//private:gobco",
         "//private:golangci_lint",
         "//private:gomutants",
     ],

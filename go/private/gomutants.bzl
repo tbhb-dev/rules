@@ -10,85 +10,29 @@ load(
     "mutation_changes_slice",
     "mutation_gate_test",
 )
-load(":go_srcs.bzl", "GoSrcsInfo", "go_srcs_aspect")
+load(":go_unit.bzl", "GO_TOOLCHAIN", "UNIT_ATTRS", "go_unit", "sdk_files", "tool_binary")
 
 # Internal: consumers load //:defs.bzl.
 visibility(["//", "//private/...", "//tests/..."])
 
-_GO_TOOLCHAIN = "@rules_go//go:toolchain"
-
-def _dirname(path):
-    return path.rpartition("/")[0]
-
-def _gomutants_binary(target):
-    """The gomutants executable itself, not the hub's Bash shim on Windows."""
-    for f in target[DefaultInfo].default_runfiles.files.to_list():
-        if f.basename == "gomutants.exe":
-            return f
-    return target[DefaultInfo].files_to_run.executable
-
 def _gomutants_report_impl(ctx):
-    prefix = ctx.file.go_mod.short_path[:-len("go.mod")]
-    directories = {t.label.package: True for t in ctx.attr.tests}
-    if len(directories) != 1:
-        fail("tests must all be in one package; they are in {}".format(sorted(directories)))
-    directory = list(directories)[0]
-    if prefix and not (directory + "/").startswith(prefix):
-        fail("{} is not in the module directory {}".format(directory, prefix))
-    pkg = directory[len(prefix):] or "."
-
-    # The package's own sources are mutated, against its tests; the sources
-    # of the packages it depends on are deps.
-    entries = []
-    for f in depset(transitive = [t[GoSrcsInfo].srcs for t in ctx.attr.tests]).to_list():
-        role = "dep"
-        if _dirname(f.short_path) == directory:
-            role = "test" if f.basename.endswith("_test.go") else "mut"
-        entries.append((role, f))
-    if not [f for role, f in entries if role == "mut"]:
-        fail("the tests in {} reach no source of their own package".format(directory or "."))
-    entries += [("data", f) for f in ctx.files.data]
-    entries.append(("mod", ctx.file.go_mod))
-    if ctx.file.go_sum:
-        entries.append(("mod", ctx.file.go_sum))
-    for _, f in entries:
-        if f.owner.repo_name != "":
-            fail("{} is from repository @{}; only files of the main repository can be mutated".format(f.short_path, f.owner.repo_name))
-        if not f.short_path.startswith(prefix):
-            fail("{} is not in the module directory {}".format(f.short_path, prefix or "."))
-    files = [f for _, f in entries]
-
-    manifest = ctx.actions.declare_file(ctx.label.name + ".manifest")
-    ctx.actions.write(manifest, "".join([
-        "{}\t{}\t{}\n".format(role, f.path, f.short_path[len(prefix):])
-        for role, f in entries
-    ]))
+    unit = go_unit(ctx, "mutated")
+    files = unit.files
 
     # The unit's slice of the change set, without the base: the same bytes
     # for every change set that touches none of the unit's files.
     unit_slice = mutation_changes_slice(ctx, files)
 
-    sdk = ctx.toolchains[_GO_TOOLCHAIN].sdk
-    sdk_files = depset([sdk.go, sdk.root_file], transitive = [sdk.srcs, sdk.headers, sdk.tools, sdk.libs])
-    gomutants = _gomutants_binary(ctx.attr._gomutants)
+    gomutants = tool_binary(ctx.attr._gomutants, "gomutants.exe")
     report = ctx.actions.declare_file(ctx.label.name + ".txt")
     log = ctx.actions.declare_file(ctx.label.name + ".log")
 
-    args = ctx.actions.args()
+    args = unit.args
     args.add("-gomutants", gomutants)
-    args.add("-go", sdk.go)
-    args.add("-manifest", manifest)
-    args.add("-prefix", prefix)
-    args.add("-pkg", pkg)
     args.add("-report", report)
     args.add("-log", log)
     if unit_slice:
         args.add("-changes", unit_slice)
-    if ctx.attr.proxy:
-        roots = [f for f in ctx.files.proxy if f.basename == "go_mod_proxy.root"]
-        if len(roots) != 1:
-            fail("proxy must be a go_mod_proxy repository's :proxy target")
-        args.add("-proxy", roots[0].dirname)
     if ctx.attr.cpus:
         args.add("-workers", str(ctx.attr.cpus))
     args.add("--")
@@ -97,8 +41,8 @@ def _gomutants_report_impl(ctx):
         executable = ctx.executable._runner,
         arguments = [args],
         inputs = depset(
-            [manifest] + files + ctx.files.proxy + ([unit_slice] if unit_slice else []),
-            transitive = [sdk_files],
+            [unit.manifest] + files + ctx.files.proxy + ([unit_slice] if unit_slice else []),
+            transitive = [sdk_files(ctx)],
         ),
         tools = [ctx.attr._gomutants[DefaultInfo].files_to_run, gomutants],
         outputs = [report, log],
@@ -134,24 +78,9 @@ deletes or changes a file without changed lines; otherwise only the
 functions the changed lines fall in, and nothing when no change reaches
 the unit. Writes `<name>.txt` (MutationReportInfo), gomutants' log and the
 slice (the `changes` output group).""",
-    attrs = MUTATION_CHANGES_ATTRS | {
+    attrs = MUTATION_CHANGES_ATTRS | UNIT_ATTRS | {
         "cpus": attr.int(doc = "CPUs to reserve for the action (`cpu:N`) and gomutants workers to run; 0 for the defaults."),
-        "data": attr.label_list(
-            allow_files = True,
-            doc = "Other files the tests read (testdata, embedded files), in the module directory.",
-        ),
         "flags": attr.string_list(doc = "More gomutants flags, such as `--timeout-coefficient=20`."),
-        "go_mod": attr.label(mandatory = True, allow_single_file = ["go.mod"]),
-        "go_sum": attr.label(allow_single_file = ["go.sum"], doc = "The module's go.sum, when it has requirements."),
-        "proxy": attr.label(
-            allow_files = True,
-            doc = "The `:proxy` target of a go_mod_proxy repository made from go.sum, when the module has requirements.",
-        ),
-        "tests": attr.label_list(
-            aspects = [go_srcs_aspect],
-            mandatory = True,
-            doc = "go_test targets of one package, which is mutated against them.",
-        ),
         "_gomutants": attr.label(
             default = Label("@tbhb_rules_gomutants//:gomutants"),
             executable = True,
@@ -163,7 +92,7 @@ slice (the `changes` output group).""",
             cfg = "exec",
         ),
     },
-    toolchains = [_GO_TOOLCHAIN],
+    toolchains = [GO_TOOLCHAIN],
 )
 
 def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], flags = [], cpus = 0, changes = None, require_scope = "any", **kwargs):

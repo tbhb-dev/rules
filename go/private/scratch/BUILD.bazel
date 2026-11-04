@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(
+    glob(["*.go"]),
+    visibility = ["//tests:__subpackages__"],
+)
+
+go_library(
+    name = "scratch",
+    srcs = ["scratch.go"],
+    importpath = "github.com/tbhb-dev/rules/go/private/scratch",
+    visibility = [
+        "//private:__subpackages__",
+        "//tests:__subpackages__",
+    ],
+)
+
+go_test(
+    name = "scratch_test",
+    srcs = ["scratch_test.go"],
+    embed = [":scratch"],
+    visibility = ["//tests:__subpackages__"],
+)

@@ -16,6 +16,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/tbhb-dev/rules/go/private/gomutants",
     visibility = ["//visibility:private"],
+    deps = ["//private/scratch"],
 )
 
 go_binary(
@@ -29,4 +30,5 @@ go_test(
     srcs = ["main_test.go"],
     embed = [":gomutants_lib"],
     visibility = ["//tests:__subpackages__"],
+    deps = ["//private/scratch"],
 )
