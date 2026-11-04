@@ -51,6 +51,7 @@ bzl_library(
         "//private:gobco",
         "//private:golangci_lint",
         "//private:gomutants",
+        "//private:govulncheck",
     ],
 )
 

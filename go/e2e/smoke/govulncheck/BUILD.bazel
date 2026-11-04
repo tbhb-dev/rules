@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+# A module of its own, at a version of golang.org/x/text with known
+# vulnerabilities, for the govulncheck_test proofs: called calls one of the
+# vulnerable functions and notcalled only imports the package.
+exports_files([
+    "go.mod",
+    "go.sum",
+])

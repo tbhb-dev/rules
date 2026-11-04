@@ -36,6 +36,7 @@ exports_files(
         "golangci_lint_merge.sh",
         "go_mod_tidy.sh.tpl",
         "gobco_test.sh.tpl",
+        "govulncheck_test.sh.tpl",
         "golangci_lint_test.sh.tpl",
         "report_test.sh.tpl",
     ],
@@ -100,6 +101,17 @@ bzl_library(
     srcs = ["gobco.bzl"],
     visibility = ["//:__subpackages__"],
     deps = [
+        ":go_unit",
+        "@bazel_skylib//lib:shell",
+    ],
+)
+
+bzl_library(
+    name = "govulncheck",
+    srcs = ["govulncheck.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        ":go_srcs",
         ":go_unit",
         "@bazel_skylib//lib:shell",
     ],

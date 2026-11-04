@@ -14,6 +14,7 @@ load(
     _golangci_lint_test_factory = "golangci_lint_test_factory",
 )
 load("//private:gomutants.bzl", _gomutants_report = "gomutants_report", _gomutants_test = "gomutants_test")
+load("//private:govulncheck.bzl", _govulncheck = "govulncheck", _govulncheck_test = "govulncheck_test")
 
 GolangciLintInfo = _GolangciLintInfo
 go_arch_lint_test = _go_arch_lint_test
@@ -24,3 +25,5 @@ golangci_lint_aspect_factory = _golangci_lint_aspect_factory
 golangci_lint_test_factory = _golangci_lint_test_factory
 gomutants_report = _gomutants_report
 gomutants_test = _gomutants_test
+govulncheck = _govulncheck
+govulncheck_test = _govulncheck_test

@@ -2,11 +2,12 @@
 # Copyright Tony Burns
 
 # This module's own Go code (the packages driver, the report tool, the
-# gomutants and gobco runners and their shared scratch module) under the checks it ships.
+# gomutants, gobco and govulncheck runners and their shared scratch module)
+# under the checks it ships.
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
-load("//:defs.bzl", "go_deadcode_test", "go_mod_tidy_test")
+load("//:defs.bzl", "go_deadcode_test", "go_mod_tidy_test", "govulncheck", "govulncheck_test")
 load(":linters.bzl", "self_lint_test")
 
 repo_files()
@@ -18,6 +19,8 @@ GO_TARGETS = [
     "//private/gobco:gobco_test",
     "//private/gomutants",
     "//private/gomutants:gomutants_test",
+    "//private/govulncheck",
+    "//private/govulncheck:govulncheck_test",
     "//private/report",
     "//private/report:report_test",
     "//private/scratch",
@@ -31,6 +34,8 @@ GO_SRCS = [
     "//private/gobco:main_test.go",
     "//private/gomutants:main.go",
     "//private/gomutants:main_test.go",
+    "//private/govulncheck:main.go",
+    "//private/govulncheck:main_test.go",
     "//private/report:main.go",
     "//private/report:main_test.go",
     "//private/scratch:scratch.go",
@@ -59,4 +64,22 @@ bzl_library(
     name = "linters_bzl",
     srcs = ["linters.bzl"],
     deps = ["//:defs"],
+)
+
+# Advisories change without any input changing, so this is a manual test;
+# CI runs `bazel run //tests/self:govulncheck`, which makes the same scan.
+govulncheck_test(
+    name = "govulncheck_test",
+    srcs = GO_TARGETS,
+    go_mod = "//:go.mod",
+    go_sum = "//:go.sum",
+    proxy = "@self_go_mod_proxy//:proxy",
+)
+
+govulncheck(
+    name = "govulncheck",
+    srcs = GO_TARGETS,
+    go_mod = "//:go.mod",
+    go_sum = "//:go.sum",
+    proxy = "@self_go_mod_proxy//:proxy",
 )
