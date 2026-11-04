@@ -11,6 +11,7 @@
     "@vitest/coverage-v8": "4.1.12",
     "dependency-cruiser": "18.7.0",
     "eslint": "10.13.0",
+    "eslint-plugin-sonarjs": "4.2.2",
     "knip": "6.44.0",
     "pnpm": "12.16.1",
     "typescript": "6.0.3",

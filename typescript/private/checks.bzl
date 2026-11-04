@@ -29,7 +29,7 @@ visibility("//...")
 _PACKAGES = {
     "biome": ["@biomejs/biome"],
     "depcruise": ["dependency-cruiser", "typescript"],
-    "eslint": ["eslint", "typescript", "typescript-eslint", "vitest"],
+    "eslint": ["eslint", "eslint-plugin-sonarjs", "typescript", "typescript-eslint", "vitest"],
     "knip": ["knip", "typescript", "vitest"],
     "pnpm-audit": ["pnpm"],
     "stryker": ["@stryker-mutator/core", "@stryker-mutator/vitest-runner", "@vitest/coverage-v8", "typescript", "vitest"],
@@ -165,6 +165,22 @@ def eslint_test(name, srcs, node_modules = [], workers = False, **kwargs):
     with the same TypeScript as `tsc_test`. The consumer's own packages come
     from `node_modules`. Any error or warning fails the check, and so does a
     tree in which ESLint finds no file to lint. The config must be ESM.
+
+    After the consumer's config, the check always applies a layer of
+    eslint-plugin-sonarjs rules at `error`, which no config can switch off,
+    lower or reconfigure: `sonarjs/cognitive-complexity` with a ceiling of
+    15, as complexipy and gocognit in the Python and Go rules, and the
+    plugin's security rules, as bandit and gosec do (code evaluation, hard-coded
+    passwords and secrets, weak hashing, ciphers, keys and TLS, insecure
+    cookies, CORS and CSRF settings, unsafe regular expressions, and the
+    like; the list is `SONARJS_SECURITY` in launch.mjs). The plugin is this
+    module's pin, linked under `eslint-plugin-sonarjs` for the config to
+    import, and the consumer's package.json must not list it. The plugin
+    reports no command or SQL injection from user input, which Sonar finds
+    only with taint analysis. A comment in a source file, such as
+    `// eslint-disable-next-line sonarjs/no-hardcoded-passwords`, still
+    applies to that file; the rest of the plugin's rules stay off unless the
+    config enables them.
 
     Args:
         name: Target name.

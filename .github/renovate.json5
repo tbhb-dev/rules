@@ -52,6 +52,16 @@
       ],
     },
     {
+      // typescript/launch.mjs lists the plugin's security rules by name,
+      // because the plugin carries no rule category.
+      description: "eslint-plugin-sonarjs bumps need the security rule list checked",
+      matchFileNames: ["typescript/**/package.json"],
+      matchPackageNames: ["eslint-plugin-sonarjs"],
+      prBodyNotes: [
+        "Check `SONARJS_SECURITY` in typescript/launch.mjs against the new release: list the rules Sonar's rule metadata types VULNERABILITY (the comment there says how), add any new one and drop any the plugin removed, or ESLint fails with an unknown rule.",
+      ],
+    },
+    {
       // tbhb_rules_d2's PNG font. 2.045R-ro/1.095R-it is the last Source
       // Sans Pro release; later ones are Source Sans 3, another family name
       // and asset layout, and the bazel manager would misread the tag's
