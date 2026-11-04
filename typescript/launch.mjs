@@ -34,9 +34,86 @@ const pinned = Object.keys(
 
 // Pinned packages whose consumer copy, at another version, would split one
 // tool into two instances: the test runners load the consumer's copy of
-// these through its imports while running their own.
+// these through its imports while running their own, and ESLint refuses two
+// plugins of one name, the consumer's `eslint-plugin-sonarjs` and the
+// rules-owned layer's.
 const MUST_MATCH =
-  /^(vitest|@vitest\/.*|@stryker-mutator\/.*|@cloudflare\/vitest-plugin)$/;
+  /^(vitest|@vitest\/.*|@stryker-mutator\/.*|@cloudflare\/vitest-plugin|eslint-plugin-sonarjs)$/;
+
+// The ESLint layer this module applies after the consumer's config, whatever
+// it says: eslint-plugin-sonarjs' cognitive complexity at 15, the same
+// ceiling as complexipy and gocognit in the Python and Go rules, and its
+// security rules, the counterpart of bandit and gosec. The plugin's
+// metadata has no category, so the security rules are the ones Sonar's own
+// rule metadata types VULNERABILITY (SonarJS master on 2026-11-04, for
+// eslint-plugin-sonarjs 4.2.2), without the rules marked deprecated. Sonar's
+// taint-analysis rules (command and SQL injection from user input) are not
+// in the plugin. When the plugin moves, list its rules again by that type:
+// a rule it adds is not enforced until it is added here, and one it removes
+// makes ESLint fail with an unknown-rule error.
+const COGNITIVE_COMPLEXITY = 15;
+const SONARJS_SECURITY = [
+  "aws-apigateway-public-api",
+  "aws-ec2-rds-dms-public",
+  "aws-ec2-unencrypted-ebs-volume",
+  "aws-efs-unencrypted",
+  "aws-iam-all-privileges",
+  "aws-iam-all-resources-accessible",
+  "aws-iam-privilege-escalation",
+  "aws-iam-public-access",
+  "aws-opensearchservice-domain",
+  "aws-rds-unencrypted-databases",
+  "aws-restricted-ip-admin-access",
+  "aws-s3-bucket-granted-access",
+  "aws-s3-bucket-insecure-http",
+  "aws-s3-bucket-public-access",
+  "aws-s3-bucket-versioning",
+  "aws-sagemaker-unencrypted-notebook",
+  "aws-sns-unencrypted-topics",
+  "aws-sqs-unencrypted-queue",
+  "code-eval",
+  "content-length",
+  "content-security-policy",
+  "cookie-no-httponly",
+  "cors",
+  "csrf",
+  "disabled-auto-escaping",
+  "disabled-resource-integrity",
+  "dompurify-unsafe-config",
+  "dynamically-constructed-templates",
+  "encryption-secure-mode",
+  "file-permissions",
+  "file-uploads",
+  "hardcoded-secret-signatures",
+  "hashing",
+  "insecure-cookie",
+  "insecure-jwt-token",
+  "link-with-target-blank",
+  "no-angular-bypass-sanitization",
+  "no-clear-text-protocols",
+  "no-hardcoded-passwords",
+  "no-hardcoded-secrets",
+  "no-mime-sniff",
+  "no-os-command-from-path",
+  "no-referrer-policy",
+  "no-session-cookies-on-static-assets",
+  "no-weak-cipher",
+  "no-weak-keys",
+  "post-message",
+  "production-debug",
+  "pseudo-random",
+  "publicly-writable-directories",
+  "review-blockchain-mnemonic",
+  "session-regeneration",
+  "slow-regex",
+  "sql-queries",
+  "strict-transport-security",
+  "unverified-certificate",
+  "unverified-hostname",
+  "weak-ssl",
+  "x-powered-by",
+  "xml-parser-xxe",
+];
 
 function pinnedDir(name) {
   const dir = join(here, "node_modules", name);
@@ -193,7 +270,30 @@ async function eslint(args) {
   const { ESLint } = await import(
     pathToFileURL(join(pinnedDir("eslint"), "lib", "api.js")).href
   );
-  const linter = new ESLint({ errorOnUnmatchedPattern: true });
+  // overrideConfig is appended after the consumer's eslint.config.*, so in
+  // ESLint's last-wins merge no config of the consumer's can turn these
+  // rules off, warn on them, or change their options.
+  const sonarjs = (
+    await import(
+      pathToFileURL(
+        join(pinnedDir("eslint-plugin-sonarjs"), "cjs", "plugin.js"),
+      ).href
+    )
+  ).default;
+  const layer = {
+    name: "tbhb/sonarjs",
+    plugins: { sonarjs },
+    rules: {
+      "sonarjs/cognitive-complexity": ["error", COGNITIVE_COMPLEXITY],
+      ...Object.fromEntries(
+        SONARJS_SECURITY.map((rule) => [`sonarjs/${rule}`, "error"]),
+      ),
+    },
+  };
+  const linter = new ESLint({
+    errorOnUnmatchedPattern: true,
+    overrideConfig: [layer],
+  });
   const results = await linter.lintFiles(["."]);
   const report = await (await linter.loadFormatter("stylish")).format(results);
   if (report) {

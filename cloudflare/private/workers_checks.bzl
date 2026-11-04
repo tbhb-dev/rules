@@ -34,6 +34,10 @@ def workers_tsc_test(name, **kwargs):
 def workers_eslint_test(name, **kwargs):
     """`eslint_test` for a Worker tested with `@cloudflare/vitest-plugin`.
 
+    The same rules-owned layer applies: cognitive complexity at a ceiling of
+    15 and eslint-plugin-sonarjs' security rules, at `error`, whatever the
+    Worker's ESLint config says.
+
     Args:
         name: Target name.
         **kwargs: Passed to `eslint_test`.

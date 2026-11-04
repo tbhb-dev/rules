@@ -14,6 +14,7 @@ load(
     "worker_bundle",
     "worker_deploy",
     "worker_types_test",
+    "workers_eslint_test",
     "workers_stryker_test",
     "workers_tsc_test",
     "workers_vitest_test",
@@ -176,6 +177,48 @@ expect_failure_test(
     name = "proof_types_body_fails",
     pattern = "committed: \tplanted\\(\\): void;",
     test = ":proof_types_body",
+)
+
+# The sonarjs layer applies to a Worker's check as to any other: the Worker,
+# its tests and its configs pass it.
+workers_eslint_test(
+    name = "eslint_test",
+    srcs = WORKER + [
+        "eslint.config.mjs",
+        "stryker.config.mjs",
+        "vitest.config.mjs",
+    ],
+    node_modules = [":node_modules"],
+)
+
+# Planted: as in typescript/e2e/smoke, a config that turns the layer's rules
+# off, a function over the cognitive complexity ceiling of 15, and a
+# hard-coded credential.
+SONARJS_PROOF = [
+    "proof/sonarjs/eslint.config.mjs",
+    "proof/sonarjs/tsconfig.json",
+    "proof/sonarjs/complexity.ts",
+    "proof/sonarjs/credential.ts",
+]
+
+workers_eslint_test(
+    name = "proof_eslint_sonarjs",
+    srcs = SONARJS_PROOF,
+    node_modules = [":node_modules"],
+    strip_prefix = "proof/sonarjs",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_eslint_sonarjs_complexity_fails",
+    pattern = "error +Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed +sonarjs/cognitive-complexity",
+    test = ":proof_eslint_sonarjs",
+)
+
+expect_failure_test(
+    name = "proof_eslint_sonarjs_credential_fails",
+    pattern = "error +.*password.* +sonarjs/no-hardcoded-passwords",
+    test = ":proof_eslint_sonarjs",
 )
 
 # The Worker's tests run inside workerd, against a local R2 bucket.

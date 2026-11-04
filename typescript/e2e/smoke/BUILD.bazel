@@ -150,6 +150,46 @@ expect_failure_test(
     test = ":proof_eslint_floating_promise",
 )
 
+# The rules-owned sonarjs layer comes after the consumer's config, which here
+# turns off cognitive-complexity and no-hardcoded-passwords: the planted
+# function over the ceiling of 15 and the planted credential still fail.
+SONARJS_CONFIG = [
+    "proof/sonarjs/eslint.config.mjs",
+    "proof/sonarjs/tsconfig.json",
+]
+
+eslint_test(
+    name = "proof_eslint_sonarjs",
+    srcs = SONARJS_CONFIG + [
+        "proof/sonarjs/complexity.ts",
+        "proof/sonarjs/credential.ts",
+    ],
+    node_modules = [":node_modules"],
+    strip_prefix = "proof/sonarjs",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_eslint_sonarjs_complexity_fails",
+    pattern = "error +Refactor this function to reduce its Cognitive Complexity from 16 to the 15 allowed +sonarjs/cognitive-complexity",
+    test = ":proof_eslint_sonarjs",
+)
+
+expect_failure_test(
+    name = "proof_eslint_sonarjs_credential_fails",
+    pattern = "error +.*password.* +sonarjs/no-hardcoded-passwords",
+    test = ":proof_eslint_sonarjs",
+)
+
+# A function at exactly the ceiling passes, so the layer's ceiling is 15 and
+# no lower. It is a regular test, not a proof.
+eslint_test(
+    name = "eslint_sonarjs_ceiling_test",
+    srcs = SONARJS_CONFIG + ["proof/sonarjs/ceiling.ts"],
+    node_modules = [":node_modules"],
+    strip_prefix = "proof/sonarjs",
+)
+
 knip_test(
     name = "proof_knip_unused_file",
     srcs = [
