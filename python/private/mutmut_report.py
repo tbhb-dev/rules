@@ -63,6 +63,10 @@ NO_GIT = "use_git_change_detection = false"
 # Verdicts that depend on the machine (load, signals) rather than the code:
 # the action fails on them, so Bazel never caches one.
 UNSTABLE = ("timeout", "errored", "interrupted")
+# A mutant mutmut never checked means the run stopped early (killed, out of
+# memory, a crash), so it isn't cached either: a cached aborted run fails
+# every later test with the same inputs.
+NOT_CHECKED = "mutant." + NOT_RUN.replace(" ", "_") + "="
 
 SEPARATOR = "ǁ"
 TEST_NAMES = ("test_*.py", "*_test.py", "conftest.py")
@@ -363,7 +367,10 @@ def scratch_config(path: Path) -> None:
 def unstable(text: str) -> list[str]:
     """Return the machine-dependent verdicts a report records."""
     lines = text.splitlines()
-    return [key for key in UNSTABLE if f"{key}=0" not in lines]
+    found = [key for key in UNSTABLE if f"{key}=0" not in lines]
+    if any(line.startswith(NOT_CHECKED) for line in lines):
+        found.append("not_checked")
+    return found
 
 
 def mutmut_paths(path: Path) -> tuple[list[str], list[str]]:

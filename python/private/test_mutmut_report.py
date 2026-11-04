@@ -268,6 +268,14 @@ def test_unstable(counts: dict[str, str], expected: list[str]) -> None:
     assert mr.unstable(text + "mutant.survived=a=b\n") == expected
 
 
+def test_unstable_flags_a_mutant_never_checked() -> None:
+    keys = ["total", *mr.OUTCOMES, "interrupted"]
+    text = "".join(f"{key}=0\n" for key in keys)
+    assert mr.unstable(text + "mutant.not_checked=a.x_f__mutmut_1\n") == [
+        "not_checked",
+    ]
+
+
 def test_main_fails_an_unstable_run_and_shows_the_log(
     fake_mutmut: list[list[str]],
     capsys: pytest.CaptureFixture[str],
