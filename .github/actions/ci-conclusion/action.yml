@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# The body of a repository's `conclusion` job, the one required check. The
+# job itself stays in each repository's own workflow, so the check context
+# `conclusion` in the ruleset does not depend on this action.
+name: CI conclusion
+description: >-
+  Fail unless every needed job's result is exactly "success", so a job that
+  was skipped, cancelled or never finished cannot pass.
+
+inputs:
+  needs:
+    description: >-
+      The `needs` context as JSON: pass `${{ toJSON(needs) }}` from a job
+      that runs with `if: always()`.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # harden-runner monitors Linux runners only.
+    - name: Harden the runner
+      if: runner.os == 'Linux'
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
+      with:
+        egress-policy: audit
+
+    # A matrix with a cancelled leg reports "abandoned", not "cancelled", so
+    # the check lists what passes, not what fails.
+    - name: Fail if any needed job did not succeed
+      shell: bash
+      env:
+        NEEDS: ${{ inputs.needs }}
+      run: |
+        echo "$NEEDS"
+        if ! jq -e 'all(.[]; .result == "success")' <<<"$NEEDS" >/dev/null; then
+          echo "A required job did not succeed." >&2
+          exit 1
+        fi
