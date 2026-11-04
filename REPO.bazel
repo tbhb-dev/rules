@@ -7,6 +7,10 @@
 # never scan them.
 ignore_directories([
     ".git",
+    # Bazel convenience symlinks (--symlink_prefix=.bazel-). The old bazel-*
+    # links stay listed for one transition: clones that have not run Bazel
+    # since the prefix change still have them.
+    ".bazel-*",
     "bazel-*",
     "**/.bazel_env",
     ".claude/worktrees",

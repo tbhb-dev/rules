@@ -18,7 +18,7 @@ default_stages: [pre-commit]
 exclude: |
   (?x)^(
     \.vale/(Google|write-good|proselint|ai-tells.*)/
-    |bazel-.*/|tmp/|\.worktrees/
+    |\.bazel-.*/|bazel-.*/|tmp/|\.worktrees/
     |(.*/)?(mutants|testdata)/
     |.*\.d2\.(svg|png|sha256)$
     |(.*/)?worker-configuration\.d\.ts$

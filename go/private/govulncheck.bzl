@@ -135,7 +135,7 @@ def govulncheck_test(name, srcs, go_mod, go_sum = None, proxy = None, data = [],
     SARIF: the test also writes the scan as SARIF 2.1.0 to
     `govulncheck.sarif` in `$TEST_UNDECLARED_OUTPUTS_DIR`, whether or not the
     scan found anything. Bazel puts it at
-    `bazel-testlogs/<package>/<name>/test.outputs/govulncheck.sarif`, in
+    `$(bazel info bazel-testlogs)/<package>/<name>/test.outputs/govulncheck.sarif`, in
     `outputs.zip` there under `--zip_undeclared_test_outputs`, for GitHub's
     `github/codeql-action/upload-sarif` (give each test its own `category`).
     `bazel run` writes it where `--sarif=` says. Locations in the module's

@@ -84,6 +84,7 @@ BUILDIFIER_EXCLUDES = [
     "./.git/*",
     "./.venv/*",
     "./.mise/*",
+    "./.bazel-*",
     "./bazel-*",
 ]
 

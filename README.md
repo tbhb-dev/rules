@@ -36,7 +36,7 @@ To develop against a local clone, put `common --override_module=tbhb_rules=/path
 
 `glob()` stops at package boundaries, so a check over the whole repository needs every package to contribute its files. Call `repo_files()` in every `BUILD.bazel`, root included. Each call collects its package's files plus the `repo_files` target of each direct subpackage, so a package that forgets the call breaks analysis of its parent instead of dropping out of the checks unnoticed.
 
-List directories without source files, such as `.git`, `bazel-*`, `.venv`, and tool caches, in `ignore_directories` in `REPO.bazel`, and no glob enters them. `repo_files` takes an `exclude` list for loose files such as `.DS_Store`.
+List directories without source files, such as `.git`, `.bazel-*` (and the old `bazel-*` links), `.venv`, and tool caches, in `ignore_directories` in `REPO.bazel`, and no glob enters them. `repo_files` takes an `exclude` list for loose files such as `.DS_Store`.
 
 ```starlark
 load("@tbhb_rules//lint:defs.bzl", "gitleaks_test", "ryl_test")
