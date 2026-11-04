@@ -13,7 +13,7 @@ import (
 )
 
 // TestMain doubles as gobco. With FAKE_GOBCO_RC set it is a fake gobco: it
-// checks that it was run in a module with the arguments the runner passes,
+// checks that it was run with the arguments and environment the runner passes,
 // writes FAKE_GOBCO_STATS to the file -stats names (when set) and exits
 // with FAKE_GOBCO_RC.
 func TestMain(m *testing.M) {
@@ -29,10 +29,9 @@ func fakeGobco(rc string) int {
 		fmt.Fprintf(os.Stderr, "fake gobco: arguments %q\n", args)
 		return 3
 	}
-	if _, err := os.Stat("go.mod"); err != nil {
-		fmt.Fprintf(os.Stderr, "fake gobco: %v\n", err)
-		return 3
-	}
+	// The working directory isn't checked: on Windows, rules_go's test
+	// main changes it before TestMain runs. The smoke module's gobco_test
+	// runs the real gobco in the module.
 	if proxy := os.Getenv("GOPROXY"); proxy != "off" {
 		fmt.Fprintf(os.Stderr, "fake gobco: GOPROXY is %q\n", proxy)
 		return 3
