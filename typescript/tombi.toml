@@ -18,6 +18,8 @@ toml-version = "v1.0.0"
 exclude = [
   ".venv/**/*.toml",
   "tmp/**/*.toml",
+  ".bazel-*/**/*.toml",
+  # Old convenience-link name, kept for one transition.
   "bazel-*/**/*.toml",
   # Test fixtures, some deliberately malformed for failure proofs.
   "**/testdata/**/*.toml",

@@ -26,7 +26,7 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir "$ws"
-(cd "$here/workspace" && tar -cf - --exclude='./bazel-*' .) | (cd "$ws" && tar -xf -)
+(cd "$here/workspace" && tar -cf - --exclude='./.bazel-*' --exclude='./bazel-*' .) | (cd "$ws" && tar -xf -)
 sed -i.orig \
   -e "s|path = \"../../..\"|path = \"$rules\"|" \
   -e "s|path = \"../..\"|path = \"$rules/python\"|" \
@@ -43,10 +43,12 @@ target() {
   *) echo "//:mutmut_$1_test" ;;
   esac
 }
+# The convenience link follows the last build's configuration, as `bazel info
+# bazel-bin` would for the flags that build used.
 report() {
   case $1 in
-  cli) echo bazel-bin/mutmut_test.report.report ;;
-  *) echo "bazel-bin/mutmut_$1_test.report.report" ;;
+  cli) echo .bazel-bin/mutmut_test.report.report ;;
+  *) echo ".bazel-bin/mutmut_$1_test.report.report" ;;
   esac
 }
 targets=()

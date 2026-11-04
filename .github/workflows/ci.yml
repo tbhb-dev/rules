@@ -161,8 +161,10 @@ jobs:
         with:
           name: testlogs-${{ matrix.os }}-${{ matrix.workspace.id }}
           path: |
-            ${{ matrix.workspace.dir }}/bazel-testlogs/**/test.log
-            ${{ matrix.workspace.dir }}/bazel-testlogs/**/test.xml
+            ${{ matrix.workspace.dir }}/.bazel-testlogs/**/test.log
+            ${{ matrix.workspace.dir }}/.bazel-testlogs/**/test.xml
+          # The convenience links are dotfiles, which the action skips by default.
+          include-hidden-files: true
           if-no-files-found: ignore
 
   # Checks that need Git history or the GitHub API, which no sandboxed test

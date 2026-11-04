@@ -5,6 +5,10 @@
 # never scans them: Bazel's convenience symlinks and local tool state (the
 # same list in every workspace of tbhb_rules), and e2e/, which holds consumer modules with their own MODULE.bazel.
 ignore_directories([
+    # Bazel convenience symlinks (--symlink_prefix=.bazel-). The old bazel-*
+    # links stay listed for one transition: clones that have not run Bazel
+    # since the prefix change still have them.
+    ".bazel-*",
     "bazel-*",
     "**/.bazel_env",
     ".claude/worktrees",
