@@ -141,10 +141,22 @@ def worker_deploy(
 
     The target bundles the Worker for `env` (a `worker_bundle` named
     `<name>.bundle`) and reads the live deployment, which must be one version
-    at 100%; a Worker's first deploy is a one-time bootstrap outside it. It
-    uploads the bundle as a new version with the Worker's `secrets`, deploys
-    it at 0% beside the live version, and runs each `pre_deploy` target
-    against it through the `Cloudflare-Workers-Version-Overrides` header.
+    at 100%; a Worker's first deploy is a one-time bootstrap outside it.
+    Then it compares the last migration `tag` the config declares for `env`
+    (read the way wrangler does, so `env`'s own `migrations` or the ones it
+    inherits) with the migration tag the live script has applied. If they
+    differ, the target fails before uploading anything: `wrangler versions
+    upload` can't apply a Durable Object migration, only a plain `wrangler
+    deploy` can. The message names both tags and the command; run it once
+    (it puts the code you have checked out live at 100%), then rerun the
+    target. A config without migrations skips the check. If the applied tag
+    can't be read for a config that has migrations, the target fails too,
+    since it can't tell. The tag comes from the Cloudflare API with the same
+    credentials as wrangler.
+
+    The target uploads the bundle as a new version with the Worker's
+    `secrets`, deploys it at 0% beside the live version, and runs each
+    `pre_deploy` target against it through the `Cloudflare-Workers-Version-Overrides` header.
     Only when they pass, and the deployment is still the one it made, does it
     move the new version to 100% and run each `post_deploy` target against
     `url`. A failing test is retried for up to 60 seconds (a deployment takes
@@ -233,6 +245,7 @@ def worker_deploy(
         name = name,
         data = [
             Label("//:node_modules/wrangler"),
+            Label("//:migrations"),
             ":" + bundle,
             config,
         ] + {t: None for t in pre_deploy + post_deploy}.keys(),

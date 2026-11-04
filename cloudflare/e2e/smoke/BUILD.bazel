@@ -104,6 +104,26 @@ worker_deploy(
     visibility = ["//deploy:__pkg__"],
 )
 
+# The config declares Durable Object migrations (v1 at the top level, v1 and
+# v2 for stg), so the target compares v2 with the tag the fake API reports.
+worker_deploy(
+    name = "deploy_stg_migrations",
+    srcs = WORKER + ["wrangler.migrations.jsonc"],
+    config = "wrangler.migrations.jsonc",
+    env = "stg",
+    node_modules = ":node_modules",
+    pass_env = ["SMOKE_READ_TOKENS"],
+    post_deploy = ["//deploy:check"],
+    pre_deploy = ["//deploy:check"],
+    secrets = {
+        "MAIN_TOKEN": "SMOKE_MAIN_TOKEN",
+        "READ_TOKENS": "SMOKE_READ_TOKENS",
+    },
+    tags = ["manual"],
+    url = "https://smoke-stg.example",
+    visibility = ["//deploy:__pkg__"],
+)
+
 build_test(
     name = "bundle_test",
     targets = [
