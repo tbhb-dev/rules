@@ -1,0 +1,117 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# Everything a Bazel CI job does between checkout and the first Bazel
+# command that tests. The caller checks out first: a composite action in
+# this repository is only reachable by a local path after checkout, and
+# Bazel needs the sources anyway.
+name: Set up Bazel for CI
+description: >-
+  Harden the runner, set up Bazel with its caches, make Windows and Linux
+  arm64 runners build, and fetch the dependencies with retries.
+
+inputs:
+  disk-cache:
+    description: >-
+      The disk cache key for setup-bazel, or "false" for no disk cache. Pass a
+      key that is unique per job, such as the workflow, OS and workspace.
+    required: false
+    default: "false"
+  cache-save:
+    description: >-
+      Whether this run may save the Bazel caches: "true" or "false". Pull
+      requests should not, so pass
+      `${{ github.event_name != 'pull_request' }}`.
+    required: false
+    default: "false"
+  rust-version:
+    description: >-
+      The Rust toolchain installed on Linux arm64 runners, for complexipy's
+      source build. Other runners ignore it.
+    required: false
+    default: 1.99.1
+  targets:
+    description: >-
+      The Bazel targets to fetch, retrying transient failures, split on
+      whitespace. Empty skips the fetch.
+    required: false
+    default: //...
+  working-directory:
+    description: The directory of the Bazel workspace the fetch runs in.
+    required: false
+    default: .
+
+runs:
+  using: composite
+  steps:
+    # harden-runner monitors Linux runners only.
+    - name: Harden the runner
+      if: runner.os == 'Linux'
+      uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
+      with:
+        egress-policy: audit
+
+    # On Windows the rules' scripts run under the shell toolchain's Bash,
+    # MSYS2's on the hosted image. Only there: elsewhere Bazel would run
+    # genrule commands with it too.
+    - name: Point Bazel at Bash
+      if: runner.os == 'Windows'
+      shell: bash
+      run: echo 'BAZEL_SH=C:/msys64/usr/bin/bash.exe' >>"$GITHUB_ENV"
+
+    - name: Set up Bazel
+      uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
+      with:
+        bazelisk-cache: true
+        disk-cache: ${{ inputs.disk-cache }}
+        repository-cache: true
+        cache-save: ${{ inputs.cache-save }}
+
+    # complexipy publishes no Python 3.15 wheel for Linux arm64, so uv builds
+    # it from source there with maturin, which needs a Rust toolchain. The
+    # runner has rustup but no default toolchain. tbhb_rules' python_env_repo
+    # passes RUSTUP_HOME and CARGO_HOME through to uv, so nothing else is
+    # needed. Drop this step once a cp315 manylinux aarch64 wheel exists.
+    - name: Set up Rust for complexipy's source build
+      if: runner.os == 'Linux' && runner.arch == 'ARM64'
+      shell: bash
+      env:
+        RUST_VERSION: ${{ inputs.rust-version }}
+      run: |
+        rustup toolchain install "${RUST_VERSION}" --profile minimal
+        rustup default "${RUST_VERSION}"
+
+    # Some runfiles paths pass Windows' 260-character limit under the
+    # default output root in the runner's profile. The user bazelrc reaches
+    # the workspace wherever it is. After setup-bazel, which writes that file
+    # too and leaves its last line unterminated, hence the leading newline.
+    - name: Shorten Bazel's output root
+      if: runner.os == 'Windows'
+      shell: bash
+      run: printf '\nstartup --output_user_root=C:/b\n' >>"$HOME/.bazelrc"
+
+    # Even under that root, a few paths in the Python runtime's packages
+    # pass 260 characters; Python reads them only with long paths enabled.
+    - name: Enable long paths
+      if: runner.os == 'Windows'
+      shell: bash
+      run: reg add 'HKLM\SYSTEM\CurrentControlSet\Control\FileSystem' //v LongPathsEnabled //t REG_DWORD //d 1 //f
+
+    # Fetching hits go.dev's release list (go_sdk.from_file), PyPI, GitHub
+    # and the BCR mirror, which can fail for longer than Bazel's own
+    # download retries wait. Only the fetch is retried: a test failure never
+    # is.
+    - name: Fetch, retrying transient failures
+      if: inputs.targets != ''
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        TARGETS: ${{ inputs.targets }}
+      run: |
+        read -ra targets <<<"${TARGETS}"
+        for attempt in 1 2 3; do
+          bazelisk fetch --config=ci "${targets[@]}" && break
+          if ((attempt == 3)); then exit 1; fi
+          sleep 60
+        done
