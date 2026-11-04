@@ -5,6 +5,7 @@ load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load(
     "@tbhb_rules_python//:defs.bzl",
+    "deptry_test",
     "import_linter_test",
     "mutmut_test",
     "pyrefly_test",
@@ -17,6 +18,8 @@ repo_files()
 
 PLANTED = [
     "planted/run-check",
+    "planted/undeclared/**",
+    "planted/unused/**",
     "tools/interim/leak.py",
 ]
 
@@ -46,6 +49,25 @@ pytest_test(
         "tools",
     ],
 )
+
+# One run per member: deptry checks the pyproject.toml of the directory it
+# runs from against the Python under it, and the members' src layout is why
+# it scans src. app depends on core, a member installed in the environment
+# like any other dependency.
+[
+    deptry_test(
+        name = "deptry_{}_test".format(member),
+        srcs = CLEAN,
+        chdir = member,
+        roots = ["src"],
+    )
+    for member in [
+        "app",
+        "cli",
+        "core",
+        "weak",
+    ]
+]
 
 # Root packages: the `tools` namespace package (no __init__.py) and the
 # src-layout member's `clipkg`. tools/check-layout has no .py suffix, so
@@ -166,6 +188,22 @@ import_linter_test(
     tags = PROOF_TAGS,
 )
 
+# Members of their own, planted outside the workspace: one imports a
+# package it does not declare, one declares a member it does not import.
+[
+    deptry_test(
+        name = "proof_deptry_" + member,
+        srcs = CLEAN + glob(["planted/{}/**".format(member)]),
+        chdir = "planted/" + member,
+        roots = ["src"],
+        tags = PROOF_TAGS,
+    )
+    for member in [
+        "undeclared",
+        "unused",
+    ]
+]
+
 mutmut_test(
     name = "proof_mutmut_member_survivor",
     srcs = [":weak"],
@@ -218,6 +256,8 @@ mutmut_test(
 )
 
 PROOF_REASONS = {
+    "proof_deptry_undeclared": "DEP001 'requests' imported but missing from the dependency definitions",
+    "proof_deptry_unused": "DEP002 'corepkg' defined as a dependency but not used in the codebase",
     "proof_import_linter_leak": "interim code stays out of clipkg BROKEN",
     "proof_mutmut_diff_added_file": "survived: weakpkg\\.x_half__mutmut_",
     "proof_mutmut_diff_input_changed": "survived: weakpkg\\.x_half__mutmut_",

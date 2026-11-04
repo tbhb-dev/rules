@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+[project]
+name = "unusedpkg"
+version = "0"
+requires-python = ">=3.15"
+# Declares a workspace member that nothing here imports.
+dependencies = ["corepkg"]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"

@@ -144,6 +144,41 @@ def bandit_test(name, srcs, args = ["-q"], exclude = [], python_env = _ENV, **kw
     """
     _check(name, srcs, "bandit", args, exclude = exclude, python_env = python_env, **kwargs)
 
+def deptry_test(name, srcs, roots = ["."], args = [], chdir = "", python_env = _ENV, **kwargs):
+    """Finds undeclared, unused and misplaced dependencies with deptry.
+
+    deptry compares the project's declared dependencies (`[project]`,
+    `[dependency-groups]`) with the third-party modules its Python files
+    import, and fails on any finding: a missing dependency (DEP001), an unused
+    one (DEP002), a transitive one used directly (DEP003) or a development
+    one imported by code that ships (DEP004). It maps modules to packages
+    through the locked environment, so the environment must provide deptry
+    and every declared dependency, and it takes its configuration from
+    `[tool.deptry]` in the pyproject.toml of the directory it runs from.
+
+    It checks one project: the pyproject.toml in `chdir` against the Python
+    under its `roots`. A uv workspace takes one target per member, each with
+    its `chdir`; the members are installed in the environment, so a member's
+    dependency on another is a dependency like any other. deptry reads
+    `.py` and `.ipynb` files only, so extensionless scripts are not
+    checked, and a project with no Python file has nothing to find and
+    passes. It skips a `tests` directory at the top of a root by default;
+    name colocated or nested test files in `--extend-exclude` (a regular
+    expression matched from the start of the path).
+
+    Args:
+        name: Target name.
+        srcs: Files to copy, usually a `repo_files` target.
+        roots: Directories, relative to `chdir`, to scan. A `src` layout
+            scans `["src"]`: the modules directly under a root are the
+            project's own, not third-party imports.
+        args: Extra deptry options, such as `--extend-exclude`.
+        chdir: Directory, relative to the tree root, of the project to check.
+        python_env: The Python environment, which must provide deptry.
+        **kwargs: Passed to `tree_check_test`.
+    """
+    _check(name, srcs, "deptry", ["--no-ansi"] + args + roots, select = False, chdir = chdir, python_env = python_env, **kwargs)
+
 def pytest_test(
         name,
         srcs,

@@ -8,6 +8,7 @@ load(
     "//private:checks.bzl",
     _bandit_test = "bandit_test",
     _complexipy_test = "complexipy_test",
+    _deptry_test = "deptry_test",
     _import_linter_test = "import_linter_test",
     _pip_audit = "pip_audit",
     _pip_audit_test = "pip_audit_test",
@@ -25,6 +26,7 @@ PyEnvInfo = _PyEnvInfo
 PyUnitInfo = _PyUnitInfo
 bandit_test = _bandit_test
 complexipy_test = _complexipy_test
+deptry_test = _deptry_test
 import_linter_test = _import_linter_test
 mutmut_report = _mutmut_report
 mutmut_test = _mutmut_test

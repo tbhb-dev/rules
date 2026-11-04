@@ -8,6 +8,7 @@ buildifier
 commit's
 cspell
 dereferenced
+deptry
 [Ff]ormatters
 [Ff]rontmatter
 gitleaks
