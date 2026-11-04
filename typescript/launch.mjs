@@ -208,13 +208,10 @@ async function eslint(args) {
 }
 
 async function vitest(args) {
-  let coverage = false;
   let workers = false;
   let config;
   for (const arg of args) {
-    if (arg === "--coverage") {
-      coverage = true;
-    } else if (arg === "--workers") {
+    if (arg === "--workers") {
       workers = true;
     } else if (arg.startsWith("--config=")) {
       config = arg.slice("--config=".length);
@@ -228,14 +225,31 @@ async function vitest(args) {
   const { startVitest } = await import(
     pathToFileURL(join(pinnedDir("vitest"), "dist", "node.js")).href
   );
-  const options = { run: true, watch: false, coverage: { enabled: coverage } };
+  // Coverage is always on, at 100% of lines, branches, functions and
+  // statements. These options override the consumer's Vitest config, which
+  // Vitest merges key by key: a config's lower or negative threshold loses,
+  // and a config with none gains these. Branch coverage is thus a floor
+  // the consumer doesn't set.
+  const options = {
+    run: true,
+    watch: false,
+    coverage: {
+      enabled: true,
+      thresholds: {
+        lines: 100,
+        branches: 100,
+        functions: 100,
+        statements: 100,
+      },
+    },
+  };
   // V8 coverage can't see into workerd, and a Workers check links only
   // Istanbul; without this, Vitest would report a missing package instead.
   const istanbulOnly = {
     name: "tbhb-workers-coverage",
     configureVitest({ vitest: ctx }) {
       const provider = ctx.config.coverage.provider ?? "v8";
-      if (coverage && provider !== "istanbul") {
+      if (provider !== "istanbul") {
         throw new Error(
           `launch.mjs: a workers check needs test.coverage.provider "istanbul" in the Vitest config, not "${provider}"`,
         );

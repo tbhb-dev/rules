@@ -9,7 +9,6 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/greeting.ts", "src/log.ts"],
-      thresholds: { 100: true },
     },
   },
 });

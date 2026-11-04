@@ -11,6 +11,7 @@ load(
     "pytest_test",
     "ruff_test",
 )
+load(":coverage_proofs.bzl", "pytest_coverage_proofs")
 
 repo_files()
 
@@ -81,6 +82,12 @@ pytest_test(
     srcs = [f for f in CLEAN if f != "tools/test_report.py"],
     coverage = ["tools"],
     tags = PROOF_TAGS,
+)
+
+# A pytest_test with no `coverage` fails at analysis, naming the argument.
+pytest_coverage_proofs(
+    name = "proof_pytest_no_coverage",
+    srcs = CLEAN,
 )
 
 PROOF_REASONS = {

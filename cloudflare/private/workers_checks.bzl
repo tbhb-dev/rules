@@ -53,8 +53,10 @@ def workers_vitest_test(name, **kwargs):
     """`vitest_test` with the tests running inside workerd.
 
     The Vitest config adds `cloudflareTest({ wrangler: { configPath } })`
-    from `@cloudflare/vitest-plugin` to its plugins and, for coverage, sets
-    `test.coverage.provider` to `"istanbul"`.
+    from `@cloudflare/vitest-plugin` to its plugins and sets
+    `test.coverage.provider` to `"istanbul"`. Coverage always runs, with a
+    100% branch, line, function and statement floor that the launcher
+    sets over the config's thresholds; consumers don't configure it.
 
     Args:
         name: Target name.

@@ -24,3 +24,6 @@ local_path_override(
 
 python = use_extension("@tbhb_rules_python//:extensions.bzl", "python")
 python.project()
+
+# The analysis tests of pytest_test's `coverage` argument.
+bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)

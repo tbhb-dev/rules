@@ -17,7 +17,6 @@ filegroup(
 vitest_test(
     name = "proof_vitest_version_mismatch",
     srcs = ["//:src/greeting.test.ts"],
-    coverage = False,
     node_modules = [":node_modules"],
     tags = ["manual"],
 )

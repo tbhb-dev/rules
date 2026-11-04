@@ -250,28 +250,32 @@ def depcruise_test(name, srcs, config = ".dependency-cruiser.cjs", dirs = ["src"
         **kwargs
     )
 
-def vitest_test(name, srcs, config = None, coverage = True, node_modules = [], workers = False, **kwargs):
+def vitest_test(name, srcs, config = None, node_modules = [], workers = False, **kwargs):
     """Runs the project's tests once with Vitest.
 
     Vitest reads its config (`vitest.config.ts` and the other names it looks
     for) at the tree root, or `config`. Tests import `vitest` as usual; this
-    module links its pinned Vitest into the tree. With `coverage`, V8
-    coverage runs and the config's `test.coverage.thresholds` are enforced.
+    module links its pinned Vitest into the tree.
+
+    Coverage always runs, with V8, and the floor is 100% of branches,
+    lines, functions and statements. The launcher sets it over whatever the
+    config's `test.coverage.thresholds` say, so a consumer can neither
+    lower nor omit it, and no argument turns coverage off. The config still
+    chooses what to measure, through `test.coverage.include` and `exclude`.
     A failing test, a missed threshold, or a run in which no test ran
     (skipped and todo tests don't count) fails the check.
 
     With `workers`, the tests run inside workerd: the config adds
     `cloudflareTest({ wrangler: { configPath } })` from
     `@cloudflare/vitest-plugin` to its plugins. The coverage provider
-    becomes Istanbul, since V8 coverage can't see into workerd: the config
-    must set `test.coverage.provider` to `"istanbul"`, and the check fails
+    becomes Istanbul, since V8 coverage can't see into workerd, at the same
+    100% floor: the config must set `test.coverage.provider` to `"istanbul"`, and the check fails
     with a clear message if it asks for any other provider.
 
     Args:
         name: Target name.
         srcs: The project's files, tests and config among them.
         config: A Vitest config file, when not one Vitest finds by itself.
-        coverage: Collect coverage and enforce the config's thresholds.
         node_modules: The consumer's `npm_link_all_packages` target, such as `//:node_modules`.
         workers: The project is a Cloudflare Worker tested with
             `@cloudflare/vitest-plugin`: link this module's pinned plugin.
@@ -287,7 +291,7 @@ def vitest_test(name, srcs, config = None, coverage = True, node_modules = [], w
         config = config,
         node_modules = node_modules,
         workers = workers,
-        tool_args = (["--coverage"] if coverage else []) + (["--workers"] if workers else []) + (["--config={config}"] if config else []),
+        tool_args = (["--workers"] if workers else []) + (["--config={config}"] if config else []),
         output_guard = "vitest: ran [1-9][0-9]* tests",
         **kwargs
     )

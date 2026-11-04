@@ -185,7 +185,6 @@ vitest_test(
     name = "proof_vitest_failing_test",
     srcs = ["proof/vitest_fail/sum.test.ts"],
     config = "proof/vitest_fail/vitest.config.mjs",
-    coverage = False,
     node_modules = [":node_modules"],
     tags = PROOF_TAGS,
 )
@@ -196,6 +195,7 @@ expect_failure_test(
     test = ":proof_vitest_failing_test",
 )
 
+# The config sets no thresholds: the check fails on the launcher's floor.
 vitest_test(
     name = "proof_vitest_coverage",
     srcs = glob(
@@ -211,6 +211,25 @@ expect_failure_test(
     name = "proof_vitest_coverage_fails",
     pattern = "Coverage for (lines|branches|statements) \\([0-9.]+%\\) does not meet global threshold \\(100%\\)",
     test = ":proof_vitest_coverage",
+)
+
+# The config lowers every threshold to 0 and leaves only a branch unrun, so
+# only the branch floor can fail: the launcher's thresholds win.
+vitest_test(
+    name = "proof_vitest_branch_floor",
+    srcs = glob(
+        ["proof/vitest_branch/**"],
+        exclude = ["proof/vitest_branch/vitest.config.mjs"],
+    ),
+    config = "proof/vitest_branch/vitest.config.mjs",
+    node_modules = [":node_modules"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_vitest_branch_floor_fails",
+    pattern = "Coverage for branches \\([0-9.]+%\\) does not meet global threshold \\(100%\\)",
+    test = ":proof_vitest_branch_floor",
 )
 
 stryker_test(
@@ -236,7 +255,6 @@ vitest_test(
     name = "proof_vitest_no_tests",
     srcs = [],
     config = "proof/vitest_none/vitest.config.mjs",
-    coverage = False,
     node_modules = [":node_modules"],
     tags = PROOF_TAGS,
 )
