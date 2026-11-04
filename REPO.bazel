@@ -15,6 +15,8 @@ ignore_directories([
     "**/.bazel_env",
     ".claude/worktrees",
     ".mise",
+    # Obsidian vault settings, from opening the repository as a vault.
+    ".obsidian",
     "**/.venv",
     "mutants",
     "tmp",
