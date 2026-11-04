@@ -30,6 +30,7 @@ deadcode
 delenv
 depguard
 depset
+deptry
 direnv
 docstrings
 dugite

@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+[project]
+name = "e2e-single-unused"
+version = "0"
+requires-python = ">=3.15"
+# Declared and installed in the environment, but nothing imports it.
+dependencies = ["packaging"]
+
+[tool.uv]
+package = false

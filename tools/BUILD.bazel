@@ -10,6 +10,7 @@ load(
     "@tbhb_rules_python//:defs.bzl",
     "bandit_test",
     "complexipy_test",
+    "deptry_test",
     "mutmut_test",
     "pip_audit",
     "pylint_test",
@@ -163,6 +164,11 @@ complexipy_test(
     name = "complexipy_test",
     srcs = PYTHON_SRCS,
     exclude = PYTHON_EXCLUDE,
+)
+
+deptry_test(
+    name = "deptry_test",
+    srcs = PYTHON_SRCS,
 )
 
 # Tests are excluded: B101 flags every assert, and asserts are pytest's API.

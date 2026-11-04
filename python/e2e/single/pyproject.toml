@@ -9,6 +9,7 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+  "deptry==0.25.1",
   "mutmut==3.8.1",
   "pyrefly==1.4.0",
   "pytest==9.2.0",
