@@ -12,6 +12,7 @@ dereferenced
 deptry
 [Ff]ormatters
 [Ff]rontmatter
+dugite
 gitleaks
 gobco
 gomutants

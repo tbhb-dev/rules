@@ -17,6 +17,7 @@ buildifier
 buildmeta
 buildtag
 cacheinfo
+cainfo
 cand
 capsys
 cicd
@@ -76,6 +77,7 @@ importpath
 inconshreveable
 junitxml
 keepends
+libexec
 listy
 LLMX
 localmodule
@@ -132,6 +134,7 @@ rctx
 recvcheck
 resvg
 rlocation
+rlocationpath
 rollouts
 rollup
 rumdl

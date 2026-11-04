@@ -25,8 +25,8 @@ def codeowners_test(
     GitHub's owner and syntax validation needs the API and stays outside the
     test graph.
 
-    The pinned git is the builtins-only `bin/git` of dugite-native: on Linux
-    it needs glibc 2.34 or newer.
+    The pinned git is the `bin/git` of dugite-native, run through a wrapper
+    that points it at its own files: on Linux it needs glibc 2.34 or newer.
 
     Args:
         name: Target name.
