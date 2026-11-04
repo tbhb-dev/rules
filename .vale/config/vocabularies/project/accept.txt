@@ -13,6 +13,7 @@ dereferenced
 gitleaks
 gobco
 gomutants
+govulncheck
 [Ll]ockfiles?
 mutmut
 npm

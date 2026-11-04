@@ -6,7 +6,7 @@ load("@gazelle//:def.bzl", "gazelle")
 load("@tbhb_rules//format:defs.bzl", "format_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
-load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test")
+load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test", "govulncheck", "govulncheck_test")
 load("@tbhb_rules_go//tests/golangci:oracle.bzl", "golangci_lint_oracle")
 load("//tools/coverage:defs.bzl", "gobco_test")
 load("//tools/lint:linters.bzl", "golangci_lint_parity_test", "golangci_lint_test")
@@ -22,6 +22,8 @@ load("//tools/mutation:defs.bzl", "gomutants_test")
 # gazelle:resolve go example.com/smoke/internal/feature1 //internal/feature1
 # gazelle:resolve go example.com/smoke/internal/platform //internal/platform
 # gazelle:resolve go example.com/smoke/internal/shared //internal/shared
+# govulncheck/ is a module of its own, with hand-written targets.
+# gazelle:exclude govulncheck
 gazelle(name = "gazelle")
 
 repo_files()
@@ -61,6 +63,7 @@ COVERAGE = [
 # module the clean checks cover.
 NOT_IN_MODULE = [
     "dirty/*",
+    "govulncheck/*",
     "internal/extra/*",
     "*/planted_*",
 ]
@@ -424,3 +427,83 @@ gobco_test(
         ("and", "^  coverage/condition/condition.go:16:19: condition \"n <= 10\" was once true but never false$"),
     ]
 ]
+
+# govulncheck. These need the network (the vulnerability database), so they
+# are manual; CI runs the :govulncheck_proofs suite below on every platform.
+# The module's own code is clean: go-cmp and the standard library have no
+# vulnerability it can reach.
+govulncheck_test(
+    name = "govulncheck_test",
+    srcs = CLEAN,
+    go_mod = "go.mod",
+    go_sum = "go.sum",
+    proxy = "@go_mod_proxy//:proxy",
+)
+
+# The `bazel run` companion of the same scan.
+govulncheck(
+    name = "govulncheck",
+    srcs = CLEAN,
+    go_mod = "go.mod",
+    go_sum = "go.sum",
+    proxy = "@go_mod_proxy//:proxy",
+)
+
+# Reachability: govulncheck/ requires a version of golang.org/x/text with
+# vulnerable functions. A package that imports it and calls none of them
+# passes; a package that calls language.ParseAcceptLanguage fails.
+govulncheck_test(
+    name = "govulncheck_not_called_test",
+    srcs = ["//govulncheck/notcalled"],
+    go_mod = "//govulncheck:go.mod",
+    go_sum = "//govulncheck:go.sum",
+    proxy = "@vulnerable_proxy//:proxy",
+)
+
+govulncheck_test(
+    name = "proof_vulnerable_called",
+    srcs = ["//govulncheck/called"],
+    go_mod = "//govulncheck:go.mod",
+    go_sum = "//govulncheck:go.sum",
+    proxy = "@vulnerable_proxy//:proxy",
+)
+
+# The wrappers need the network too, as they run the test in their own
+# sandbox.
+NETWORK_PROOF_TAGS = [
+    "external",
+    "manual",
+    "requires-network",
+]
+
+[
+    expect_failure_test(
+        name = "proof_vulnerable_called_{}_fails".format(name),
+        pattern = pattern,
+        tags = NETWORK_PROOF_TAGS,
+        test = ":proof_vulnerable_called",
+    )
+    for name, pattern in [
+        # The OSV ID, the module and the fixed version.
+        ("osv", "Vulnerability #[0-9]+: GO-2021-0113$"),
+        ("fixed", "Fixed in: golang.org/x/text@v0.3.7$"),
+        # The call stack from the module's own code.
+        ("stack", "called.go:[0-9]+:[0-9]+: called.Accepted calls language.ParseAcceptLanguage$"),
+        ("verdict", "govulncheck: FAIL: the code calls vulnerable functions"),
+    ]
+]
+
+# What CI runs on every platform. Not :govulncheck_test, whose answer a new
+# advisory for go-cmp or the standard library can change; the proofs name a
+# vulnerable version of one module that no later advisory makes reachable.
+test_suite(
+    name = "govulncheck_proofs",
+    tags = ["manual"],
+    tests = [
+        ":govulncheck_not_called_test",
+        ":proof_vulnerable_called_fixed_fails",
+        ":proof_vulnerable_called_osv_fails",
+        ":proof_vulnerable_called_stack_fails",
+        ":proof_vulnerable_called_verdict_fails",
+    ],
+)

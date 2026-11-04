@@ -6,9 +6,11 @@
 A small module with two binaries sharing a package (one built pure, a second
 configuration), layered internal packages and one external dependency
 (go-cmp, through go_deps), under golangci-lint, deadcode, go-arch-lint,
-go mod tidy, gomutants and the golangci-lint formatter; a parity check of
-the aspect against golangci-lint run the ordinary way; and proofs that the
-checks fail on planted defects.
+go mod tidy, gomutants, gobco, govulncheck and the golangci-lint formatter; a
+parity check of the aspect against golangci-lint run the ordinary way; and
+proofs that the checks fail on planted defects. govulncheck/ is a second
+module, at a vulnerable version of golang.org/x/text, for the govulncheck
+proofs.
 """
 
 module(name = "tbhb_rules_go_smoke")
@@ -34,13 +36,25 @@ go_sdk.from_file(go_mod = "//:go.mod")
 
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
-use_repo(go_deps, "com_github_google_go_cmp")
 
-# The modules go.sum lists, as a GOPROXY directory, for go_mod_tidy_test
-# and the parity oracle.
+# govulncheck/ is a module of its own, at a vulnerable version of x/text. A
+# go_deps extension reads one go.mod, so the version is pinned here as well.
+go_deps.module(
+    path = "golang.org/x/text",
+    sum = "h1:aRYxNxv6iGQlyVaZmk6ZgYEDa+Jg18DxebPSrd6bg1M=",
+    version = "v0.3.6",
+)
+use_repo(go_deps, "com_github_google_go_cmp", "org_golang_x_text")
+
+# The modules go.sum lists, as a GOPROXY directory, for go_mod_tidy_test,
+# the parity oracle and govulncheck_test; and the same for govulncheck/.
 go_mod_proxy = use_extension("@tbhb_rules_go//:extensions.bzl", "go_mod_proxy")
 go_mod_proxy.from_file(
     name = "go_mod_proxy",
     go_sum = "//:go.sum",
 )
-use_repo(go_mod_proxy, "go_mod_proxy")
+go_mod_proxy.from_file(
+    name = "vulnerable_proxy",
+    go_sum = "//govulncheck:go.sum",
+)
+use_repo(go_mod_proxy, "go_mod_proxy", "vulnerable_proxy")

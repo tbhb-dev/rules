@@ -188,6 +188,16 @@ jobs:
         if: matrix.workspace.id == 'python-workspace' && runner.os != 'Windows'
         run: python/e2e/incremental.sh
 
+      # govulncheck_test needs the network and gives a different answer as
+      # advisories are published, so it is manual and `//...` skips it. The
+      # smoke module's proofs of it name a vulnerable version of one module,
+      # which no later advisory changes, and run on every platform here. Its
+      # own module's scan is the `repo` job's.
+      - name: Prove govulncheck
+        if: matrix.workspace.id == 'go-smoke'
+        working-directory: ${{ matrix.workspace.dir }}
+        run: bazelisk test --config=ci //:govulncheck_proofs
+
       # A failed run's test logs, so a failure that does not recur can still
       # be read.
       - name: Keep the test logs
@@ -260,6 +270,20 @@ jobs:
       - name: Audit the locked Cloudflare toolchain
         working-directory: typescript
         run: bazelisk run //:pnpm_audit -- --dir "${GITHUB_WORKSPACE}/cloudflare"
+
+      # The Go module's code, against the vulnerability database, the same
+      # way. The SARIF is kept as an artifact, below, for a failure too.
+      - name: Scan the Go module for reachable vulnerabilities
+        working-directory: go
+        run: bazelisk run //tests/self:govulncheck -- --sarif="${RUNNER_TEMP}/govulncheck.sarif"
+
+      - name: Keep the govulncheck SARIF
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: govulncheck-sarif
+          path: ${{ runner.temp }}/govulncheck.sarif
+          if-no-files-found: ignore
 
       # //:zizmor_test runs the offline audits; a token turns on the online
       # ones, which need the network.

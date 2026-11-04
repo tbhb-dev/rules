@@ -118,9 +118,17 @@ def _tools_impl(module_ctx):
         binaries = {platform: gobco for platform in PLATFORMS},
     )
 
+    # govulncheck's releases carry no binaries either.
+    govulncheck = str(Label("@org_golang_x_vuln//cmd/govulncheck"))
+    tool_hub(
+        name = "tbhb_rules_govulncheck",
+        tool = "govulncheck",
+        binaries = {platform: govulncheck for platform in PLATFORMS},
+    )
+
     return module_ctx.extension_metadata(reproducible = True)
 
 tools = module_extension(
     implementation = _tools_impl,
-    doc = "The tools of this module: golangci-lint and go-arch-lint (prebuilt) gomutants and gobco (built from go.mod).",
+    doc = "The tools of this module: golangci-lint and go-arch-lint (prebuilt), gomutants, gobco and govulncheck (built from go.mod).",
 )

@@ -24,13 +24,15 @@ type Entry struct {
 }
 
 // Roles: the package's own sources, its tests, data its tests read, go.mod
-// and go.sum, and the sources of the packages it depends on.
+// and go.sum, the sources of the packages it depends on, and, when the unit
+// is a whole module, its sources.
 const (
 	RoleMut  = "mut"
 	RoleTest = "test"
 	RoleData = "data"
 	RoleMod  = "mod"
 	RoleDep  = "dep"
+	RoleSrc  = "src"
 )
 
 // ReadManifest reads the manifest file the rule writes.

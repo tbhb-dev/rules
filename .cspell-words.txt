@@ -60,6 +60,7 @@ gomod
 gomodguard
 gomutants
 govet
+govulncheck
 gpgsign
 gsub
 hardwrap
@@ -136,6 +137,7 @@ runfiles
 rustup
 rylignore
 sandboxed
+sarif
 sess
 sessionstart
 setopt

@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_go//go:def.bzl", "go_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+go_library(
+    name = "called",
+    srcs = ["called.go"],
+    importpath = "example.com/vulnerable/called",
+    visibility = ["//visibility:public"],
+    deps = ["@org_golang_x_text//language"],
+)
