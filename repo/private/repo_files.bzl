@@ -39,11 +39,14 @@ def repo_files(name = "repo_files", exclude = [], exclude_subpackages = [], visi
     # The old bazel-* names stay listed for one transition: clones that have
     # not run Bazel since the prefix change still have those links.
     #
+    # Obsidian writes its vault settings to `.obsidian` when the repository
+    # is opened as a vault; they are never source files.
+    #
     # In a linked worktree or a submodule, `.git` is a file, which
     # REPO.bazel's ignore_directories can't name, and copied into a check's
     # tree it would pose as a repository. It is never a source file.
     skip = ([".bazel-*", "bazel-*"] if not package else []) + exclude_subpackages
-    exclude = exclude + [".bazel-*/**", "bazel-*/**", ".git"] if not package else exclude
+    exclude = exclude + [".bazel-*/**", "bazel-*/**", ".git", ".obsidian/**"] if not package else exclude
     subpackages = [
         "//{}:{}".format(package + "/" + sub if package else sub, name)
         for sub in native.subpackages(include = ["**"], exclude = skip, allow_empty = True)
