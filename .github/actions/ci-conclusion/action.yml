@@ -13,8 +13,8 @@ description: >-
 inputs:
   needs:
     description: >-
-      The `needs` context as JSON: pass `${{ toJSON(needs) }}` from a job
-      that runs with `if: always()`.
+      The `needs` context as JSON, from toJSON(needs) in a job that runs
+      with `if: always()` (see the README).
     required: true
 
 runs:

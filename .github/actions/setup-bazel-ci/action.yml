@@ -21,8 +21,8 @@ inputs:
   cache-save:
     description: >-
       Whether this run may save the Bazel caches: "true" or "false". Pull
-      requests should not, so pass
-      `${{ github.event_name != 'pull_request' }}`.
+      requests should not, so pass true only for events other than
+      pull_request (see the README).
     required: false
     default: "false"
   rust-version:
