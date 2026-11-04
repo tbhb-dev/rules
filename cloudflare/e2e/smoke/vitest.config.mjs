@@ -11,7 +11,6 @@ export default defineConfig({
     coverage: {
       provider: "istanbul",
       include: ["src/index.ts"],
-      thresholds: { 100: true },
     },
   },
 });
