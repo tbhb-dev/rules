@@ -5,6 +5,7 @@ afakt
 AKIA
 ascm
 autouse
+awrel
 bazelignore
 bazelignored
 bazelisk
