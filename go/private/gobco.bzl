@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""`gobco_test`: a floor on the condition coverage of one Go package, measured with gobco."""
+"""`gobco_test`: requires every condition of one Go package to reach both outcomes, measured with gobco."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
 load("@tbhb_rules//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
@@ -11,8 +11,6 @@ load(":go_unit.bzl", "GO_TOOLCHAIN", "UNIT_ATTRS", "go_unit", "sdk_files", "tool
 visibility(["//", "//private/...", "//tests/..."])
 
 def _gobco_test_impl(ctx):
-    if ctx.attr.floor < 0 or ctx.attr.floor > 100:
-        fail("floor is a percentage from 0 to 100, not {}".format(ctx.attr.floor))
     unit = go_unit(ctx, "covered")
     gobco = tool_binary(ctx.attr._gobco, "gobco.exe")
     report = ctx.actions.declare_file(ctx.label.name + ".txt")
@@ -38,7 +36,6 @@ def _gobco_test_impl(ctx):
         template = ctx.file._test_runner,
         output = script,
         substitutions = {
-            "@@FLOOR@@": str(ctx.attr.floor),
             "@@PACKAGE@@": shell.quote(unit.directory or "."),
             "@@REPORT@@": shell.quote(report.short_path),
         },
@@ -50,13 +47,13 @@ def _gobco_test_impl(ctx):
 gobco_test = rule(
     implementation = _gobco_test_impl,
     test = True,
-    doc = """Fails when the tests of a Go package leave conditions below a coverage floor.
+    doc = """Fails when the tests of a Go package leave any condition outcome unreached.
 
 Go's own coverage counts statements. gobco instruments every condition of
 the package, and a run records whether each was true and false, so a branch
 or an operand of `&&`/`||` no test reaches is found even when its line ran.
-Each condition has two outcomes; coverage is the share of them the tests
-reached.
+Each condition has two outcomes, and the required coverage is 100%: every
+outcome of every condition. The requirement is fixed.
 
 One gobco_test is one package, the one `tests` are in, and one cached build
 action: it copies the package's sources and tests, the main-repository
@@ -64,13 +61,12 @@ sources of the packages they depend on (through `deps` and `embed`),
 `data`, and go.mod and go.sum into a scratch module, and runs gobco on the
 package with the toolchain's go, offline (modules come from `proxy`). A
 change to a package reruns its target and those of the packages that depend
-on it, and every other target is a cache hit; the `floor` is read by the
-test, so changing it reruns no gobco. Declare one target next to each
+on it, and every other target is a cache hit. Declare one target next to each
 package's go_test. gobco instruments one package per run, so a target for a
 whole module would not be cached per package.
 
-The test fails when coverage is below `floor` percent, and prints the
-uncovered conditions as `file:line:column: condition "<code>" was ... but
+The test fails when any outcome is uncovered, and prints the uncovered
+conditions as `file:line:column: condition "<code>" was ... but
 never true|false`. A package with no conditions passes. The action fails,
 and is not cached, when the package's tests fail under gobco or gobco
 instruments nothing.
@@ -92,14 +88,11 @@ Platforms: the rule runs on Linux (x86_64 and arm64), macOS and Windows. The
 gobco binary comes from the same pinned hub on each, and the gate runs
 through the shell toolchain, as the other bash-based tests do on Windows.
 
-gobco has no way to mark a condition as unreachable (no pragma, comment or
-ignore file), and this rule adds none: cover the condition, or change the
-code so it has no condition. Lowering `floor` is the only allowance.""",
+The requirement is 100%, fixed, with no allowance: gobco has no way to mark
+a condition as unreachable (no pragma, comment or ignore file), and this
+rule adds no threshold, exclusion or ignore list. When a condition is
+unreachable, restructure the code so it has none.""",
     attrs = SHELL_ATTRS | UNIT_ATTRS | {
-        "floor": attr.int(
-            default = 100,
-            doc = "The least percentage of condition outcomes the tests must reach, 0 to 100.",
-        ),
         "_gobco": attr.label(
             default = Label("@tbhb_rules_gobco//:gobco"),
             executable = True,

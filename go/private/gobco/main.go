@@ -7,12 +7,12 @@
 // It copies the unit's module files into a scratch tree and runs gobco there
 // with the SDK's go, offline. gobco instruments the package, runs its tests
 // and writes how often each condition was true and false to a JSON file;
-// this command reads that and writes the report gobco_test checks against
-// its floor: `covered=N`, `total=M` (two outcomes for each condition) and
-// one `uncovered=<file>:<line>:<column>: condition "<code>" was ...` for
-// each condition with an outcome the tests never reached. It exits 1, and
-// writes no report, when the tests fail under gobco or gobco instruments
-// nothing, so Bazel never caches either.
+// this command reads that and writes the report gobco_test checks:
+// `covered=N`, `total=M` (two outcomes for each condition) and one
+// `uncovered=<file>:<line>:<column>: condition "<code>" was ...` for each
+// condition with an outcome the tests never reached. It exits 1, and writes
+// no report, when the tests fail under gobco or gobco instruments nothing,
+// so Bazel never caches either.
 package main
 
 import (

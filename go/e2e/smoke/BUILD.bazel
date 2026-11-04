@@ -390,13 +390,6 @@ gobco_test(
     tests = ["//lib:lib_test"],
 )
 
-# coverage/branch reaches 3 of 4 outcomes: a floor of 75 passes.
-gobco_test(
-    name = "gobco_floor_test",
-    floor = 75,
-    tests = ["//coverage/branch:branch_test"],
-)
-
 # gobco proofs, each failing for the stated reason. Their tests run every
 # line, so Go's statement coverage would pass them.
 
@@ -431,17 +424,3 @@ gobco_test(
         ("and", "^  coverage/condition/condition.go:16:19: condition \"n <= 10\" was once true but never false$"),
     ]
 ]
-
-# The floor is a floor: 3 of 4 outcomes is 75%, below 76.
-gobco_test(
-    name = "proof_floor",
-    floor = 76,
-    tags = PROOF_TAGS,
-    tests = ["//coverage/branch:branch_test"],
-)
-
-expect_failure_test(
-    name = "proof_floor_fails",
-    pattern = "FAIL: coverage/branch: 3 of 4 outcomes covered \\(75.0%\\), floor 76%$",
-    test = ":proof_floor",
-)

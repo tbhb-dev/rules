@@ -3,20 +3,18 @@
 # Copyright Tony Burns
 
 # Fails when a package's condition coverage, measured by a build action with
-# gobco, is below the floor. Generated from gobco_test.sh.tpl by the
-# gobco_test rule; @@REPORT@@, @@FLOOR@@ and @@PACKAGE@@ are filled in at
-# analysis time.
+# gobco, is below 100%. Generated from gobco_test.sh.tpl by the gobco_test
+# rule; @@REPORT@@ and @@PACKAGE@@ are filled in at analysis time.
 #
 # The report holds covered=<outcomes the tests reached> and total=<outcomes
 # there are: two for each condition>, and an uncovered=<location>: <condition
 # and the outcome missed> for each condition that has one it never reached.
-# The package passes when covered is at least floor percent of total, so a
-# package with no conditions passes.
+# The package passes when covered equals total, so a package with no
+# conditions passes.
 
 set -euo pipefail
 
 report=@@REPORT@@
-floor=@@FLOOR@@
 package=@@PACKAGE@@
 
 value_of() {
@@ -39,9 +37,9 @@ fi
 
 # Tenths of a percent, for the message; the check itself is exact.
 tenths=$((covered * 1000 / total))
-summary="$package: $covered of $total outcomes covered (${tenths%?}.${tenths: -1}%), floor $floor%"
+summary="$package: $covered of $total outcomes covered (${tenths%?}.${tenths: -1}%)"
 
-if ((covered * 100 >= floor * total)); then
+if ((covered == total)); then
   echo "gobco_test: ok: $summary"
   exit 0
 fi
