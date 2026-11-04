@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+# Windows has no wrapper: its pinned Git runs from its own tree.
+NOT_WINDOWS = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+GIT = "$(rlocationpath @tbhb_rules_git//:git)"
+
+# The exported git finds its helpers, so HTTPS remotes work: what a developer
+# gets through bazel_env.
+sh_test(
+    name = "git_exec_path_test",
+    srcs = ["git_exec_path_test.sh"],
+    data = ["@tbhb_rules_git//:git"],
+    env = {"GIT_RLOCATIONPATH": GIT},
+    target_compatible_with = NOT_WINDOWS,
+)
+
+# The dugite-native binary alone, as the git target was before its wrapper.
+sh_test(
+    name = "proof_git_unwrapped",
+    srcs = ["git_exec_path_test.sh"],
+    data = ["@tbhb_rules_git//:git"],
+    env = {
+        "GIT_RLOCATIONPATH": GIT,
+        "UNWRAPPED": "1",
+    },
+    tags = ["manual"],
+    target_compatible_with = NOT_WINDOWS,
+)
+
+expect_failure_test(
+    name = "proof_git_unwrapped_fails",
+    pattern = "FAIL: git --exec-path is //libexec/git-core",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_git_unwrapped",
+)
+
+# git ls-remote over HTTPS through the exported git:
+#   bazel test //pins/tests:git_network_test
+sh_test(
+    name = "git_network_test",
+    srcs = ["git_network_test.sh"],
+    data = ["@tbhb_rules_git//:git"],
+    env = {"GIT_RLOCATIONPATH": GIT},
+    tags = [
+        "manual",
+        "requires-network",
+    ],
+    target_compatible_with = NOT_WINDOWS,
+)

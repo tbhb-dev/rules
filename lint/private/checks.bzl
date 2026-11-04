@@ -213,8 +213,8 @@ def zizmor_test(name, srcs, config = None, tool = Label("@tbhb_rules_zizmor//:zi
     )
 
 # Environment for a pinned git that must not read the host's configuration.
-# The template dir is emptied because dugite's compiled-in template path
-# does not exist. HOME is already the test's TEST_TMPDIR.
+# The template dir is emptied so a repository gets no sample hooks. HOME is
+# already the test's TEST_TMPDIR.
 GIT_TEST_ENV = {
     "GIT_CONFIG_GLOBAL": "/dev/null",
     "GIT_CONFIG_NOSYSTEM": "1",

@@ -21,6 +21,15 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file"
 load(":hub.bzl", _EXPORT = "EXPORT", _EXPORT_TREE = "EXPORT_TREE", _tool_hub = "tool_hub")
 
 def _tools_impl(mctx):
+    # dugite-native is not relocatable on its own (pins/git_wrapper.sh): the
+    # macOS and Linux archives get a wrapper beside bin/git that sets the
+    # environment dugite sets, and the git hub exports the wrapper with the
+    # whole tree, which the wrapper's real git needs beside it.
+    git_patch_cmds = [
+        "cat > bin/git-wrapper <<'TBHB_RULES_EOF'\n{}TBHB_RULES_EOF".format(mctx.read(Label("//pins:git_wrapper.sh"))),
+        "chmod +x bin/git-wrapper",
+    ]
+
     http_archive(
         name = "tbhb_rules_actionlint_macos_arm64",
         build_file_content = _EXPORT.format("actionlint"),
@@ -97,21 +106,24 @@ def _tools_impl(mctx):
 
     http_archive(
         name = "tbhb_rules_git_macos_arm64",
-        build_file_content = _EXPORT.format("bin/git"),
+        build_file_content = _EXPORT_TREE.format("bin/git-wrapper"),
+        patch_cmds = git_patch_cmds,
         sha256 = "1110de343de11cc6f469b782b60f36217b9199b5e06875dd65baa26dd60563c7",
         url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-macOS-arm64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_git_linux_x86_64",
-        build_file_content = _EXPORT.format("bin/git"),
+        build_file_content = _EXPORT_TREE.format("bin/git-wrapper"),
+        patch_cmds = git_patch_cmds,
         sha256 = "1efd8ce0516b670b6b6d0f49ecaf395ceb8cf7fff3f5857259763d97a1238df9",
         url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-ubuntu-x64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_git_linux_arm64",
-        build_file_content = _EXPORT.format("bin/git"),
+        build_file_content = _EXPORT_TREE.format("bin/git-wrapper"),
+        patch_cmds = git_patch_cmds,
         sha256 = "d5ce120515bf3013a014e6a918aa87ec0f7a6f5f9687c48d50127e637cb9b6c2",
         url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-ubuntu-arm64.tar.gz",
     )
@@ -440,12 +452,17 @@ def _tools_impl(mctx):
         name = "tbhb_rules_git",
         tool = "git",
         binaries = {
-            "linux_arm64": "@tbhb_rules_git_linux_arm64//:bin/git",
-            "linux_x86_64": "@tbhb_rules_git_linux_x86_64//:bin/git",
-            "macos_arm64": "@tbhb_rules_git_macos_arm64//:bin/git",
+            "linux_arm64": "@tbhb_rules_git_linux_arm64//:bin/git-wrapper",
+            "linux_x86_64": "@tbhb_rules_git_linux_x86_64//:bin/git-wrapper",
+            "macos_arm64": "@tbhb_rules_git_macos_arm64//:bin/git-wrapper",
             "windows_x86_64": "@tbhb_rules_git_windows_x86_64//:cmd/git.exe",
         },
-        data = {"windows_x86_64": "@tbhb_rules_git_windows_x86_64//:tree"},
+        data = {
+            "linux_arm64": "@tbhb_rules_git_linux_arm64//:tree",
+            "linux_x86_64": "@tbhb_rules_git_linux_x86_64//:tree",
+            "macos_arm64": "@tbhb_rules_git_macos_arm64//:tree",
+            "windows_x86_64": "@tbhb_rules_git_windows_x86_64//:tree",
+        },
     )
 
     _tool_hub(
