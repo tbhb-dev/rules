@@ -38,6 +38,10 @@ def workers_eslint_test(name, **kwargs):
     15 and eslint-plugin-sonarjs' security rules, at `error`, whatever the
     Worker's ESLint config says.
 
+    Under typescript-eslint's `strictTypeChecked`, `no-deprecated` flags
+    `env` and `SELF` from `cloudflare:test` in the tests; import `env` and
+    `exports` from `cloudflare:workers` instead.
+
     Args:
         name: Target name.
         **kwargs: Passed to `eslint_test`.
@@ -46,6 +50,10 @@ def workers_eslint_test(name, **kwargs):
 
 def workers_knip_test(name, **kwargs):
     """`knip_test` for a Worker tested with `@cloudflare/vitest-plugin`.
+
+    knip reads `cloudflare:` imports, such as `cloudflare:workers`, as the
+    package `cloudflare`; list `"cloudflare"` in the config's
+    `ignoreDependencies`.
 
     Args:
         name: Target name.
@@ -62,6 +70,10 @@ def workers_vitest_test(name, **kwargs):
     100% branch, line, function and statement floor that the launcher
     sets over the config's thresholds; consumers don't configure it.
 
+    In the tests, import `env` and `exports` from `cloudflare:workers`, not
+    `env` and `SELF` from `cloudflare:test`, which typescript-eslint's
+    `no-deprecated` flags.
+
     Args:
         name: Target name.
         **kwargs: Passed to `vitest_test`.
@@ -74,6 +86,13 @@ def workers_stryker_test(name, **kwargs):
     Tests that reach the Worker through `SELF` don't import the mutated
     files, so Vitest can't relate them; set `vitest: { related: false }` in
     the Stryker config, or Stryker finds no test to run.
+
+    Per-test coverage doesn't map inside workerd, so this check runs
+    Stryker with `--coverageAnalysis all`, whatever the config says.
+
+    Stryker can't activate a mutant in a module-scope initializer, such as
+    `export const HEADER = "..."`, without reloading the module in workerd,
+    so that mutant always survives. Keep such values inside functions.
 
     Args:
         name: Target name.

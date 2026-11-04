@@ -418,6 +418,9 @@ switch (tool) {
     if (args[0] === "--workers") {
       args.shift();
       await checkCompatibilityDates();
+      // Per-test coverage doesn't map inside workerd, so mutants in code
+      // the tests do reach would have no covering test.
+      args.push("--coverageAnalysis", "all");
     }
     await runBin("@stryker-mutator/core", "bin/stryker.js", args);
     break;
