@@ -39,17 +39,18 @@ bazel_dep(name = "gazelle", version = "0.54.0")
 # Prebuilt tools (golangci-lint, go-arch-lint): literal per-platform
 # http_archive pins in private/tools.bzl that Renovate bumps, each behind a
 # tbhb_rules_<tool> hub, the same shape as tbhb_rules' own pins. gomutants'
-# hub serves the build from go.mod below.
+# and gobco's hubs serve their builds from go.mod below.
 tools = use_extension("//private:tools.bzl", "tools")
-use_repo(tools, "tbhb_rules_go_arch_lint", "tbhb_rules_golangci_lint", "tbhb_rules_gomutants")
+use_repo(tools, "tbhb_rules_go_arch_lint", "tbhb_rules_gobco", "tbhb_rules_golangci_lint", "tbhb_rules_gomutants")
 
 # Go tools without a prebuilt release for every platform (deadcode, and
-# gomutants behind its tbhb_rules_gomutants hub) are built by rules_go from
-# the `tool` directives in go.mod. A consumer that also uses go_deps shares
-# the module graph, and its versions win by minimal version selection.
+# gomutants and gobco behind their tbhb_rules_<tool> hubs) are built by
+# rules_go from the `tool` directives in go.mod. A consumer that also uses
+# go_deps shares the module graph, and its versions win by minimal version
+# selection.
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
-use_repo(go_deps, "com_github_gomutants_gomutants", "org_golang_x_tools")
+use_repo(go_deps, "com_github_gomutants_gomutants", "com_github_rillig_gobco", "org_golang_x_tools")
 
 # Dev dependencies: this module's own tests.
 bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)

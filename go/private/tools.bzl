@@ -109,9 +109,18 @@ def _tools_impl(module_ctx):
         binaries = {platform: gomutants for platform in PLATFORMS},
     )
 
+    # gobco's releases carry no binaries, so rules_go builds it from go.mod
+    # the same way.
+    gobco = str(Label("@com_github_rillig_gobco//:gobco"))
+    tool_hub(
+        name = "tbhb_rules_gobco",
+        tool = "gobco",
+        binaries = {platform: gobco for platform in PLATFORMS},
+    )
+
     return module_ctx.extension_metadata(reproducible = True)
 
 tools = module_extension(
     implementation = _tools_impl,
-    doc = "The tools of this module: golangci-lint and go-arch-lint (prebuilt) and gomutants (built from go.mod).",
+    doc = "The tools of this module: golangci-lint and go-arch-lint (prebuilt) gomutants and gobco (built from go.mod).",
 )

@@ -10,6 +10,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/tbhb-dev/rules/go/private/scratch"
 )
 
 // TestMain doubles as gomutants and as the fake git. Invoked as git (the
@@ -103,15 +105,15 @@ func Double(n int) int {
 func Hello() { fmt.Println("hi") }
 `
 
-func unit(t *testing.T) (string, []entry) {
+func unit(t *testing.T) (string, []scratch.Entry) {
 	t.Helper()
 	dir := t.TempDir()
-	return dir, []entry{
-		{roleMut, write(t, dir, "src/p/p.go", pkgSource), "p/p.go"},
-		{roleTest, write(t, dir, "src/p/p_test.go", "package p\n"), "p/p_test.go"},
-		{roleDep, write(t, dir, "src/q/q.go", "package q\n"), "q/q.go"},
-		{roleData, write(t, dir, "src/p/testdata/x", "x"), "p/testdata/x"},
-		{roleMod, write(t, dir, "src/go.mod", "module m\n"), "go.mod"},
+	return dir, []scratch.Entry{
+		{Role: scratch.RoleMut, Src: write(t, dir, "src/p/p.go", pkgSource), Rel: "p/p.go"},
+		{Role: scratch.RoleTest, Src: write(t, dir, "src/p/p_test.go", "package p\n"), Rel: "p/p_test.go"},
+		{Role: scratch.RoleDep, Src: write(t, dir, "src/q/q.go", "package q\n"), Rel: "q/q.go"},
+		{Role: scratch.RoleData, Src: write(t, dir, "src/p/testdata/x", "x"), Rel: "p/testdata/x"},
+		{Role: scratch.RoleMod, Src: write(t, dir, "src/go.mod", "module m\n"), Rel: "go.mod"},
 	}
 }
 
@@ -317,7 +319,7 @@ func runFake(t *testing.T, changes, rc string, js *string) (int, string) {
 	t.Helper()
 	dir := t.TempDir()
 	src := write(t, dir, "src/p.go", pkgSource)
-	manifest := write(t, dir, "manifest", roleMut+"\t"+src+"\tp/p.go\n")
+	manifest := write(t, dir, "manifest", scratch.RoleMut+"\t"+src+"\tp/p.go\n")
 	self, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -402,32 +404,5 @@ func TestRunNoReportIsInterrupted(t *testing.T) {
 func TestFakeGitRejectsOtherCommands(t *testing.T) {
 	if fakeGit([]string{"log"}) == 0 {
 		t.Error("git log answered")
-	}
-}
-
-func TestEnviron(t *testing.T) {
-	env := environ([]string{"PATH=/usr/bin", "GOFLAGS=-mod=vendor", "CGO_ENABLED=1", "LANG=C"}, filepath.Join("sdk", "bin", "go"), "w", "")
-	got := map[string]string{}
-	for _, kv := range env {
-		k, v, _ := strings.Cut(kv, "=")
-		if _, dup := got[k]; dup {
-			t.Errorf("%s set twice", k)
-		}
-		got[k] = v
-	}
-	for k, want := range map[string]string{
-		"PATH":        filepath.Join("sdk", "bin") + string(os.PathListSeparator) + "/usr/bin",
-		"GOROOT":      "sdk",
-		"GOFLAGS":     "-modcacherw",
-		"GOPROXY":     "off",
-		"CGO_ENABLED": "0",
-		"LANG":        "C",
-	} {
-		if got[k] != want {
-			t.Errorf("%s=%q, want %q", k, got[k], want)
-		}
-	}
-	if fileURL("/p/proxy") != "file:///p/proxy" {
-		t.Error(fileURL("/p/proxy"))
 	}
 }

@@ -9,11 +9,13 @@ toolchain go1.27.3
 
 tool (
 	github.com/gomutants/gomutants
+	github.com/rillig/gobco
 	golang.org/x/tools/cmd/deadcode
 )
 
 require (
 	github.com/gomutants/gomutants v0.7.2 // indirect
+	github.com/rillig/gobco v1.3.4 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect

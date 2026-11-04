@@ -35,7 +35,6 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -43,6 +42,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/tbhb-dev/rules/go/private/scratch"
 )
 
 func main() {
@@ -50,38 +51,6 @@ func main() {
 		os.Exit(fakeGit(os.Args[1:]))
 	}
 	os.Exit(runMain(os.Args[1:]))
-}
-
-// entry is a manifest line: the file's role in the unit, where it is in the
-// execution root and its path relative to the module directory.
-type entry struct {
-	role, src, rel string
-}
-
-// Roles: the package's own sources (mutated), its tests, data its tests
-// read, go.mod and go.sum, and the sources of the packages it depends on.
-const (
-	roleMut  = "mut"
-	roleTest = "test"
-	roleData = "data"
-	roleMod  = "mod"
-	roleDep  = "dep"
-)
-
-func readManifest(name string) ([]entry, error) {
-	data, err := os.ReadFile(name)
-	if err != nil {
-		return nil, err
-	}
-	var entries []entry
-	for _, line := range strings.Split(strings.TrimSuffix(string(data), "\n"), "\n") {
-		fields := strings.Split(line, "\t")
-		if len(fields) != 3 {
-			return nil, fmt.Errorf("manifest line %q is not <role>\\t<source>\\t<path>", line)
-		}
-		entries = append(entries, entry{fields[0], fields[1], fields[2]})
-	}
-	return entries, nil
 }
 
 // span is an inclusive range of lines.
@@ -107,7 +76,7 @@ type changeSet struct {
 
 // makeSlice reads the unit's change set (none when the name is empty) and
 // returns its selection.
-func makeSlice(changes string, entries []entry, prefix string) (slice, error) {
+func makeSlice(changes string, entries []scratch.Entry, prefix string) (slice, error) {
 	if changes == "" {
 		return fullSlice, nil
 	}
@@ -122,9 +91,9 @@ func makeSlice(changes string, entries []entry, prefix string) (slice, error) {
 	if c.Version != 1 || c.Files == nil {
 		return slice{}, fmt.Errorf("%s: not a version 1 change set", changes)
 	}
-	byPath := map[string]entry{}
+	byPath := map[string]scratch.Entry{}
 	for _, e := range entries {
-		byPath[prefix+e.rel] = e
+		byPath[prefix+e.Rel] = e
 	}
 	files := map[string][]span{}
 	for repoPath, change := range c.Files {
@@ -141,17 +110,17 @@ func makeSlice(changes string, entries []entry, prefix string) (slice, error) {
 			}
 			return fullSlice, nil
 		}
-		if e.role != roleMut || len(ranges) == 0 {
+		if e.Role != scratch.RoleMut || len(ranges) == 0 {
 			return fullSlice, nil
 		}
-		spans, ok, err := funcSpans(e.src, ranges)
+		spans, ok, err := funcSpans(e.Src, ranges)
 		if err != nil {
 			return slice{}, err
 		}
 		if !ok {
 			return fullSlice, nil
 		}
-		files[e.rel] = spans
+		files[e.Rel] = spans
 	}
 	return slice{Scope: "diff", Files: files}, nil
 }
@@ -293,7 +262,7 @@ func (r result) unstable() []string {
 
 func run(c runConfig) (result, []byte, error) {
 	var log bytes.Buffer
-	entries, err := readManifest(c.manifest)
+	entries, err := scratch.ReadManifest(c.manifest)
 	if err != nil {
 		return result{}, nil, err
 	}
@@ -307,34 +276,19 @@ func run(c runConfig) (result, []byte, error) {
 		return r, log.Bytes(), nil
 	}
 
-	for _, p := range []*string{&c.gomutants, &c.goBin, &c.manifest} {
-		if *p, err = filepath.Abs(*p); err != nil {
-			return result{}, nil, err
-		}
+	if c.gomutants, err = filepath.Abs(c.gomutants); err != nil {
+		return result{}, nil, err
 	}
-	if c.proxy != "" {
-		if c.proxy, err = filepath.Abs(c.proxy); err != nil {
-			return result{}, nil, err
-		}
-	}
-	work, err := os.MkdirTemp("", "gomutants-")
+	w, err := scratch.New("gomutants-", entries, c.goBin, c.proxy)
 	if err != nil {
 		return result{}, nil, err
 	}
-	defer func() { _ = os.RemoveAll(work) }()
+	defer w.Close()
 	// The fake git answers with this exact root, and gomutants compares
 	// it with the paths of the files it mutates.
-	if work, err = filepath.EvalSymlinks(work); err != nil {
+	work, mod := w.Dir, w.Mod
+	if err := os.Mkdir(filepath.Join(work, "bin"), 0o755); err != nil {
 		return result{}, nil, err
-	}
-	mod := filepath.Join(work, "mod")
-	if err := copyTree(entries, mod); err != nil {
-		return result{}, nil, err
-	}
-	for _, dir := range []string{"home", "tmp", "bin"} {
-		if err := os.Mkdir(filepath.Join(work, dir), 0o755); err != nil {
-			return result{}, nil, err
-		}
 	}
 	pattern := "./" + c.pkg
 	if c.pkg == "." {
@@ -348,13 +302,13 @@ func run(c runConfig) (result, []byte, error) {
 		common = append(common, "--workers", strconv.Itoa(c.workers))
 	}
 	common = append(common, c.flags...)
-	env := environ(os.Environ(), c.goBin, work, c.proxy)
+	env := w.Env
 
 	var listed []mutantKey
 	if s.Scope == "diff" {
 		// Every mutant of the package, to check the selection against.
 		var out bytes.Buffer
-		cmd := command(c.gomutants, append(append([]string{}, common...), "--dry-run", pattern), mod, env, &out)
+		cmd := scratch.Command(c.gomutants, append(append([]string{}, common...), "--dry-run", pattern), mod, env, &out)
 		fmt.Fprintf(&log, "$ gomutants %s\n", strings.Join(cmd.Args[1:], " "))
 		err := cmd.Run()
 		log.Write(out.Bytes())
@@ -373,7 +327,7 @@ func run(c runConfig) (result, []byte, error) {
 			return result{}, nil, err
 		}
 		env = append(env,
-			"PATH="+filepath.Join(work, "bin")+string(os.PathListSeparator)+pathOf(env),
+			"PATH="+filepath.Join(work, "bin")+string(os.PathListSeparator)+scratch.PathOf(env),
 			"GOMUTANTS_FAKE_GIT_ROOT="+mod,
 			"GOMUTANTS_FAKE_GIT_DIFF="+filepath.Join(work, "changes.diff"),
 		)
@@ -382,7 +336,7 @@ func run(c runConfig) (result, []byte, error) {
 
 	report := filepath.Join(work, "report.json")
 	args := append(append(common, "--output", report), pattern)
-	cmd := command(c.gomutants, args, mod, env, &log)
+	cmd := scratch.Command(c.gomutants, args, mod, env, &log)
 	fmt.Fprintf(&log, "$ gomutants %s\n", strings.Join(args, " "))
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(&log, "gomutants: run failed: %v\n", err)
@@ -407,108 +361,6 @@ func run(c runConfig) (result, []byte, error) {
 		r.crossCheck(listed, s, data, c.prefix)
 	}
 	return r, log.Bytes(), nil
-}
-
-func command(name string, args []string, dir string, env []string, out *bytes.Buffer) *exec.Cmd {
-	cmd := exec.Command(name, args...)
-	cmd.Dir = dir
-	cmd.Env = env
-	cmd.Stdout = out
-	cmd.Stderr = out
-	return cmd
-}
-
-// copyTree copies each manifest entry to its path under root. Copies, not
-// links: the go command reads the module tree, and Bazel's are symlinks.
-func copyTree(entries []entry, root string) error {
-	for _, e := range entries {
-		dest := filepath.Join(root, filepath.FromSlash(e.rel))
-		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-			return err
-		}
-		data, err := os.ReadFile(e.src)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(dest, data, 0o644); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// environ is base with the go command's settings replaced: the SDK's go
-// first on PATH, caches and HOME under work, modules only from proxy.
-func environ(base []string, goBin, work, proxy string) []string {
-	var env []string
-	path := ""
-	for _, kv := range base {
-		key, value, _ := strings.Cut(kv, "=")
-		upper := strings.ToUpper(key)
-		switch {
-		case upper == "PATH":
-			path = value
-		case strings.HasPrefix(upper, "GO"), strings.HasPrefix(upper, "CGO_"),
-			upper == "HOME", upper == "USERPROFILE", upper == "XDG_CONFIG_HOME",
-			upper == "TMPDIR", upper == "TMP", upper == "TEMP":
-		default:
-			env = append(env, kv)
-		}
-	}
-	goroot := filepath.Dir(filepath.Dir(goBin))
-	bin := filepath.Join(goroot, "bin")
-	if path != "" {
-		bin += string(os.PathListSeparator) + path
-	}
-	goproxy := "off"
-	if proxy != "" {
-		goproxy = fileURL(proxy)
-	}
-	home := filepath.Join(work, "home")
-	tmp := filepath.Join(work, "tmp")
-	return append(env,
-		"PATH="+bin,
-		"GOROOT="+goroot,
-		"HOME="+home,
-		"USERPROFILE="+home,
-		"XDG_CONFIG_HOME="+filepath.Join(home, ".config"),
-		"TMPDIR="+tmp,
-		"TMP="+tmp,
-		"TEMP="+tmp,
-		"GOCACHE="+filepath.Join(work, "gocache"),
-		"GOPATH="+filepath.Join(work, "gopath"),
-		"GOMODCACHE="+filepath.Join(work, "gopath", "pkg", "mod"),
-		"GOPROXY="+goproxy,
-		// go.sum is the module's own; the checksum database is not asked.
-		"GOSUMDB=off",
-		// -modcacherw: the scratch tree is removed, module cache included.
-		"GOFLAGS=-modcacherw",
-		"GOTOOLCHAIN=local",
-		"GOWORK=off",
-		"GOENV=off",
-		"GOTELEMETRY=off",
-		// No C compiler from the host.
-		"CGO_ENABLED=0",
-	)
-}
-
-// pathOf returns the last PATH in env.
-func pathOf(env []string) string {
-	value := ""
-	for _, kv := range env {
-		if k, v, _ := strings.Cut(kv, "="); strings.EqualFold(k, "PATH") {
-			value = v
-		}
-	}
-	return value
-}
-
-func fileURL(dir string) string {
-	slashed := filepath.ToSlash(dir)
-	if !strings.HasPrefix(slashed, "/") {
-		slashed = "/" + slashed // C:/x becomes file:///C:/x
-	}
-	return "file://" + slashed
 }
 
 // setUpFakeGit writes the slice as a unified diff and puts this binary in
