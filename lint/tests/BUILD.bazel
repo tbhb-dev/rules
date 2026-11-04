@@ -2,10 +2,12 @@
 # Copyright Tony Burns
 
 load("//lint:defs.bzl", "gitleaks_history")
+load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":cspell_tests.bzl", "cspell_test_suite")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
+load(":gitleaks_private_scenario.bzl", "gitleaks_private_scenario_test")
 load(":tree_check_tests.bzl", "tree_check_test_suite")
 
 repo_files()
@@ -13,6 +15,72 @@ repo_files()
 tree_check_test_suite(name = "tree_check_tests")
 
 cspell_test_suite(name = "cspell_tests")
+
+# gitleaks_tool against throwaway trees, with and without the private
+# config it requires.
+
+gitleaks_tool(
+    name = "gitleaks_required",
+    required = True,
+)
+
+gitleaks_tool(name = "gitleaks_optional")
+
+[
+    gitleaks_private_scenario_test(
+        name = "gitleaks_private_{}_test".format(scenario),
+        patterns = patterns,
+        scenario = scenario,
+        status = status,
+        subject = ":gitleaks_optional" if scenario == "optional" else ":gitleaks_required",
+    )
+    for scenario, status, patterns in [
+        (
+            "unset",
+            1,
+            ["gitleaks_tool: FAIL: GITLEAKS_CONFIG_TOML is unset or empty"],
+        ),
+        (
+            "empty",
+            1,
+            ["gitleaks_tool: FAIL: GITLEAKS_CONFIG_TOML is unset or empty"],
+        ),
+        (
+            "no_canary",
+            1,
+            ["has no rule with the id tbhb-private-canary"],
+        ),
+        (
+            "other_config",
+            1,
+            ["the committed config is 'other.toml'"],
+        ),
+        (
+            "no_committed",
+            1,
+            ["/.gitleaks.toml does not exist"],
+        ),
+        (
+            "clean",
+            0,
+            ["no leaks found"],
+        ),
+        (
+            "findings",
+            1,
+            [
+                "RuleID: +aws-access-token",
+                "RuleID: +tbhb-private-word",
+                "RuleID: +tbhb-private-canary",
+            ],
+        ),
+        (
+            "optional",
+            0,
+            ["no leaks found"],
+        ),
+    ]
+]
 
 # gitleaks_history against throwaway repositories.
 

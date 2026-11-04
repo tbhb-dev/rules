@@ -84,7 +84,11 @@ def _tree_check_impl(ctx):
     executable, runfiles = shell_executable(ctx, script, runfiles)
     return [
         DefaultInfo(executable = executable, runfiles = runfiles),
-        RunEnvironmentInfo(environment = ctx.attr.env),
+        RunEnvironmentInfo(
+            environment = ctx.attr.env,
+            inherited_environment = ctx.attr.env_inherit,
+        ),
+        testing.ExecutionInfo(ctx.attr.execution_requirements),
     ]
 
 tree_check_test = rule(
@@ -114,6 +118,12 @@ its inputs is diagnosable.""",
         ),
         "env": attr.string_dict(
             doc = "Environment variables for the tool.",
+        ),
+        "env_inherit": attr.string_list(
+            doc = "Environment variables the tool takes from the environment Bazel runs in. Their values join the test's action key.",
+        ),
+        "execution_requirements": attr.string_dict(
+            doc = "Execution requirements for the test action, such as `no-remote-cache`, which tags can't set through a `select`.",
         ),
         "git_root": attr.bool(
             doc = "Create an empty `.git` directory at the tree root, for tools that find the project by it. It holds no Git metadata.",

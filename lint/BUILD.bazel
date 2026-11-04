@@ -2,9 +2,21 @@
 # Copyright Tony Burns
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("//repo:defs.bzl", "repo_files")
 
 repo_files()
+
+# `common --//lint:gitleaks_private_config` (in a consumer's .bazelrc:
+# `common --@tbhb_rules//lint:gitleaks_private_config`) makes gitleaks_test
+# and gitleaks_history require the private gitleaks config in
+# GITLEAKS_CONFIG_TOML and fail without it. See
+# //lint/private:gitleaks_tool.bzl.
+bool_flag(
+    name = "gitleaks_private_config",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
 
 bzl_library(
     name = "defs",
@@ -15,6 +27,7 @@ bzl_library(
         "//lint/private:codeowners",
         "//lint/private:cspell",
         "//lint/private:gitleaks_history",
+        "//lint/private:gitleaks_tool",
         "//lint/private:okf_docs",
         "//lint/private:reuse",
         "//lint/private:shell",

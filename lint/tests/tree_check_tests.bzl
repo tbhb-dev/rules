@@ -182,6 +182,36 @@ def _test_rumdl_owns_its_root_impl(env, target):
         "@@GIT_ROOT@@": "1",
     })
 
+def _gitleaks_private_subject(name):
+    util.helper_target(
+        gitleaks_test,
+        name = name,
+        srcs = ["testdata/root/a.txt"],
+        tool = ":fake_tool.sh",
+        tags = ["manual"],
+    )
+
+def _test_gitleaks_private_config(name):
+    _gitleaks_private_subject(name + "_subject")
+    analysis_test(
+        name = name,
+        impl = _test_gitleaks_private_config_impl,
+        target = name + "_subject",
+        config_settings = {str(Label("//lint:gitleaks_private_config")): True},
+    )
+
+def _test_gitleaks_private_config_impl(env, target):
+    env.expect.that_collection(target[RunEnvironmentInfo].inherited_environment).contains_exactly(["GITLEAKS_CONFIG_TOML"])
+    env.expect.that_dict(target[testing.ExecutionInfo].requirements).contains_exactly({"no-remote-cache": "1"})
+
+def _test_gitleaks_without_private_config(name):
+    _gitleaks_private_subject(name + "_subject")
+    analysis_test(name = name, impl = _test_gitleaks_without_private_config_impl, target = name + "_subject")
+
+def _test_gitleaks_without_private_config_impl(env, target):
+    env.expect.that_collection(target[RunEnvironmentInfo].inherited_environment).contains_exactly([])
+    env.expect.that_dict(target[testing.ExecutionInfo].requirements).contains_exactly({})
+
 def tree_check_test_suite(name):
     test_suite(
         name = name,
@@ -195,6 +225,8 @@ def tree_check_test_suite(name):
             _test_cache_path_cannot_be_absolute,
             _test_cache_files_and_env,
             _test_gitleaks_guard,
+            _test_gitleaks_private_config,
+            _test_gitleaks_without_private_config,
             _test_tombi_schemas,
             _test_bats_uses_pinned_git,
             _test_rumdl_owns_its_root,

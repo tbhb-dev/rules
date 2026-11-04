@@ -70,6 +70,13 @@ on:
           writes. Empty skips the check.
         type: string
         default: ""
+    secrets:
+      GITLEAKS_CONFIG_TOML:
+        description: >-
+          The private gitleaks config, for a repository that sets
+          `@tbhb_rules//lint:gitleaks_private_config`. Only the history
+          scan sees it.
+        required: false
 
 permissions: {}
 
@@ -128,6 +135,8 @@ jobs:
       # Git history is not a declared input, so the history scan runs
       # outside the test graph; //:gitleaks_test covers the working tree.
       - name: Scan Git history for secrets
+        env:
+          GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
         run: bazelisk run //:gitleaks_history
 
       # Advisories change without any input changing, so the audit is never

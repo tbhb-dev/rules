@@ -3,12 +3,14 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("//repo:defs.bzl", "repo_files")
+load(":gitleaks_tool.bzl", "gitleaks_tool")
 
 repo_files()
 
 exports_files([
     "codeowners.sh",
     "gitleaks_history.sh.tpl",
+    "gitleaks_tool.sh.tpl",
     "shell_select.sh",
     "tree_check.sh.tpl",
     "vale.sh",
@@ -61,6 +63,28 @@ bzl_library(
     srcs = ["gitleaks_history.bzl"],
     visibility = ["//lint:__subpackages__"],
     deps = ["@bazel_skylib//lib:shell"],
+)
+
+config_setting(
+    name = "gitleaks_private_required",
+    flag_values = {"//lint:gitleaks_private_config": "True"},
+    visibility = ["//visibility:public"],
+)
+
+# The default gitleaks of gitleaks_test and gitleaks_history.
+gitleaks_tool(
+    name = "gitleaks",
+    required = select({
+        ":gitleaks_private_required": True,
+        "//conditions:default": False,
+    }),
+    visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "gitleaks_tool",
+    srcs = ["gitleaks_tool.bzl"],
+    visibility = ["//lint:__subpackages__"],
 )
 
 bzl_library(

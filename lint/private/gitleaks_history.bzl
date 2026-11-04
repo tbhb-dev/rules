@@ -36,7 +36,9 @@ gitleaks_history = rule(
 
 Fails on any finding, when the repository has no commits, and when gitleaks
 scans no commits although the history holds content (gitleaks exits 0 when
-its own git invocation fails). A shallow clone scans only the commits it
+its own git invocation fails), and, under
+`--//lint:gitleaks_private_config`, without the private config in
+`GITLEAKS_CONFIG_TOML`. A shallow clone scans only the commits it
 has, so CI should fetch the full history. The working tree is
 `gitleaks_test`'s job.""",
     attrs = SHELL_ATTRS | {
@@ -52,11 +54,11 @@ has, so CI should fetch the full history. The working tree is
             doc = "The git put first on PATH for gitleaks.",
         ),
         "tool": attr.label(
-            default = "@tbhb_rules_gitleaks//:gitleaks",
+            default = Label("//lint/private:gitleaks"),
             executable = True,
             cfg = "target",
             allow_files = True,
-            doc = "The gitleaks executable.",
+            doc = "The gitleaks executable. The default requires the private config under `--//lint:gitleaks_private_config`; see `gitleaks_tool`.",
         ),
         "_runner": attr.label(
             default = ":gitleaks_history.sh.tpl",
