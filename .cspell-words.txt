@@ -5,6 +5,7 @@ afakt
 AKIA
 ascm
 autouse
+awrel
 bazelignore
 bazelignored
 bazelisk
@@ -83,6 +84,7 @@ manylinux
 mapfile
 mapliteral
 maturin
+mcpjson
 mctx
 mdfile
 mdir
