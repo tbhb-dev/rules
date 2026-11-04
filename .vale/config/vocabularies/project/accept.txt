@@ -6,6 +6,7 @@ bazelisk
 buildifier
 [Cc]onfigs
 commit's
+complexipy
 cspell
 dereferenced
 deptry
@@ -35,3 +36,4 @@ toolchains
 uv
 workerd
 x_defs
+zizmor

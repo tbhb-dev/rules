@@ -65,6 +65,7 @@ path = [
   "README.md",
   ".github/CODEOWNERS",
   ".github/PULL_REQUEST_TEMPLATE.md",
+  ".github/actions/README.md",
   ".gitattributes",
   ".gitignore",
   ".editorconfig",
