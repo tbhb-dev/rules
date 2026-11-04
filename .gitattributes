@@ -19,10 +19,20 @@ worker-configuration.d.ts linguist-generated
 # files and the tool pins. This repository's own tooling, tests and CI stay
 # out of what consumers download. e2e/smoke stays: the BCR presubmit runs it
 # from the archive as the test module.
+#
+# The composite actions under .github/actions/ stay: GitHub's runner fetches
+# a remote action as this repository's archive at the pinned commit, which
+# honors export-ignore, so excluding them breaks every consumer's `uses:`.
+# A negation can't re-include files under an ignored directory, so the rule
+# names .github/'s contents rather than the directory itself, and git
+# archive skips a directory marked export-ignore without looking inside, so
+# .github/actions itself is unmarked too.
 .agents/ export-ignore
 .claude/ export-ignore
 .codex/ export-ignore
-.github/ export-ignore
+.github/** export-ignore
+.github/actions -export-ignore
+.github/actions/** -export-ignore
 .pre-commit-config.yaml export-ignore
 docs/ export-ignore
 tools/ export-ignore

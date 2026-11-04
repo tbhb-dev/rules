@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":repo_layout_tests.bzl", "repo_layout_test_suite", "scripts_layout_test")
@@ -53,4 +54,23 @@ expect_failure_test(
     name = "proof_no_files_fails",
     pattern = "repo_layout: FAIL: no files to check",
     test = ":proof_no_files",
+)
+
+# The source archive keeps the composite actions that consumers call by
+# commit. Windows has no wrapped Git to run.
+sh_test(
+    name = "archive_actions_test",
+    srcs = ["archive_actions_test.sh"],
+    data = [
+        "//:.gitattributes",
+        "@tbhb_rules_git//:git",
+    ],
+    env = {
+        "GITATTRIBUTES_RLOCATIONPATH": "$(rlocationpath //:.gitattributes)",
+        "GIT_RLOCATIONPATH": "$(rlocationpath @tbhb_rules_git//:git)",
+    },
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )

@@ -32,6 +32,12 @@ exports_files([
     "tombi.toml",
 ])
 
+# For //repo/tests:archive_actions_test.
+exports_files(
+    [".gitattributes"],
+    visibility = ["//repo/tests:__pkg__"],
+)
+
 # For //tools's vale_test and vale_sync.
 exports_files(
     [
