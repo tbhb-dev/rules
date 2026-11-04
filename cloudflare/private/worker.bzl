@@ -83,8 +83,10 @@ def worker_types_test(name, srcs, config = "wrangler.jsonc", types = "worker-con
     The check's tree is rooted at this package, so a Worker in a
     subdirectory of the repository works like one at its root.
 
-    The `.update` target leaves wrangler's project cache (`.wrangler/`)
-    beside the config; gitignore it, as for any wrangler project.
+    The `.update` target keeps wrangler's cache, home and logs in a
+    temporary directory, so it leaves nothing in the tree. It writes an
+    empty or missing types file, which a new Worker starts with; a file
+    with other content that wrangler didn't write is refused.
 
     Args:
         name: Target name.
