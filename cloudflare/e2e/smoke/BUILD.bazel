@@ -239,6 +239,22 @@ expect_failure_test(
     test = ":proof_workers_v8",
 )
 
+# Planted: a config with no thresholds and a branch its test leaves unrun.
+# Istanbul reports the gap, and the launcher's 100% floor fails the check.
+workers_vitest_test(
+    name = "proof_workers_floor",
+    srcs = WORKER + glob(["proof/workers_floor/**"]),
+    config = "proof/workers_floor/vitest.config.mjs",
+    node_modules = [":node_modules"],
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_workers_floor_fails",
+    pattern = "Coverage for branches \\([0-9.]+%\\) does not meet global threshold \\(100%\\)",
+    test = ":proof_workers_floor",
+)
+
 # Planted: a wrangler config whose compatibility date the pinned workerd
 # doesn't support. The check fails at once, naming the date, instead of
 # hanging until the timeout; "short" bounds it at a minute.
