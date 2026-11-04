@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -25,16 +26,20 @@ func TestMain(m *testing.M) {
 func fakeGobco(rc string) int {
 	args := os.Args[1:]
 	if len(args) != 3 || args[0] != "-stats" || args[2] != filepath.Join("p", "q") {
+		fmt.Fprintf(os.Stderr, "fake gobco: arguments %q\n", args)
 		return 3
 	}
 	if _, err := os.Stat("go.mod"); err != nil {
+		fmt.Fprintf(os.Stderr, "fake gobco: %v\n", err)
 		return 3
 	}
-	if os.Getenv("GOPROXY") != "off" {
+	if proxy := os.Getenv("GOPROXY"); proxy != "off" {
+		fmt.Fprintf(os.Stderr, "fake gobco: GOPROXY is %q\n", proxy)
 		return 3
 	}
 	if js, ok := os.LookupEnv("FAKE_GOBCO_STATS"); ok {
 		if err := os.WriteFile(args[1], []byte(js), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "fake gobco: %v\n", err)
 			return 3
 		}
 	}
@@ -119,9 +124,9 @@ func TestRun(t *testing.T) {
 	t.Setenv("FAKE_GOBCO_RC", "0")
 	t.Setenv("FAKE_GOBCO_STATS", `[{"Start": "p/q/q.go:4:9", "Code": "n > 0", "TrueCount": 2, "FalseCount": 0}]`)
 	c := config(t)
-	got, _, err := run(c)
+	got, out, err := run(c)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v\n%s", err, out)
 	}
 	want := result{covered: 1, total: 2, uncovered: []string{`mod/p/q/q.go:4:9: condition "n > 0" was 2 times true but never false`}}
 	if !reflect.DeepEqual(got, want) {
@@ -144,9 +149,9 @@ func TestRunRejects(t *testing.T) {
 			if tc.hasStats {
 				t.Setenv("FAKE_GOBCO_STATS", tc.stats)
 			}
-			_, _, err := run(config(t))
+			_, out, err := run(config(t))
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
-				t.Errorf("err is %v, want it to contain %q", err, tc.want)
+				t.Errorf("err is %v, want it to contain %q\n%s", err, tc.want, out)
 			}
 		})
 	}
