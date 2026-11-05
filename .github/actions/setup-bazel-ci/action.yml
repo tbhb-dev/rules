@@ -58,7 +58,14 @@ runs:
     - name: Point Bazel at Bash
       if: runner.os == 'Windows'
       shell: bash
-      run: echo 'BAZEL_SH=C:/msys64/usr/bin/bash.exe' >>"$GITHUB_ENV"
+      run: |
+        # A self-hosted Windows runner may lack MSYS2, and Bazel then fails
+        # much later with a less direct error.
+        if [ ! -f /c/msys64/usr/bin/bash.exe ]; then
+          echo "::error::MSYS2's Bash isn't at C:/msys64/usr/bin/bash.exe. Install MSYS2 at C:/msys64 on this runner."
+          exit 1
+        fi
+        echo 'BAZEL_SH=C:/msys64/usr/bin/bash.exe' >>"$GITHUB_ENV"
 
     - name: Set up Bazel
       uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
