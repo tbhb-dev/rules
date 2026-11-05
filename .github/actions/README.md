@@ -14,10 +14,11 @@ Run it after `checkout`. It runs these steps in order:
 
 1. Harden the runner with `step-security/harden-runner` in audit mode, on Linux only.
 2. Point `BAZEL_SH` at MSYS2's Bash, on Windows only, and fail when it's missing from `C:/msys64`.
-3. Set up Bazel with `bazel-contrib/setup-bazel` and turn on the bazelisk cache plus the repository cache.
-4. Install a Rust toolchain on Linux arm64, for the source build of complexipy. The Python environment rule passes `RUSTUP_HOME` and `CARGO_HOME` through to uv, which leaves `.bazelrc.user` alone.
-5. Shorten Bazel's output root and enable long paths, on Windows only.
-6. Fetch the targets, retrying up to three times a minute apart.
+3. On Linux under a container CPU quota, export the quota as `PYTEST_XDIST_AUTO_NUM_WORKERS`, so `-n auto` in a `pytest_test` starts one worker per CPU the container may use.
+4. Set up Bazel with `bazel-contrib/setup-bazel` and turn on the bazelisk cache plus the repository cache.
+5. Install a Rust toolchain on Linux arm64, for the source build of complexipy. The Python environment rule passes `RUSTUP_HOME` and `CARGO_HOME` through to uv, which leaves `.bazelrc.user` alone.
+6. Shorten Bazel's output root and enable long paths, on Windows only.
+7. Fetch the targets, retrying up to three times a minute apart.
 
 | Input               | Default  | Meaning                                                                                                 |
 |---------------------|----------|---------------------------------------------------------------------------------------------------------|
