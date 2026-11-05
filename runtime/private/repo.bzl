@@ -82,10 +82,23 @@ def _uv(rctx):
     rctx.symlink("uv-dist/uv", "uv")
     return rctx.path("uv")
 
+# uv prints this when a locked package has no wheel for the interpreter and
+# platform, and building its sdist failed.
+_SDIST_BUILD_FAILED = "Failed to build `"
+
+_SDIST_HINT = """
+A package in uv.lock has no wheel for this Python version and platform, so uv
+built it from source, and that build needs tools this host lacks (a C
+compiler, make or Rust). Skip the package on this Python version with an
+environment marker in pyproject.toml, or lock a version that publishes a
+wheel for it.
+"""
+
 def _run(rctx, args, env, what, working_directory = ""):
     result = rctx.execute(args, environment = env, working_directory = working_directory, quiet = True)
     if result.return_code != 0:
-        fail("{}: {} failed ({}):\n{}{}".format(rctx.name, what, result.return_code, result.stdout, result.stderr))
+        hint = _SDIST_HINT if _SDIST_BUILD_FAILED in result.stderr else ""
+        fail("{}: {} failed ({}):\n{}{}{}".format(rctx.name, what, result.return_code, result.stdout, result.stderr, hint))
     return result.stdout
 
 def _python_env_repo_impl(rctx):
