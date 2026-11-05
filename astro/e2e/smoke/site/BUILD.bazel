@@ -58,9 +58,11 @@ js_test(
     args = [
         "$(rootpath :dev)",
         "$(rootpath @tbhb_rules_astro//:astro)",
+        "$(rootpath //proof/no_astro:dev)",
     ] + ["$(rootpath {})".format(f) for f in SITE],
     data = [
         ":dev",
+        "//proof/no_astro:dev",
         "@tbhb_rules_astro//:astro",
     ] + SITE,
     entry_point = "dev_test.mjs",

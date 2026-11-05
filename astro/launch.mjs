@@ -186,7 +186,8 @@ function devOptions(args) {
   for (let i = 0; i < args.length; i += 1) {
     const match = /^--(port|host|base)(?:=(.*))?$/.exec(args[i]);
     const value = match?.[2] ?? args[i + 1];
-    if (!match || value === undefined) {
+    // An empty value, as in `--port=`, is no value.
+    if (!match || value === undefined || value === "") {
       console.error(
         `launch.mjs: dev takes --port, --host and --base, each with a value, got ${args[i]}`,
       );

@@ -12,9 +12,10 @@
 // port, and exit 0 on SIGTERM.
 //
 // The unknown-command refusal runs the module's build tool, whose binary
-// names no command of its own.
+// names no command of its own, and the empty-tree refusal a dev server whose
+// node_modules target links nothing.
 //
-// Usage: dev_test.mjs <dev binary> <astro tool binary> <site file>...
+// Usage: dev_test.mjs <dev binary> <astro tool binary> <empty-tree dev binary> <site file>...
 
 import { spawn } from "node:child_process";
 import {
@@ -28,7 +29,7 @@ import {
 import { createServer } from "node:net";
 import { dirname, join } from "node:path";
 
-const [devBin, toolBin, ...files] = process.argv.slice(2);
+const [devBin, toolBin, emptyDevBin, ...files] = process.argv.slice(2);
 const failures = [];
 
 function workspaceCopy(name) {
@@ -94,6 +95,15 @@ await refuses(
   2,
   "dev takes --port, --host and --base",
 );
+for (const flag of ["--port=", "--host=", "--base="]) {
+  await refuses(
+    `empty ${flag}`,
+    [flag],
+    { BUILD_WORKSPACE_DIRECTORY: workspace },
+    2,
+    "dev takes --port, --host and --base",
+  );
+}
 await refuses(
   "unknown command",
   ["serve"],
@@ -114,6 +124,21 @@ await refuses(
 );
 if (lstatSync(join(installed, "node_modules")).isSymbolicLink()) {
   failures.push("own node_modules: the launcher replaced a real directory");
+}
+
+// A node_modules target that links nothing has no tree to link.
+const empty = workspaceCopy("empty");
+mkdirSync(join(empty, "proof", "no_astro"), { recursive: true });
+await refuses(
+  "empty node_modules tree",
+  [],
+  { BUILD_WORKSPACE_DIRECTORY: empty },
+  1,
+  "astro isn't in the consumer's node_modules",
+  emptyDevBin,
+);
+if (existsSync(join(empty, "proof", "no_astro", "node_modules"))) {
+  failures.push("empty node_modules tree: the launcher linked a tree that doesn't exist");
 }
 
 // What `bazel clean` leaves behind: a link into an output base that's gone.

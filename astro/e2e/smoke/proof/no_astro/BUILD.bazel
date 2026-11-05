@@ -3,6 +3,7 @@
 
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_astro//:defs.bzl", "astro_dev")
 
 repo_files()
 
@@ -10,3 +11,11 @@ repo_files()
 npm_link_all_packages(name = "node_modules")
 
 exports_files(["package.json"])
+
+# A dev server over a tree that links nothing: //site:dev_test proves it
+# links no node_modules into the workspace and names the missing astro.
+astro_dev(
+    name = "dev",
+    node_modules = ":node_modules",
+    visibility = ["//site:__pkg__"],
+)
