@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules_playwright the way a browser test would.
+
+Its own playwright-core comes from its pnpm lock, at the release the pinned
+browsers belong to; the launch proof starts the pinned Chromium headless
+shell through it with no `playwright install` and no network.
+"""
+
+module(name = "tbhb_rules_playwright_smoke")
+
+bazel_dep(name = "tbhb_rules_playwright")
+local_path_override(
+    module_name = "tbhb_rules_playwright",
+    path = "../..",
+)
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../../..",
+)
+
+bazel_dep(name = "aspect_rules_js", version = "3.5.2")
+
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "npm",
+    data = [
+        "//:package.json",
+        "//:pnpm-workspace.yaml",
+    ],
+    lifecycle_hooks = {"*": []},
+    pnpm_lock = "//:pnpm-lock.yaml",
+)
+use_repo(npm, "npm")
+
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm")
+pnpm.pnpm(
+    name = "pnpm",
+    pnpm_version = "12.16.1",
+    pnpm_version_integrity = "sha512-CR0d7nknV1Zhsl2rPCrjHK/BxU1rce1qZgDPDByxBDSkR+rhQBXxsj4ua+3u1535SpMuIWTSgyKA3OP7MvZW0Q==",
+)
+use_repo(pnpm, "pnpm")

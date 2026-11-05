@@ -1,0 +1,48 @@
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{bat,cmd}]
+end_of_line = crlf
+
+[{*.bzl,BUILD,BUILD.bazel,MODULE.bazel,WORKSPACE,*.bazelrc,.bazelrc}]
+indent_style = space
+indent_size = 2
+
+[*.{json,jsonc,json5}]
+indent_style = space
+indent_size = 2
+
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.toml]
+indent_style = space
+indent_size = 2
+
+[*.{sh,sh.tpl}]
+indent_style = space
+indent_size = 2
+# shfmt reads this; flags such as -ln would make it ignore the whole file.
+shell_variant = bash
+
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+
+# D2 renders (tbhb_rules_d2) must match a fresh render byte for byte.
+[*.d2.{svg,png,sha256}]
+trim_trailing_whitespace = false
+
+# wrangler types output (tbhb_rules_cloudflare), which worker_types_test
+# compares with a fresh run byte for byte: tabs and trailing spaces included.
+[worker-configuration.d.ts]
+trim_trailing_whitespace = false
+indent_style = unset

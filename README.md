@@ -11,7 +11,7 @@ Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned 
 | runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
 | testing | `@tbhb_rules//testing:defs.bzl` | `expect_failure_test` |
 
-Language and diagram rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/`, `tbhb_rules_python` in `python/`, `tbhb_rules_typescript` in `typescript/`, `tbhb_rules_cloudflare` in `cloudflare/`, which builds on the TypeScript module, and `tbhb_rules_d2` in `diagrams/d2/`.
+Language and diagram rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/`, `tbhb_rules_python` in `python/`, `tbhb_rules_typescript` in `typescript/`, `tbhb_rules_cloudflare` in `cloudflare/`, which builds on the TypeScript module, `tbhb_rules_playwright` in `playwright/`, which pins Playwright's browsers, and `tbhb_rules_d2` in `diagrams/d2/`.
 
 The modules require Bazel 9 or newer (`bazel_compatibility = [">=9.0.0"]`), the only release line tbhb-dev repositories use.
 

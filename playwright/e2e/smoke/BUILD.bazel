@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("@tbhb_rules_playwright//:defs.bzl", "CHROMIUM_HEADLESS_SHELL_REVISION", "PLAYWRIGHT_VERSION")
+
+npm_link_all_packages(name = "node_modules")
+
+# Starts the pinned Chromium headless shell through this module's own
+# playwright-core and loads a page, after checking that playwright-core is
+# the release the browsers belong to.
+LAUNCH_DATA = [
+    ":node_modules/playwright-core",
+    "@tbhb_rules_playwright//:chromium",
+]
+
+js_test(
+    name = "launch_test",
+    data = LAUNCH_DATA,
+    entry_point = "launch_test.mjs",
+    env = {
+        "TBHB_PLAYWRIGHT_BROWSERS": "$(rlocationpath @tbhb_rules_playwright//:chromium)",
+        "TBHB_PLAYWRIGHT_REVISION": CHROMIUM_HEADLESS_SHELL_REVISION,
+        "TBHB_PLAYWRIGHT_VERSION": PLAYWRIGHT_VERSION,
+    },
+    # Playwright follows the browsers' links to their real paths; rules_js's
+    # fs patch would keep the link paths instead.
+    patch_node_fs = False,
+)
+
+# Proof: pins at another revision than playwright-core's fail the check
+# before any browser starts.
+js_test(
+    name = "proof_revision_drift",
+    data = LAUNCH_DATA,
+    entry_point = "launch_test.mjs",
+    env = {
+        "TBHB_PLAYWRIGHT_BROWSERS": "$(rlocationpath @tbhb_rules_playwright//:chromium)",
+        "TBHB_PLAYWRIGHT_REVISION": "0",
+        "TBHB_PLAYWRIGHT_VERSION": PLAYWRIGHT_VERSION,
+    },
+    patch_node_fs = False,
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_revision_drift_fails",
+    pattern = "wants chromium-headless-shell revision [0-9]+, but the pins hold 0",
+    test = ":proof_revision_drift",
+)

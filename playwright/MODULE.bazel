@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Playwright's browsers for tbhb-dev repositories, pinned and hermetic.
+
+Each supported platform's Chromium headless shell is a literal, sha256-pinned
+archive from Playwright's own CDN, laid out the way Playwright expects under
+PLAYWRIGHT_BROWSERS_PATH, so a test never runs `playwright install` and never
+reaches the network.
+
+Consumers load only `@tbhb_rules_playwright//:defs.bzl`.
+"""
+
+module(
+    name = "tbhb_rules_playwright",
+    version = "0.0.0",
+    bazel_compatibility = [">=9.0.0"],
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "platforms", version = "1.1.0")
+
+browsers = use_extension("//private:browsers.bzl", "browsers")
+use_repo(
+    browsers,
+    "tbhb_rules_playwright_chromium_headless_shell_linux_arm64",
+    "tbhb_rules_playwright_chromium_headless_shell_linux_x86_64",
+    "tbhb_rules_playwright_chromium_headless_shell_macos_arm64",
+    "tbhb_rules_playwright_chromium_headless_shell_windows_x86_64",
+)
+
+# The parent module's checks, which this module's own BUILD runs over its
+# files.
+bazel_dep(name = "tbhb_rules")
+
+# The released module resolves tbhb_rules from the registry; inside this
+# repository it is the enclosing module.
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "..",
+)
+
+# Dev dependencies: this module's own tests.
+bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)

@@ -1,0 +1,56 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright Tony Burns
+
+// The launch proof: playwright-core must be the release the pinned browsers
+// belong to, and the pinned Chromium headless shell must start from the
+// runfiles with nothing but PLAYWRIGHT_BROWSERS_PATH set, then load a page.
+
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+
+const require = createRequire(import.meta.url);
+const core = dirname(require.resolve("playwright-core/package.json"));
+const { version } = JSON.parse(readFileSync(join(core, "package.json"), "utf8"));
+const shell = JSON.parse(
+  readFileSync(join(core, "browsers.json"), "utf8"),
+).browsers.find((b) => b.name === "chromium-headless-shell");
+
+const failures = [];
+if (version !== process.env.TBHB_PLAYWRIGHT_VERSION) {
+  failures.push(
+    `playwright-core is ${version}, but the browsers belong to ${process.env.TBHB_PLAYWRIGHT_VERSION}`,
+  );
+}
+if (shell.revision !== process.env.TBHB_PLAYWRIGHT_REVISION) {
+  failures.push(
+    `playwright-core ${version} wants chromium-headless-shell revision ${shell.revision}, but the pins hold ${process.env.TBHB_PLAYWRIGHT_REVISION}`,
+  );
+}
+if (failures.length > 0) {
+  console.error(failures.join("\n"));
+  process.exit(1);
+}
+
+const runfiles = process.env.RUNFILES_DIR ?? process.env.TEST_SRCDIR;
+const pathFile = join(runfiles, process.env.TBHB_PLAYWRIGHT_BROWSERS);
+process.env.PLAYWRIGHT_BROWSERS_PATH = join(
+  runfiles,
+  readFileSync(pathFile, "utf8").trim(),
+);
+
+const { chromium } = await import("playwright-core");
+const browser = await chromium.launch({ headless: true });
+try {
+  const page = await browser.newPage();
+  await page.goto("data:text/html,<title>tbhb-playwright-smoke</title>");
+  const title = await page.title();
+  if (title !== "tbhb-playwright-smoke") {
+    console.error(`expected the page title tbhb-playwright-smoke, got ${title}`);
+    process.exitCode = 1;
+  } else {
+    console.log(`launched Chromium ${browser.version()}: ${title}`);
+  }
+} finally {
+  await browser.close();
+}
