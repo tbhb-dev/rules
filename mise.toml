@@ -58,6 +58,8 @@ run = [
   "cd python && bazelisk test //...",
   "cd python/e2e/single && bazelisk test //...",
   "cd python/e2e/workspace && bazelisk test //...",
+  "cd ansible && bazelisk test //...",
+  "cd ansible/e2e && bazelisk test //...",
   "cd typescript && bazelisk test //...",
   "cd typescript/e2e/smoke && bazelisk test //...",
   "cd typescript/e2e/bare && bazelisk test //...",
