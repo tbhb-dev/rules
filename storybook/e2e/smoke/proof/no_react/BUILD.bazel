@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_storybook//:defs.bzl", "storybook_test")
+
+repo_files()
+
+# Links nothing: package.json has no dependencies.
+npm_link_all_packages(name = "node_modules")
+
+exports_files(["package.json"])
+
+# Must fail: //:proof_no_react_fails.
+storybook_test(
+    name = "proof",
+    srcs = glob([
+        ".storybook/**",
+        "src/**",
+    ]) + ["package.json"],
+    framework = "react",
+    node_modules = ":node_modules",
+    tags = ["manual"],
+    visibility = ["//:__pkg__"],
+)

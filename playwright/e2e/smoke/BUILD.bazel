@@ -13,18 +13,22 @@ npm_link_all_packages(name = "node_modules")
 # the release the browsers belong to.
 LAUNCH_DATA = [
     ":node_modules/playwright-core",
+    "@tbhb_rules_playwright//:browsers_path",
     "@tbhb_rules_playwright//:chromium",
 ]
+
+LAUNCH_ENV = {
+    "TBHB_PLAYWRIGHT_BROWSERS": "$(rlocationpath @tbhb_rules_playwright//:chromium)",
+    "TBHB_PLAYWRIGHT_HELPER": "$(rlocationpath @tbhb_rules_playwright//:browsers_path)",
+    "TBHB_PLAYWRIGHT_REVISION": CHROMIUM_HEADLESS_SHELL_REVISION,
+    "TBHB_PLAYWRIGHT_VERSION": PLAYWRIGHT_VERSION,
+}
 
 js_test(
     name = "launch_test",
     data = LAUNCH_DATA,
     entry_point = "launch_test.mjs",
-    env = {
-        "TBHB_PLAYWRIGHT_BROWSERS": "$(rlocationpath @tbhb_rules_playwright//:chromium)",
-        "TBHB_PLAYWRIGHT_REVISION": CHROMIUM_HEADLESS_SHELL_REVISION,
-        "TBHB_PLAYWRIGHT_VERSION": PLAYWRIGHT_VERSION,
-    },
+    env = LAUNCH_ENV,
     # Playwright follows the browsers' links to their real paths; rules_js's
     # fs patch would keep the link paths instead.
     patch_node_fs = False,
@@ -36,11 +40,7 @@ js_test(
     name = "proof_revision_drift",
     data = LAUNCH_DATA,
     entry_point = "launch_test.mjs",
-    env = {
-        "TBHB_PLAYWRIGHT_BROWSERS": "$(rlocationpath @tbhb_rules_playwright//:chromium)",
-        "TBHB_PLAYWRIGHT_REVISION": "0",
-        "TBHB_PLAYWRIGHT_VERSION": PLAYWRIGHT_VERSION,
-    },
+    env = LAUNCH_ENV | {"TBHB_PLAYWRIGHT_REVISION": "0"},
     patch_node_fs = False,
     tags = ["manual"],
 )
@@ -49,4 +49,31 @@ expect_failure_test(
     name = "proof_revision_drift_fails",
     pattern = "wants chromium-headless-shell revision [0-9]+, but the pins hold 0",
     test = ":proof_revision_drift",
+)
+
+# Proof: a browsers location that holds nothing fails with the helper's
+# message, not inside Playwright.
+js_test(
+    name = "proof_browsers_missing",
+    data = LAUNCH_DATA + ["proof/nowhere.txt"],
+    entry_point = "launch_test.mjs",
+    env = LAUNCH_ENV | {"TBHB_PLAYWRIGHT_BROWSERS": "$(rlocationpath proof/nowhere.txt)"},
+    patch_node_fs = False,
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_browsers_missing_fails",
+    pattern = "the pinned browsers aren't at .*nowhere; on Windows, build with --enable_runfiles",
+    test = ":proof_browsers_missing",
+)
+
+# browsersPath over planted layouts, including the two it refuses.
+js_test(
+    name = "browsers_path_test",
+    data = ["@tbhb_rules_playwright//:browsers_path"],
+    entry_point = "browsers_path_test.mjs",
+    env = {"TBHB_PLAYWRIGHT_HELPER": "$(rlocationpath @tbhb_rules_playwright//:browsers_path)"},
+    # The helper follows the planted links to their real paths.
+    patch_node_fs = False,
 )

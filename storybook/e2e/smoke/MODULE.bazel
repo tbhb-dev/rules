@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules_storybook the way a design system would.
+
+One Storybook per framework, each in its own subpackage with one static
+story, whose renderer libraries (react and react-dom, lit, astro) come from
+this module's pnpm lock, built, tested in the pinned Chromium and served
+under a base path; with proofs that each check fails on a planted defect.
+"""
+
+module(name = "tbhb_rules_storybook_smoke")
+
+bazel_dep(name = "tbhb_rules_storybook")
+local_path_override(
+    module_name = "tbhb_rules_storybook",
+    path = "../..",
+)
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../../..",
+)
+
+bazel_dep(name = "tbhb_rules_typescript")
+local_path_override(
+    module_name = "tbhb_rules_typescript",
+    path = "../../../typescript",
+)
+
+bazel_dep(name = "tbhb_rules_playwright")
+local_path_override(
+    module_name = "tbhb_rules_playwright",
+    path = "../../../playwright",
+)
+
+bazel_dep(name = "aspect_rules_js", version = "3.5.2")
+bazel_dep(name = "bazel_lib", version = "3.7.0")
+bazel_dep(name = "platforms", version = "1.1.0")
+
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "npm",
+    data = [
+        "//:package.json",
+        "//:pnpm-workspace.yaml",
+        "//proof/no_react:package.json",
+    ],
+    lifecycle_hooks = {"*": []},
+    pnpm_lock = "//:pnpm-lock.yaml",
+)
+use_repo(npm, "npm")
+
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm")
+pnpm.pnpm(
+    name = "pnpm",
+    pnpm_version = "12.16.1",
+    pnpm_version_integrity = "sha512-CR0d7nknV1Zhsl2rPCrjHK/BxU1rce1qZgDPDByxBDSkR+rhQBXxsj4ua+3u1535SpMuIWTSgyKA3OP7MvZW0Q==",
+)
+use_repo(pnpm, "pnpm")

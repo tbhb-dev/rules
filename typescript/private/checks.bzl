@@ -29,7 +29,7 @@ visibility("//...")
 _PACKAGES = {
     "biome": ["@biomejs/biome"],
     "depcruise": ["dependency-cruiser", "typescript"],
-    "eslint": ["eslint", "eslint-plugin-sonarjs", "typescript", "typescript-eslint", "vitest"],
+    "eslint": ["eslint", "eslint-plugin-sonarjs", "eslint-plugin-storybook", "typescript", "typescript-eslint", "vitest"],
     "knip": ["knip", "typescript", "vitest"],
     "pnpm-audit": ["pnpm"],
     "stryker": ["@stryker-mutator/core", "@stryker-mutator/vitest-runner", "@vitest/coverage-v8", "typescript", "vitest"],
@@ -181,6 +181,10 @@ def eslint_test(name, srcs, node_modules = [], workers = False, **kwargs):
     `// eslint-disable-next-line sonarjs/no-hardcoded-passwords`, still
     applies to that file; the rest of the plugin's rules stay off unless the
     config enables them.
+
+    The module also pins eslint-plugin-storybook, linked under its name for
+    a config that lints stories to import, such as its
+    `configs["flat/recommended"]`; nothing applies it unless the config does.
 
     Args:
         name: Target name.

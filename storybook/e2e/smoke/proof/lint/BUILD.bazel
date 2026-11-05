@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_typescript//:defs.bzl", "eslint_test")
+
+repo_files()
+
+# Must fail: //:proof_lint_fails.
+eslint_test(
+    name = "proof",
+    srcs = glob(["src/**"]) + [
+        "eslint.config.mjs",
+        "package.json",
+    ],
+    node_modules = ["//:node_modules"],
+    strip_prefix = package_name(),
+    tags = ["manual"],
+    visibility = ["//:__pkg__"],
+)

@@ -1,0 +1,141 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@tbhb_rules//format:defs.bzl", "format", "format_test")
+load(
+    "@tbhb_rules//lint:defs.bzl",
+    "editorconfig_checker_test",
+    "gitleaks_test",
+    "rumdl_test",
+    "ryl_test",
+    "tombi_test",
+)
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_storybook_npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules_typescript//:defs.bzl", "biome_test")
+
+repo_files(
+    exclude = [
+        ".DS_Store",
+        "**/.DS_Store",
+        ".bazelrc.user",
+    ],
+)
+
+# The pinned toolchain (package.json, pnpm-lock.yaml). To move a pin, edit
+# package.json, then regenerate the lock with the pnpm 12 that MODULE.bazel pins:
+#   bazel run -- @pnpm//:pnpm --dir "$PWD" install --lockfile-only
+# CI audits this lock with tbhb_rules_typescript's pnpm_audit, from
+# typescript/:
+#   bazel run //:pnpm_audit -- --dir "$PWD/../storybook"
+npm_link_all_packages(name = "node_modules")
+
+# The launcher every rule builds its own js_binary around
+# (private/storybook.bzl), in the output tree beside :node_modules, where
+# rules_js needs a consumer's js_binary to find it, with the modules it
+# loads beside it.
+copy_to_bin(
+    name = "launcher",
+    srcs = ["launch.mjs"],
+    visibility = ["//visibility:public"],
+)
+
+copy_to_bin(
+    name = "launcher_data",
+    srcs = [
+        "package.json",
+        "resolve_hooks.mjs",
+        "vite_layer.mjs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# This module's own JavaScript and JSON, under Biome.
+biome_test(
+    name = "biome_test",
+    srcs = [":repo_files"],
+)
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    visibility = ["//visibility:public"],
+    deps = ["//private:storybook"],
+)
+
+# This module is released on its own (strip_prefix storybook/), so it carries its
+# own copies of the parent module's lint configs. Each copy must match the
+# parent's byte for byte; a change goes to both. .gitignore and .rylignore
+# are this module's own (.ryl.toml reads them).
+LINT_CONFIGS = [
+    ".editorconfig",
+    ".editorconfig-checker.json",
+    ".gitleaks.toml",
+    ".rumdl.toml",
+    ".ryl.toml",
+    "tombi.toml",
+]
+
+[
+    diff_test(
+        name = "config_matches_parent_" + config.lstrip(".").replace(".", "_").replace("-", "_"),
+        file1 = config,
+        file2 = "@tbhb_rules//:" + config,
+    )
+    for config in LINT_CONFIGS
+]
+
+# The parent module's whole-tree checks, over this module's files.
+gitleaks_test(
+    name = "gitleaks_test",
+    srcs = [":repo_files"],
+    config = ".gitleaks.toml",
+)
+
+ryl_test(
+    name = "ryl_test",
+    srcs = [":repo_files"],
+    config = ".ryl.toml",
+)
+
+tombi_test(
+    name = "tombi_test",
+    srcs = [":repo_files"],
+    config = "tombi.toml",
+)
+
+rumdl_test(
+    name = "rumdl_test",
+    srcs = [":repo_files"],
+    config = ".rumdl.toml",
+)
+
+editorconfig_checker_test(
+    name = "editorconfig_checker_test",
+    srcs = [":repo_files"],
+    config = ".editorconfig-checker.json",
+)
+
+# This module's own formatting: `bazel run //:format` rewrites the tree,
+# `//:format.check` and `format_test` check it, with the parent module's
+# formatters.
+FORMATTERS = [
+    "@tbhb_rules//format:buildifier",
+    "@tbhb_rules//format:rumdl",
+    "@tbhb_rules//format:ryl",
+    "@tbhb_rules//format:shfmt",
+]
+
+format(
+    name = "format",
+    formatters = FORMATTERS,
+)
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    formatters = FORMATTERS,
+)

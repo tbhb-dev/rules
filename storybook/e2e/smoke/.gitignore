@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# A local `pnpm install`, or the link storybook_dev makes to the built tree;
+# the checks use the npm_link_all_packages tree. Storybook's dev server also
+# keeps its cache in a node_modules beside each Storybook.
+# No trailing slash: the link is a file to git, not a directory.
+node_modules
+# The config storybook_dev generates beside each Storybook.
+.tbhb-storybook/

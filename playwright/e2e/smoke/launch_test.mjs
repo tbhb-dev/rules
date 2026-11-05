@@ -5,13 +5,16 @@
 // belong to, and the pinned Chromium headless shell must start from the
 // runfiles with nothing but PLAYWRIGHT_BROWSERS_PATH set, then load a page.
 
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join, relative } from "node:path";
+import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 const core = dirname(require.resolve("playwright-core/package.json"));
-const { version } = JSON.parse(readFileSync(join(core, "package.json"), "utf8"));
+const { version } = JSON.parse(
+  readFileSync(join(core, "package.json"), "utf8"),
+);
 const shell = JSON.parse(
   readFileSync(join(core, "browsers.json"), "utf8"),
 ).browsers.find((b) => b.name === "chromium-headless-shell");
@@ -37,49 +40,16 @@ if (failures.length > 0) {
 }
 
 const runfiles = process.env.RUNFILES_DIR ?? process.env.TEST_SRCDIR;
-const pathFile = join(runfiles, process.env.TBHB_PLAYWRIGHT_BROWSERS);
-const browsersPath = join(runfiles, readFileSync(pathFile, "utf8").trim());
-if (!existsSync(browsersPath)) {
-  // On Windows without --enable_runfiles there is no runfiles tree to find
-  // the browsers in.
-  console.error(
-    `the pinned browsers aren't at ${browsersPath}; on Windows, build with --enable_runfiles`,
-  );
+const { browsersPath } = await import(
+  pathToFileURL(join(runfiles, process.env.TBHB_PLAYWRIGHT_HELPER)).href
+);
+let realBrowsers;
+try {
+  realBrowsers = browsersPath(process.env.TBHB_PLAYWRIGHT_BROWSERS);
+} catch (error) {
+  console.error(`launch_test: ${error.message}`);
   process.exit(1);
 }
-
-// The first file under a directory, depth first.
-function firstFile(dir) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
-    if (entry.isFile() || entry.isSymbolicLink()) {
-      return path;
-    }
-    const found = firstFile(path);
-    if (found !== undefined) {
-      return found;
-    }
-  }
-  return undefined;
-}
-
-// The runfiles tree links each file, not each directory, so the browsers'
-// real directory comes from one file's real path. Under it the browser's
-// path is far shorter: on Windows the runfiles path to the executable runs
-// past MAX_PATH, and CreateProcess then fails with ENOENT although the file
-// is there.
-const sample = firstFile(browsersPath);
-const real = realpathSync(sample);
-const rel = relative(browsersPath, sample);
-if (!real.endsWith(rel)) {
-  // Falling back to the runfiles path would bring back the opaque Windows
-  // ENOENT, so a layout surprise fails here as itself.
-  console.error(
-    `launch_test: the real path ${real} of ${sample} doesn't end in ${rel}, so the browsers' real directory can't be derived.`,
-  );
-  process.exit(1);
-}
-const realBrowsers = real.slice(0, real.length - rel.length - 1);
 process.env.PLAYWRIGHT_BROWSERS_PATH = realBrowsers;
 console.log(
   `PLAYWRIGHT_BROWSERS_PATH=${realBrowsers} (${realBrowsers.length} characters)`,
@@ -92,7 +62,9 @@ try {
   await page.goto("data:text/html,<title>tbhb-playwright-smoke</title>");
   const title = await page.title();
   if (title !== "tbhb-playwright-smoke") {
-    console.error(`expected the page title tbhb-playwright-smoke, got ${title}`);
+    console.error(
+      `expected the page title tbhb-playwright-smoke, got ${title}`,
+    );
     process.exitCode = 1;
   } else {
     console.log(`launched Chromium ${browser.version()}: ${title}`);

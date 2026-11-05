@@ -20,6 +20,10 @@ module(
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
 bazel_dep(name = "platforms", version = "1.1.0")
 
+# copy_to_bin, for :browsers_path: rules_js runs JavaScript only from the
+# output tree.
+bazel_dep(name = "bazel_lib", version = "3.7.0")
+
 browsers = use_extension("//private:browsers.bzl", "browsers")
 use_repo(
     browsers,

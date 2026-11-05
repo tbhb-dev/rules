@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_storybook//:defs.bzl", "storybook_test")
+load("@tbhb_rules_typescript//:defs.bzl", "eslint_test", "vitest_test")
+
+repo_files()
+
+# One tree, two runners: the project's unit tests with tbhb_rules_typescript's
+# Vitest, and its stories with this module's, each with its own config; and
+# the stories linted with tbhb_rules_typescript's eslint-plugin-storybook.
+SRCS = glob([
+    ".storybook/**",
+    "src/**",
+]) + [
+    "eslint.config.mjs",
+    "package.json",
+    "vitest.config.mjs",
+]
+
+vitest_test(
+    name = "vitest_test",
+    srcs = SRCS,
+    node_modules = ["//:node_modules"],
+    strip_prefix = package_name(),
+)
+
+storybook_test(
+    name = "storybook_test",
+    srcs = SRCS,
+    framework = "html",
+    node_modules = "//:node_modules",
+)
+
+eslint_test(
+    name = "eslint_test",
+    srcs = SRCS,
+    node_modules = ["//:node_modules"],
+    strip_prefix = package_name(),
+)

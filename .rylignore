@@ -7,5 +7,7 @@ astro/e2e/*/pnpm-lock.yaml
 cloudflare/pnpm-lock.yaml
 cloudflare/e2e/*/pnpm-lock.yaml
 playwright/e2e/*/pnpm-lock.yaml
+storybook/pnpm-lock.yaml
+storybook/e2e/*/pnpm-lock.yaml
 typescript/pnpm-lock.yaml
 typescript/e2e/*/pnpm-lock.yaml
