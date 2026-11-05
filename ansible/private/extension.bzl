@@ -105,6 +105,10 @@ def _ansible_impl(mctx):
         # Before the first `bazelisk run @tbhb_rules_ansible//:lock` there is
         # no lock, and nothing is fetched: ansible_collections_lock_test
         # fails until it is written.
+        # Renovate commits only files named requirements.lock.json after it
+        # runs the lock command, so any other name would drop its output.
+        if collections.lock.name != "requirements.lock.json":
+            fail("ansible.collections: name the lock requirements.lock.json, not {}".format(collections.lock.name))
         lock_file = mctx.path(collections.lock)
         lock = json.decode(mctx.read(lock_file)).get("collections", {}) if lock_file.exists else {}
         for collection, pin in sorted(lock.items()):

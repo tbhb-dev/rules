@@ -44,6 +44,11 @@ alias(
 # e. Its output is deterministic (sorted keys, two-space indent, trailing
 #    newline), so a rerun with unchanged pins is a no-op.
 #
+# The extension requires the lock's name to be requirements.lock.json, the
+# only name Renovate's task commits. That task runs from the repository
+# root, so it covers a tag in the root MODULE.bazel; a nested module root
+# (such as ansible/e2e) reruns the lock by hand.
+#
 # With no `ansible.collections` tag it fails, saying so.
 python_tool(
     name = "lock",
