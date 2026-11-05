@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+bzl_library(
+    name = "browsers",
+    srcs = ["browsers.bzl"],
+    visibility = ["//:__pkg__"],
+    deps = ["@bazel_tools//tools/build_defs/repo:http.bzl"],
+)
+
+bzl_library(
+    name = "browsers_rule",
+    srcs = ["browsers_rule.bzl"],
+    visibility = ["//:__pkg__"],
+    deps = [":browsers"],
+)

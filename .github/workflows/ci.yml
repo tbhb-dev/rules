@@ -62,7 +62,9 @@ jobs:
               {"id": "typescript-smoke", "dir": "typescript/e2e/smoke", "deps": ["root", "typescript"]},
               {"id": "typescript-bare", "dir": "typescript/e2e/bare", "deps": ["root", "typescript"]},
               {"id": "cloudflare", "dir": "cloudflare", "deps": ["root", "typescript"]},
-              {"id": "cloudflare-smoke", "dir": "cloudflare/e2e/smoke", "deps": ["root", "typescript", "cloudflare"]}
+              {"id": "cloudflare-smoke", "dir": "cloudflare/e2e/smoke", "deps": ["root", "typescript", "cloudflare"]},
+              {"id": "playwright", "dir": "playwright", "deps": ["root"]},
+              {"id": "playwright-smoke", "dir": "playwright/e2e/smoke", "deps": ["root", "playwright"]}
             ]
         run: |
           files="${RUNNER_TEMP}/changed"
@@ -179,7 +181,7 @@ jobs:
       gazelle-dirs: go go/e2e/smoke
       govulncheck-target: //tests/self:govulncheck
       govulncheck-working-directory: go
-      module-dirs: . cloudflare diagrams/d2 go python typescript
+      module-dirs: . cloudflare diagrams/d2 go playwright python typescript
       pnpm-audit-dirs: typescript cloudflare
       pnpm-audit-workspace: typescript
 

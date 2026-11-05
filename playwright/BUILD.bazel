@@ -1,0 +1,154 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@tbhb_rules//format:defs.bzl", "format", "format_test")
+load(
+    "@tbhb_rules//lint:defs.bzl",
+    "editorconfig_checker_test",
+    "gitleaks_test",
+    "rumdl_test",
+    "ryl_test",
+    "tombi_test",
+)
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("//private:browsers_rule.bzl", "playwright_browsers")
+
+repo_files(
+    exclude = [
+        ".DS_Store",
+        "**/.DS_Store",
+        ".bazelrc.user",
+    ],
+)
+
+# The platforms the pinned browsers cover, the same four as tbhb_rules'
+# tool pins.
+PLATFORMS = {
+    "linux_arm64": [
+        "@platforms//os:linux",
+        "@platforms//cpu:arm64",
+    ],
+    "linux_x86_64": [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    "macos_arm64": [
+        "@platforms//os:macos",
+        "@platforms//cpu:arm64",
+    ],
+    "windows_x86_64": [
+        "@platforms//os:windows",
+        "@platforms//cpu:x86_64",
+    ],
+}
+
+[
+    config_setting(
+        name = platform,
+        constraint_values = constraints,
+    )
+    for platform, constraints in PLATFORMS.items()
+]
+
+# The current platform's Chromium headless shell; defs.bzl says how a test
+# uses it. Elsewhere it is incompatible, so a test that needs it is skipped
+# rather than failed.
+playwright_browsers(
+    name = "chromium",
+    srcs = select(
+        {
+            ":" + platform: ["@tbhb_rules_playwright_chromium_headless_shell_{}//:browsers".format(platform)]
+            for platform in PLATFORMS
+        } | {"//conditions:default": []},
+    ),
+    target_compatible_with = select(
+        {":" + platform: [] for platform in PLATFORMS} | {"//conditions:default": ["@platforms//:incompatible"]},
+    ),
+    visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//private:browsers",
+        "//private:browsers_rule",
+    ],
+)
+
+# This module is released on its own (strip_prefix playwright/), so it carries
+# its own copies of the parent module's lint configs. Each copy must match the
+# parent's byte for byte; a change goes to both. .gitignore and .rylignore
+# are this module's own (.ryl.toml reads them).
+LINT_CONFIGS = [
+    ".editorconfig",
+    ".editorconfig-checker.json",
+    ".gitleaks.toml",
+    ".rumdl.toml",
+    ".ryl.toml",
+    "tombi.toml",
+]
+
+[
+    diff_test(
+        name = "config_matches_parent_" + config.lstrip(".").replace(".", "_").replace("-", "_"),
+        file1 = config,
+        file2 = "@tbhb_rules//:" + config,
+    )
+    for config in LINT_CONFIGS
+]
+
+# The parent module's whole-tree checks, over this module's files.
+gitleaks_test(
+    name = "gitleaks_test",
+    srcs = [":repo_files"],
+    config = ".gitleaks.toml",
+)
+
+ryl_test(
+    name = "ryl_test",
+    srcs = [":repo_files"],
+    config = ".ryl.toml",
+)
+
+tombi_test(
+    name = "tombi_test",
+    srcs = [":repo_files"],
+    config = "tombi.toml",
+)
+
+rumdl_test(
+    name = "rumdl_test",
+    srcs = [":repo_files"],
+    config = ".rumdl.toml",
+)
+
+editorconfig_checker_test(
+    name = "editorconfig_checker_test",
+    srcs = [":repo_files"],
+    config = ".editorconfig-checker.json",
+)
+
+# This module's own formatting: `bazel run //:format` rewrites the tree,
+# `//:format.check` and `format_test` check it, with the parent module's
+# formatters.
+FORMATTERS = [
+    "@tbhb_rules//format:buildifier",
+    "@tbhb_rules//format:rumdl",
+    "@tbhb_rules//format:ryl",
+    "@tbhb_rules//format:shfmt",
+]
+
+format(
+    name = "format",
+    formatters = FORMATTERS,
+)
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    formatters = FORMATTERS,
+)

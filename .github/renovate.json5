@@ -69,6 +69,19 @@
       ],
     },
     {
+      // tbhb_rules_playwright's browser archives come from Playwright's own
+      // CDN, which no Renovate datasource reads, and belong to one
+      // playwright-core release. Renovate moves playwright-core; the e2e
+      // smoke module's launch_test then fails until the pins match it.
+      description: "playwright-core bumps need the browser pins moved",
+      matchFileNames: ["playwright/**/package.json"],
+      matchPackageNames: ["playwright-core"],
+      groupName: "playwright",
+      prBodyNotes: [
+        "Move the pins in playwright/private/browsers.bzl to the new playwright-core's browsers.json on this branch: PLAYWRIGHT_VERSION, the chromium-headless-shell revision and browser version, and each archive's URL and sha256. Until then `launch_test` in playwright/e2e/smoke fails, as expected.",
+      ],
+    },
+    {
       // tbhb_rules_d2's PNG font. 2.045R-ro/1.095R-it is the last Source
       // Sans Pro release; later ones are Source Sans 3, another family name
       // and asset layout, and the bazel manager would misread the tag's
