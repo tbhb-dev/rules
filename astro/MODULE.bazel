@@ -54,6 +54,7 @@ use_repo(npm, "tbhb_rules_astro_npm")
 
 # Dev dependencies: this module's own tests.
 bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
+bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
 
 # The pnpm 12 pinned here, for maintainers regenerating the lock:
 # bazel run -- @pnpm//:pnpm --dir "$PWD" install --lockfile-only

@@ -38,6 +38,7 @@ npm.npm_translate_lock(
     data = [
         "//:package.json",
         "//:pnpm-workspace.yaml",
+        "//proof/no_astro:package.json",
     ],
     lifecycle_hooks = {"*": []},
     pnpm_lock = "//:pnpm-lock.yaml",

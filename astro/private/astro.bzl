@@ -24,13 +24,42 @@ _NOT_WINDOWS = select({
     "//conditions:default": [],
 })
 
+def node_modules_error(label):
+    """Why `label` can't be a rule's `node_modules`, or None when it can.
+
+    It must be the consumer's own `npm_link_all_packages` target, in the
+    main repository: the launcher finds that tree in the runfiles by its
+    package path.
+
+    Args:
+        label: A Label.
+
+    Returns:
+        An error message, or None.
+    """
+    if label.repo_name != "":
+        return "node_modules: {} is from repository @{}; pass the consumer's own npm_link_all_packages target".format(label, label.repo_name)
+    if label.name.split("/")[-1] != "node_modules":
+        return "node_modules: {} isn't an npm_link_all_packages target; pass the whole tree, such as //:node_modules".format(label)
+    return None
+
+def node_modules_path(label):
+    """The runfiles path of a valid `node_modules` label, relative to the main repository.
+
+    Args:
+        label: A Label that node_modules_error accepts.
+
+    Returns:
+        The path, such as `node_modules` or `site/node_modules`.
+    """
+    return label.package + "/" + label.name if label.package else label.name
+
 def _runfiles_path(label):
     label = native.package_relative_label(label)
-    if label.repo_name != "":
-        fail("node_modules: {} is from repository @{}; pass the consumer's own npm_link_all_packages target".format(label, label.repo_name))
-    if label.name.split("/")[-1] != "node_modules":
-        fail("node_modules: {} isn't an npm_link_all_packages target; pass the whole tree, such as //:node_modules".format(label))
-    return label.package + "/" + label.name if label.package else label.name
+    error = node_modules_error(label)
+    if error:
+        fail(error)
+    return node_modules_path(label)
 
 def astro_build(name, srcs, node_modules, **kwargs):
     """Builds a static Astro site with `astro build`.

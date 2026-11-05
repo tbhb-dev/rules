@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load(":node_modules_tests.bzl", "node_modules_test_suite")
+
+repo_files()
+
+node_modules_test_suite(name = "node_modules_tests")

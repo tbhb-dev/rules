@@ -12,6 +12,8 @@ importers:
         specifier: 7.4.5
         version: 7.4.5(yaml@2.9.1)
 
+  proof/no_astro: {}
+
 packages:
 
   '@astrojs/compiler-binding-android-arm64@0.5.2':

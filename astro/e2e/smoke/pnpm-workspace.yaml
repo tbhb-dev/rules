@@ -6,4 +6,7 @@
 # package.json, and rules_js reads this file too. allowBuilds is empty because
 # no lifecycle script may run.
 
+packages:
+  - proof/no_astro
+
 allowBuilds: {}

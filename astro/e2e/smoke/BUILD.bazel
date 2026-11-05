@@ -49,3 +49,19 @@ expect_failure_test(
     target_compatible_with = NOT_WINDOWS,
     test = ":proof_empty",
 )
+
+# A project whose package.json lacks astro: the launcher names the problem.
+astro_check_test(
+    name = "proof_no_astro",
+    srcs = ["//proof/no_astro:repo_files"],
+    node_modules = "//proof/no_astro:node_modules",
+    strip_prefix = "proof/no_astro",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_no_astro_fails",
+    pattern = "launch.mjs: astro isn't in the consumer's node_modules",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_no_astro",
+)
