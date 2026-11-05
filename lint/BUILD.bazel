@@ -3,6 +3,7 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("//lint/private:gitleaks_text.bzl", "gitleaks_text")
 load("//repo:defs.bzl", "repo_files")
 
 repo_files()
@@ -15,6 +16,14 @@ repo_files()
 bool_flag(
     name = "gitleaks_private_config",
     build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+# Scans stdin: `bazel run @tbhb_rules//lint:gitleaks_text < file`, from a
+# consumer's workspace, under its .gitleaks.toml. repo-checks.yml runs it on
+# a pull request's title and body.
+gitleaks_text(
+    name = "gitleaks_text",
     visibility = ["//visibility:public"],
 )
 

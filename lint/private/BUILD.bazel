@@ -10,6 +10,7 @@ repo_files()
 exports_files([
     "codeowners.sh",
     "gitleaks_history.sh.tpl",
+    "gitleaks_text.sh.tpl",
     "gitleaks_tool.sh.tpl",
     "shell_select.sh",
     "tree_check.sh.tpl",
@@ -63,6 +64,12 @@ bzl_library(
     srcs = ["gitleaks_history.bzl"],
     visibility = ["//lint:__subpackages__"],
     deps = ["@bazel_skylib//lib:shell"],
+)
+
+bzl_library(
+    name = "gitleaks_text",
+    srcs = ["gitleaks_text.bzl"],
+    visibility = ["//lint:__subpackages__"],
 )
 
 config_setting(
