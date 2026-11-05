@@ -11,7 +11,7 @@ Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned 
 | runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
 | testing | `@tbhb_rules//testing:defs.bzl` | `expect_failure_test` |
 
-Language and diagram rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/`, `tbhb_rules_python` in `python/`, `tbhb_rules_typescript` in `typescript/`, `tbhb_rules_cloudflare` in `cloudflare/`, which builds on the TypeScript module, `tbhb_rules_astro` in `astro/`, `tbhb_rules_playwright` in `playwright/`, which pins Playwright's browsers, `tbhb_rules_storybook` in `storybook/`, which builds, tests and serves Storybooks on those browsers, and `tbhb_rules_d2` in `diagrams/d2/`.
+Language and diagram rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/`, `tbhb_rules_python` in `python/`, `tbhb_rules_typescript` in `typescript/`, `tbhb_rules_cloudflare` in `cloudflare/`, which builds on the TypeScript module, `tbhb_rules_astro` in `astro/`, `tbhb_rules_playwright` in `playwright/`, which pins Playwright's browsers, `tbhb_rules_storybook` in `storybook/`, which builds, tests and serves Storybooks on those browsers, `tbhb_rules_ansible` in `ansible/`, which checks Ansible playbooks, roles and inventories, and `tbhb_rules_d2` in `diagrams/d2/`.
 
 The modules require Bazel 9 or newer (`bazel_compatibility = [">=9.0.0"]`), the only release line tbhb-dev repositories use.
 
@@ -115,6 +115,24 @@ d2_diagrams(name = "diagrams")
 
 By default `d2_diagrams` renders every `*.d2` file in the package and its subdirectories, and `srcs` narrows the set. List the files a diagram reads in `data`: imported `.d2` files (`...@shared`, `x: @x`) and local images, which d2 finds relative to the source. Renders run offline, so a remote image (`icon: https://...`) fails the render. Save the image beside the source and list it in `data` instead. The PNG step fails on any font family in the SVG that it has no font for. `bazel run //docs:diagrams` writes the renders beside their sources and deletes renders that have lost their source. `//docs:diagrams_test` fails when a render is missing, when a committed SVG differs from a fresh render, when a manifest doesn't hold the hashes of the committed files, or when a render has no source. The test doesn't draw the bitmap again, because its pixels can differ across platforms. The manifest vouches for it instead. `:diagrams.renders` builds the renders into the output tree. Keep the renders byte for byte in Git: mark `*.d2.svg` and `*.d2.sha256` `eol=lf` and `*.d2.png` `binary` in `.gitattributes`. Keep fixers away from them too: add `.*\.d2\.(svg|png|sha256)$` to the `exclude` of any pre-commit or prek config with whitespace, line-ending or byte-order-mark fixers. In `.editorconfig`, set `trim_trailing_whitespace = false` for `[*.d2.{svg,png,sha256}]`.
 
+### Ansible
+
+`tbhb_rules_ansible` checks Ansible content in the same scratch tree as the whole-tree checks, with ansible-core, ansible-lint and Molecule from a locked uv environment.
+
+```starlark
+ansible = use_extension("@tbhb_rules_ansible//:extensions.bzl", "ansible")
+ansible.toolchain(lock = "//ansible:uv.lock", pyproject = "//ansible:pyproject.toml")
+ansible.collections(lock = "//ansible:requirements.lock.json", requirements = "//ansible:requirements.yml")
+```
+
+Both tags are optional and only the root module may declare them. `toolchain` names a uv project in any package, whose `.python-version` picks the interpreter. Without it, the checks use the module's own pins in `ansible/tools/`: ansible-core 2.22.0, the first release that runs on Python 3.15. Every check also takes `python_env`, such as `@tbhb_python//:env` when the root uv project depends on ansible-core.
+
+`ansible_syntax_check_test` lists the inventory with `ansible-inventory --list` and runs `ansible-playbook --syntax-check` on each playbook. `ansible_lint_test` runs ansible-lint with `--offline`. Its default config is the production profile plus the opt-in rules, named one by one in `ansible/private/ansible-lint.yml`. An `.ansible-lint` in `srcs`, or `config`, replaces it entirely, and the test log says which config ran. Both tests set `ANSIBLE_CONFIG` to the tree's `ansible.cfg`, put only the pinned collections on `ANSIBLE_COLLECTIONS_PATH`, which overrides any `collections_path` in the config, and keep the Ansible home and temporary directories under `TEST_TMPDIR`. They run on Linux and macOS. ansible-core doesn't run on Windows, so the tests are incompatible there.
+
+`requirements.yml` pins each Galaxy collection with `name`, one exact `version`, and `source: https://galaxy.ansible.com`, and lists every transitive dependency. A range is an error. `bazelisk run @tbhb_rules_ansible//:lock` writes `requirements.lock.json` beside it with each collection's URL and sha256, read from Galaxy's metadata. It never downloads a tarball. The extension fetches each tarball by that sha256 and fails on any dependency in a collection's `MANIFEST.json` that the file doesn't pin. `ansible_collections_lock_test` fails when the two files disagree.
+
+`molecule_test` runs `molecule test` on a role. It needs Docker and the network, so it's tagged `manual` and runs only when named. Its docstring has the details. `ansible/e2e/` is a consumer with both kinds of environment and the failure proofs.
+
 ### Windows
 
 The rules' executables are Bash scripts. On Windows each runs through a `.bat` launcher with the Bash of the shell `toolchain`, so set `BAZEL_SH` to an MSYS2 or Git for Windows `bash.exe`. The scripts read their files from the `runfiles` tree, so add `startup --windows_enable_symlinks` and `common:windows --enable_runfiles` (with `common --enable_platform_specific_config`) to your `.bazelrc`, and turn on Developer Mode so Bazel can create the symlinks.
@@ -128,7 +146,7 @@ mise provides bazelisk, and uv for the interim pull request scripts (`mise insta
 | `bazelisk test //...` | buildifier, this repository's lint, shell and Python gates (in `tools/`), run on its own rules |
 | `(cd e2e/smoke && bazelisk test //...)` | the rules as a consumer sees them, including the failure proofs |
 | `bazelisk run //:format` | rewrites files with the formatters, and `//:format.check` only checks |
-| `(cd go && bazelisk test //...)`, `(cd python && bazelisk test //...)`, `(cd diagrams/d2 && bazelisk test //...)` | the nested modules, each with its own consumers under `e2e/` |
+| `(cd go && bazelisk test //...)`, `(cd python && bazelisk test //...)`, `(cd ansible && bazelisk test //...)`, `(cd diagrams/d2 && bazelisk test //...)` | the nested modules, each with its own consumers under `e2e/` |
 | `mise run test` | every command in this table except the format runs |
 
 `.github/workflows/ci.yml` lists the complete gate set.
