@@ -77,6 +77,7 @@ importpath
 inconshreveable
 junitxml
 keepends
+ldconfig
 libexec
 listy
 LLMX
@@ -140,6 +141,7 @@ rollup
 rumdl
 runfile
 runfiles
+rustc
 rustup
 rylignore
 sandboxed
