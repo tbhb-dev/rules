@@ -17,11 +17,21 @@ visibility("//lint/...")
 def _config_args(config, flag):
     return [flag, "{config}"] if config else []
 
-def gitleaks_test(name, srcs, config = None, tool = Label("@tbhb_rules_gitleaks//:gitleaks"), **kwargs):
+# With //lint:gitleaks_private_config, gitleaks_test reads the private
+# config from the environment. It goes into the test's action key, so a
+# changed config reruns the test, and stays out of remote caches.
+_PRIVATE = Label("//lint/private:gitleaks_private_required")
+
+def gitleaks_test(name, srcs, config = None, tool = Label("//lint/private:gitleaks"), **kwargs):
     """Scans the files in `srcs` for secrets with `gitleaks dir`.
 
     This checks the working tree only. Git history needs `.git`, which a
     sandboxed test cannot see; scan it outside the test graph.
+
+    With `--//lint:gitleaks_private_config`, the default tool requires the
+    private config in `GITLEAKS_CONFIG_TOML`, which extends `config`; see
+    `//lint/private:gitleaks_tool.bzl`. `config` must then be the root
+    `.gitleaks.toml`.
 
     Args:
         name: Target name.
@@ -34,6 +44,14 @@ def gitleaks_test(name, srcs, config = None, tool = Label("@tbhb_rules_gitleaks/
         name = name,
         srcs = srcs,
         config = config,
+        env_inherit = select({
+            _PRIVATE: ["GITLEAKS_CONFIG_TOML"],
+            "//conditions:default": [],
+        }),
+        execution_requirements = select({
+            _PRIVATE: {"no-remote-cache": "1"},
+            "//conditions:default": {},
+        }),
         tool = tool,
         tool_args = ["dir", "--no-banner", "--redact", "--verbose"] + _config_args(config, "--config") + ["."],
         # gitleaks reports how much it read; zero bytes means it saw nothing.

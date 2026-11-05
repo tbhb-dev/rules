@@ -100,6 +100,10 @@ jobs:
           cache-save: ${{ github.event_name != 'pull_request' }}
 
       - name: Test
+        # Only for a repository that sets the private gitleaks config; see
+        # the following section.
+        env:
+          GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
         run: bazelisk test --config=ci //...
 
   repo:
@@ -110,6 +114,8 @@ jobs:
     with:
       gazelle-dirs: .
       module-dirs: .
+    secrets:
+      GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
 
   conclusion:
     name: conclusion
@@ -123,6 +129,10 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
 ```
+
+### The private gitleaks config
+
+A repository whose `.bazelrc` sets `common --@tbhb_rules//lint:gitleaks_private_config` runs `gitleaks_test` and `gitleaks_history` with a private config from the `GITLEAKS_CONFIG_TOML` environment variable. The config begins with `[extend] path = ".gitleaks.toml"` and defines a rule with the id `tbhb-private-canary`. Both checks fail without it. In CI the variable comes from a secret, which the test step sets and the `repo` job passes on to `repo-checks.yml`. A composite action can't read secrets, so `setup-bazel-ci` never sees it. Repositories without the flag leave both lines out.
 
 The consumer's `conclusion` job skips `checkout`: the runner fetches a remote action itself. This repository's own `ci.yml` uses the same jobs with local paths, `./.github/actions/...` after `checkout` and `./.github/workflows/repo-checks.yml`, since a change can't pin its own commit.
 
