@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# A consumer config that replaces the default: with the min profile, the
+# planted no-changed-when finding is not reported.
+profile: min
+offline: true

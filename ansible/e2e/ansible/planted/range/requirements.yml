@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# A range rather than one exact version.
+collections:
+  - name: ansible.posix
+    version: ">=2.0.0"
+    source: https://galaxy.ansible.com

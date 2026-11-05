@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# Run only by :molecule_test, which is manual: it needs a Docker daemon that
+# can run privileged containers (sysctl writes the kernel's settings).
+dependency:
+  # The collections are the pinned ones the check puts on the path;
+  # nothing is installed at test time.
+  name: galaxy
+  enabled: false
+driver:
+  name: docker
+platforms:
+  - name: instance
+    image: docker.io/library/debian:trixie
+    pre_build_image: false
+    privileged: true
+provisioner:
+  name: ansible

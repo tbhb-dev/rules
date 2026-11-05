@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# A consumer's own Ansible project, in a package other than the root, which
+# MODULE.bazel selects with ansible.toolchain. ansible-core 2.21 does not
+# import on Python 3.15, so .python-version here pins 3.14.
+[project]
+name = "tbhb-rules-ansible-e2e"
+version = "0"
+description = "The e2e consumer's Ansible tools"
+requires-python = ">=3.14"
+dependencies = [
+  "ansible-core==2.21.6",
+  "ansible-lint==26.11.0",
+  "molecule==26.11.0",
+  "molecule-plugins[docker]==26.11.0",
+]
+
+[tool.uv]
+package = false
+required-version = "==0.13.6"

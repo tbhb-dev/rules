@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# A play keyword that does not exist.
+- name: Configure the web servers
+  hosts: web
+  rolez:
+    - role: web

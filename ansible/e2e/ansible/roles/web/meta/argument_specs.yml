@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+argument_specs:
+  main:
+    short_description: Tune a web server's kernel.
+    options:
+      web_somaxconn:
+        type: int
+        default: 1024
+        description: The listen backlog, net.core.somaxconn.

@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# example.planted exists only under .collections, the collections_path
+# ansible.cfg sets, which the checks override.
+- name: Ping through a collection the checks must not see
+  hosts: web
+  tasks:
+    - name: Ping
+      example.planted.ping:

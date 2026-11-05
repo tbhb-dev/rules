@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules_ansible the way a repository with an Ansible tree does.
+
+The Ansible project lives in the `ansible` package, not the root: its own uv
+project (pyproject.toml, uv.lock, .python-version) is the toolchain, and its
+requirements.yml and requirements.lock.json pin the collections. The checks
+run on that toolchain and on the rules' own pins, and proofs show that each
+fails on a planted defect.
+"""
+
+module(name = "tbhb_rules_ansible_e2e")
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../..",
+)
+
+bazel_dep(name = "tbhb_rules_ansible")
+local_path_override(
+    module_name = "tbhb_rules_ansible",
+    path = "..",
+)
+
+# tbhb_rules_ansible depends on tbhb_rules_python, which only the root
+# module can point at the sibling directory.
+local_path_override(
+    module_name = "tbhb_rules_python",
+    path = "../../python",
+)
+
+ansible = use_extension("@tbhb_rules_ansible//:extensions.bzl", "ansible")
+ansible.toolchain(
+    lock = "//ansible:uv.lock",
+    pyproject = "//ansible:pyproject.toml",
+)
+ansible.collections(
+    lock = "//ansible:requirements.lock.json",
+    requirements = "//ansible:requirements.yml",
+)

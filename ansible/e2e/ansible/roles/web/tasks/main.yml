@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# A module from the pinned ansible.posix, which only resolves through the
+# collections path the checks set.
+- name: Raise the listen backlog
+  ansible.posix.sysctl:
+    name: net.core.somaxconn
+    value: "{{ web_somaxconn }}"
+    state: present
