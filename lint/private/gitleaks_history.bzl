@@ -39,8 +39,9 @@ scans no commits although the history holds content (gitleaks exits 0 when
 its own git invocation fails), and, under
 `--//lint:gitleaks_private_config`, without the private config in
 `GITLEAKS_CONFIG_TOML`. A shallow clone scans only the commits it
-has, so CI should fetch the full history. The working tree is
-`gitleaks_test`'s job.""",
+has, so CI should fetch the full history. It scans every ref unless given
+`--log-opts`: `bazel run <target> -- --log-opts=HEAD` scans only the
+checked-out branch. The working tree is `gitleaks_test`'s job.""",
     attrs = SHELL_ATTRS | {
         "config": attr.label(
             allow_single_file = True,

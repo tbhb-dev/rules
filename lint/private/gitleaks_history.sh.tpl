@@ -5,6 +5,8 @@
 # Scans the workspace's git history with gitleaks. Generated from
 # gitleaks_history.sh.tpl; the @@NAME@@ markers are filled in at analysis
 # time. Run with `bazel run`. A shallow clone scans only the commits it has.
+# Arguments go to `gitleaks git` before the path, so `--log-opts=HEAD` limits
+# the scan to the checked-out branch; without it gitleaks scans every ref.
 
 set -euo pipefail
 
@@ -34,7 +36,7 @@ history=$(mktemp)
 trap 'rm -f "$log" "$history"' EXIT
 # To a file, not a pipe, so gitleaks' own exit status survives.
 status=0
-"$tool" "${args[@]}" . >"$log" 2>&1 || status=$?
+"$tool" "${args[@]}" "$@" . >"$log" 2>&1 || status=$?
 cat "$log"
 if ((status != 0)); then
   exit "$status"

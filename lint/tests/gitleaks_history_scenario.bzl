@@ -3,6 +3,7 @@
 
 """Runs a `gitleaks_history` target against a throwaway repository."""
 
+load("@bazel_skylib//lib:shell.bzl", "shell")
 load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "path_dir", "shell_executable")
 
 _DRIVER = """#!/usr/bin/env bash
@@ -27,6 +28,16 @@ case {scenario} in
     printf 'aws_access_key_id = %s%s\\n' AKIA Z7Q3XK2M5TNB4VWR >"$repo/creds.txt"
     commit secret
     ;;
+  other_branch)
+    # The checked-out branch is clean; another branch holds the key, as an
+    # open pull request's ref does in a full-depth CI checkout.
+    echo hello >"$repo/a.txt"
+    commit clean
+    git -C "$repo" checkout -q -b other
+    printf 'aws_access_key_id = %s%s\\n' AKIA Z7Q3XK2M5TNB4VWR >"$repo/creds.txt"
+    commit secret
+    git -C "$repo" checkout -q -
+    ;;
   no_commits) ;;
   no_content) commit empty ;;
   corrupt)
@@ -36,7 +47,7 @@ case {scenario} in
     rm -f "$repo/.git/objects/${{blob:0:2}}/${{blob:2}}"
     ;;
 esac
-BUILD_WORKSPACE_DIRECTORY="$repo" "$PWD/{subject}"
+BUILD_WORKSPACE_DIRECTORY="$repo" "$PWD/{subject}" {args}
 """
 
 def _gitleaks_history_scenario_test_impl(ctx):
@@ -44,6 +55,7 @@ def _gitleaks_history_scenario_test_impl(ctx):
     ctx.actions.write(
         output = driver,
         content = _DRIVER.format(
+            args = " ".join([shell.quote(arg) for arg in ctx.attr.subject_args]),
             git_dir = path_dir(ctx.attr.git),
             scenario = ctx.attr.scenario,
             subject = ctx.executable.subject.short_path,
@@ -62,7 +74,8 @@ gitleaks_history_scenario_test = rule(
     toolchains = SHELL_TOOLCHAINS,
     attrs = SHELL_ATTRS | {
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["clean", "corrupt", "no_commits", "no_content", "secret"]),
+        "scenario": attr.string(mandatory = True, values = ["clean", "corrupt", "no_commits", "no_content", "other_branch", "secret"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
+        "subject_args": attr.string_list(doc = "Arguments passed to the subject."),
     },
 )

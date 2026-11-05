@@ -66,7 +66,7 @@ Notes on individual tools:
 - `tombi_test` creates `<name>.format` and `<name>.lint`, with a `<name>` suite. tombi runs offline, and some of its embedded schemas refer to others by URL. Pass pinned copies in `schemas = {url: label}`, such as an `http_file` with a `sha256`. Otherwise those references become warnings, which fail the lint.
 - `actionlint_test` puts the pinned shellcheck on PATH, so the `run:` block checks can't silently vanish.
 - `zizmor_test` runs the offline audits only. The online audits need the network and a token, so they belong outside the test graph.
-- `gitleaks_test` scans the working tree. `gitleaks_history` scans the Git history, with `bazel run` (in CI, after a full-depth checkout). It fails when gitleaks walks no commits of a history with content, which gitleaks itself reports as success.
+- `gitleaks_test` scans the working tree. `gitleaks_history` scans the Git history of every branch, with `bazel run` (in CI, after a full-depth checkout). `bazel run //:gitleaks_history -- --log-opts=HEAD` scans only the checked-out branch. It fails when gitleaks walks no commits of a history with content, which gitleaks itself reports as success.
 
 ### Failure proofs
 

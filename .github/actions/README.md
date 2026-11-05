@@ -54,6 +54,8 @@ The `repo` job clones the full history and makes these checks in order. An empty
 7. zizmor, with the online audits, and the pedantic persona.
 8. The CODEOWNERS owner and syntax check through the GitHub API, with `curl` and `jq`.
 
+On a pull request the history scan covers only the tested commit's history, so a finding on another open pull request's branch, which the full clone also holds, fails only that pull request. Pushes scan every branch.
+
 | Input                           | Default             | Meaning                                                            |
 |---------------------------------|---------------------|--------------------------------------------------------------------|
 | `runs-on`                       | `ubuntu-26.04`      | The runner label.                                                  |
