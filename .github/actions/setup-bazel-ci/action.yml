@@ -25,12 +25,6 @@ inputs:
       pull_request (see the README).
     required: false
     default: "false"
-  rust-version:
-    description: >-
-      The Rust toolchain installed on Linux arm64 runners, for complexipy's
-      source build. Other runners ignore it.
-    required: false
-    default: 1.99.1
   targets:
     description: >-
       The Bazel targets to fetch, retrying transient failures, split on
@@ -115,18 +109,53 @@ runs:
         fi
 
     # complexipy publishes no Python 3.15 wheel for Linux arm64, so uv builds
-    # it from source there with maturin, which needs a Rust toolchain. The
-    # runner has rustup but no default toolchain. tbhb_rules' python_env_repo
-    # passes RUSTUP_HOME and CARGO_HOME through to uv, so nothing else is
-    # needed. Drop this step once a cp315 manylinux aarch64 wheel exists.
+    # it from source there with maturin, which needs Rust and a C compiler. A
+    # runner image may have neither, so the step brings both: Rust's
+    # standalone component archives and zig, each checked against a pinned
+    # sha256, with zig serving as cc, c++ and ar. Python unpacks zig's .tar.xz
+    # because an image may lack xz. cc-rs passes Rust's target triple, which
+    # zig can't parse, and rustc passes aarch64's -Wl,--fix-cortex-a53-843419,
+    # which zig's linker rejects; the shims drop both and build for the host,
+    # the only target here. tbhb_rules' python_env_repo hands PATH to uv, so nothing
+    # else is needed. Drop this step once a cp315 manylinux aarch64 wheel
+    # exists.
     - name: Set up Rust for complexipy's source build
       if: runner.os == 'Linux' && runner.arch == 'ARM64'
       shell: bash
       env:
-        RUST_VERSION: ${{ inputs.rust-version }}
-      run: |
-        rustup toolchain install "${RUST_VERSION}" --profile minimal
-        rustup default "${RUST_VERSION}"
+        RUST_VERSION: 1.99.1
+        SHA256_RUSTC: e4656174f0ba5ea3dab5f58d069b7afae6d7616187de31c65cb6432e4f941399
+        SHA256_CARGO: 201dbeac1795713b98aeae044e01695e70ae2ea3ded42683ebce5a8a1c90f8a6
+        SHA256_RUST_STD: 32d1ddb44cd49d6497ab6a24f440d4286a20b2667fdf928b876f59c66d13d722
+        ZIG_VERSION: 0.17.1
+        SHA256_ZIG: a1546d5646eb184437918d6635ca6b762a0e889eac09cef720ee7a1ed3fe7795
+      run: |  # zizmor: ignore[github-env]
+        root="${RUNNER_TEMP}/rust-toolchain"
+        mkdir -p "${root}/dl" "${root}/rust" "${root}/zig" "${root}/cc"
+        fetch() {
+          curl -fsSL --retry 3 -o "${root}/dl/$3" "$1"
+          echo "$2  ${root}/dl/$3" | sha256sum -c --quiet -
+        }
+        for component in rustc:"${SHA256_RUSTC}" cargo:"${SHA256_CARGO}" rust-std:"${SHA256_RUST_STD}"; do
+          name="${component%%:*}-${RUST_VERSION}-aarch64-unknown-linux-gnu"
+          fetch "https://static.rust-lang.org/dist/${name}.tar.gz" "${component#*:}" "${name}.tar.gz"
+          tar -xzf "${root}/dl/${name}.tar.gz" -C "${root}/dl"
+          bash "${root}/dl/${name}/install.sh" --prefix="${root}/rust" --disable-ldconfig >/dev/null
+          rm -rf "${root}/dl/${name}" "${root}/dl/${name}.tar.gz"
+        done
+        zig_name="zig-aarch64-linux-${ZIG_VERSION}"
+        fetch "https://ziglang.org/download/${ZIG_VERSION}/${zig_name}.tar.xz" "${SHA256_ZIG}" "${zig_name}.tar.xz"
+        python3 -c 'import sys, tarfile; tarfile.open(sys.argv[1], "r:xz").extractall(sys.argv[2], filter="data")' \
+          "${root}/dl/${zig_name}.tar.xz" "${root}/zig"
+        rm -f "${root}/dl/${zig_name}.tar.xz"
+        for tool in cc c++ ar; do
+          printf '%s\n' '#!/usr/bin/env bash' 'args=()' 'for arg in "$@"; do' \
+            '  case "${arg}" in --target=* | -Wl,--fix-cortex-a53-843419) ;; *) args+=("${arg}") ;; esac' 'done' \
+            "exec '${root}/zig/${zig_name}/zig' ${tool} \"\${args[@]}\"" >"${root}/cc/${tool}"
+          chmod +x "${root}/cc/${tool}"
+        done
+        echo "${root}/rust/bin" >>"${GITHUB_PATH}"
+        echo "${root}/cc" >>"${GITHUB_PATH}"
 
     # Some runfiles paths pass Windows' 260-character limit under the
     # default output root in the runner's profile. The user bazelrc reaches
