@@ -16,7 +16,7 @@ Run it after `checkout`. It runs these steps in order:
 2. Point `BAZEL_SH` at MSYS2's Bash, on Windows only, and fail when it's missing from `C:/msys64`.
 3. On Linux under a container CPU quota, export the quota as `PYTEST_XDIST_AUTO_NUM_WORKERS`, so `-n auto` in a `pytest_test` starts one worker per CPU the container may use.
 4. Set up Bazel with `bazel-contrib/setup-bazel` and turn on the bazelisk cache plus the repository cache.
-5. On Linux arm64, put a pinned Rust toolchain and zig, which stands in for `cc`, `c++` and `ar`, on `PATH` for the source build of complexipy. Both downloads are checked against pinned hashes, so the runner image needs neither.
+5. On Linux arm64, download a pinned Rust toolchain and zig, check both against pinned hashes, and put them on `PATH` for the source build of complexipy, with `cc`, `c++` and `ar` running zig. A runner image without Rust or a C compiler works too.
 6. Shorten Bazel's output root and enable long paths, on Windows only.
 7. Fetch the targets, retrying up to three times a minute apart.
 
