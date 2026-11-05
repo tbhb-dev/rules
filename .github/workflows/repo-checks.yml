@@ -118,10 +118,12 @@ jobs:
           if ! command -v bazelisk >/dev/null 2>&1; then
             bazel="$(command -v bazel)"
             dir="$(dirname "${bazel}")"
-            case "${bazel}" in
-              *.exe) cp "${bazel}" "${dir}/bazelisk.exe" ;;
-              *) ln -s "${bazel}" "${dir}/bazelisk" ;;
-            esac
+            # Git Bash prints the Windows path without .exe.
+            if [ -f "${dir}/bazel.exe" ]; then
+              cp "${dir}/bazel.exe" "${dir}/bazelisk.exe"
+            else
+              ln -s "${bazel}" "${dir}/bazelisk"
+            fi
           fi
 
       # The Go workspaces' BUILD files, as gazelle would write them.
