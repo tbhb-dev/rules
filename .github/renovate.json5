@@ -24,6 +24,13 @@
   // .bazelversion as one group.
   packageRules: [
     {
+      // The govulncheck smoke test needs a module with known
+      // vulnerabilities to find, so its golang.org/x/text pin stays put.
+      description: "The govulncheck smoke fixture keeps its vulnerable pin",
+      matchFileNames: ["go/e2e/smoke/govulncheck/go.mod"],
+      enabled: false,
+    },
+    {
       description: "typescript-eslint 8 supports TypeScript below 6.1 (peer >=4.8.4 <6.1.0)",
       matchFileNames: ["typescript/**/package.json"],
       matchPackageNames: ["typescript"],
