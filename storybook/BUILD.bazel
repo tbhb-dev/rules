@@ -28,6 +28,12 @@ repo_files(
 # The pinned toolchain (package.json, pnpm-lock.yaml). To move a pin, edit
 # package.json, then regenerate the lock with the pnpm 12 that MODULE.bazel pins:
 #   bazel run -- @pnpm//:pnpm --dir "$PWD" install --lockfile-only
+# pnpm-workspace.yaml's override lifts glob, under @storybook/react-vite's
+# @joshwooding/vite-plugin-react-docgen-typescript, to 14, the only line
+# with the fix for GHSA-3g3m-2fjr-6pw4, past the plugin's ^13; glob 14 brings
+# minimatch 11, with the fix for GHSA-g3hv-75wg-m249. The react smoke
+# Storybook's docgen runs on them. Drop it once the plugin's range reaches
+# glob 14.0.2.
 # CI audits this lock with tbhb_rules_typescript's pnpm_audit, from
 # typescript/:
 #   bazel run //:pnpm_audit -- --dir "$PWD/../storybook"

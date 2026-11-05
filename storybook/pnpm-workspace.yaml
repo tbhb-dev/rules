@@ -11,5 +11,8 @@
 # from the consumer's tree, so this lock carries no copy of its own that
 # could load beside the consumer's.
 
+overrides:
+  glob@<14.0.2: 14.0.3
+
 allowBuilds: {}
 autoInstallPeers: false
