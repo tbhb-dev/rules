@@ -271,7 +271,9 @@ def load_stats(path: Path) -> dict[str, object] | None:
     """Read the cicd stats, or None when there are none to read."""
     try:
         data = json.loads(path.read_text())
-    except OSError, ValueError:
+    # This file runs in the consumer's interpreter, and Python before 3.14
+    # requires the parentheses that ruff's 3.15 target strips.
+    except (OSError, ValueError):  # fmt: skip
         return None
     return data if isinstance(data, dict) else None
 
