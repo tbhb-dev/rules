@@ -103,6 +103,9 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
         with:
+          # Self-hosted runners have no bazelisk; with a version set, the
+          # action downloads it when it's missing.
+          bazelisk-version: 1.30.0
           bazelisk-cache: true
           repository-cache: true
           cache-save: false
@@ -186,15 +189,18 @@ jobs:
           --persona pedantic --no-progress "${GITHUB_WORKSPACE}/.github"
 
       # //:codeowners_test checks that every pattern matches a path; owner
-      # and syntax validation needs GitHub's API.
+      # and syntax validation needs GitHub's API. Self-hosted runners may
+      # lack gh, so the call uses curl.
       - name: Check CODEOWNERS owners and syntax
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          errors="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/codeowners/errors?ref=${HEAD_SHA}" \
-            --jq '.errors')"
+          response="$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/codeowners/errors?ref=${HEAD_SHA}")"
+          errors="$(printf '%s' "${response}" | jq '.errors')"
           count="$(printf '%s' "${errors}" | jq 'length')"
           if [ "${count}" -ne 0 ]; then
             echo "::error::CODEOWNERS has ${count} owner or syntax error(s):"

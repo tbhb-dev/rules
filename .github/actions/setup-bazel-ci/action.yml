@@ -63,6 +63,9 @@ runs:
     - name: Set up Bazel
       uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
       with:
+        # Self-hosted runners have no bazelisk; with a version set, the
+        # action downloads it when it's missing.
+        bazelisk-version: 1.30.0
         bazelisk-cache: true
         disk-cache: ${{ inputs.disk-cache }}
         repository-cache: true

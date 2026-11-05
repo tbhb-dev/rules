@@ -52,7 +52,7 @@ The `repo` job clones the full history and makes these checks in order. An empty
 5. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
 6. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
 7. zizmor, with the online audits, and the pedantic persona.
-8. The CODEOWNERS owner and syntax check through the GitHub API.
+8. The CODEOWNERS owner and syntax check through the GitHub API, with `curl` and `jq`.
 
 | Input                           | Default             | Meaning                                                            |
 |---------------------------------|---------------------|--------------------------------------------------------------------|
