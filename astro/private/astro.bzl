@@ -19,8 +19,10 @@ _ENV = {
 
 # Not yet proved on Windows: the targets are incompatible there, so `bazel
 # test //...` skips them.
+# Label() resolves @platforms in this module, so a consumer needs no
+# platforms dependency of its own.
 _NOT_WINDOWS = select({
-    "@platforms//os:windows": ["@platforms//:incompatible"],
+    Label("@platforms//os:windows"): [Label("@platforms//:incompatible")],
     "//conditions:default": [],
 })
 
