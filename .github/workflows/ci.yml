@@ -183,6 +183,37 @@ jobs:
       pnpm-audit-dirs: typescript cloudflare
       pnpm-audit-workspace: typescript
 
+  # Consumers run the composite actions as `tbhb-dev/rules/...@<sha>`, which
+  # GitHub fetches from the source archive, so an `export-ignore` that drops
+  # one breaks every consumer while this repository's local-path uses pass.
+  # `uses:` can't take an expression, so this checks the archive itself.
+  archive:
+    name: archive
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fail if the source archive lacks an action
+        run: |
+          archived=$(git archive --format=tar HEAD | tar -t)
+          status=0
+          for action in .github/actions/*/action.yml; do
+            if ! grep -qxF "$action" <<<"$archived"; then
+              echo "::error file=$action::the source archive leaves out $action"
+              status=1
+            fi
+          done
+          exit "$status"
+
   # One stable required check for branch protection. The job stays here, by
   # that name, so the ruleset's required context does not change; the action
   # holds the logic. `if: always()` runs it even when a needed job failed. It
@@ -191,7 +222,7 @@ jobs:
   conclusion:
     name: conclusion
     if: always()
-    needs: [plan, bazel, repo]
+    needs: [plan, bazel, repo, archive]
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:

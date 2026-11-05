@@ -15,6 +15,11 @@ load(":go_unit.bzl", "GO_TOOLCHAIN", "UNIT_ATTRS", "go_unit", "sdk_files", "tool
 # Internal: consumers load //:defs.bzl.
 visibility(["//", "//private/...", "//tests/..."])
 
+# gomutants' 2s floor on the per-mutant timeout is too short for packages
+# whose tests start slowly, and a mutant's run can stop at the first failing
+# test. The flags attribute follows these, so a consumer's value wins.
+_DEFAULT_FLAGS = ["--timeout-min=20s", "--test-flags=-failfast"]
+
 def _gomutants_report_impl(ctx):
     unit = go_unit(ctx, "mutated")
     files = unit.files
@@ -36,6 +41,7 @@ def _gomutants_report_impl(ctx):
     if ctx.attr.cpus:
         args.add("-workers", str(ctx.attr.cpus))
     args.add("--")
+    args.add_all(_DEFAULT_FLAGS)
     args.add_all(ctx.attr.flags)
     ctx.actions.run(
         executable = ctx.executable._runner,
@@ -80,7 +86,7 @@ the unit. Writes `<name>.txt` (MutationReportInfo), gomutants' log and the
 slice (the `changes` output group).""",
     attrs = MUTATION_CHANGES_ATTRS | UNIT_ATTRS | {
         "cpus": attr.int(doc = "CPUs to reserve for the action (`cpu:N`) and gomutants workers to run; 0 for the defaults."),
-        "flags": attr.string_list(doc = "More gomutants flags, such as `--timeout-coefficient=20`."),
+        "flags": attr.string_list(doc = "More gomutants flags, such as `--timeout-coefficient=20`. They follow the defaults, so a later `--timeout-min` wins and `--test-flags=-failfast=false` turns fail-fast off."),
         "_gomutants": attr.label(
             default = Label("@tbhb_rules_gomutants//:gomutants"),
             executable = True,
@@ -116,7 +122,8 @@ def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], 
         proxy: A go_mod_proxy repository's `:proxy` target made from go.sum,
             when the module has requirements.
         data: Other files the tests read, in the module directory.
-        flags: More gomutants flags.
+        flags: More gomutants flags, after the defaults
+            `--timeout-min=20s --test-flags=-failfast`.
         cpus: CPUs to reserve per unit, and gomutants workers to run.
         changes: The change set; quality's `changes` flag when None.
         require_scope: `full` makes the gate fail on any diff-scope report,
