@@ -67,6 +67,25 @@ runs:
         fi
         echo 'BAZEL_SH=C:/msys64/usr/bin/bash.exe' >>"$GITHUB_ENV"
 
+    # nproc and Python's os.cpu_count() count the host's CPUs, not a
+    # container's CPU quota, so pytest-xdist's `-n auto` would start a worker
+    # per host CPU. Bazel already honors the quota. pytest_test passes this
+    # variable through, and xdist uses it for `-n auto`. A runner with no
+    # quota (cgroup v1, or cpu.max of "max") is left alone.
+    - name: Size test workers to the CPU quota
+      if: runner.os == 'Linux'
+      shell: bash
+      # The value written is an integer from shell arithmetic on a kernel
+      # file, so the write can't carry anything else.
+      run: |  # zizmor: ignore[github-env]
+        [ -r /sys/fs/cgroup/cpu.max ] || exit 0
+        read -r quota period </sys/fs/cgroup/cpu.max
+        [ "${quota}" != max ] || exit 0
+        workers=$(( (quota + period - 1) / period ))
+        [ "${workers}" -ge 1 ] || workers=1
+        [ "${workers}" -lt "$(nproc)" ] || exit 0
+        echo "PYTEST_XDIST_AUTO_NUM_WORKERS=${workers}" >>"$GITHUB_ENV"
+
     - name: Set up Bazel
       uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
       with:

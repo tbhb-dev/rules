@@ -211,7 +211,9 @@ def pytest_test(
 
     Coverage is measured in the test with pytest-cov, which the environment
     must provide, and the floor is 100% branch coverage (branches and
-    lines). Consumers don't configure the floor. A test must say what to
+    lines). Consumers don't configure the floor. The test inherits
+    PYTEST_XDIST_AUTO_NUM_WORKERS, the worker count pytest-xdist's `-n auto`
+    uses when it's set. A test must say what to
     measure: with no `coverage`, the target fails at analysis time, naming
     this argument.
 
@@ -245,6 +247,14 @@ def pytest_test(
             "--cov-fail-under=100",
         ]
     pytest_args = ["-p", "no:cacheprovider", "--junitxml={env:XML_OUTPUT_FILE}"] + cov_args + args
+
+    # pytest-xdist's `-n auto` counts the host's CPUs, not a container's CPU
+    # quota; setup-bazel-ci exports the quota as this variable, which xdist
+    # reads in place of the count.
+    env_inherit = kwargs.pop("env_inherit", [])
+    if "PYTEST_XDIST_AUTO_NUM_WORKERS" not in env_inherit:
+        env_inherit = env_inherit + ["PYTEST_XDIST_AUTO_NUM_WORKERS"]
+    kwargs["env_inherit"] = env_inherit
     if not vale_packages:
         _check(name, srcs, "pytest", pytest_args, select = False, chdir = chdir, python_env = python_env, **kwargs)
         return
