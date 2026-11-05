@@ -50,12 +50,19 @@ astro_dev(
     node_modules = "//:node_modules",
 )
 
-# The dev server starts on a free port, serves the base path, and exits 0 on
+# The dev server's refusals, then the server: it replaces a dangling
+# node_modules link, serves the base path on a free port, and exits 0 on
 # SIGTERM.
 js_test(
     name = "dev_test",
-    args = ["$(rootpath :dev)"] + ["$(rootpath {})".format(f) for f in SITE],
-    data = [":dev"] + SITE,
+    args = [
+        "$(rootpath :dev)",
+        "$(rootpath @tbhb_rules_astro//:astro)",
+    ] + ["$(rootpath {})".format(f) for f in SITE],
+    data = [
+        ":dev",
+        "@tbhb_rules_astro//:astro",
+    ] + SITE,
     entry_point = "dev_test.mjs",
     target_compatible_with = NOT_WINDOWS,
 )

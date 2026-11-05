@@ -23,11 +23,13 @@
 
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   realpathSync,
   symlinkSync,
+  unlinkSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -131,7 +133,8 @@ function astroDir() {
   }
 }
 
-function astroBin() {
+// The consumer's astro package directory, or an error and exit 1.
+function requireAstro() {
   const dir = astroDir();
   if (dir === null) {
     console.error(
@@ -140,19 +143,34 @@ function astroBin() {
     );
     process.exit(1);
   }
-  return join(realpathSync(dir), "bin", "astro.mjs");
+  return realpathSync(dir);
 }
 
 // The consumer's node_modules for `dev`: the npm_link_all_packages tree in
 // the runfiles, linked into the workspace where Node finds it, beside the
-// package that declared it, unless the workspace already has one there (a
-// local `pnpm install`, or a link from an earlier run).
+// package that declared it. A real directory there (a local `pnpm
+// install`) is left alone. A link there, from an earlier run, is replaced:
+// after `bazel clean` or an output base change it dangles.
 function linkWorkspaceNodeModules(workspace) {
   const runfiles = process.env.RUNFILES_DIR ?? process.env.JS_BINARY__RUNFILES;
   const rel = process.env.TBHB_NODE_MODULES;
   const source = join(runfiles, "_main", rel);
   const path = join(workspace, rel);
-  if (existsSync(source) && !existsSync(path)) {
+  let existing = null;
+  try {
+    existing = lstatSync(path);
+  } catch {
+    // Nothing there yet.
+  }
+  if (existing !== null && !existing.isSymbolicLink()) {
+    return;
+  }
+  if (existing !== null) {
+    unlinkSync(path);
+  }
+  // A package.json without dependencies links no package, so its tree has
+  // no directory to link.
+  if (existsSync(source)) {
     link(realpathSync(source), path);
   }
 }
@@ -163,14 +181,21 @@ function devOptions(args) {
     host: process.env.ASTRO_HOST ?? "127.0.0.1",
     base: process.env.ASTRO_BASE,
   };
-  for (let i = 0; i < args.length; i += 2) {
-    const key = args[i].replace(/^--/, "");
-    if (!(key in options) || args[i + 1] === undefined) {
-      throw new Error(
-        `launch.mjs: dev takes --port, --host and --base, got ${args[i]}`,
+  // `--port 4321` and `--port=4321` both work, and the same for --host and
+  // --base.
+  for (let i = 0; i < args.length; i += 1) {
+    const match = /^--(port|host|base)(?:=(.*))?$/.exec(args[i]);
+    const value = match?.[2] ?? args[i + 1];
+    if (!match || value === undefined) {
+      console.error(
+        `launch.mjs: dev takes --port, --host and --base, each with a value, got ${args[i]}`,
       );
+      process.exit(2);
     }
-    options[key] = args[i + 1];
+    if (match[2] === undefined) {
+      i += 1;
+    }
+    options[match[1]] = value;
   }
   return options;
 }
@@ -187,12 +212,8 @@ async function dev(args) {
   linkWorkspaceNodeModules(workspace);
   const root = join(workspace, process.env.TBHB_PACKAGE ?? "");
   process.chdir(root);
-  const astro = astroDir();
-  if (astro === null) {
-    astroBin();
-  }
   const { dev: start } = await import(
-    pathToFileURL(join(realpathSync(astro), "dist", "index.js")).href
+    pathToFileURL(join(requireAstro(), "dist", "index.js")).href
   );
   // server.open false and no TTY: the server never opens a browser or
   // waits on a prompt.
@@ -223,7 +244,7 @@ async function dev(args) {
 }
 
 async function runAstro(args) {
-  const bin = astroBin();
+  const bin = join(requireAstro(), "bin", "astro.mjs");
   process.argv = [process.argv[0], bin, ...args];
   await import(pathToFileURL(bin).href);
 }
