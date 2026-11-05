@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("@tbhb_rules_astro//:defs.bzl", "astro_check_test")
+
+repo_files()
+
+# astro, for the site in site/ and the proofs.
+npm_link_all_packages(name = "node_modules")
+
+NOT_WINDOWS = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+# Proofs: each target must fail, for the reason expect_failure_test states.
+# They are manual so `bazel test //...` runs them only through the proofs.
+PROOF_TAGS = ["manual"]
+
+astro_check_test(
+    name = "proof_type_error",
+    srcs = glob(["proof/type_error/**"]),
+    node_modules = ":node_modules",
+    strip_prefix = "proof/type_error",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_type_error_fails",
+    pattern = "Type 'string' is not assignable to type 'number'",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_type_error",
+)
+
+astro_check_test(
+    name = "proof_empty",
+    srcs = glob(["proof/empty/**"]),
+    node_modules = ":node_modules",
+    strip_prefix = "proof/empty",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_empty_fails",
+    pattern = "astro check: the tree holds no .astro files",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_empty",
+)

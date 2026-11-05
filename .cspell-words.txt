@@ -4,6 +4,7 @@ addopts
 afakt
 AKIA
 ascm
+astrojs
 autouse
 awrel
 bazelignore

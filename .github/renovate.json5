@@ -20,8 +20,9 @@
   // go_sdk.from_file reads, python.json5 the pyproject and uv.lock pins and
   // uv's required-version, npm the package.json and pnpm-lock.yaml pins
   // (lint/private/cspell, typescript/package.json with Biome's binaries,
-  // cloudflare/package.json with wrangler, e2e consumers), and bazelisk every
-  // .bazelversion as one group.
+  // cloudflare/package.json with wrangler, astro/package.json with
+  // @astrojs/check, e2e consumers), and bazelisk every .bazelversion as one
+  // group.
   packageRules: [
     {
       // The govulncheck smoke test needs a module with known

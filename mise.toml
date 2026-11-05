@@ -65,4 +65,6 @@ run = [
   "cd cloudflare/e2e/smoke && bazelisk test //...",
   "cd playwright && bazelisk test //...",
   "cd playwright/e2e/smoke && bazelisk test //...",
+  "cd astro && bazelisk test //...",
+  "cd astro/e2e/smoke && bazelisk test //...",
 ]
