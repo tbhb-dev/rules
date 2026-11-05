@@ -610,9 +610,14 @@ async function dev(args) {
   const root = join(workspace, process.env.TBHB_PACKAGE ?? "");
   requireRenderers(root);
   // The run's own generated directory, outside the workspace, so two runs
-  // don't share one and nothing of it lands in the consumer's tree.
-  const gen = realpathSync(mkdtempSync(join(tmpdir(), "tbhb-storybook-")));
-  const cleanUp = () => rmSync(gen, { recursive: true, force: true });
+  // don't share one and nothing of it lands in the consumer's tree. It sits
+  // in a private directory of its own: Storybook makes the config
+  // directory's parent Vite's root, which Vite watches whole, so a parent
+  // shared with other programs, as the temp directory is, would reload the
+  // server on every file they write.
+  const run = realpathSync(mkdtempSync(join(tmpdir(), "tbhb-storybook-")));
+  const gen = join(run, "config");
+  const cleanUp = () => rmSync(run, { recursive: true, force: true });
   process.on("exit", cleanUp);
   await fallBackFrom(root, gen);
   writeConfig(root, gen, {

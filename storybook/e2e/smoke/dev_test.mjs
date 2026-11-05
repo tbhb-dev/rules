@@ -13,7 +13,8 @@
 // in a workspace with no node_modules or, with --refusals, a dangling link
 // there, as `bazel clean` leaves one: it must link the built tree, answer
 // 502 until Storybook is up and refuse a socket meanwhile, then answer 200
-// at the base path, redirect the base without its slash, refuse paths
+// at the base path, ignore other programs' files written beside it in its
+// temp directory, redirect the base without its slash, refuse paths
 // outside it, and exit 0 on SIGTERM.
 //
 // Usage: dev_test.mjs [--refusals] <dev binary> <launcher binary> <base> <file>...
@@ -71,7 +72,7 @@ function start(args, env, bin = devBin, detached = false) {
   const exited = new Promise((resolve) =>
     child.on("exit", (code) => resolve({ code, output })),
   );
-  return { child, exited };
+  return { child, exited, output: () => output };
 }
 
 // A refusal that starts a server instead would never exit: it's stopped
@@ -254,11 +255,16 @@ const port = await new Promise((resolve) => {
   });
 });
 
+// The server's temp directory, shared with whatever else runs there, as a
+// user's temp directory is.
+const tmp = join(process.env.TEST_TMPDIR, "tmp");
+mkdirSync(tmp);
+
 // Both argument forms: --port=N and --base B. With the refusals, the stop
 // is Ctrl-C's: SIGINT to the whole process group.
-const { child, exited } = start(
+const { child, exited, output } = start(
   [`--port=${port}`, "--base", base],
-  { BUILD_WORKSPACE_DIRECTORY: workspace },
+  { BUILD_WORKSPACE_DIRECTORY: workspace, TMPDIR: tmp },
   devBin,
   refusals,
 );
@@ -282,6 +288,27 @@ while (Date.now() < deadline) {
   }
   await new Promise((resolve) => setTimeout(resolve, 500));
 }
+// Another program's files in the temp directory, beside the server's own:
+// the server mustn't watch them, so it neither reloads nor restarts, and
+// still serves.
+const before = output().length;
+const other = join(tmp, "other-tool");
+mkdirSync(join(other, "src"), { recursive: true });
+writeFileSync(join(tmp, "tsconfig.json"), "{}\n");
+writeFileSync(join(other, "tsconfig.json"), "{}\n");
+writeFileSync(join(other, "src", "index.ts"), "export const x = 1;\n");
+writeFileSync(join(tmp, "note.txt"), "other\n");
+await new Promise((resolve) => setTimeout(resolve, 5_000));
+writeFileSync(join(other, "src", "index.ts"), "export const x = 2;\n");
+await new Promise((resolve) => setTimeout(resolve, 5_000));
+const watched = output()
+  .slice(before)
+  .split("\n")
+  .filter((line) => /reload|restart|tsconfig/i.test(line));
+const after = await fetch(`${url}iframe.html`).then(
+  (res) => res.status,
+  (error) => error.message,
+);
 const origin = `http://127.0.0.1:${port}`;
 // Each answer, or the error that came instead.
 async function answer(path) {
@@ -316,6 +343,14 @@ if (status !== 200 || iframe !== 200 || result.code !== 0) {
     `server: ${url} answered ${status} (iframe.html ${iframe}); the server exited with ${result.code}`,
   );
   child.kill("SIGKILL");
+}
+if (watched.length > 0) {
+  failures.push(
+    `server: files beside it in the temp directory were watched:\n    ${watched.slice(0, 5).join("\n    ")}`,
+  );
+}
+if (after !== 200) {
+  failures.push(`server: iframe.html answered ${after} after the temp directory changed`);
 }
 if (starting !== true) {
   failures.push(

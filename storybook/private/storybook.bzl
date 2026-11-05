@@ -278,7 +278,9 @@ def storybook_dev(name, framework, node_modules, config_dir = ".storybook", **kw
     as `/storybook/react/`, so several can sit behind one reverse proxy at
     the paths they'd have on a site. Its generated config and Storybook's
     cache go in a temporary directory of the run's own, outside the
-    workspace, so concurrent runs don't collide.
+    workspace, so concurrent runs don't collide. It watches only that
+    directory and the files the Storybook loads, not the rest of the
+    system's temp directory.
 
     In the workspace it writes one thing: where `node_modules`' package
     declares that tree (`sb/node_modules` for `//sb:node_modules`), a
