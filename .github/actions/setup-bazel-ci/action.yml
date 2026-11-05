@@ -114,8 +114,9 @@ runs:
     # standalone component archives and zig, each checked against a pinned
     # sha256, with zig serving as cc, c++ and ar. Python unpacks zig's .tar.xz
     # because an image may lack xz. cc-rs passes Rust's target triple, which
-    # zig can't parse; the shims drop it and build for the host, the only
-    # target here. tbhb_rules' python_env_repo hands PATH to uv, so nothing
+    # zig can't parse, and rustc passes aarch64's -Wl,--fix-cortex-a53-843419,
+    # which zig's linker rejects; the shims drop both and build for the host,
+    # the only target here. tbhb_rules' python_env_repo hands PATH to uv, so nothing
     # else is needed. Drop this step once a cp315 manylinux aarch64 wheel
     # exists.
     - name: Set up Rust for complexipy's source build
@@ -149,7 +150,7 @@ runs:
         rm -f "${root}/dl/${zig_name}.tar.xz"
         for tool in cc c++ ar; do
           printf '%s\n' '#!/usr/bin/env bash' 'args=()' 'for arg in "$@"; do' \
-            '  case "${arg}" in --target=*) ;; *) args+=("${arg}") ;; esac' 'done' \
+            '  case "${arg}" in --target=* | -Wl,--fix-cortex-a53-843419) ;; *) args+=("${arg}") ;; esac' 'done' \
             "exec '${root}/zig/${zig_name}/zig' ${tool} \"\${args[@]}\"" >"${root}/cc/${tool}"
           chmod +x "${root}/cc/${tool}"
         done
