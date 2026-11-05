@@ -8,6 +8,7 @@ load("//testing:defs.bzl", "expect_failure_test")
 load(":cspell_tests.bzl", "cspell_test_suite")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
 load(":gitleaks_private_scenario.bzl", "gitleaks_private_scenario_test")
+load(":gitleaks_text_scenario.bzl", "gitleaks_text_scenario_test")
 load(":tree_check_tests.bzl", "tree_check_test_suite")
 
 repo_files()
@@ -128,11 +129,33 @@ gitleaks_history_scenario_test(
     ]
 ]
 
+# gitleaks_text on piped text, with and without a committed config.
+
+[
+    gitleaks_text_scenario_test(
+        name = "text_{}_test".format(scenario),
+        scenario = scenario,
+        subject = "//lint:gitleaks_text",
+    )
+    for scenario in [
+        "clean",
+        "clean_no_config",
+    ]
+]
+
+gitleaks_text_scenario_test(
+    name = "proof_text_secret",
+    scenario = "secret",
+    subject = "//lint:gitleaks_text",
+    tags = PROOF_TAGS,
+)
+
 PROOF_REASONS = {
     "proof_history_corrupt": "gitleaks_history: FAIL: git cannot read the history",
     "proof_history_no_commits": "gitleaks_history: FAIL: the repository has no commits",
     "proof_history_other_branch": "leaks found: [1-9]",
     "proof_history_secret": "leaks found: [1-9]",
+    "proof_text_secret": "leaks found: [1-9]",
 }
 
 [

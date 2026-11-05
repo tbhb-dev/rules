@@ -5,6 +5,7 @@ Repositories using `tbhb_rules` would otherwise each copy the same CI. The share
 - `.github/actions/setup-bazel-ci` prepares a Bazel job.
 - `.github/actions/ci-conclusion` decides the `conclusion` check.
 - `.github/workflows/repo-checks.yml` runs the repository-level checks.
+- `.github/workflows/pr-text.yml` scans a pull request's title and body after an edit.
 
 A consumer keeps its own `ci.yml` with the checkout, the test matrix, and the Bazel commands. The pieces cover the steps that never differ between repositories.
 
@@ -48,13 +49,14 @@ The `repo` job clones the full history and makes these checks in order. An empty
 1. `bazel run //:gazelle -- -mode=diff` in each of `gazelle-dirs`.
 2. `bazel mod tidy` in each of `module-dirs`, then `git diff --exit-code` on their `MODULE.bazel`.
 3. `//:gitleaks_history`.
-4. `pip-audit-target`.
-5. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
-6. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
-7. zizmor, with the online audits, and the pedantic persona.
-8. The CODEOWNERS owner and syntax check through the GitHub API, with `curl` and `jq`.
+4. On a pull request, `@tbhb_rules//lint:gitleaks_text` on its title and body.
+5. `pip-audit-target`.
+6. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
+7. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
+8. zizmor, with the online audits, and the pedantic persona.
+9. The CODEOWNERS owner and syntax check through the GitHub API, with `curl` and `jq`.
 
-On a pull request the history scan covers only the tested commit's history, so a finding on another open pull request's branch, which the full clone also holds, fails only that pull request. Pushes scan every branch.
+On a pull request the history scan covers only the tested commit's history, so a finding on another open pull request's branch, which the full clone also holds, fails only that pull request. Pushes scan every branch. The title and body get the same rules as the history, the private ones included, because a squash merge makes them the commit message.
 
 | Input                           | Default             | Meaning                                                            |
 |---------------------------------|---------------------|--------------------------------------------------------------------|
@@ -71,6 +73,26 @@ On a pull request the history scan covers only the tested commit's history, so a
 The calling job must grant `contents: read`, because a called workflow's token can never exceed its caller's.
 
 This workflow sets up Bazel inline and doesn't call `setup-bazel-ci`. A `./` path in a called workflow resolves in the caller's checkout. That checkout lacks the action.
+
+## `pr-text.yml`
+
+An edit to a pull request's title or body doesn't start a CI run, so `repo-checks.yml` doesn't see it. This workflow runs `@tbhb_rules//lint:gitleaks_text` on the edited text, and because the ruleset doesn't require its check, a red one only marks the edit until the next push scans the text again under `conclusion`. Call it from a workflow of its own:
+
+```yaml
+on:
+  pull_request:
+    types: [edited]
+
+jobs:
+  pr-text:
+    permissions:
+      contents: read
+    uses: tbhb-dev/rules/.github/workflows/pr-text.yml@<sha>  # main
+    secrets:
+      GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
+```
+
+It takes one input, `runs-on`, with the default `ubuntu-26.04`.
 
 ## In a consumer's `ci.yml`
 

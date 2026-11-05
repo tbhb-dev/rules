@@ -181,6 +181,7 @@ SHELL_SCRIPTS = [
     "format/private/format.sh.tpl",
     "lint/private/codeowners.sh",
     "lint/private/gitleaks_history.sh.tpl",
+    "lint/private/gitleaks_text.sh.tpl",
     "lint/private/shell_select.sh",
     "lint/private/tree_check.sh.tpl",
     "lint/private/vale.sh",

@@ -75,7 +75,7 @@ on:
         description: >-
           The private gitleaks config, for a repository that sets
           `@tbhb_rules//lint:gitleaks_private_config`. Only the history
-          scan sees it.
+          scan and the pull request text scan see it.
         required: false
 
 permissions: {}
@@ -166,6 +166,24 @@ jobs:
           else
             bazelisk run //:gitleaks_history
           fi
+
+      # A pull request's title and body become the squash commit's message,
+      # so they get the same rules as the history. pr-text.yml scans them
+      # again after an edit.
+      - name: Scan the pull request's title and body for secrets
+        if: github.event_name == 'pull_request'
+        env:
+          GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if [[ -z ${PR_TITLE} ]]; then
+            echo "The pull request event carries no title to scan." >&2
+            exit 1
+          fi
+          text="${RUNNER_TEMP}/pr-text.txt"
+          printf '%s\n\n%s\n' "${PR_TITLE}" "${PR_BODY}" >"${text}"
+          bazelisk run @tbhb_rules//lint:gitleaks_text <"${text}"
 
       # Advisories change without any input changing, so the audit is never
       # a cached test.
