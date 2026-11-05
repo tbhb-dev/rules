@@ -19,7 +19,11 @@ from PlaywrightBrowsersInfo.
 On Windows, Bazel makes no runfiles tree unless asked, and the browsers must
 sit in one: a consumer sets `common:windows --enable_runfiles` (with
 `startup --windows_enable_symlinks`, so the tree holds links, not copies),
-as this module's e2e smoke module does. The target is compatible with linux arm64 and
+as this module's e2e smoke module does. The runfiles tree links each file,
+and the path to the browser through it can run past Windows' MAX_PATH, so
+point PLAYWRIGHT_BROWSERS_PATH at the browsers' real directory instead,
+from the real path of any one file under it, as that module's launch test
+does. The target is compatible with linux arm64 and
 x86_64, macOS arm64 and Windows x86_64, and incompatible elsewhere, so a test
 that depends on it is skipped there.
 

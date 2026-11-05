@@ -5,9 +5,9 @@
 // belong to, and the pinned Chromium headless shell must start from the
 // runfiles with nothing but PLAYWRIGHT_BROWSERS_PATH set, then load a page.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 
 const require = createRequire(import.meta.url);
 const core = dirname(require.resolve("playwright-core/package.json"));
@@ -47,7 +47,37 @@ if (!existsSync(browsersPath)) {
   );
   process.exit(1);
 }
-process.env.PLAYWRIGHT_BROWSERS_PATH = browsersPath;
+
+// The first file under a directory, depth first.
+function firstFile(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isFile() || entry.isSymbolicLink()) {
+      return path;
+    }
+    const found = firstFile(path);
+    if (found !== undefined) {
+      return found;
+    }
+  }
+  return undefined;
+}
+
+// The runfiles tree links each file, not each directory, so the browsers'
+// real directory comes from one file's real path. Under it the browser's
+// path is far shorter: on Windows the runfiles path to the executable runs
+// past MAX_PATH, and CreateProcess then fails with ENOENT although the file
+// is there.
+const sample = firstFile(browsersPath);
+const real = realpathSync(sample);
+const rel = relative(browsersPath, sample);
+const realBrowsers = real.endsWith(rel)
+  ? real.slice(0, real.length - rel.length - 1)
+  : browsersPath;
+process.env.PLAYWRIGHT_BROWSERS_PATH = realBrowsers;
+console.log(
+  `PLAYWRIGHT_BROWSERS_PATH=${realBrowsers} (${realBrowsers.length} characters)`,
+);
 
 const { chromium } = await import("playwright-core");
 const browser = await chromium.launch({ headless: true });
