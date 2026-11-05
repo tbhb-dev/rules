@@ -45,6 +45,7 @@ npm.npm_translate_lock(
     data = [
         "//:package.json",
         "//:pnpm-workspace.yaml",
+        "//astro:package.json",
         "//proof/no_react:package.json",
     ],
     lifecycle_hooks = {"*": []},

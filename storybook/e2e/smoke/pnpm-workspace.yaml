@@ -7,6 +7,7 @@
 # no lifecycle script may run.
 
 packages:
+  - astro
   - proof/no_react
 
 allowBuilds: {}

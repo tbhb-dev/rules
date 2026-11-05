@@ -11,13 +11,15 @@ NOT_WINDOWS = select({
     "//conditions:default": [],
 })
 
-def storybook_fixture(framework, heading, refusals = False):
+def storybook_fixture(framework, heading, refusals = False, node_modules = "//:node_modules", empty_tree = False):
     """This package's Storybook for `framework`, built, tested and served.
 
     Args:
         framework: The framework the rules take.
         heading: The heading the Greeting story renders.
         refusals: Whether the dev test also proves the dev server's refusals.
+        node_modules: The npm_link_all_packages target the renderer comes from.
+        empty_tree: Whether that target links no package.
     """
     srcs = native.glob([".storybook/**", "src/**", "package.json"])
 
@@ -25,7 +27,7 @@ def storybook_fixture(framework, heading, refusals = False):
         name = "dist",
         srcs = srcs,
         framework = framework,
-        node_modules = "//:node_modules",
+        node_modules = node_modules,
     )
 
     # The built Storybook served from the base path a Pages site gives it.
@@ -57,13 +59,13 @@ def storybook_fixture(framework, heading, refusals = False):
         name = "storybook_test",
         srcs = srcs,
         framework = framework,
-        node_modules = "//:node_modules",
+        node_modules = node_modules,
     )
 
     storybook_dev(
         name = "dev",
         framework = framework,
-        node_modules = "//:node_modules",
+        node_modules = node_modules,
     )
 
     # The dev server, run as `bazel run` would run it, over a copy of the
@@ -82,5 +84,9 @@ def storybook_fixture(framework, heading, refusals = False):
             "//:dev_test",
         ] + files,
         entry_point = "//:dev_test",
+        env = {
+            "TBHB_SMOKE_EMPTY_TREE": "1" if empty_tree else "0",
+            "TBHB_SMOKE_NODE_MODULES": "/".join([p for p in [node_modules[2:].split(":")[0] if node_modules.startswith("//") else native.package_name(), "node_modules"] if p]),
+        },
         target_compatible_with = NOT_WINDOWS,
     )

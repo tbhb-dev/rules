@@ -1,12 +1,21 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("//:fixture.bzl", "storybook_fixture")
 
 repo_files()
 
+# astro is this package's own dependency, as in a workspace that keeps each
+# Storybook's libraries beside it, so it's in no node_modules above the
+# Storybook: only the launcher's fallback resolution finds it.
+npm_link_all_packages(name = "node_modules")
+
+exports_files(["package.json"])
+
 storybook_fixture(
     framework = "astro",
     heading = "Hello from Astro",
+    node_modules = ":node_modules",
 )

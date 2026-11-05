@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Tony Burns
 
-// The launcher's resolve hooks in a process of their own: a bare import
-// that resolves only from a fallback parent comes from there, and one that
-// resolves nowhere, or a relative import that misses, fails as it would
-// without the hooks, with Node's own error for the original importer.
+// The launcher's resolve hooks in a process of their own, for `import`,
+// which goes through the asynchronous loader hook, and for `require`,
+// which goes through the in-thread one: a bare specifier that resolves only
+// from a fallback parent comes from there, and one that resolves nowhere,
+// or a relative one that misses, fails as it would without the hooks, with
+// Node's own error for the original importer.
 
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -26,22 +28,39 @@ writeFileSync(
   JSON.stringify({ name: "fallback-only", type: "module", exports: "./index.js" }),
 );
 writeFileSync(join(pkg, "index.js"), "export const found = 'fallback';\n");
+const cjs = join(parent, "node_modules", "fallback-only-cjs");
+mkdirSync(cjs, { recursive: true });
+writeFileSync(
+  join(cjs, "package.json"),
+  JSON.stringify({ name: "fallback-only-cjs", main: "index.cjs" }),
+);
+writeFileSync(join(cjs, "index.cjs"), "exports.found = 'fallback';\n");
 
 const project = join(tmp, "project");
 mkdirSync(project, { recursive: true });
 writeFileSync(
   join(project, "probe.mjs"),
-  `const { found } = await import("fallback-only");
+  `import { createRequire } from "node:module";
+const require = createRequire(import.meta.url);
+const { found } = await import("fallback-only");
+const required = require("fallback-only-cjs").found;
 const codes = [];
+const at = (error) => error.code + (error.message.includes("probe.mjs") ? "@probe" : "");
 for (const specifier of ["missing-everywhere", "./missing.mjs"]) {
   try {
     await import(specifier);
     codes.push("resolved");
   } catch (error) {
-    codes.push(error.code + (error.message.includes("probe.mjs") ? "@probe" : ""));
+    codes.push(at(error));
+  }
+  try {
+    require(specifier);
+    codes.push("resolved");
+  } catch (error) {
+    codes.push(at(error));
   }
 }
-console.log(JSON.stringify({ found, codes }));
+console.log(JSON.stringify({ found, required, codes }));
 `,
 );
 
@@ -61,7 +80,13 @@ const run = spawnSync(
 );
 const want = JSON.stringify({
   found: "fallback",
-  codes: ["ERR_MODULE_NOT_FOUND@probe", "ERR_MODULE_NOT_FOUND@probe"],
+  required: "fallback",
+  codes: [
+    "ERR_MODULE_NOT_FOUND@probe",
+    "MODULE_NOT_FOUND@probe",
+    "ERR_MODULE_NOT_FOUND@probe",
+    "MODULE_NOT_FOUND@probe",
+  ],
 });
 if (run.status !== 0 || run.stdout.trim() !== want) {
   console.error(

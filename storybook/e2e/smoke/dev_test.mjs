@@ -24,6 +24,7 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  readlinkSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -34,6 +35,8 @@ const argv = process.argv.slice(2);
 const refusals = argv[0] === "--refusals";
 const [devBin, launcherBin, base, ...files] = refusals ? argv.slice(1) : argv;
 const failures = [];
+// Where the dev server links the consumer's tree, relative to the workspace.
+const linked = process.env.TBHB_SMOKE_NODE_MODULES;
 
 function workspaceCopy(name) {
   const workspace = join(process.env.TEST_TMPDIR, name);
@@ -47,8 +50,11 @@ function workspaceCopy(name) {
 
 // Storybook reports some failures on stdout, so a refusal's message is
 // looked for in both streams.
-function start(args, env, bin = devBin) {
+// A detached child leads its own process group, which a signal can then
+// reach as a whole.
+function start(args, env, bin = devBin, detached = false) {
   const child = spawn(bin, args, {
+    detached,
     env: { ...process.env, BAZEL_BINDIR: ".", ...env },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -123,9 +129,63 @@ if (refusals) {
     1,
     "framework needs",
   );
-  if (lstatSync(join(installed, "node_modules")).isSymbolicLink()) {
+  if (lstatSync(join(installed, linked)).isSymbolicLink()) {
     failures.push("own node_modules: the launcher replaced a real directory");
   }
+
+  // A link of the consumer's own, not into Bazel's output tree, stays.
+  const ownLink = workspaceCopy("own-link");
+  const elsewhere = join(process.env.TEST_TMPDIR, "elsewhere");
+  mkdirSync(elsewhere);
+  symlinkSync(elsewhere, join(ownLink, linked), "junction");
+  await refuses(
+    "own node_modules link without the renderer",
+    [],
+    { BUILD_WORKSPACE_DIRECTORY: ownLink },
+    1,
+    "framework needs",
+  );
+  if (readlinkSync(join(ownLink, linked)) !== elsewhere) {
+    failures.push("own node_modules link: the launcher replaced it");
+  }
+
+  // Their own copy: a refusal past the arguments links node_modules.
+  const ports = workspaceCopy("ports");
+  await refuses(
+    "a port past 65535",
+    ["--port", "70000"],
+    { BUILD_WORKSPACE_DIRECTORY: ports },
+    2,
+    "dev takes a port from 0 to 65535, got 70000",
+  );
+  await refuses(
+    "a port that isn't one",
+    ["--port", "abc"],
+    { BUILD_WORKSPACE_DIRECTORY: ports },
+    2,
+    "dev takes a port from 0 to 65535, got abc",
+  );
+  const taken = createServer();
+  await new Promise((resolve) => taken.listen(0, "127.0.0.1", resolve));
+  const takenPort = taken.address().port;
+  // An earlier version's link into Bazel's output tree, which the first run
+  // replaces with a directory of its own, which the second replaces in turn.
+  const earlier = join(process.env.TEST_TMPDIR, "earlier", "bazel-out", "tree");
+  mkdirSync(earlier, { recursive: true });
+  symlinkSync(earlier, join(ports, linked), "junction");
+  for (const run of ["first", "second"]) {
+    await refuses(
+      `a port in use, ${run} run`,
+      ["--port", String(takenPort)],
+      { BUILD_WORKSPACE_DIRECTORY: ports },
+      1,
+      `dev can't listen on 127.0.0.1:${takenPort}: EADDRINUSE`,
+    );
+    if (!existsSync(join(ports, linked, ".tbhb-storybook-links"))) {
+      failures.push(`${run} run: ${linked} isn't the launcher's directory`);
+    }
+  }
+  taken.close();
 
   // A main config that throws: Storybook fails, and so must dev and build.
   const broken = workspaceCopy("broken");
@@ -156,12 +216,13 @@ if (refusals) {
   );
 }
 
-// Whether the proxy closes a socket it can't pass on, sending nothing.
-function socketRefused(port) {
+// What the proxy answers a socket upgrade at `path` with: "" when it closes
+// the socket unanswered.
+function upgrade(port, path) {
   return new Promise((resolve) => {
     const socket = connect(port, "127.0.0.1", () => {
       socket.write(
-        `GET ${base}storybook-server-channel HTTP/1.1\r\nHost: 127.0.0.1\r\n` +
+        `GET ${path} HTTP/1.1\r\nHost: 127.0.0.1\r\n` +
           "Connection: Upgrade\r\nUpgrade: websocket\r\n\r\n",
       );
     });
@@ -169,18 +230,18 @@ function socketRefused(port) {
     socket.on("data", (chunk) => {
       data += chunk;
     });
-    socket.on("error", () => resolve(false));
-    socket.on("close", () => resolve(data === ""));
+    socket.on("error", () => resolve(null));
+    socket.on("close", () => resolve(data));
     setTimeout(() => {
       socket.destroy();
-      resolve(false);
+      resolve(null);
     }, 5_000);
   });
 }
 
 // With the refusals, what `bazel clean` leaves behind: a link into an
 // output base that's gone. Without, a workspace with no node_modules yet.
-const nodeModules = join(workspace, "node_modules");
+const nodeModules = join(workspace, linked);
 if (refusals) {
   symlinkSync(join(process.env.TEST_TMPDIR, "gone"), nodeModules, "junction");
 }
@@ -193,10 +254,14 @@ const port = await new Promise((resolve) => {
   });
 });
 
-// Both argument forms: --port=N and --base B.
-const { child, exited } = start([`--port=${port}`, "--base", base], {
-  BUILD_WORKSPACE_DIRECTORY: workspace,
-});
+// Both argument forms: --port=N and --base B. With the refusals, the stop
+// is Ctrl-C's: SIGINT to the whole process group.
+const { child, exited } = start(
+  [`--port=${port}`, "--base", base],
+  { BUILD_WORKSPACE_DIRECTORY: workspace },
+  devBin,
+  refusals,
+);
 const url = `http://127.0.0.1:${port}${base}`;
 const deadline = Date.now() + 120_000;
 let status = 0;
@@ -206,7 +271,7 @@ while (Date.now() < deadline) {
   try {
     status = (await fetch(url)).status;
     if (status === 502 && starting === null) {
-      starting = await socketRefused(port);
+      starting = (await upgrade(port, `${base}storybook-server-channel`)) === "";
     }
     iframe = (await fetch(`${url}iframe.html`)).status;
     if (status === 200 && iframe === 200) {
@@ -218,9 +283,28 @@ while (Date.now() < deadline) {
   await new Promise((resolve) => setTimeout(resolve, 500));
 }
 const origin = `http://127.0.0.1:${port}`;
-const bare = await fetch(`${origin}${base.slice(0, -1)}`, { redirect: "manual" });
-const outside = (await fetch(`${origin}/elsewhere/`)).status;
-child.kill("SIGTERM");
+// Each answer, or the error that came instead.
+async function answer(path) {
+  try {
+    const res = await fetch(`${origin}${path}`, { redirect: "manual" });
+    return `${res.status} ${res.headers.get("location") ?? ""}`.trim();
+  } catch (error) {
+    return error.message;
+  }
+}
+const bare = base.slice(0, -1);
+const answers = {
+  [bare]: [await answer(bare), `308 ${base}`],
+  [`${bare}?path=/story`]: [await answer(`${bare}?path=/story`), `308 ${base}?path=/story`],
+  "/elsewhere/": [await answer("/elsewhere/"), "404"],
+};
+const outsideSocket = await upgrade(port, "/elsewhere/");
+const signal = refusals ? "SIGINT" : "SIGTERM";
+if (refusals) {
+  process.kill(-child.pid, signal);
+} else {
+  child.kill(signal);
+}
 const result = await Promise.race([
   exited,
   new Promise((resolve) =>
@@ -240,14 +324,27 @@ if (starting !== true) {
       : "server: a socket opened while Storybook started wasn't closed unanswered",
   );
 }
-if (bare.status !== 308 || bare.headers.get("location") !== base) {
-  failures.push(`server: ${base.slice(0, -1)} answered ${bare.status}, not 308 to ${base}`);
+for (const [path, [got, want]] of Object.entries(answers)) {
+  if (got !== want) {
+    failures.push(`server: ${path} answered ${got}, not ${want}`);
+  }
 }
-if (outside !== 404) {
-  failures.push(`server: /elsewhere/ answered ${outside}, not 404`);
+if (!outsideSocket?.startsWith("HTTP/1.1 404")) {
+  failures.push(`server: a socket at /elsewhere/ got ${JSON.stringify(outsideSocket)}, not a 404`);
 }
-if (!existsSync(join(nodeModules, ".aspect_rules_js"))) {
-  failures.push("server: node_modules wasn't linked to the built tree");
+// A tree with no packages links nothing.
+const empty = process.env.TBHB_SMOKE_EMPTY_TREE === "1";
+if (existsSync(join(nodeModules, ".tbhb-storybook-links")) === empty) {
+  failures.push(
+    empty
+      ? `server: ${linked} was made for a tree with no packages`
+      : `server: ${linked} wasn't linked to the built tree`,
+  );
+}
+// The generated config lives outside the workspace.
+const pkg = dirname(dirname(files.find((file) => file.endsWith(".storybook/main.ts"))));
+if (existsSync(join(workspace, pkg, ".tbhb-storybook"))) {
+  failures.push("server: the generated config landed in the workspace");
 }
 
 if (failures.length > 0) {
@@ -255,5 +352,5 @@ if (failures.length > 0) {
   process.exit(1);
 }
 console.log(
-  `dev_test: ${refusals ? "the refusals hold, and " : ""}${url} answered 502 while starting, then 200, and the server exited 0 on SIGTERM`,
+  `dev_test: ${refusals ? "the refusals hold, and " : ""}${url} answered 502 while starting, then 200, and the server exited 0 on ${signal}`,
 );

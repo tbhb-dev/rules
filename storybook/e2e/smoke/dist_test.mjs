@@ -3,7 +3,8 @@
 
 // Serves a built Storybook from a base path, the way a Pages site serves it
 // under /storybook/<framework>/, and opens its story in the pinned Chromium:
-// the story must render its heading, and no request may fail.
+// the story must render its heading, and no request may fail. The build
+// must hold no project.json, whose build time would make each build differ.
 //
 // Usage: dist_test.mjs <dist dir> <base> <story id> <heading>
 
@@ -57,6 +58,9 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 const { chromium } = await import("playwright-core");
 const browser = await chromium.launch({ headless: true });
 const failures = [];
+if (existsSync(join(dist, "project.json"))) {
+  failures.push("project.json is in the build");
+}
 try {
   const page = await browser.newPage();
   page.on("response", (r) => {

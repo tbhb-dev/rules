@@ -11,12 +11,15 @@
 //                              serves the consumer's own sources in the
 //                              `bazel run` workspace, under a base path
 //
-// The project gets a generated config directory, .tbhb-storybook, whose
-// main config imports the consumer's (TBHB_CONFIG_DIR) and fixes the
-// framework, adds the a11y and Vitest addons, and layers Vite resolution
-// over it; its preview imports the consumer's and makes an a11y violation
-// fail a story's test, whatever the consumer's preview says. A story or a
-// component can still set its own `parameters.a11y.test`.
+// The project gets a generated config directory, whose main config imports
+// the consumer's (TBHB_CONFIG_DIR) and fixes the framework, adds the a11y
+// and Vitest addons, and layers Vite resolution over it; its preview imports
+// the consumer's and replaces its project-level a11y settings, so an a11y
+// violation fails a story's test with axe's defaults whatever the
+// consumer's preview says. A story or a component can still set its own
+// `parameters.a11y` and `globals.a11y`. In build and test the directory is
+// .tbhb-storybook in the scratch copy of the project; in dev it's a
+// temporary directory of the run's own, outside the workspace.
 //
 // The generated directory's node_modules links this module's packages, so
 // the generated config resolves them. In build and test, the project's own
@@ -35,10 +38,10 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   rmSync,
   symlinkSync,
-  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import http from "node:http";
@@ -160,17 +163,21 @@ function configFile(root, name) {
   return null;
 }
 
-// A path from the generated directory, with forward slashes, as an import
-// specifier.
-function fromGen(root, path) {
-  return `./${relative(join(root, GEN), path).split(sep).join("/")}`;
+// Options a framework needs because the config directory is generated: the
+// astro framework finds astro, and the project's astro.config, from the
+// config directory's parent unless told the project's root.
+function frameworkDefaults(root) {
+  return FRAMEWORK === "astro" ? { resolveFrom: root } : {};
 }
 
-function writeConfig(root, options = {}) {
-  const gen = join(root, GEN);
+function writeConfig(root, gen, { allow = [], ...options } = {}) {
   rmSync(gen, { recursive: true, force: true });
   linkPinned(join(gen, "node_modules"));
-  const vite = { roots: [root, gen], stores: stores(root), ...options };
+  const vite = {
+    roots: [root, gen],
+    stores: [...allow, ...stores(root, gen)],
+    ...options,
+  };
   const main = configFile(root, "main");
   if (main === null) {
     fail(`no main config in ${join(CONFIG_DIR, "main.*")}`);
@@ -180,7 +187,7 @@ function writeConfig(root, options = {}) {
   );
   writeFileSync(
     join(gen, "main.mjs"),
-    `import * as userModule from ${JSON.stringify(fromGen(root, main))};
+    `import * as userModule from ${JSON.stringify(pathToFileURL(main).href)};
 import { tbhbVite } from ${JSON.stringify(pathToFileURL(join(here, "vite_layer.mjs")).href)};
 
 const user = userModule.default ?? userModule;
@@ -197,9 +204,10 @@ export default {
   ...user,
   stories: (user.stories ?? []).map(rebaseEntry),
   ...(user.staticDirs ? { staticDirs: user.staticDirs.map(rebaseEntry) } : {}),
-  framework: { name: ${JSON.stringify(process.env.TBHB_FRAMEWORK_PACKAGE)}, options: user.framework?.options ?? {} },
+  framework: { name: ${JSON.stringify(process.env.TBHB_FRAMEWORK_PACKAGE)}, options: { ...${JSON.stringify(frameworkDefaults(root))}, ...user.framework?.options } },
   addons: [...(user.addons ?? []).filter((addon) => !OWN.includes(addonName(addon))), ...OWN],
-  core: { ...user.core, disableTelemetry: true, disableWhatsNewNotifications: true },
+  // No project.json: it holds the build's time, so no two builds would match.
+  core: { ...user.core, disableTelemetry: true, disableWhatsNewNotifications: true, disableProjectJson: true },
   async viteFinal(config, options) {
     const own = user.viteFinal ? await user.viteFinal(config, options) : config;
     return tbhbVite(own, ${JSON.stringify(vite)});
@@ -210,16 +218,22 @@ export default {
   const preview = configFile(root, "preview");
   writeFileSync(
     join(gen, "preview.mjs"),
-    `${preview === null ? "const user = {};" : `import * as user from ${JSON.stringify(fromGen(root, preview))};`}
+    `${preview === null ? "const user = {};" : `import * as user from ${JSON.stringify(pathToFileURL(preview).href)};`}
 
 const { default: annotations = {}, ...named } = user;
 const all = { ...named, ...annotations };
 
 // Any a11y violation fails the story's test at the project level, whatever
-// the consumer's preview says; a story or a component can still set its own.
+// the consumer's preview says: its a11y parameters (test, disable, and axe's
+// config, options and context) give way to axe's defaults at \`error\`, and
+// its a11y globals can't make the check manual. A story or a component can
+// still set its own.
+const a11yGlobals = (globals = {}) => ({ ...globals, a11y: { ...globals.a11y, manual: false } });
 export default {
   ...all,
-  parameters: { ...all.parameters, a11y: { ...all.parameters?.a11y, test: "error" } },
+  parameters: { ...all.parameters, a11y: { test: "error", disable: false } },
+  initialGlobals: a11yGlobals(all.initialGlobals),
+  ...(all.globals ? { globals: a11yGlobals(all.globals) } : {}),
 };
 `,
   );
@@ -248,12 +262,9 @@ export default defineConfig({
 
 // The directories rules_js's stores sit in, for Vite's server.fs.allow:
 // each package's real path, up to its store's node_modules.
-function stores(root) {
+function stores(root, gen) {
   const found = new Set();
-  for (const dir of [
-    join(root, "node_modules"),
-    join(root, GEN, "node_modules"),
-  ]) {
+  for (const dir of [join(root, "node_modules"), join(gen, "node_modules")]) {
     if (!existsSync(dir)) {
       continue;
     }
@@ -268,10 +279,10 @@ function stores(root) {
 
 // Node resolution falls back from either store to the other, in this
 // process and in Storybook's.
-async function fallBackFrom(root) {
+async function fallBackFrom(root, gen) {
   const parents = [
     pathToFileURL(join(root, "package.json")).href,
-    pathToFileURL(join(root, GEN, "package.json")).href,
+    pathToFileURL(join(gen, "package.json")).href,
   ];
   process.env.TBHB_FALLBACK_PARENTS = JSON.stringify(parents);
   const hooks = pathToFileURL(join(here, "resolve_hooks.mjs")).href;
@@ -289,12 +300,17 @@ const STORYBOOK = join(
   "core.js",
 );
 
-function storybook(args, root) {
+// Storybook runs in `cwd`, the generated directory, and keeps its cache
+// there, not in a node_modules of the project, which may be a link into
+// Bazel's output tree.
+function storybook(args, cwd, projectRoot) {
   const child = spawn(process.execPath, [STORYBOOK, ...args], {
-    cwd: root,
+    cwd,
     env: {
       ...process.env,
+      CACHE_DIR: join(cwd, "cache"),
       CI: "true",
+      ...(projectRoot ? { STORYBOOK_PROJECT_ROOT: projectRoot } : {}),
       STORYBOOK_DISABLE_TELEMETRY: "1",
       // Storybook's dev server insists on naming a package manager, by a
       // lockfile or one on PATH; a sandbox has neither. It runs none here.
@@ -305,7 +321,9 @@ function storybook(args, root) {
   });
   return {
     child,
-    exited: new Promise((done) => child.on("exit", (code) => done(code ?? 1))),
+    exited: new Promise((done) =>
+      child.on("exit", (code, signal) => done({ code, signal })),
+    ),
   };
 }
 
@@ -325,23 +343,30 @@ async function build(outDir, manifest) {
     copyFileSync(resolve(execroot, src), join(root, dest));
   }
   outDir = resolve(execroot, outDir);
-  linkProject(root);
-  requireRenderers(root);
-  await fallBackFrom(root);
-  const gen = writeConfig(root);
-  const { exited } = storybook(
-    ["build", "--config-dir", gen, "--output-dir", outDir, "--quiet"],
-    root,
-  );
-  process.exitCode = await exited;
+  try {
+    linkProject(root);
+    requireRenderers(root);
+    const gen = join(root, GEN);
+    await fallBackFrom(root, gen);
+    writeConfig(root, gen);
+    const { exited } = storybook(
+      ["build", "--config-dir", gen, "--output-dir", outDir, "--quiet"],
+      root,
+    );
+    const { code } = await exited;
+    process.exitCode = code ?? 1;
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 }
 
 async function test() {
   const root = process.cwd();
   linkProject(root);
   requireRenderers(root);
-  await fallBackFrom(root);
-  const gen = writeConfig(root);
+  const gen = join(root, GEN);
+  await fallBackFrom(root, gen);
+  writeConfig(root, gen);
   const runfiles = process.env.TEST_SRCDIR ?? process.env.RUNFILES_DIR;
   const { browsersPath } = await import(
     pathToFileURL(join(runfiles, process.env.TBHB_PLAYWRIGHT_HELPER)).href
@@ -378,11 +403,21 @@ async function test() {
   process.exit();
 }
 
-// The consumer's node_modules for `dev`: the npm_link_all_packages tree in
-// the runfiles, linked into the workspace where Node finds it, beside the
-// package that declared it. A real directory there (a local `pnpm
-// install`) is left alone. A link there, from an earlier run, is replaced:
-// after `bazel clean` or an output base change it dangles.
+// The file that marks a workspace node_modules directory as this launcher's.
+const LINKS_MARKER = ".tbhb-storybook-links";
+
+// The consumer's node_modules for `dev`: a directory, beside the package
+// that declared its npm_link_all_packages tree, linking each of the tree's
+// packages to its real directory, where Node finds them. Not a link to the
+// tree itself: a tree in a subpackage links its packages relatively into
+// the root package's store, which Node doesn't follow from a sandboxed
+// test's runfiles.
+//
+// A directory of the consumer's own there (a local `pnpm install`), or a
+// link of theirs, is left alone. This launcher's directory, marked by
+// LINKS_MARKER, is made anew each run, so links left dangling by `bazel
+// clean` or an output base change go; so is a link into Bazel's output tree
+// or a dangling one, which earlier versions made.
 function linkWorkspaceNodeModules(workspace) {
   const runfiles = process.env.RUNFILES_DIR ?? process.env.JS_BINARY__RUNFILES;
   const rel = process.env.TBHB_NODE_MODULES;
@@ -394,16 +429,29 @@ function linkWorkspaceNodeModules(workspace) {
   } catch {
     // Nothing there yet.
   }
-  if (existing !== null && !existing.isSymbolicLink()) {
-    return;
-  }
   if (existing !== null) {
-    unlinkSync(path);
+    const ours = existing.isSymbolicLink()
+      ? !existsSync(path) ||
+        readlinkSync(path).includes(`${sep}bazel-out${sep}`)
+      : existsSync(join(path, LINKS_MARKER));
+    if (!ours) {
+      return;
+    }
+    // Removes the links, not what they point to.
+    rmSync(path, { recursive: true, force: true });
   }
   // A package.json without dependencies links no package, so its tree has
-  // no directory to link.
-  if (existsSync(source)) {
-    link(realpathSync(source), path);
+  // no directory.
+  if (!existsSync(source)) {
+    return;
+  }
+  mkdirSync(path, { recursive: true });
+  writeFileSync(
+    join(path, LINKS_MARKER),
+    "storybook_dev's links to the consumer's npm_link_all_packages tree; it remakes this directory each run.\n",
+  );
+  for (const name of packagesIn(source)) {
+    link(realpathSync(join(source, name)), join(path, name));
   }
 }
 
@@ -429,6 +477,9 @@ function devOptions(args) {
     }
     options[match[1]] = value;
   }
+  if (!/^[0-9]+$/.test(options.port) || Number(options.port) > 65535) {
+    fail(`dev takes a port from 0 to 65535, got ${options.port}`, 2);
+  }
   // The base is a directory: it starts and ends with a slash.
   options.base = `/${options.base.replace(/^\/+|\/+$/g, "")}/`.replace(
     /^\/\/$/,
@@ -452,15 +503,16 @@ function freePort() {
 // too, so two Storybooks behind one port don't share a path.
 const CHANNEL = '"/storybook-server-channel"';
 
-// Serves Storybook's dev server, on `target`, under `base` on host:port.
+// Serves Storybook's dev server, on `target`, under `base`.
 // Storybook's own routes sit at its root, so the base is stripped; Vite's
 // HMR socket sits under the base, so that upgrade passes as it is.
-function proxy({ host, port, base }, target) {
+function proxy({ base }, target) {
   const strip = (url) =>
     url.startsWith(base) ? `/${url.slice(base.length)}` : null;
   const server = http.createServer((req, res) => {
-    if (`${req.url}/` === base) {
-      res.writeHead(308, { location: base });
+    const [pathname, query] = req.url.split(/(?=\?)/);
+    if (`${pathname}/` === base) {
+      res.writeHead(308, { location: `${base}${query ?? ""}` });
       res.end();
       return;
     }
@@ -479,6 +531,8 @@ function proxy({ host, port, base }, target) {
         headers: { ...req.headers, "accept-encoding": "identity" },
       },
       (up) => {
+        // Storybook going away mid-response, as it does on a stop.
+        up.on("error", () => res.destroy());
         if (!/javascript/.test(up.headers["content-type"] ?? "")) {
           res.writeHead(up.statusCode, up.headers);
           up.pipe(res);
@@ -501,8 +555,13 @@ function proxy({ host, port, base }, target) {
         });
       },
     );
-    // Storybook not listening yet: the caller retries.
+    // Storybook not listening yet: the caller retries. Once a response has
+    // started, it can only be cut off.
     upstream.on("error", () => {
+      if (res.headersSent) {
+        res.destroy();
+        return;
+      }
       res.writeHead(502);
       res.end("Storybook isn't up yet");
     });
@@ -512,7 +571,12 @@ function proxy({ host, port, base }, target) {
     const hmr = (req.headers["sec-websocket-protocol"] ?? "").includes(
       "vite-hmr",
     );
-    const path = hmr ? req.url : (strip(req.url) ?? req.url);
+    const stripped = strip(req.url);
+    if (stripped === null) {
+      socket.end("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+      return;
+    }
+    const path = hmr ? req.url : stripped;
     const up = net.connect(target, "127.0.0.1", () => {
       const headers = Object.entries(req.headers)
         .map(([key, value]) => `${key}: ${value}`)
@@ -524,8 +588,16 @@ function proxy({ host, port, base }, target) {
     up.on("error", () => socket.destroy());
     socket.on("error", () => up.destroy());
   });
-  server.listen(Number(port), host);
   return server;
+}
+
+function listen(server, { host, port }) {
+  return new Promise((done) => {
+    server.once("error", (error) =>
+      fail(`dev can't listen on ${host}:${port}: ${error.code}`),
+    );
+    server.listen(Number(port), host, done);
+  });
 }
 
 async function dev(args) {
@@ -537,12 +609,22 @@ async function dev(args) {
   linkWorkspaceNodeModules(workspace);
   const root = join(workspace, process.env.TBHB_PACKAGE ?? "");
   requireRenderers(root);
-  await fallBackFrom(root);
-  const gen = writeConfig(root, {
+  // The run's own generated directory, outside the workspace, so two runs
+  // don't share one and nothing of it lands in the consumer's tree.
+  const gen = realpathSync(mkdtempSync(join(tmpdir(), "tbhb-storybook-")));
+  const cleanUp = () => rmSync(gen, { recursive: true, force: true });
+  process.on("exit", cleanUp);
+  await fallBackFrom(root, gen);
+  writeConfig(root, gen, {
+    allow: [workspace],
     base: options.base,
     clientPort: Number(options.port),
   });
   const target = await freePort();
+  // Bound before Storybook starts, so a port in use fails with nothing to
+  // stop.
+  const server = proxy(options, target);
+  await listen(server, options);
   const { child, exited } = storybook(
     [
       "dev",
@@ -559,26 +641,33 @@ async function dev(args) {
     ],
     // Storybook checks a community framework by resolving it from its
     // working directory, which the generated directory's links satisfy; the
-    // workspace's node_modules has only the consumer's packages.
+    // workspace's node_modules has only the consumer's packages. Its project
+    // root stays the workspace.
     gen,
+    workspace,
   );
-  const server = proxy(options, target);
   console.log(
     `storybook dev: serving ${FRAMEWORK} at http://${options.host}:${options.port}${options.base}`,
   );
-  // Storybook's own SIGTERM handling sets its exit code; setting this one
-  // first, before any await, makes a requested stop exit 0.
+  // A stop requested by SIGINT or SIGTERM exits 0, however Storybook ends:
+  // Ctrl-C under `bazel run` signals the whole process group, so Storybook
+  // can exit on its own SIGINT before this process handles its own.
+  let stopping = false;
   const stop = () => {
-    process.exitCode = 0;
+    stopping = true;
     server.close();
     child.kill("SIGTERM");
     setTimeout(() => process.exit(0), 5000).unref();
   };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
-  const code = await exited;
+  const { code, signal } = await exited;
   server.close();
-  process.exit(process.exitCode ?? code);
+  const stopped =
+    stopping ||
+    ["SIGINT", "SIGTERM"].includes(signal) ||
+    [130, 143].includes(code);
+  process.exit(stopped ? 0 : (code ?? 1));
 }
 
 // storybook_dev's binary names its command in the environment, so the

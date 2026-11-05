@@ -179,7 +179,8 @@ def storybook_build(name, srcs, framework, node_modules, config_dir = ".storyboo
     The output is a directory, named after the target, holding the built
     Storybook (`index.html`, `iframe.html` and their assets). Every path in
     it is relative, so it serves as it is from any base path, such as
-    `/storybook/react/` of a GitHub Pages site.
+    `/storybook/react/` of a GitHub Pages site. It holds no `project.json`,
+    whose build time would make two builds of the same sources differ.
 
     The Storybook is this package's: `srcs` sit at their paths relative to
     it, and `config_dir` holds its `main` and `preview` configs. The
@@ -213,10 +214,13 @@ def storybook_test(name, srcs, framework, node_modules, config_dir = ".storybook
     """Runs every story as a test in the pinned Chromium.
 
     Vitest's browser mode renders each story, runs its play function, and
-    checks the result for accessibility: a violation fails the story at the
-    project level, whatever the consumer's preview sets, and only a story's
-    or a component's own `parameters.a11y.test` can relax it. A run in
-    which no story ran fails too.
+    checks the result for accessibility with axe's defaults: a violation
+    fails the story. The consumer's preview can't change that: its
+    `parameters.a11y` (`test`, `disable`, and axe's `config`, `options`
+    and `context`) gives way to `test: "error"`, and its `a11y.manual`
+    global to `false`. Only a story's or a component's own
+    `parameters.a11y` or `globals.a11y` can relax the check. A run in which
+    no story ran fails too.
 
     The project is this package's, as for storybook_build.
 
@@ -272,11 +276,15 @@ def storybook_dev(name, framework, node_modules, config_dir = ".storybook", **kw
     (`BUILD_WORKSPACE_DIRECTORY`), so edits reload as they would with a
     local `storybook dev`, and serves the Storybook under a base path, such
     as `/storybook/react/`, so several can sit behind one reverse proxy at
-    the paths they'd have on a site. It writes its generated config to
-    `.tbhb-storybook/` in this package, and, when the workspace has no
-    `node_modules` where that target's package declares it, links the built
-    tree there; gitignore both, `node_modules` without a trailing slash,
-    since git sees the link as a file.
+    the paths they'd have on a site. Its generated config and Storybook's
+    cache go in a temporary directory of the run's own, outside the
+    workspace, so concurrent runs don't collide.
+
+    In the workspace it writes one thing: where `node_modules`' package
+    declares that tree (`sb/node_modules` for `//sb:node_modules`), a
+    directory linking each of the tree's packages into Bazel's output tree,
+    remade each run, unless a directory or link of the consumer's own is
+    there. Gitignore and bazelignore it, as for a local `pnpm install`.
 
     It listens on 127.0.0.1:6006 at `/` unless told otherwise, never opens
     a browser and never prompts, so it can run as a background job, and it

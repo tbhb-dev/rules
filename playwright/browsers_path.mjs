@@ -17,41 +17,44 @@ import { join, relative } from "node:path";
 
 // The first file under a directory, depth first.
 function firstFile(dir) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
-    if (entry.isFile() || entry.isSymbolicLink()) {
-      return path;
-    }
-    const found = firstFile(path);
-    if (found !== undefined) {
-      return found;
-    }
-  }
-  return undefined;
+	for (const entry of readdirSync(dir, { withFileTypes: true })) {
+		const path = join(dir, entry.name);
+		if (entry.isFile() || entry.isSymbolicLink()) {
+			return path;
+		}
+		const found = firstFile(path);
+		if (found !== undefined) {
+			return found;
+		}
+	}
+	return undefined;
 }
 
 export function browsersPath(pathFile) {
-  const runfiles = process.env.RUNFILES_DIR ?? process.env.TEST_SRCDIR;
-  const linked = join(
-    runfiles,
-    readFileSync(join(runfiles, pathFile), "utf8").trim(),
-  );
-  if (!existsSync(linked)) {
-    // On Windows without --enable_runfiles there is no runfiles tree to
-    // find the browsers in.
-    throw new Error(
-      `the pinned browsers aren't at ${linked}; on Windows, build with --enable_runfiles`,
-    );
-  }
-  const sample = firstFile(linked);
-  const real = realpathSync(sample);
-  const rel = relative(linked, sample);
-  if (!real.endsWith(rel)) {
-    // Falling back to the runfiles path would bring back the opaque Windows
-    // ENOENT, so a layout surprise fails here as itself.
-    throw new Error(
-      `the real path ${real} of ${sample} doesn't end in ${rel}, so the browsers' real directory can't be derived`,
-    );
-  }
-  return real.slice(0, real.length - rel.length - 1);
+	const runfiles = process.env.RUNFILES_DIR ?? process.env.TEST_SRCDIR;
+	const linked = join(
+		runfiles,
+		readFileSync(join(runfiles, pathFile), "utf8").trim(),
+	);
+	if (!existsSync(linked)) {
+		// On Windows without --enable_runfiles there is no runfiles tree to
+		// find the browsers in.
+		throw new Error(
+			`the pinned browsers aren't at ${linked}; on Windows, build with --enable_runfiles`,
+		);
+	}
+	const sample = firstFile(linked);
+	if (sample === undefined) {
+		throw new Error(`the pinned browsers at ${linked} hold no files`);
+	}
+	const real = realpathSync(sample);
+	const rel = relative(linked, sample);
+	if (!real.endsWith(rel)) {
+		// Falling back to the runfiles path would bring back the opaque Windows
+		// ENOENT, so a layout surprise fails here as itself.
+		throw new Error(
+			`the real path ${real} of ${sample} doesn't end in ${rel}, so the browsers' real directory can't be derived`,
+		);
+	}
+	return real.slice(0, real.length - rel.length - 1);
 }

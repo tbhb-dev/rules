@@ -54,6 +54,7 @@ copy_to_bin(
     srcs = [
         "package.json",
         "resolve_hooks.mjs",
+        "resolve_loader.mjs",
         "vite_layer.mjs",
     ],
     visibility = ["//visibility:public"],
