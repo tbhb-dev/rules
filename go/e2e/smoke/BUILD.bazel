@@ -380,7 +380,8 @@ expect_failure_test(
     test = ":proof_diff_on_main",
 )
 
-# gobco. Every condition of coverage/full has both outcomes reached.
+# gobco. Every condition of coverage/full has both outcomes reached. Its
+# full_plan9_test.go, which no platform here builds, is left out of the run.
 gobco_test(
     name = "gobco_test",
     tests = ["//coverage/full:full_test"],

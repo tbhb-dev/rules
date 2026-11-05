@@ -8,14 +8,18 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/tbhb-dev/rules/go/private/scratch"
 )
 
 // TestMain doubles as gobco. With FAKE_GOBCO_RC set it is a fake gobco: it
 // checks that it was run with the arguments and environment the runner passes,
-// writes FAKE_GOBCO_STATS to the file -stats names (when set) and exits
-// with FAKE_GOBCO_RC.
+// and, with FAKE_GOBCO_FILES set, that those are the files (comma-separated)
+// of the scratch copy of the package, writes FAKE_GOBCO_STATS to the file
+// -stats names (when set) and exits with FAKE_GOBCO_RC.
 func TestMain(m *testing.M) {
 	if rc, ok := os.LookupEnv("FAKE_GOBCO_RC"); ok {
 		os.Exit(fakeGobco(rc))
@@ -35,6 +39,19 @@ func fakeGobco(rc string) int {
 	if proxy := os.Getenv("GOPROXY"); proxy != "off" {
 		fmt.Fprintf(os.Stderr, "fake gobco: GOPROXY is %q\n", proxy)
 		return 3
+	}
+	if want, ok := os.LookupEnv("FAKE_GOBCO_FILES"); ok {
+		// The statistics file is in the scratch directory, next to mod.
+		pkg := filepath.Join(filepath.Dir(args[1]), "mod", "p", "q")
+		entries, err := os.ReadDir(pkg)
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		if got := strings.Join(names, ","); err != nil || got != want {
+			fmt.Fprintf(os.Stderr, "fake gobco: the package has %q (%v), want %q\n", got, err, want)
+			return 3
+		}
 	}
 	if js, ok := os.LookupEnv("FAKE_GOBCO_STATS"); ok {
 		if err := os.WriteFile(args[1], []byte(js), 0o644); err != nil {
@@ -119,10 +136,76 @@ func config(t *testing.T) runConfig {
 	}
 }
 
+// otherGOOS is an operating system the tests are not running on.
+func otherGOOS() string {
+	if runtime.GOOS == "windows" {
+		return "linux"
+	}
+	return "windows"
+}
+
+// source writes a Go file named name, holding text, to a new directory and
+// returns its path.
+func source(t *testing.T, name, text string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// The fixtures: a file every platform builds, and files no platform the
+// tests run on builds, which would not compile if gobco saw them.
+const (
+	plain   = "package q\n\nfunc Positive(n int) bool { return n > 0 }\n"
+	unbuilt = "package q\n\nvar _ = undefined\n"
+	ignored = "//go:build ignore\n\n" + unbuilt
+)
+
+func TestBuildable(t *testing.T) {
+	entry := func(role, dir, name, text string) scratch.Entry {
+		return scratch.Entry{Role: role, Src: source(t, name, text), Rel: dir + "/" + name}
+	}
+	entries := []scratch.Entry{
+		{Role: scratch.RoleMod, Src: "go.mod", Rel: "go.mod"},
+		entry(scratch.RoleMut, "p/q", "q.go", plain),
+		entry(scratch.RoleMut, "p/q", "ignored.go", ignored),
+		entry(scratch.RoleMut, "p/q", "cgo.go", "//go:build cgo\n\n"+unbuilt),
+		entry(scratch.RoleTest, "p/q", "q_"+otherGOOS()+"_test.go", unbuilt),
+		entry(scratch.RoleTest, "p/q", "here_test.go", "//go:build "+runtime.GOOS+"\n\npackage q\n"),
+		entry(scratch.RoleTest, "p/q", "not_here_test.go", "//go:build !"+runtime.GOOS+"\n\n"+unbuilt),
+		// Another package's files go as they are: gobco's importer
+		// applies their constraints itself.
+		entry(scratch.RoleDep, "p/dep", "dep.go", ignored),
+	}
+	got, err := buildable(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rels []string
+	for _, e := range got {
+		rels = append(rels, e.Rel)
+	}
+	want := []string{"go.mod", "p/q/q.go", "p/q/here_test.go", "p/dep/dep.go"}
+	if !reflect.DeepEqual(rels, want) {
+		t.Errorf("kept %q, want %q", rels, want)
+	}
+}
+
 func TestRun(t *testing.T) {
 	t.Setenv("FAKE_GOBCO_RC", "0")
 	t.Setenv("FAKE_GOBCO_STATS", `[{"Start": "p/q/q.go:4:9", "Code": "n > 0", "TrueCount": 2, "FalseCount": 0}]`)
+	t.Setenv("FAKE_GOBCO_FILES", "q.go")
 	c := config(t)
+	other := "q_" + otherGOOS() + ".go"
+	manifest := "mod\t" + filepath.Join(filepath.Dir(c.manifest), "go.mod") + "\tgo.mod\n" +
+		"mut\t" + source(t, "q.go", plain) + "\tp/q/q.go\n" +
+		"mut\t" + source(t, other, unbuilt) + "\tp/q/" + other + "\n" +
+		"test\t" + source(t, "ignored_test.go", ignored) + "\tp/q/ignored_test.go\n"
+	if err := os.WriteFile(c.manifest, []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	got, out, err := run(c)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, out)
@@ -161,6 +244,17 @@ func TestRunRejectsAMissingManifest(t *testing.T) {
 	c.manifest = filepath.Join(t.TempDir(), "absent")
 	if _, _, err := run(c); err == nil {
 		t.Error("a missing manifest was read")
+	}
+}
+
+func TestRunRejectsAnUnreadableSource(t *testing.T) {
+	c := config(t)
+	absent := filepath.Join(t.TempDir(), "absent.go")
+	if err := os.WriteFile(c.manifest, []byte("mut\t"+absent+"\tp/q/absent.go\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := run(c); err == nil {
+		t.Error("a missing source was read")
 	}
 }
 
