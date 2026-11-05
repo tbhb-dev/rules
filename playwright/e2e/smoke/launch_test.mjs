@@ -71,9 +71,15 @@ function firstFile(dir) {
 const sample = firstFile(browsersPath);
 const real = realpathSync(sample);
 const rel = relative(browsersPath, sample);
-const realBrowsers = real.endsWith(rel)
-  ? real.slice(0, real.length - rel.length - 1)
-  : browsersPath;
+if (!real.endsWith(rel)) {
+  // Falling back to the runfiles path would bring back the opaque Windows
+  // ENOENT, so a layout surprise fails here as itself.
+  console.error(
+    `launch_test: the real path ${real} of ${sample} doesn't end in ${rel}, so the browsers' real directory can't be derived.`,
+  );
+  process.exit(1);
+}
+const realBrowsers = real.slice(0, real.length - rel.length - 1);
 process.env.PLAYWRIGHT_BROWSERS_PATH = realBrowsers;
 console.log(
   `PLAYWRIGHT_BROWSERS_PATH=${realBrowsers} (${realBrowsers.length} characters)`,
