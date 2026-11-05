@@ -66,7 +66,13 @@ jobs:
               {"id": "playwright", "dir": "playwright", "deps": ["root"]},
               {"id": "playwright-smoke", "dir": "playwright/e2e/smoke", "deps": ["root", "playwright"]},
               {"id": "astro", "dir": "astro", "deps": ["root", "typescript"]},
-              {"id": "astro-smoke", "dir": "astro/e2e/smoke", "deps": ["root", "typescript", "astro"]}
+              {"id": "astro-smoke", "dir": "astro/e2e/smoke", "deps": ["root", "typescript", "astro"]},
+              {"id": "storybook", "dir": "storybook", "deps": ["root", "typescript", "playwright"]},
+              {
+                "id": "storybook-smoke",
+                "dir": "storybook/e2e/smoke",
+                "deps": ["root", "typescript", "playwright", "storybook"]
+              }
             ]
         run: |
           files="${RUNNER_TEMP}/changed"
@@ -183,8 +189,8 @@ jobs:
       gazelle-dirs: go go/e2e/smoke
       govulncheck-target: //tests/self:govulncheck
       govulncheck-working-directory: go
-      module-dirs: . astro cloudflare diagrams/d2 go playwright python typescript
-      pnpm-audit-dirs: typescript cloudflare astro
+      module-dirs: . astro cloudflare diagrams/d2 go playwright python storybook typescript
+      pnpm-audit-dirs: typescript cloudflare astro storybook
       pnpm-audit-workspace: typescript
 
   # Consumers run the composite actions as `tbhb-dev/rules/...@<sha>`, which

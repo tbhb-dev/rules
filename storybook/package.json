@@ -1,0 +1,22 @@
+{
+  "name": "tbhb-rules-storybook-toolchain",
+  "private": true,
+  "description": "The npm tools behind @tbhb_rules_storybook//:defs.bzl, linked into each build's and check's tree after the consumer's packages. The renderer libraries (react and react-dom, lit, astro) are the consumer's own dependencies, not pinned here. vitest, @vitest/* and typescript match tbhb_rules_typescript's pins; playwright matches tbhb_rules_playwright's PLAYWRIGHT_VERSION; vite meets astro 7's range.",
+  "dependencies": {
+    "@storybook-astro/framework": "1.15.0",
+    "@storybook/addon-a11y": "10.6.5",
+    "@storybook/addon-vitest": "10.6.5",
+    "@storybook/builder-vite": "10.6.5",
+    "@storybook/html-vite": "10.6.5",
+    "@storybook/react": "10.6.5",
+    "@storybook/react-vite": "10.6.5",
+    "@storybook/web-components-vite": "10.6.5",
+    "@vitest/browser": "4.1.12",
+    "@vitest/browser-playwright": "4.1.12",
+    "playwright": "1.64.1",
+    "storybook": "10.6.5",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "4.1.12"
+  }
+}

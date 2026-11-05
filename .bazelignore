@@ -5,4 +5,5 @@ e2e/
 go/
 playwright/
 python/
+storybook/
 typescript/

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@tbhb_rules//format:defs.bzl", "format", "format_test")
@@ -51,6 +52,15 @@ PLATFORMS = {
     )
     for platform, constraints in PLATFORMS.items()
 ]
+
+# browsers_path.mjs: `browsersPath(pathFile)` turns :chromium's output into
+# the browsers' real directory for PLAYWRIGHT_BROWSERS_PATH, the form a
+# browser launches from on every platform; defs.bzl says how a test uses it.
+copy_to_bin(
+    name = "browsers_path",
+    srcs = ["browsers_path.mjs"],
+    visibility = ["//visibility:public"],
+)
 
 # The current platform's Chromium headless shell; defs.bzl says how a test
 # uses it. Elsewhere it is incompatible, so a test that needs it is skipped

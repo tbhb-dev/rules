@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# A local `pnpm install`, or the links storybook_dev makes to the built
+# tree; the checks use the npm_link_all_packages tree.
+node_modules

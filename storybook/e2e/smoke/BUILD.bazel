@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+# The renderer libraries, for every Storybook in a subpackage.
+npm_link_all_packages(name = "node_modules")
+
+# The test each fixture serves its built Storybook with, in the output tree,
+# where rules_js runs JavaScript from.
+copy_to_bin(
+    name = "dist_test",
+    srcs = ["dist_test.mjs"],
+    visibility = ["//:__subpackages__"],
+)
+
+# The test each fixture runs its dev server with.
+copy_to_bin(
+    name = "dev_test",
+    srcs = ["dev_test.mjs"],
+    visibility = ["//:__subpackages__"],
+)
+
+# The launcher's resolve hooks, in a process of their own.
+js_test(
+    name = "hooks_test",
+    data = ["@tbhb_rules_storybook//:launcher_data"],
+    entry_point = "hooks_test.mjs",
+    env = {"TBHB_LAUNCHER_DATA": "$(rlocationpaths @tbhb_rules_storybook//:launcher_data)"},
+)
+
+# Proofs: each target must fail, for the reason expect_failure_test states.
+# Each proof's Storybook and its manual storybook_test, `:proof`, sit in its
+# own subpackage under proof/, so `bazel test //...` runs them only here.
+PROOFS = {
+    # An a11y violation fails even though the project's preview asks only
+    # for a report.
+    "a11y": "Elements must meet minimum color contrast ratio thresholds",
+    # The project's preview turning the check off, making it manual, or
+    # turning a rule off in axe changes nothing: only a story or a component
+    # can relax it.
+    "a11y_disable": "Elements must meet minimum color contrast ratio thresholds",
+    "a11y_manual": "Elements must meet minimum color contrast ratio thresholds",
+    "a11y_rules": "Elements must meet minimum color contrast ratio thresholds",
+    # eslint-plugin-storybook's recommended rules, through
+    # tbhb_rules_typescript's eslint_test.
+    "lint": "storybook/default-exports",
+    # No main config: nothing to build the Storybook from.
+    "no_main": "launch.mjs: no main config in .storybook/main.\\*",
+    # react's renderer libraries missing from the consumer's node_modules.
+    "no_react": "launch.mjs: the react framework needs react, react-dom from the consumer's node_modules",
+    # A run in which no story ran proves nothing.
+    "no_stories": "storybook test: ran 0 stories",
+    # A failing play function fails the story.
+    "play": "planted failure: no h2 in the story",
+}
+
+[
+    expect_failure_test(
+        name = "proof_{}_fails".format(proof),
+        pattern = pattern,
+        target_compatible_with = select({
+            "@platforms//os:windows": ["@platforms//:incompatible"],
+            "//conditions:default": [],
+        }),
+        test = "//proof/{}:proof".format(proof),
+    )
+    for proof, pattern in PROOFS.items()
+]

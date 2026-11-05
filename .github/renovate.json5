@@ -21,8 +21,8 @@
   // uv's required-version, npm the package.json and pnpm-lock.yaml pins
   // (lint/private/cspell, typescript/package.json with Biome's binaries,
   // cloudflare/package.json with wrangler, astro/package.json with
-  // @astrojs/check, e2e consumers), and bazelisk every .bazelversion as one
-  // group.
+  // @astrojs/check, storybook/package.json, e2e consumers), and bazelisk
+  // every .bazelversion as one group.
   packageRules: [
     {
       // The govulncheck smoke test needs a module with known
@@ -41,12 +41,27 @@
       // The coverage packages require Vitest's exact version, and each
       // @cloudflare/vitest-plugin release depends on one exact wrangler,
       // whose workerd runs the tests; the Cloudflare module's wrangler
-      // generates the Worker types and deploys, from its own workerd. One
-      // group keeps them all on one Vitest and one workerd.
-      description: "Vitest, its plugins and wrangler move together",
-      matchFileNames: ["typescript/**/package.json", "cloudflare/**/package.json"],
-      matchPackageNames: ["vitest", "@vitest/**", "@cloudflare/vitest-plugin", "wrangler"],
-      groupName: "vitest and workerd",
+      // generates the Worker types and deploys, from its own workerd.
+      // tbhb_rules_storybook's story tests run on the same Vitest, through
+      // @vitest/browser-playwright, whose playwright must drive the
+      // browsers tbhb_rules_playwright pins for one playwright-core. One
+      // group keeps them all on one Vitest, one workerd and one Playwright.
+      description: "Vitest, its plugins, Playwright and wrangler move together",
+      matchFileNames: [
+        "typescript/**/package.json",
+        "cloudflare/**/package.json",
+        "playwright/**/package.json",
+        "storybook/**/package.json",
+      ],
+      matchPackageNames: [
+        "vitest",
+        "@vitest/**",
+        "@cloudflare/vitest-plugin",
+        "wrangler",
+        "playwright",
+        "playwright-core",
+      ],
+      groupName: "vitest, playwright and workerd",
     },
     {
       // A wrangler bump that moves workerd changes every Worker's generated
@@ -72,15 +87,24 @@
     {
       // tbhb_rules_playwright's browser archives come from Playwright's own
       // CDN, which no Renovate datasource reads, and belong to one
-      // playwright-core release. Renovate moves playwright-core; the e2e
-      // smoke module's launch_test then fails until the pins match it.
-      description: "playwright-core bumps need the browser pins moved",
-      matchFileNames: ["playwright/**/package.json"],
-      matchPackageNames: ["playwright-core"],
-      groupName: "playwright",
+      // playwright-core release. Renovate moves playwright-core, and
+      // tbhb_rules_storybook's playwright with it; playwright/e2e/smoke's
+      // launch_test and storybook's versions_test then fail until the pins
+      // match.
+      description: "Playwright bumps need the browser pins moved",
+      matchFileNames: ["playwright/**/package.json", "storybook/**/package.json"],
+      matchPackageNames: ["playwright", "playwright-core"],
       prBodyNotes: [
-        "Move the pins in playwright/private/browsers.bzl to the new playwright-core's browsers.json on this branch: PLAYWRIGHT_VERSION, the chromium-headless-shell revision and browser version, and each archive's URL and sha256. Until then `launch_test` in playwright/e2e/smoke fails, as expected.",
+        "Move the pins in playwright/private/browsers.bzl to the new playwright-core's browsers.json on this branch: PLAYWRIGHT_VERSION, the chromium-headless-shell revision and browser version, and each archive's URL and sha256. Until then `launch_test` in playwright/e2e/smoke and `//tests:versions_test` in storybook fail, as expected.",
       ],
+    },
+    {
+      // Storybook's packages peer each other at one release, and
+      // eslint-plugin-storybook, in tbhb_rules_typescript, follows it.
+      description: "Storybook's packages move together",
+      matchFileNames: ["typescript/**/package.json", "storybook/**/package.json"],
+      matchPackageNames: ["storybook", "@storybook/**", "eslint-plugin-storybook"],
+      groupName: "storybook",
     },
     {
       // tbhb_rules_d2's PNG font. 2.045R-ro/1.095R-it is the last Source

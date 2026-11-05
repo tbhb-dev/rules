@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("//:fixture.bzl", "storybook_fixture")
+
+repo_files()
+
+storybook_fixture(
+    # The html framework needs no renderer library, so its Storybook runs on
+    # a tree that links none.
+    empty_tree = True,
+    framework = "html",
+    heading = "Hello from HTML",
+    node_modules = "//proof/no_react:node_modules",
+)

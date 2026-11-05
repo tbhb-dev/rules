@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("@tbhb_rules_playwright//:defs.bzl", "PLAYWRIGHT_VERSION")
+load(":rules_tests.bzl", "rules_test_suite")
+
+repo_files()
+
+rules_test_suite(name = "rules_tests")
+
+VERSIONS_ENV = {
+    "TBHB_LAUNCHER_DATA": "$(rlocationpaths //:launcher_data)",
+    "TBHB_PLAYWRIGHT_VERSION": PLAYWRIGHT_VERSION,
+}
+
+js_test(
+    name = "versions_test",
+    data = ["//:launcher_data"],
+    entry_point = "versions_test.mjs",
+    env = VERSIONS_ENV,
+)
+
+# Must fail: the same check against browsers for another release.
+js_test(
+    name = "proof_versions_drift",
+    data = ["//:launcher_data"],
+    entry_point = "versions_test.mjs",
+    env = VERSIONS_ENV | {"TBHB_PLAYWRIGHT_VERSION": "0.0.0"},
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_versions_drift_fails",
+    pattern = "versions_test: package.json pins playwright [0-9.]+; tbhb_rules_playwright's browsers are for 0.0.0",
+    test = ":proof_versions_drift",
+)

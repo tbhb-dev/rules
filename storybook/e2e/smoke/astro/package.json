@@ -1,0 +1,8 @@
+{
+  "name": "tbhb-rules-storybook-smoke-astro",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "astro": "7.4.5"
+  }
+}
