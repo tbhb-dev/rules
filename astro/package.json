@@ -1,0 +1,9 @@
+{
+  "name": "tbhb-rules-astro-toolchain",
+  "private": true,
+  "description": "The npm tools behind @tbhb_rules_astro//:defs.bzl, linked into each check's tree after the consumer's packages. astro itself is the consumer's own dependency, not pinned here; typescript matches tbhb_rules_typescript's pin.",
+  "dependencies": {
+    "@astrojs/check": "0.9.12",
+    "typescript": "6.0.3"
+  }
+}

@@ -2,6 +2,8 @@ tmp/
 .venv/
 .mise/
 lint/private/cspell/pnpm-lock.yaml
+astro/pnpm-lock.yaml
+astro/e2e/*/pnpm-lock.yaml
 cloudflare/pnpm-lock.yaml
 cloudflare/e2e/*/pnpm-lock.yaml
 playwright/e2e/*/pnpm-lock.yaml

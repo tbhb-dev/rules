@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Astro rules for tbhb-dev repositories: a static `astro build` as a Bazel
+output and an `astro check` test.
+
+astro itself comes from the consumer's own node_modules; this module pins
+only @astrojs/check and the TypeScript it runs.
+
+Consumers load only `@tbhb_rules_astro//:defs.bzl`.
+"""
+
+module(
+    name = "tbhb_rules_astro",
+    version = "0.0.0",
+    bazel_compatibility = [">=9.0.0"],
+)
+
+bazel_dep(name = "tbhb_rules")
+
+# The released module resolves tbhb_rules from the registry; inside this
+# repository it is the enclosing module.
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "..",
+)
+
+# biome_test, for this module's own JavaScript, and the pnpm audit. Released with tbhb_rules;
+# inside this repository it is the sibling module.
+bazel_dep(name = "tbhb_rules_typescript")
+local_path_override(
+    module_name = "tbhb_rules_typescript",
+    path = "../typescript",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "aspect_rules_js", version = "3.5.2")
+bazel_dep(name = "bazel_lib", version = "3.7.0")
+
+# @astrojs/check and TypeScript, installed by rules_js from this module's
+# pnpm lock under a private hub, so a consumer's own npm hubs never meet
+# them. Every package is pinned by integrity hash and no lifecycle script
+# runs. Like tbhb_rules, this module registers no Node toolchain; the root
+# module controls it.
+npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
+npm.npm_translate_lock(
+    name = "tbhb_rules_astro_npm",
+    data = ["//:package.json"],
+    lifecycle_hooks = {"*": []},
+    pnpm_lock = "//:pnpm-lock.yaml",
+)
+use_repo(npm, "tbhb_rules_astro_npm")
+
+# Dev dependencies: this module's own tests.
+bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
+bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
+
+# The pnpm 12 pinned here, for maintainers regenerating the lock:
+# bazel run -- @pnpm//:pnpm --dir "$PWD" install --lockfile-only
+pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm", dev_dependency = True)
+pnpm.pnpm(
+    name = "pnpm",
+    pnpm_version = "12.16.1",
+    pnpm_version_integrity = "sha512-CR0d7nknV1Zhsl2rPCrjHK/BxU1rce1qZgDPDByxBDSkR+rhQBXxsj4ua+3u1535SpMuIWTSgyKA3OP7MvZW0Q==",
+)
+use_repo(pnpm, "pnpm")

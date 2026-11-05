@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_astro//:defs.bzl", "astro_build", "astro_check_test", "astro_dev")
+
+repo_files()
+
+# The site as a consumer builds and checks it, from a subpackage of the
+# repository, with astro from the root's node_modules.
+SITE = glob(
+    ["**"],
+    exclude = [
+        "dev_test.mjs",
+        "site_test.mjs",
+    ],
+)
+
+NOT_WINDOWS = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+astro_build(
+    name = "dist",
+    srcs = SITE,
+    node_modules = "//:node_modules",
+)
+
+# The build's output directory holds the rendered page.
+js_test(
+    name = "dist_test",
+    args = ["$(rootpath :dist)"],
+    data = [":dist"],
+    entry_point = "site_test.mjs",
+    target_compatible_with = NOT_WINDOWS,
+)
+
+astro_check_test(
+    name = "astro_check_test",
+    srcs = SITE,
+    node_modules = "//:node_modules",
+    strip_prefix = "site",
+)
+
+# `bazel run //site:dev` serves the site from the workspace.
+astro_dev(
+    name = "dev",
+    node_modules = "//:node_modules",
+)
+
+# The dev server's refusals, then the server: it replaces a dangling
+# node_modules link, serves the base path on a free port, and exits 0 on
+# SIGTERM.
+js_test(
+    name = "dev_test",
+    args = [
+        "$(rootpath :dev)",
+        "$(rootpath @tbhb_rules_astro//:astro)",
+        "$(rootpath //proof/no_astro:dev)",
+    ] + ["$(rootpath {})".format(f) for f in SITE],
+    data = [
+        ":dev",
+        "//proof/no_astro:dev",
+        "@tbhb_rules_astro//:astro",
+    ] + SITE,
+    entry_point = "dev_test.mjs",
+    target_compatible_with = NOT_WINDOWS,
+)
