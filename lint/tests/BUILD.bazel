@@ -103,6 +103,16 @@ gitleaks_history_scenario_test(
     subject = ":history_subject",
 )
 
+# A key on another branch fails the default scan of every ref, and passes a
+# scan limited to the checked-out branch, as repo-checks.yml runs on pull
+# requests.
+gitleaks_history_scenario_test(
+    name = "history_head_only_test",
+    scenario = "other_branch",
+    subject = ":history_subject",
+    subject_args = ["--log-opts=HEAD"],
+)
+
 [
     gitleaks_history_scenario_test(
         name = "proof_history_" + scenario,
@@ -113,6 +123,7 @@ gitleaks_history_scenario_test(
     for scenario in [
         "corrupt",
         "no_commits",
+        "other_branch",
         "secret",
     ]
 ]
@@ -120,6 +131,7 @@ gitleaks_history_scenario_test(
 PROOF_REASONS = {
     "proof_history_corrupt": "gitleaks_history: FAIL: git cannot read the history",
     "proof_history_no_commits": "gitleaks_history: FAIL: the repository has no commits",
+    "proof_history_other_branch": "leaks found: [1-9]",
     "proof_history_secret": "leaks found: [1-9]",
 }
 

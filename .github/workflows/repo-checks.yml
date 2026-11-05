@@ -153,10 +153,19 @@ jobs:
 
       # Git history is not a declared input, so the history scan runs
       # outside the test graph; //:gitleaks_test covers the working tree.
+      # The full-depth checkout fetches every branch, so on a pull request
+      # the scan keeps to the tested commit's history, and another open
+      # pull request's findings stay on that pull request.
       - name: Scan Git history for secrets
         env:
+          EVENT: ${{ github.event_name }}
           GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
-        run: bazelisk run //:gitleaks_history
+        run: |
+          if [[ ${EVENT} == pull_request ]]; then
+            bazelisk run //:gitleaks_history -- --log-opts=HEAD
+          else
+            bazelisk run //:gitleaks_history
+          fi
 
       # Advisories change without any input changing, so the audit is never
       # a cached test.

@@ -47,7 +47,7 @@ The `repo` job clones the full history and makes these checks in order. An empty
 
 1. `bazel run //:gazelle -- -mode=diff` in each of `gazelle-dirs`.
 2. `bazel mod tidy` in each of `module-dirs`, then `git diff --exit-code` on their `MODULE.bazel`.
-3. `//:gitleaks_history`.
+3. `//:gitleaks_history`, over every fetched branch, or on a pull request over the tested commit's history only.
 4. `pip-audit-target`.
 5. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
 6. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
