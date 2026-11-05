@@ -15,7 +15,10 @@ go_library(
 
 go_test(
     name = "full_test",
-    srcs = ["full_test.go"],
+    srcs = [
+        "full_plan9_test.go",
+        "full_test.go",
+    ],
     visibility = ["//visibility:public"],
     deps = [":full"],
 )

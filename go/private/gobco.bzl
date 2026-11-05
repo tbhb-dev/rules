@@ -78,10 +78,17 @@ wherever it is, and each operand of `&&`, `||` and `!` on its own. That
 includes the conditions gobco's own `-branch` mode counts, so one run
 covers both. What it does not count: `select`, `default` clauses, and code
 without conditions, such as a function with none or a statement no test
-runs; pair it with Go's statement coverage. gobco type-checks every file
-in the package whatever its build constraints, so a package with files for
-different platforms that declare the same names stops with a panic: do not
-declare a gobco_test for it. A test that starts a copy of itself with a
+runs; pair it with Go's statement coverage.
+
+Build constraints: gobco itself type-checks every file in the package
+whatever its constraints, so the package's own sources and tests that a
+`//go:build` line or a `_GOOS`/`_GOARCH` file name suffix excludes on the
+platform the action runs on (with cgo off, as the tests run) are left out
+of the scratch copy. A package with a Unix-only test file, or with files
+for different platforms that declare the same names, is measured on each
+platform with that platform's files; the conditions of an excluded file are
+not counted there. The packages it depends on are loaded with their own
+constraints applied. A test that starts a copy of itself with a
 cleaned environment must pass `GOBCO_STATS` on, or the copy panics.
 
 Platforms: the rule runs on Linux (x86_64 and arm64), macOS and Windows. The

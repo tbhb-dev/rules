@@ -30,4 +30,5 @@ go_test(
     srcs = ["main_test.go"],
     embed = [":gobco_lib"],
     visibility = ["//tests:__subpackages__"],
+    deps = ["//private/scratch"],
 )

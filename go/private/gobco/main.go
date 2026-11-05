@@ -5,7 +5,10 @@
 // Go package, for tbhb_rules' gobco_test.
 //
 // It copies the unit's module files into a scratch tree and runs gobco there
-// with the SDK's go, offline. gobco instruments the package, runs its tests
+// with the SDK's go, offline. It leaves out of the copy the package's own
+// files that build constraints exclude on the platform it runs on, since
+// gobco type-checks every file of the package whatever its constraints.
+// gobco instruments the package, runs its tests
 // and writes how often each condition was true and false to a JSON file;
 // this command reads that and writes the report gobco_test checks:
 // `covered=N`, `total=M` (two outcomes for each condition) and one
@@ -21,9 +24,11 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"go/build"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/tbhb-dev/rules/go/private/scratch"
@@ -142,6 +147,9 @@ func run(c runConfig) (result, []byte, error) {
 	if err != nil {
 		return result{}, nil, err
 	}
+	if entries, err = buildable(entries); err != nil {
+		return result{}, nil, err
+	}
 	if c.gobco, err = filepath.Abs(c.gobco); err != nil {
 		return result{}, nil, err
 	}
@@ -170,4 +178,34 @@ func run(c runConfig) (result, []byte, error) {
 		return result{}, out.Bytes(), fmt.Errorf("unreadable statistics: %w", err)
 	}
 	return read(conds, c.prefix), out.Bytes(), nil
+}
+
+// buildable drops the package's own sources and tests that build
+// constraints (a //go:build line, a _GOOS or _GOARCH file name suffix)
+// exclude on the platform the tests run on. gobco parses and type-checks
+// every file in the package's directory, so a file for another platform
+// would stop it. The packages it imports need nothing: gobco loads them
+// through go/build, which honors their constraints.
+func buildable(entries []scratch.Entry) ([]scratch.Entry, error) {
+	// build.Default for its release tags. scratch.Environ drops the host's
+	// GO* settings and turns cgo off, so the go command builds the tests for
+	// the platform this runner runs on, without cgo.
+	ctx := build.Default
+	ctx.GOOS = runtime.GOOS
+	ctx.GOARCH = runtime.GOARCH
+	ctx.CgoEnabled = false
+	var kept []scratch.Entry
+	for _, e := range entries {
+		if e.Role == scratch.RoleMut || e.Role == scratch.RoleTest {
+			match, err := ctx.MatchFile(filepath.Split(e.Src))
+			if err != nil {
+				return nil, err
+			}
+			if !match {
+				continue
+			}
+		}
+		kept = append(kept, e)
+	}
+	return kept, nil
 }
