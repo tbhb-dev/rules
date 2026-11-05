@@ -38,6 +38,12 @@
       allowedVersions: "<6.1",
     },
     {
+      description: "astro check refuses TypeScript 7 (\"install TypeScript 6 instead\")",
+      matchFileNames: ["astro/**/package.json"],
+      matchPackageNames: ["typescript"],
+      allowedVersions: "<7",
+    },
+    {
       // The coverage packages require Vitest's exact version, and each
       // @cloudflare/vitest-plugin release depends on one exact wrangler,
       // whose workerd runs the tests; the Cloudflare module's wrangler
