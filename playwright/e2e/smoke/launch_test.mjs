@@ -5,7 +5,7 @@
 // belong to, and the pinned Chromium headless shell must start from the
 // runfiles with nothing but PLAYWRIGHT_BROWSERS_PATH set, then load a page.
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
@@ -22,7 +22,11 @@ if (version !== process.env.TBHB_PLAYWRIGHT_VERSION) {
     `playwright-core is ${version}, but the browsers belong to ${process.env.TBHB_PLAYWRIGHT_VERSION}`,
   );
 }
-if (shell.revision !== process.env.TBHB_PLAYWRIGHT_REVISION) {
+if (shell === undefined) {
+  failures.push(
+    `playwright-core ${version}'s browsers.json has no chromium-headless-shell entry, but the pins hold revision ${process.env.TBHB_PLAYWRIGHT_REVISION}`,
+  );
+} else if (shell.revision !== process.env.TBHB_PLAYWRIGHT_REVISION) {
   failures.push(
     `playwright-core ${version} wants chromium-headless-shell revision ${shell.revision}, but the pins hold ${process.env.TBHB_PLAYWRIGHT_REVISION}`,
   );
@@ -34,10 +38,16 @@ if (failures.length > 0) {
 
 const runfiles = process.env.RUNFILES_DIR ?? process.env.TEST_SRCDIR;
 const pathFile = join(runfiles, process.env.TBHB_PLAYWRIGHT_BROWSERS);
-process.env.PLAYWRIGHT_BROWSERS_PATH = join(
-  runfiles,
-  readFileSync(pathFile, "utf8").trim(),
-);
+const browsersPath = join(runfiles, readFileSync(pathFile, "utf8").trim());
+if (!existsSync(browsersPath)) {
+  // On Windows without --enable_runfiles there is no runfiles tree to find
+  // the browsers in.
+  console.error(
+    `the pinned browsers aren't at ${browsersPath}; on Windows, build with --enable_runfiles`,
+  );
+  process.exit(1);
+}
+process.env.PLAYWRIGHT_BROWSERS_PATH = browsersPath;
 
 const { chromium } = await import("playwright-core");
 const browser = await chromium.launch({ headless: true });

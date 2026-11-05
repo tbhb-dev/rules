@@ -18,16 +18,12 @@ PlaywrightBrowsersInfo = provider(
 )
 
 def _playwright_browsers_impl(ctx):
+    # srcs is never empty: //:chromium's select gives every compatible
+    # platform its archive, and its default arm is incompatible, so Bazel
+    # skips the target before this runs. Its files all come from that one
+    # archive repository, whose root is the PLAYWRIGHT_BROWSERS_PATH
+    # directory; a repository's rlocation path is its canonical name.
     files = ctx.files.srcs
-    if not files:
-        fail("no pinned browsers for this platform")
-
-    # Every file comes from one archive repository, whose root is the
-    # PLAYWRIGHT_BROWSERS_PATH directory; a repository's rlocation path is its
-    # canonical name.
-    repos = {f.owner.repo_name: None for f in files}
-    if len(repos) != 1:
-        fail("srcs must come from one browser archive, got {}".format(sorted(repos)))
     browsers_path = files[0].owner.repo_name
 
     # A one-line file holding that path, so a test reaches the browsers with
