@@ -1,0 +1,113 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@tbhb_ansible_lock//:config.bzl", "LOCK", "REQUIREMENTS")
+load("@tbhb_rules//format:defs.bzl", "format", "format_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//runtime:defs.bzl", "python_tool")
+
+repo_files(
+    exclude = [
+        ".DS_Store",
+        "**/.DS_Store",
+        ".bazelrc.user",
+    ],
+)
+
+# The environment of this module's own pins (tools/uv.lock), which the
+# checks use when the root module declares no `ansible.toolchain`. A
+# consumer with a toolchain of its own can still name it as `python_env`.
+alias(
+    name = "pinned_env",
+    actual = "@tbhb_ansible_tools//:env",
+    visibility = ["//visibility:public"],
+)
+
+# Writes the root module's requirements.lock.json from its requirements.yml,
+# at the paths its `ansible.collections` tag names. Renovate runs it as a
+# postUpgradeTask after moving a pin, so it keeps these guarantees:
+#
+# a. It runs exactly as `bazelisk run @tbhb_rules_ansible//:lock` from the
+#    consumer's root, with no arguments: the paths come from the
+#    `ansible.collections` tag, and the file is written under
+#    BUILD_WORKSPACE_DIRECTORY.
+# b. It fetches only metadata from Galaxy's v3 API (each version's
+#    download URL and sha256). It never downloads, unpacks or runs a
+#    tarball.
+# c. It writes only requirements.lock.json, at the configured path.
+# d. It needs only the public internet (galaxy.ansible.com), no remote
+#    cache or private host, and runs a standard-library script plus PyYAML
+#    on tbhb_rules' pinned Python, with no Ansible environment: it fits a
+#    small runner (2 CPUs, 3 GB) from a cold Bazel.
+# e. Its output is deterministic (sorted keys, two-space indent, trailing
+#    newline), so a rerun with unchanged pins is a no-op.
+#
+# With no `ansible.collections` tag it fails, saying so.
+python_tool(
+    name = "lock",
+    # One token each, so an empty path (no tag) is still an argument.
+    args = [
+        "--requirements=" + REQUIREMENTS,
+        "--lock=" + LOCK,
+    ],
+    main = "//private:collections_lock.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
+
+# This module is released on its own (strip_prefix ansible/), so it carries
+# its own copies of the parent module's configs. Each copy must match the
+# parent's byte for byte; a change goes to both.
+CONFIGS = [
+    ".editorconfig",
+    ".rumdl.toml",
+    "tombi.toml",
+]
+
+[
+    diff_test(
+        name = "config_matches_parent_" + config.lstrip(".").replace(".", "_").replace("-", "_"),
+        file1 = config,
+        file2 = "@tbhb_rules//:" + config,
+    )
+    for config in CONFIGS
+]
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    visibility = ["//visibility:public"],
+    deps = ["//private:checks"],
+)
+
+bzl_library(
+    name = "extensions",
+    srcs = ["extensions.bzl"],
+    visibility = ["//visibility:public"],
+    deps = ["//private:extension"],
+)
+
+# This module's own formatting: `bazel run //:format` here rewrites, and
+# //:format_test fails on, any unformatted file of this module, its Python
+# with the ruff that tbhb_rules_python pins in the root module's lock.
+FORMATTERS = [
+    "@tbhb_rules//format:buildifier",
+    "@tbhb_rules//format:rumdl",
+    "@tbhb_rules//format:ryl",
+    "@tbhb_rules//format:shfmt",
+    "@tbhb_rules//format:tombi",
+    "@tbhb_rules_python//:ruff",
+]
+
+format(
+    name = "format",
+    formatters = FORMATTERS,
+)
+
+format_test(
+    name = "format_test",
+    srcs = [":repo_files"],
+    formatters = FORMATTERS,
+)

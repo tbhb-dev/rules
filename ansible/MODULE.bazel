@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Hermetic Ansible checks for tbhb-dev repositories: syntax, ansible-lint,
+pinned Galaxy collections and Molecule.
+
+Consumers load only `@tbhb_rules_ansible//:defs.bzl` and
+`@tbhb_rules_ansible//:extensions.bzl`.
+"""
+
+module(
+    name = "tbhb_rules_ansible",
+    version = "0.0.0",
+    bazel_compatibility = [">=9.0.0"],
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "tbhb_rules", version = "0.0.0")
+
+# The released module resolves tbhb_rules from the registry; inside this
+# repository it is the enclosing module.
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "..",
+)
+
+# The Ansible environment the checks default to (the root module's
+# `ansible.toolchain`, else this module's own pins in tools/uv.lock), the
+# pinned collections and the lock target's configuration.
+ansible = use_extension("//:extensions.bzl", "ansible")
+use_repo(
+    ansible,
+    "tbhb_ansible",
+    "tbhb_ansible_collections",
+    "tbhb_ansible_lock",
+    "tbhb_ansible_tools",
+)
+
+# The pinned Python, with PyYAML, that //:lock and ansible_collections_lock_test
+# run on: no Ansible environment is needed to lock collections.
+runtime = use_extension("@tbhb_rules//runtime:extensions.bzl", "runtime")
+use_repo(runtime, "tbhb_rules_python_runtime")
+
+# ruff_test, pyrefly_test, pytest_test and the ruff formatter, for this
+# module's own Python (private/*.py). A regular dependency, though only this
+# module's own gates use it: the root and private packages load it, and a
+# consumer that refers to any of their targets (//:lock, the checks' driver)
+# loads them. Released with tbhb_rules; inside this repository it is the
+# sibling module.
+bazel_dep(name = "tbhb_rules_python", version = "0.0.0")
+local_path_override(
+    module_name = "tbhb_rules_python",
+    path = "../python",
+)
+
+bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
+
+# The gates check this module's Python from its own project: pyproject.toml
+# and uv.lock here, used only when this module is the root.
+python = use_extension("@tbhb_rules_python//:extensions.bzl", "python", dev_dependency = True)
+python.project()

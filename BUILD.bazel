@@ -50,9 +50,9 @@ exports_files(
 # Every file of the repository, for the whole-tree checks below. Ignored
 # directories are listed in REPO.bazel; these are the gitignored files that
 # can sit at the root of a working checkout.
-# The nested modules (astro/, cloudflare/, diagrams/d2/, go/, playwright/,
-# python/, storybook/, typescript/) and the e2e consumers are .bazelignored
-# workspaces of their own, with their own checks.
+# The nested modules (ansible/, astro/, cloudflare/, diagrams/d2/, go/,
+# playwright/, python/, storybook/, typescript/) and the e2e consumers are
+# .bazelignored workspaces of their own, with their own checks.
 repo_files(
     exclude = [
         ".DS_Store",
@@ -66,6 +66,7 @@ repo_files(
         "mise.local.toml",
     ],
     exclude_subpackages = [
+        "ansible/**",
         "astro/**",
         "cloudflare/**",
         "diagrams/d2/**",
@@ -242,6 +243,7 @@ FORMATTERS = [
 # of their own, which format themselves with these same formatters.
 FORMAT_EXCLUDE = [
     "*/testdata/*",
+    "ansible/*",
     "astro/*",
     "cloudflare/*",
     "diagrams/d2/*",
@@ -266,9 +268,9 @@ format_test(
     formatters = FORMATTERS,
 )
 
-# A new top-level directory is a deliberate change. astro/, cloudflare/,
-# diagrams/ (diagrams/d2/), e2e/, go/, playwright/, python/, storybook/ and
-# typescript/ hold .bazelignored workspaces outside :repo_files, so they are
+# A new top-level directory is a deliberate change. ansible/, astro/,
+# cloudflare/, diagrams/ (diagrams/d2/), e2e/, go/, playwright/, python/,
+# storybook/ and typescript/ hold .bazelignored workspaces outside :repo_files, so they are
 # listed but not seen here.
 repo_layout_test(
     name = "repo_layout_test",
@@ -280,6 +282,7 @@ repo_layout_test(
         ".github",
         ".vale",
         "LICENSES",
+        "ansible",
         "astro",
         "cloudflare",
         "diagrams",

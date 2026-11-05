@@ -1,0 +1,72 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load(
+    "@tbhb_rules_python//:defs.bzl",
+    "pyrefly_test",
+    "pytest_test",
+    "ruff_test",
+)
+load(":manifest_tests.bzl", "manifest_test_suite")
+
+repo_files()
+
+exports_files([
+    "ansible-lint.yml",
+    "ansible_check.py",
+    "collections_lock.py",
+])
+
+bzl_library(
+    name = "extension",
+    srcs = [
+        "collections.bzl",
+        "extension.bzl",
+        "manifest.bzl",
+    ],
+    visibility = ["//:__subpackages__"],
+    deps = ["@tbhb_rules//runtime:defs"],
+)
+
+bzl_library(
+    name = "checks",
+    srcs = ["checks.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@bazel_skylib//lib:shell",
+        "@tbhb_rules//lint:defs",
+        "@tbhb_rules//runtime:defs",
+    ],
+)
+
+manifest_test_suite(name = "manifest_tests")
+
+# The gates for this module's own Python, from its dev project
+# (pyproject.toml and uv.lock at the module root), when it is the root
+# module.
+
+SRCS = ["//:repo_files"]
+
+ruff_test(
+    name = "ruff_test",
+    srcs = SRCS,
+)
+
+# pyrefly's verdict depends only on the platform it analyses for; the
+# scripts run on Linux and macOS (the lock script on Windows too).
+pyrefly_test(
+    name = "pyrefly_test",
+    srcs = SRCS,
+    args = [
+        "--python-platform",
+        "linux",
+    ],
+)
+
+pytest_test(
+    name = "pytest_test",
+    srcs = SRCS,
+    coverage = ["private"],
+)

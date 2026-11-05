@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# tbhb_rules_ansible's default ansible-lint config, which ansible_lint_test
+# uses when the tree has no .ansible-lint of its own. A consumer's config
+# replaces this one entirely; it does not extend it.
+profile: production
+# Never install requirements or refresh schemas from the network: the
+# checks run without it, on the pinned collections.
+offline: true
+
+# The opt-in rules, which no profile turns on, by name. Left off:
+# only-builtins, which rejects every module outside ansible.builtin, so
+# any playbook using a pinned collection would fail it.
+enable_list:
+  - empty-string-compare
+  - galaxy-version-incorrect
+  - jinja-template-extension
+  - name[prefix]
+  - no-log-password
+  - no-prompting
+  - no-same-owner
+  - role-argument-spec
+
+# Molecule's working files and caches, which are not the project's code.
+exclude_paths:
+  - .cache/
+  - .ansible/
+  - '**/molecule/*/.molecule/'

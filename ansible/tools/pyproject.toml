@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The Ansible tools tbhb_rules_ansible runs when the root module declares no
+# `ansible.toolchain`: the `ansible` extension builds @tbhb_ansible_tools
+# from this project and its uv.lock, which Renovate's uv manager keeps
+# current. ansible-core 2.22.0 is the first release that declares Python
+# 3.15, the version .python-version pins; 2.21.x stops at 3.14.
+[project]
+name = "tbhb-rules-ansible-tools"
+version = "0"
+description = "Pinned Ansible tools of tbhb_rules_ansible"
+requires-python = ">=3.15"
+dependencies = [
+  "ansible-core==2.22.0",
+  "ansible-lint==26.11.0",
+  "molecule==26.11.0",
+  "molecule-plugins[docker]==26.11.0",
+]
+
+[tool.uv]
+package = false
+# The uv that @tbhb_rules//runtime/private:versions.bzl pins; Renovate moves
+# both.
+required-version = "==0.13.6"
