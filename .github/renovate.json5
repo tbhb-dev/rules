@@ -32,6 +32,15 @@
       enabled: false,
     },
     {
+      // The e2e toolchain case runs the checks on an ansible-core other
+      // than the module default, on Python 3.14, so its exact pin is the
+      // point of the test.
+      description: "The Ansible e2e toolchain keeps its older ansible-core",
+      matchFileNames: ["ansible/e2e/ansible/pyproject.toml"],
+      matchPackageNames: ["ansible-core"],
+      enabled: false,
+    },
+    {
       // The planted fixtures pin a stale version and a range on purpose,
       // for the proofs that the lock check rejects them.
       description: "The Ansible e2e planted requirements stay put",

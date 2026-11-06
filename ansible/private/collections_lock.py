@@ -6,8 +6,9 @@
 Usage: collections_lock.py --requirements PATH --lock PATH [--check]
 
 requirements.yml lists each collection with its `name`, one exact
-`version` and `source: https://galaxy.ansible.com`; a range, a missing
-version, another source or a role is an error. The lock,
+`version` and `source: https://galaxy.ansible.com/api/`; a range, a missing
+version, another source or a role is an error. Renovate looks a collection
+up at its `source`, and without /api/ Galaxy answers with its web page. The lock,
 requirements.lock.json beside it, records for each collection its version
 and Galaxy's download URL and sha256, which tbhb_rules_ansible fetches the
 tarball by.
@@ -34,9 +35,9 @@ from typing import cast
 
 import yaml
 
-GALAXY = "https://galaxy.ansible.com"
+GALAXY = "https://galaxy.ansible.com/api/"
 VERSION_URL = (
-    GALAXY + "/api/v3/plugin/ansible/content/published/collections/index/"
+    GALAXY + "v3/plugin/ansible/content/published/collections/index/"
     "{namespace}/{name}/versions/{version}/"
 )
 LOCK_COMMAND = "bazelisk run @tbhb_rules_ansible//:lock"
