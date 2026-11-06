@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# Exact pins only. After changing one, run `bazelisk run
+# @tbhb_rules_ansible//:lock` and commit requirements.lock.json.
+collections:
+  - name: ansible.posix
+    version: 2.2.2
+    source: https://galaxy.ansible.com

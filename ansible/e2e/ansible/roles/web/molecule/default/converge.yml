@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+- name: Converge
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: web

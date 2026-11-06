@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# A shell task that always reports a change: no-changed-when, which the
+# production profile enforces.
+- name: Report the uptime
+  hosts: web
+  tasks:
+    - name: Read the uptime
+      ansible.builtin.shell: uptime

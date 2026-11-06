@@ -1,0 +1,191 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load(
+    "@tbhb_rules_ansible//:defs.bzl",
+    "ansible_collections_lock_test",
+    "ansible_lint_test",
+    "ansible_syntax_check_test",
+    "molecule_test",
+)
+
+exports_files([
+    "pyproject.toml",
+    "requirements.lock.json",
+    "requirements.yml",
+    "uv.lock",
+])
+
+# The Ansible tree, checked as if this package were the repository root
+# (strip_prefix), where ansible.cfg sits.
+CLEAN = glob(
+    ["**"],
+    exclude = [
+        ".collections/**",
+        "planted/**",
+    ],
+)
+
+# The environment this package's uv project pins (ansible-core 2.21 on
+# Python 3.14), which MODULE.bazel selects with ansible.toolchain and the
+# checks use by default.
+
+ansible_syntax_check_test(
+    name = "syntax_test",
+    srcs = CLEAN,
+    inventory = "inventory/hosts.yml",
+    playbooks = ["site.yml"],
+    strip_prefix = "ansible",
+)
+
+ansible_lint_test(
+    name = "lint_test",
+    srcs = CLEAN,
+    # The tree has no lint config of its own, so the rules' default runs.
+    output_guard = "ansible-lint config: tbhb_rules_ansible's default",
+    strip_prefix = "ansible",
+)
+
+ansible_collections_lock_test(
+    name = "collections_lock_test",
+    lock = "requirements.lock.json",
+    requirements = "requirements.yml",
+    strip_prefix = "ansible",
+)
+
+# The rules' own pins (ansible-core 2.22 on Python 3.15), the default when
+# a module declares no toolchain. Both run without the network: the
+# sandbox blocks it where the platform's sandbox can (block-network), and
+# every proxy-honoring client is pointed at a closed local port, which
+# covers runners whose sandbox does not isolate the network.
+OFFLINE_ENV = {
+    proxy: "http://127.0.0.1:9"
+    for proxy in [
+        "ALL_PROXY",
+        "HTTPS_PROXY",
+        "HTTP_PROXY",
+        "all_proxy",
+        "http_proxy",
+        "https_proxy",
+    ]
+} | {
+    "NO_PROXY": "",
+    "no_proxy": "",
+}
+
+ansible_syntax_check_test(
+    name = "pinned_syntax_test",
+    srcs = CLEAN,
+    env = OFFLINE_ENV,
+    inventory = "inventory/hosts.yml",
+    playbooks = ["site.yml"],
+    python_env = "@tbhb_rules_ansible//:pinned_env",
+    strip_prefix = "ansible",
+    tags = ["block-network"],
+)
+
+ansible_lint_test(
+    name = "pinned_lint_test",
+    srcs = CLEAN,
+    env = OFFLINE_ENV,
+    python_env = "@tbhb_rules_ansible//:pinned_env",
+    strip_prefix = "ansible",
+    tags = ["block-network"],
+)
+
+# Never part of //...: it needs Docker. Run it explicitly with
+# `bazelisk test //ansible:molecule_test`.
+molecule_test(
+    name = "molecule_test",
+    srcs = CLEAN,
+    role = "roles/web",
+    strip_prefix = "ansible",
+)
+
+# Proofs: each target must fail, for the reason expect_failure_test states.
+# They are manual so `bazel test //...` runs them only through the proofs.
+PROOF_TAGS = ["manual"]
+
+ansible_lint_test(
+    name = "proof_lint_violation",
+    srcs = CLEAN + ["planted/lint/site.yml"],
+    strip_prefix = "ansible",
+    tags = PROOF_TAGS,
+)
+
+ansible_syntax_check_test(
+    name = "proof_syntax_error",
+    srcs = CLEAN + ["planted/syntax/site.yml"],
+    inventory = "inventory/hosts.yml",
+    playbooks = ["planted/syntax/site.yml"],
+    strip_prefix = "ansible",
+    tags = PROOF_TAGS,
+)
+
+ansible_syntax_check_test(
+    name = "proof_inventory_error",
+    srcs = CLEAN + ["planted/inventory/hosts.ini"],
+    inventory = "planted/inventory/hosts.ini",
+    playbooks = ["site.yml"],
+    strip_prefix = "ansible",
+    tags = PROOF_TAGS,
+)
+
+# ansible.cfg's collections_path = .collections holds example.planted; the
+# check's ANSIBLE_COLLECTIONS_PATH must win, so the module does not resolve.
+ansible_syntax_check_test(
+    name = "proof_cfg_collections_path",
+    srcs = CLEAN + glob([".collections/**"]) + ["planted/cfg_collections_path.yml"],
+    inventory = "inventory/hosts.yml",
+    playbooks = ["planted/cfg_collections_path.yml"],
+    strip_prefix = "ansible",
+    tags = PROOF_TAGS,
+)
+
+ansible_collections_lock_test(
+    name = "proof_lock_mismatch",
+    lock = "requirements.lock.json",
+    requirements = "planted/mismatch/requirements.yml",
+    strip_prefix = "ansible",
+    tags = PROOF_TAGS,
+)
+
+ansible_collections_lock_test(
+    name = "proof_lock_range",
+    lock = "requirements.lock.json",
+    requirements = "planted/range/requirements.yml",
+    strip_prefix = "ansible",
+    tags = PROOF_TAGS,
+)
+
+PROOF_REASONS = {
+    "proof_cfg_collections_path": "couldn't resolve module/action 'example\\.planted\\.ping'",
+    "proof_inventory_error": "Completely failed to parse inventory source .*/planted/inventory/hosts\\.ini",
+    "proof_lint_violation": "planted/lint/site\\.yml:10 Task/Handler: Read the uptime",
+    "proof_lock_mismatch": "ansible\\.posix is pinned at 2\\.2\\.1 but locked at '2\\.2\\.2'",
+    "proof_lock_range": "ansible\\.posix: version '>=2\\.0\\.0' is not one exact version",
+    "proof_syntax_error": "'rolez' is not a valid attribute for a Play",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]
+
+# A consumer config replaces the default entirely: under its min profile
+# the planted no-changed-when finding is not reported.
+ansible_lint_test(
+    name = "lint_consumer_config_test",
+    srcs = CLEAN + [
+        "planted/lint/min.ansible-lint.yml",
+        "planted/lint/site.yml",
+    ],
+    config = "planted/lint/min.ansible-lint.yml",
+    output_guard = "ansible-lint config: planted/lint/min\\.ansible-lint\\.yml \\(the check's `config`\\)",
+    strip_prefix = "ansible",
+)

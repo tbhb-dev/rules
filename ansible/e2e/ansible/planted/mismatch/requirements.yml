@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# A version the lock beside ../../requirements.yml does not record.
+collections:
+  - name: ansible.posix
+    version: 2.2.1
+    source: https://galaxy.ansible.com

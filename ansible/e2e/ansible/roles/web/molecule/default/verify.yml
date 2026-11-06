@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Read the listen backlog
+      ansible.builtin.command: sysctl -n net.core.somaxconn
+      register: web_somaxconn_now
+      changed_when: false
+
+    - name: Check the listen backlog
+      ansible.builtin.assert:
+        that:
+          - web_somaxconn_now.stdout | int == 1024

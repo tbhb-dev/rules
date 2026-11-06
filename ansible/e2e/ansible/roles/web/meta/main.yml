@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+galaxy_info:
+  author: tbhb-dev
+  description: Tunes a web server's kernel
+  license: Apache-2.0
+  min_ansible_version: "2.21"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+dependencies: []

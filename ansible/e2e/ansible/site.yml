@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+- name: Configure the web servers
+  hosts: web
+  become: true
+  roles:
+    - role: web

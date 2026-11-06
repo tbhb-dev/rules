@@ -32,6 +32,22 @@
       enabled: false,
     },
     {
+      // The planted fixtures pin a stale version and a range on purpose,
+      // for the proofs that the lock check rejects them.
+      description: "The Ansible e2e planted requirements stay put",
+      matchFileNames: ["ansible/e2e/ansible/planted/**"],
+      enabled: false,
+    },
+    {
+      // requirements.lock.json records each collection's URL and sha256,
+      // which only the lock target writes.
+      description: "Ansible collection bumps need the lock rewritten",
+      matchFileNames: ["ansible/e2e/ansible/requirements.yml"],
+      prBodyNotes: [
+        "Rewrite the collection lock on this branch: `cd ansible/e2e && bazelisk run @tbhb_rules_ansible//:lock`, then commit `ansible/requirements.lock.json`. Until then `collections_lock_test` fails, as expected.",
+      ],
+    },
+    {
       description: "typescript-eslint 8 supports TypeScript below 6.1 (peer >=4.8.4 <6.1.0)",
       matchFileNames: ["typescript/**/package.json"],
       matchPackageNames: ["typescript"],
