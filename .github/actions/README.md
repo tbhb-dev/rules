@@ -56,7 +56,7 @@ The `repo` job clones the full history and makes these checks in order. An empty
 8. zizmor, with the online audits, and the pedantic persona.
 9. The CODEOWNERS owner and syntax check through the GitHub API, with `curl` and `jq`.
 
-The history scan covers only the tested commit's history, on a pull request and on a push, so a finding on another open pull request's branch, which the full clone also holds, fails only that pull request. The title and body get the same rules as the history, the private ones included, because a squash merge makes them the commit message.
+On a pull request and on a push alike, the history scan covers only the tested commit's history, so a finding on another open pull request's branch, which the full clone also holds, fails only that pull request. The title and body get the same rules as the history, the private ones included, because a squash merge makes them the commit message.
 
 | Input                           | Default             | Meaning                                                            |
 |---------------------------------|---------------------|--------------------------------------------------------------------|
