@@ -173,22 +173,22 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_ryl_macos_arm64",
         build_file_content = _EXPORT.format("ryl"),
-        sha256 = "753d8637baeb38b35e59fae9da94a226d7ae4423d3d26db89ae424d6a64c2792",
-        url = "https://github.com/owenlamont/ryl/releases/download/v0.26.1/ryl-aarch64-apple-darwin.tar.gz",
+        sha256 = "a503a54647f72bb66eb48f2418b11f1d3baf4ef64bd83f80486feea9cf7f431b",
+        url = "https://github.com/owenlamont/ryl/releases/download/v0.27.0/ryl-aarch64-apple-darwin.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_ryl_linux_x86_64",
         build_file_content = _EXPORT.format("ryl"),
-        sha256 = "17b6fe666c19828179c11e15943643c4d9a940dc5d7c1ae3ec0055f81aaa3023",
-        url = "https://github.com/owenlamont/ryl/releases/download/v0.26.1/ryl-x86_64-unknown-linux-gnu.tar.gz",
+        sha256 = "8d494a2742d8f2d57a49bd7db38034650ca98200f08d0c733c4650cbf5ec026d",
+        url = "https://github.com/owenlamont/ryl/releases/download/v0.27.0/ryl-x86_64-unknown-linux-gnu.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_ryl_linux_arm64",
         build_file_content = _EXPORT.format("ryl"),
-        sha256 = "dadeb75d4fc1fcc66d439b18b630d20ad9730eb017c0ecc86a55b11418c6ff51",
-        url = "https://github.com/owenlamont/ryl/releases/download/v0.26.1/ryl-aarch64-unknown-linux-gnu.tar.gz",
+        sha256 = "25fdbd300dde7944bcc9e858984246e503cbc5a66cc3b5bee9f926925d4581b1",
+        url = "https://github.com/owenlamont/ryl/releases/download/v0.27.0/ryl-aarch64-unknown-linux-gnu.tar.gz",
     )
 
     http_archive(
@@ -351,8 +351,8 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_ryl_windows_x86_64",
         build_file_content = _EXPORT.format("ryl.exe"),
-        sha256 = "e6c49aaab0d674de1842ee2095c32f22f69394fe84e0898315d9a58e506438d5",
-        url = "https://github.com/owenlamont/ryl/releases/download/v0.26.1/ryl-x86_64-pc-windows-msvc.zip",
+        sha256 = "7502eede386f3838e3c0d579419e7673b7cd797431152d9f45bcdc9a442a3115",
+        url = "https://github.com/owenlamont/ryl/releases/download/v0.27.0/ryl-x86_64-pc-windows-msvc.zip",
     )
 
     http_archive(
