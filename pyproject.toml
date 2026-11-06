@@ -10,7 +10,7 @@ name = "rules-workspace"
 version = "0"
 description = "Workspace root for the tbhb-dev/rules Python tools"
 requires-python = ">=3.15"
-# What the code under lint/private/okf_docs and tools/interim imports, which
+# What the code under lint/private/okf_docs imports, which
 # deptry holds apart from the development groups below.
 dependencies = [
   "jsonschema[format]>=4.26.0",
@@ -284,8 +284,7 @@ addopts = [
 testpaths = ["lint/private/okf_docs", "runtime/private"]
 
 [tool.mutmut]
-# Mutate this repository's Python; every mutant must be killed. The interim
-# tooling (tools/interim) is ascm's, tested there.
+# Mutate this repository's Python; every mutant must be killed.
 source_paths = ["lint/private/okf_docs", "runtime/private"]
 # Tests are copied and run, never mutated.
 do_not_mutate = ["lint/private/okf_docs/test_*.py", "runtime/private/test_*.py", "runtime/private/boot/*"]
@@ -295,8 +294,6 @@ pytest_add_cli_args_test_selection = ["lint/private/okf_docs", "runtime/private"
 
 [tool.ruff]
 line-length = 88
-# A copy of ascm's interim tooling, which ascm checks.
-extend-exclude = ["tools/interim"]
 
 [tool.ruff.lint]
 select = ["ALL"]

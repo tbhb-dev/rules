@@ -195,7 +195,6 @@ SHELL_SCRIPTS = [
     "quality/private/mutation_gate.sh.tpl",
     "testing/private/expect_failure.sh.tpl",
     "testing/tests/subject.sh",
-    "tools/interim/install.sh",
 ]
 
 tree_check_test(

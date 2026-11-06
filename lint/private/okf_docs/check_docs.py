@@ -74,9 +74,6 @@ class _Loader(yaml.SafeLoader):
 _Loader.add_constructor("tag:yaml.org,2002:timestamp", _keep_text)
 
 
-# tools/interim/pull_request.py carries a copy until the interim PR tooling is
-# deleted; this one is the lasting home.
-# pylint: disable=duplicate-code
 def parse(text: str) -> tuple[object, str]:
     """Split a file into its parsed frontmatter and body.
 

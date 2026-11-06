@@ -62,11 +62,9 @@ vale_sync(
 # configuration, from the environment the root uv.lock pins.
 PYTHON_SRCS = ["//:repo_files"]
 
-# Fixtures are content under test, not this repository's Python. The
-# interim tooling is a copy of ascm's, which tests and checks it.
+# Fixtures are content under test, not this repository's Python.
 PYTHON_EXCLUDE = [
     "**/testdata/**",
-    "tools/interim/**",
 ]
 
 ruff_test(
