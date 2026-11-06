@@ -34,7 +34,11 @@ def pin(**fields: object) -> dict[str, object]:
         (pin(version=2), "2 is not one exact version"),
         (
             pin(source="https://example.com"),
-            "source must be https://galaxy.ansible.com",
+            "source must be https://galaxy.ansible.com/api/",
+        ),
+        (
+            pin(source="https://galaxy.ansible.com"),
+            "/api/, not 'https://galaxy.ansible.com'",
         ),
         (pin(type="git"), "type must be galaxy, not 'git'"),
     ],
@@ -74,10 +78,10 @@ REQUIREMENTS = """\
 collections:
   - name: ansible.posix
     version: 2.2.2
-    source: https://galaxy.ansible.com
+    source: https://galaxy.ansible.com/api/
   - name: community.general
     version: "12.0.0"
-    source: https://galaxy.ansible.com
+    source: https://galaxy.ansible.com/api/
 """
 
 
