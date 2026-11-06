@@ -167,6 +167,7 @@ subtests
 surrogateescape
 takewhile
 tbhb
+tbhbdev
 clipkg
 testifylint
 testonly
