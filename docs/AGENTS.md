@@ -24,4 +24,4 @@ Never write `verified`. Only a human adds it, after reading the doc.
 
 ## Checks
 
-Run `uv run python tools/check_docs.py` after each change. It validates the frontmatter of the bundle and of the other Markdown files. It also checks the index entries and that an index lists each doc. Run `bazelisk test //:rumdl_test` for structure and relative links.
+Run `bazelisk test //:okf_docs_test` after each change. It validates the frontmatter of the bundle and of the other Markdown files. It also checks the index entries and that an index lists each doc. Run `bazelisk test //:rumdl_test` for structure and relative links.
