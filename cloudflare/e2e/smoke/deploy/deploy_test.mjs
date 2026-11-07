@@ -14,7 +14,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { test } from "node:test";
+import { after, before, test } from "node:test";
 
 const runfiles = process.env.RUNFILES_DIR ?? process.env.JS_BINARY__RUNFILES;
 const main = join(runfiles, process.env.TEST_WORKSPACE ?? "_main");
@@ -27,13 +27,45 @@ const files = {
   attempts: join(tmp, "attempts"),
   output: join(tmp, "github-output"),
   summary: join(tmp, "github-summary"),
+  api: join(tmp, "api.json"),
 };
 const OLD = "00000000-0000-4000-8000-000000000001";
 const NEW = "00000000-0000-4000-8000-000000000002";
 const READ = "read-7f3a9c2e5d";
 const MAIN = "main-4b81d0f6a3";
 
-function setup(env, live) {
+// The fake Cloudflare API (fake_api.mjs), which answers the migration check.
+let apiServer;
+let apiUrl;
+before(async () => {
+  apiServer = spawn(process.execPath, [join(main, process.env.fake_api)], {
+    env: { ...process.env, FAKE_LOG: files.log, FAKE_API: files.api },
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  const port = await new Promise((done) =>
+    apiServer.stdout.once("data", (data) => done(String(data).trim())),
+  );
+  apiUrl = `http://127.0.0.1:${port}`;
+});
+after(() => apiServer.kill());
+
+// What the API reports for a script whose last applied migration is `tag`
+// (null: it has applied none).
+function service(tag) {
+  return {
+    status: 200,
+    body: {
+      success: true,
+      result: {
+        default_environment: {
+          script: tag === null ? {} : { migration_tag: tag },
+        },
+      },
+    },
+  };
+}
+
+function setup(env, live, api) {
   for (const file of Object.values(files)) {
     rmSync(file, { force: true });
   }
@@ -41,6 +73,9 @@ function setup(env, live) {
   mkdirSync(runnerTemp);
   if (live !== null) {
     writeFileSync(files.state, JSON.stringify(live));
+  }
+  if (api !== undefined) {
+    writeFileSync(files.api, JSON.stringify(api));
   }
   return {
     ...process.env,
@@ -58,6 +93,8 @@ function setup(env, live) {
     SMOKE_MAIN_TOKEN: MAIN,
     FAKE_LOG: files.log,
     FAKE_STATE: files.state,
+    FAKE_API: files.api,
+    TBHB_DEPLOY_API: apiUrl,
     FAKE_STARTED: files.started,
     FAKE_ATTEMPTS: files.attempts,
     // Shrinks deploy.mjs's 60 s settle window to 3 s, and its pause to 0.25 s.
@@ -116,12 +153,13 @@ function deploy(
   target,
   env = {},
   live = [{ version_id: OLD, percentage: 100 }],
+  api = undefined,
 ) {
   const [file, args, options] = launcher(target);
   const r = spawnSync(file, args, {
     ...options,
     encoding: "utf8",
-    env: setup(env, live),
+    env: setup(env, live, api),
   });
   return outcome(r.status, r.stdout, r.stderr);
 }
@@ -392,6 +430,88 @@ test("stops before wrangler without credentials", () => {
     assert.deepEqual(r.steps, []);
     assert.match(r.stderr, new RegExp(`${name} is unset`));
   }
+});
+
+const MIGRATIONS = "deploy_stg_migrations";
+const migrationSteps = [
+  "deployments status",
+  "script metadata",
+  "versions upload",
+  `deploy ${OLD}@100% ${NEW}@0%`,
+  "check pre",
+  "deployments status",
+  `deploy ${NEW}@100%`,
+  "check post",
+];
+
+test("refuses a pending Durable Object migration before uploading anything", () => {
+  // stg's last migration is v2; the top level's is v1, so a script at v1
+  // still has v2 pending, and one that has applied none has both.
+  for (const [applied, shown] of [
+    ["v1", '"v1"'],
+    [null, "none"],
+  ]) {
+    const r = deploy(MIGRATIONS, {}, undefined, service(applied));
+    assert.equal(r.status, 1, r.stderr);
+    assert.deepEqual(r.steps, ["deployments status", "script metadata"]);
+    assert.match(
+      r.stderr,
+      new RegExp(
+        `the stg Worker has a pending Durable Object migration: \\S*wrangler\\.migrations\\.jsonc ends at tag "v2" but the live script's applied tag is ${shown}\\.`,
+      ),
+    );
+    assert.match(r.stderr, /nothing was uploaded/);
+    assert.match(
+      r.stderr,
+      /wrangler deploy --config \S*wrangler\.migrations\.jsonc --env stg\n/,
+    );
+    // The call names the Worker the config resolves for stg.
+    assert.equal(r.calls[1].path, "/accounts/account/workers/services/smoke-stg");
+    assert.equal(r.calls[1].authorization, "Bearer token");
+    assert.match(r.output, /result=failure\n$/);
+    assert.doesNotMatch(r.output, /^version-id=/m);
+  }
+});
+
+test("deploys when the applied migration tag is the config's last", () => {
+  const r = deploy(MIGRATIONS, {}, undefined, service("v2"));
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(r.steps, migrationSteps);
+  assert.match(r.output, /result=success\n$/);
+});
+
+test("fails closed when the applied migration tag can't be read", () => {
+  const unreadable = [
+    [
+      { status: 403, body: { success: false, errors: [{ code: 10000, message: "Authentication error" }] } },
+      /answered 403 \(10000: Authentication error\)/,
+    ],
+    [{ status: 200, body: "not json" }, /answered 200/],
+    [{ status: 200, body: { success: true, result: {} } }, /reported no script/],
+    // The script exists (the deployment was read), so a 404 is unreadable too.
+    [
+      { status: 404, body: { success: false, errors: [{ code: 10090, message: "gone" }] } },
+      /answered 404/,
+    ],
+  ];
+  for (const [api, reason] of unreadable) {
+    const r = deploy(MIGRATIONS, {}, undefined, api);
+    assert.equal(r.status, 1, r.stderr);
+    assert.deepEqual(r.steps, ["deployments status", "script metadata"]);
+    assert.match(r.stderr, reason);
+    assert.match(
+      r.stderr,
+      /can't read the Durable Object migrations of the stg Worker \(exited 1\), so can't tell whether one is pending; nothing was uploaded/,
+    );
+    assert.match(r.output, /result=failure\n$/);
+  }
+});
+
+test("a Worker without deployments still points at the bootstrap when its config has migrations", () => {
+  const r = deploy(MIGRATIONS, {}, null, service("v1"));
+  assert.equal(r.status, 1);
+  assert.deepEqual(r.steps, ["deployments status"]);
+  assert.match(r.stderr, /first deploy is a one-time bootstrap/);
 });
 
 // Windows has no SIGTERM to send a process.

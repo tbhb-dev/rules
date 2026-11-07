@@ -73,6 +73,14 @@ copy_to_bin(
     visibility = ["//visibility:public"],
 )
 
+# worker_deploy's migration check, which deploy.mjs runs as a child. It sits
+# beside deploy.mjs so it resolves the same node_modules/wrangler.
+copy_to_bin(
+    name = "migrations",
+    srcs = ["migrations.mjs"],
+    visibility = ["//visibility:public"],
+)
+
 # The `bazel run` launcher: wrangler in the consumer's package directory.
 copy_to_bin(
     name = "run",
@@ -80,8 +88,8 @@ copy_to_bin(
     visibility = ["//visibility:public"],
 )
 
-# This module's own JavaScript (bundle.mjs, check_types.mjs, deploy.mjs and
-# run.mjs) and JSON, under Biome.
+# This module's own JavaScript (bundle.mjs, check_types.mjs, deploy.mjs,
+# migrations.mjs and run.mjs) and JSON, under Biome.
 biome_test(
     name = "biome_test",
     srcs = [":repo_files"],

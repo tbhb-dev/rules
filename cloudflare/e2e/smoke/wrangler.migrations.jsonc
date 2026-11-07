@@ -1,0 +1,25 @@
+{
+  // The deploy_stg_migrations proof's config: Durable Object migrations at the
+  // top level and, for stg, a longer history of its own. The smoke Worker has
+  // no Durable Object, so the class named here is never exported; bundling
+  // doesn't check, and no real deploy uses this config.
+  "name": "smoke",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-23",
+  "workers_dev": false,
+  "vars": { "GREETING": "hello" },
+  "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "smoke" }],
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Counter"] }],
+  "env": {
+    "stg": {
+      "name": "smoke-stg",
+      "workers_dev": false,
+      "vars": { "GREETING": "hello" },
+      "r2_buckets": [{ "binding": "BUCKET", "bucket_name": "smoke-stg" }],
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["Counter"] },
+        { "tag": "v2", "renamed_classes": [{ "from": "Counter", "to": "Tally" }] }
+      ]
+    }
+  }
+}

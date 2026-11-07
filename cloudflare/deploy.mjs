@@ -4,7 +4,10 @@
 // worker_deploy's launcher (private/worker.bzl). Deploys a built bundle as
 // a new Worker version and moves traffic to it only after its tests pass:
 //
-// 1. Reads the live deployment, which must be one version at 100%.
+// 1. Reads the live deployment, which must be one version at 100%, and
+//    refuses a Durable Object migration the config declares that the live
+//    script hasn't applied: `versions upload` can't apply one, so it needs
+//    a one-off plain `wrangler deploy` first.
 // 2. Uploads the bundle as a new version, with the Worker's secrets.
 // 3. Deploys it at 0% beside the live version.
 // 4. Runs the pre-deploy tests against the new version, through the
@@ -247,6 +250,22 @@ function describe(result) {
   return `exited ${result.status}`;
 }
 
+// What a wrangler process, or the migration check that loads wrangler, sees.
+function wranglerEnv(extra = {}) {
+  return {
+    ...without(process.env, NEVER),
+    CI: "true",
+    HOME: join(scratch, "home"),
+    USERPROFILE: join(scratch, "home"),
+    WRANGLER_HIDE_BANNER: "true",
+    WRANGLER_LOG_PATH: join(scratch, "logs"),
+    WRANGLER_LOG_SANITIZE: "true",
+    WRANGLER_SEND_METRICS: "false",
+    XDG_CONFIG_HOME: join(scratch, "config"),
+    ...extra,
+  };
+}
+
 async function wrangler(args, { capture = false } = {}) {
   calls += 1;
   const output = join(scratch, `output-${calls}.ndjson`);
@@ -255,18 +274,7 @@ async function wrangler(args, { capture = false } = {}) {
     [wranglerBin, ...args, "--config", config, "--env", settings.env],
     {
       cwd: scratch,
-      env: {
-        ...without(process.env, NEVER),
-        CI: "true",
-        HOME: join(scratch, "home"),
-        USERPROFILE: join(scratch, "home"),
-        WRANGLER_HIDE_BANNER: "true",
-        WRANGLER_LOG_PATH: join(scratch, "logs"),
-        WRANGLER_LOG_SANITIZE: "true",
-        WRANGLER_OUTPUT_FILE_PATH: output,
-        WRANGLER_SEND_METRICS: "false",
-        XDG_CONFIG_HOME: join(scratch, "config"),
-      },
+      env: wranglerEnv({ WRANGLER_OUTPUT_FILE_PATH: output }),
       capture,
       timeout: wranglerTimeout,
     },
@@ -305,6 +313,48 @@ async function liveVersions() {
     fail("wrangler deployments status reported no versions");
   }
   return live.versions;
+}
+
+// Fails when the config's last Durable Object migration isn't the live
+// script's applied tag. A config without migrations is always fine. If the
+// tags can't be read for one that has them, the answer is unknown, so the
+// deploy stops: shipping code that needs a migration that hasn't run is
+// worse than stopping.
+async function refusePendingMigration() {
+  const resultFile = join(scratch, "migrations.json");
+  const result = await spawn(
+    process.execPath,
+    [join(here, "migrations.mjs"), config, settings.env, resultFile],
+    {
+      cwd: scratch,
+      env: wranglerEnv(
+        // A test points the API at a stand-in; outside a test it's ignored.
+        process.env.TEST_TMPDIR && process.env.TBHB_DEPLOY_API
+          ? { CLOUDFLARE_API_BASE_URL: process.env.TBHB_DEPLOY_API }
+          : {},
+      ),
+      timeout: wranglerTimeout,
+    },
+  );
+  checkInterrupted();
+  if (result.status !== 0 || !existsSync(resultFile)) {
+    fail(
+      `can't read the Durable Object migrations of the ${settings.env} Worker (${describe(result)}), ` +
+        "so can't tell whether one is pending; nothing was uploaded",
+    );
+  }
+  const { last, applied } = JSON.parse(readFileSync(resultFile, "utf8"));
+  if (last === null || last === applied) {
+    return;
+  }
+  fail(
+    `the ${settings.env} Worker has a pending Durable Object migration: ` +
+      `${settings.config} ends at tag ${JSON.stringify(last)} but the live script's ` +
+      `applied tag is ${applied === null ? "none" : JSON.stringify(applied)}. ` +
+      "wrangler versions upload can't apply migrations, so nothing was uploaded. " +
+      "Apply it once with a plain deploy, which puts the code you have checked out live at 100%, then rerun this target: " +
+      `wrangler deploy --config ${settings.config} --env ${settings.env}`,
+  );
 }
 
 function same(versions, expected) {
@@ -418,6 +468,7 @@ try {
     fail(`the live version id ${JSON.stringify(previous)} isn't a UUID`);
   }
   report("previous-version-id", previous);
+  await refusePendingMigration();
 
   // 2. Upload.
   const secretsFile = join(scratch, "secrets.json");

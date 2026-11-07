@@ -17,16 +17,20 @@ js_binary(
 js_test(
     name = "deploy_test",
     data = [
+        "fake_api.mjs",
         "fake_wrangler.mjs",
         "//:deploy_stg",
+        "//:deploy_stg_migrations",
         "//:deploy_stg_no_rollback",
         "//:deploy_stg_timeout",
     ],
     entry_point = "deploy_test.mjs",
     env = {
         "deploy_stg": "$(rootpath //:deploy_stg)",
+        "deploy_stg_migrations": "$(rootpath //:deploy_stg_migrations)",
         "deploy_stg_no_rollback": "$(rootpath //:deploy_stg_no_rollback)",
         "deploy_stg_timeout": "$(rootpath //:deploy_stg_timeout)",
+        "fake_api": "$(rootpath fake_api.mjs)",
         "fake_wrangler": "$(rootpath fake_wrangler.mjs)",
     },
 )
