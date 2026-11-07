@@ -4,11 +4,11 @@
   "description": "The npm tools behind @tbhb_rules_typescript//:defs.bzl, linked into each check's tree. typescript stays below 6.1, which typescript-eslint 8 requires (peer >=4.8.4 <6.1.0); vitest and @vitest/* stay on 4.1, which @cloudflare/vitest-pool-workers requires (peer ^4.1.0).",
   "dependencies": {
     "@biomejs/biome": "2.6.4",
-    "@cloudflare/vitest-plugin": "1.4.12",
+    "@cloudflare/vitest-plugin": "1.5.0",
     "@stryker-mutator/core": "10.1.1",
     "@stryker-mutator/vitest-runner": "10.1.1",
-    "@vitest/coverage-istanbul": "5.0.5",
-    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/coverage-istanbul": "5.1.0",
+    "@vitest/coverage-v8": "5.1.0",
     "dependency-cruiser": "18.7.1",
     "eslint": "10.14.0",
     "eslint-plugin-sonarjs": "4.2.2",
@@ -17,6 +17,6 @@
     "pnpm": "12.17.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",
-    "vitest": "5.0.5"
+    "vitest": "5.1.0"
   }
 }
