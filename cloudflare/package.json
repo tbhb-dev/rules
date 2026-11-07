@@ -3,6 +3,6 @@
   "private": true,
   "description": "The tools tbhb_rules_cloudflare runs, each pinned exactly. wrangler's esbuild and workerd come as their per-platform optional packages.",
   "dependencies": {
-    "wrangler": "4.156.0"
+    "wrangler": "4.156.1"
   }
 }
