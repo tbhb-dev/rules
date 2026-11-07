@@ -3,6 +3,7 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("//lint/private:commit_identity.bzl", "commit_identity")
 load("//lint/private:gitleaks_text.bzl", "gitleaks_text")
 load("//repo:defs.bzl", "repo_files")
 
@@ -24,6 +25,14 @@ bool_flag(
 # a pull request's title and body.
 gitleaks_text(
     name = "gitleaks_text",
+    visibility = ["//visibility:public"],
+)
+
+# Checks the commits in a range against the allowed (author, committer)
+# pairs: `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD`.
+# repo-checks.yml runs it on a pull request's commits.
+commit_identity(
+    name = "commit_identity",
     visibility = ["//visibility:public"],
 )
 

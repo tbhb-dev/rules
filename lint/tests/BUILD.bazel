@@ -5,6 +5,7 @@ load("//lint:defs.bzl", "gitleaks_history", "shellcheck_test", "shfmt_test")
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
+load(":commit_identity_scenario.bzl", "commit_identity_scenario_test")
 load(":cspell_tests.bzl", "cspell_test_suite")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
 load(":gitleaks_private_scenario.bzl", "gitleaks_private_scenario_test")
@@ -83,9 +84,36 @@ gitleaks_tool(name = "gitleaks_optional")
     ]
 ]
 
-# gitleaks_history against throwaway repositories.
-
 PROOF_TAGS = ["manual"]
+
+# commit_identity against throwaway repositories.
+
+[
+    commit_identity_scenario_test(
+        name = "commit_identity_" + scenario + "_test",
+        scenario = scenario,
+        subject = "//lint:commit_identity",
+    )
+    for scenario in [
+        "allowed",
+        "empty",
+    ]
+]
+
+[
+    commit_identity_scenario_test(
+        name = "proof_commit_identity_" + scenario,
+        scenario = scenario,
+        subject = "//lint:commit_identity",
+        tags = PROOF_TAGS,
+    )
+    for scenario in [
+        "noreply_author",
+        "wrong_committer",
+    ]
+]
+
+# gitleaks_history against throwaway repositories.
 
 gitleaks_history(
     name = "history_subject",
@@ -180,6 +208,8 @@ NO_SCRIPTS = ["testdata/root/a.txt"]
 ]
 
 PROOF_REASONS = {
+    "proof_commit_identity_noreply_author": "commit_identity: FAIL: [0-9a-f]{40} author and committer are not an allowed pair: tbhb-agent <334376894\\+tbhb-agent@users.noreply.github.com> \\(author\\) -> tbhb.dev Agent <agent@tonyburns.net> \\(committer\\)",
+    "proof_commit_identity_wrong_committer": "commit_identity: FAIL: [0-9a-f]{40} author and committer are not an allowed pair: tbhb.dev Agent <agent@tonyburns.net> \\(author\\) -> GitHub <noreply@github.com> \\(committer\\)",
     "proof_history_corrupt": "gitleaks_history: FAIL: git cannot read the history",
     "proof_history_no_commits": "gitleaks_history: FAIL: the repository has no commits",
     "proof_history_other_branch": "leaks found: [1-9]",

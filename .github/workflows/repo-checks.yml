@@ -180,6 +180,16 @@ jobs:
           printf '%s\n\n%s\n' "${PR_TITLE}" "${PR_BODY}" >"${text}"
           bazelisk run @tbhb_rules//lint:gitleaks_text <"${text}"
 
+      # A pull request's own commits, base to head, must each carry an
+      # allowed (author, committer) pair; the list is in tbhb_rules. The
+      # squash commit a merge writes is not in the range.
+      - name: Check the pull request's commit identities
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bazelisk run @tbhb_rules//lint:commit_identity -- "${BASE_SHA}" "${HEAD_SHA}"
+
       # Advisories change without any input changing, so the audit is never
       # a cached test.
       - name: Audit the locked Python dependencies
