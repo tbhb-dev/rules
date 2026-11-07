@@ -1,0 +1,6 @@
+{
+  "color": {
+    "$type": "color",
+    "surface": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1] } }
+  }
+}

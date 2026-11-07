@@ -1,0 +1,14 @@
+{
+  "name": "proof",
+  "version": "2025.10",
+  "modifiers": {
+    "theme": {
+      "contexts": {
+        "ocean": [{ "$ref": "themes/ocean.tokens.json" }],
+        "forest": [{ "$ref": "themes/forest.tokens.json" }]
+      },
+      "default": "ocean"
+    }
+  },
+  "resolutionOrder": [{ "$ref": "#/modifiers/theme" }]
+}

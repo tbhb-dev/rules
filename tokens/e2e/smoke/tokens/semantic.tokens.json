@@ -1,0 +1,12 @@
+{
+  "color": {
+    "$type": "color",
+    "surface": { "$value": "{role.neutral.1}" },
+    "surface-raised": { "$value": "{role.neutral.2}" },
+    "border": { "$value": "{role.neutral.6}" },
+    "text": { "$value": "{role.neutral.12}" },
+    "text-muted": { "$value": "{role.neutral.11}" },
+    "accent": { "$value": "{role.accent.9}" },
+    "accent-text": { "$value": "{role.accent.11}" }
+  }
+}
