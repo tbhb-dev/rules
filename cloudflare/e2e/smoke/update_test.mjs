@@ -35,9 +35,12 @@ function update(name, seed) {
   }
   // The target's own args apply only under `bazel run`, so they're repeated.
   const args = ["types", "--config", "wrangler.jsonc", types];
+  // On Windows the target is a .bat launcher, which Node starts only
+  // through a shell; the args hold no characters cmd would reinterpret.
   const result = spawnSync(join(main, process.env.update), args, {
     encoding: "utf8",
     env: { ...process.env, BAZEL_BINDIR: ".", BUILD_WORKSPACE_DIRECTORY: tree },
+    shell: process.platform === "win32",
   });
   return { tree, result };
 }
