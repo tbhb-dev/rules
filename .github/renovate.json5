@@ -102,7 +102,7 @@
       matchFileNames: ["cloudflare/**/package.json"],
       matchPackageNames: ["wrangler"],
       prBodyNotes: [
-        "Regenerate the smoke Worker's types on this branch before merging: `cd cloudflare/e2e/smoke && bazel run //:worker_types_test.update`, then commit `worker-configuration.d.ts`. Until then `worker_types_test` fails, as expected.",
+        "Regenerate both smoke Workers' types on this branch before merging: `cd cloudflare/e2e/smoke && bazel run //:worker_types_test.update && bazel run //nested:worker_types_test.update`, then commit both `worker-configuration.d.ts` files. Until then both `worker_types_test` targets fail, as expected.",
       ],
     },
     {
