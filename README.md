@@ -67,6 +67,7 @@ Notes on individual tools:
 - `actionlint_test` puts the pinned shellcheck on PATH, so the `run:` block checks can't silently vanish.
 - `zizmor_test` runs the offline audits only. The online audits need the network and a token, so they belong outside the test graph.
 - `gitleaks_test` scans the working tree. `gitleaks_history` scans the Git history of every branch, with `bazel run` (in CI, after a full-depth checkout). `bazel run //:gitleaks_history -- --log-opts=HEAD` scans only the checked-out branch. It fails when gitleaks walks no commits of a history with content, which gitleaks itself reports as success. `bazel run @tbhb_rules//lint:gitleaks_text < file` scans text, such as a pull request's body, under the workspace's `.gitleaks.toml`.
+- `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD` fails on any commit in `BASE..HEAD` whose author and committer aren't one of the allowed pairs in `ALLOWED_PAIRS`, in `lint/private/commit_identity.bzl`. `repo-checks.yml` runs it on a pull request's commits.
 
 ### Failure proofs
 
