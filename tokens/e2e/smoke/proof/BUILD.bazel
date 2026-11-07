@@ -1,0 +1,228 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@bazel_lib//lib:write_source_files.bzl", "write_source_files")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("@tbhb_rules_tokens//:defs.bzl", "tokens_css", "tokens_test")
+
+repo_files()
+
+NOT_WINDOWS = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+# Each proof_* is a tokens_test that must fail, with the message it must
+# print. They are manual, so `bazel test //...` runs only the *_fails
+# wrappers.
+
+tokens_test(
+    name = "proof_alias",
+    srcs = ["alias/a.tokens.json"],
+    resolver = "alias/tokens.resolver.json",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_alias_fails",
+    pattern = "proof/alias/a.tokens.json: color.text refers to {color.ink}, which no token defines",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_alias",
+)
+
+tokens_test(
+    name = "proof_cycle",
+    srcs = ["cycle/a.tokens.json"],
+    resolver = "cycle/tokens.resolver.json",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_cycle_fails",
+    pattern = "proof/cycle/a.tokens.json: alias cycle: color.surface -> color.text -> color.surface",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_cycle",
+)
+
+tokens_test(
+    name = "proof_missing_role",
+    srcs = glob(["missing/themes/*.tokens.json"]),
+    resolver = "missing/tokens.resolver.json",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_missing_role_fails",
+    pattern = "proof/missing/themes/forest.tokens.json: theme forest lacks role.accent.9, which proof/missing/themes/ocean.tokens.json defines for theme ocean",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_missing_role",
+)
+
+# The smoke tokens, with a pair that fails AA: Radix blue 9 is a solid
+# fill, not a text color, at about 3.2:1 on gray 1.
+tokens_test(
+    name = "proof_contrast",
+    srcs = ["//tokens:srcs"],
+    contrast = [
+        {
+            "background": "color.surface",
+            "foreground": "color.accent",
+        },
+    ],
+    resolver = "//tokens:tokens.resolver.json",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_contrast_fails",
+    pattern = r"tokens/tokens.resolver.json: contrast pair color.accent on color.surface fails WCAG 2 AA: expected 4.5, got [0-9.]+ \(AA\) \(when mode=light, theme=ocean\)",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_contrast",
+)
+
+# radix_palettes' freshness test, against a committed copy of blue's light
+# file whose step 9 hex is edited.
+write_source_files(
+    name = "proof_stale_palette",
+    files = {"stale/blue.light.tokens.json": "//palette:radix/blue.light.tokens.json"},
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_stale_palette_fails",
+    pattern = "proof:stale/blue.light.tokens.json is out of date",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_stale_palette_test",
+)
+
+# A translucent foreground is composited over its background before the
+# ratio: #1a1a1a at alpha 0.4 on white shows as a light gray, about 2.6:1,
+# where the opaque color gives about 17:1.
+tokens_test(
+    name = "proof_alpha_foreground",
+    srcs = ["alpha/a.tokens.json"],
+    contrast = [
+        {
+            "background": "color.surface",
+            "foreground": "color.text-faint",
+        },
+    ],
+    resolver = "alpha/tokens.resolver.json",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_alpha_foreground_fails",
+    pattern = r"proof/alpha/tokens.resolver.json: contrast pair color.text-faint on color.surface fails WCAG 2 AA: expected 4.5, got 2\.[0-9]+ \(AA\) \(color.text-faint at alpha 0.4, composited over color.surface\)",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_alpha_foreground",
+)
+
+# A translucent background is refused: what shows through it isn't known.
+tokens_test(
+    name = "proof_alpha_background",
+    srcs = ["alpha/a.tokens.json"],
+    contrast = [
+        {
+            "background": "color.scrim",
+            "foreground": "color.surface",
+        },
+    ],
+    resolver = "alpha/tokens.resolver.json",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_alpha_background_fails",
+    pattern = "proof/alpha/tokens.resolver.json: contrast pair color.surface on color.scrim: color.scrim has alpha 0.5, and a translucent background's contrast depends on what lies behind it",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_alpha_background",
+)
+
+# The opaque pair in the same file passes, so the two above fail for alpha.
+tokens_test(
+    name = "alpha_opaque_test",
+    srcs = ["alpha/a.tokens.json"],
+    contrast = [
+        {
+            "background": "color.surface",
+            "foreground": "color.text",
+        },
+    ],
+    resolver = "alpha/tokens.resolver.json",
+)
+
+tokens_test(
+    name = "proof_no_contexts",
+    srcs = ["empty/a.tokens.json"],
+    resolver = "empty/tokens.resolver.json",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_no_contexts_fails",
+    pattern = "proof/empty/tokens.resolver.json: modifier theme has no contexts; give it at least one",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_no_contexts",
+)
+
+# An inline group in the resolver is linted as a file is.
+tokens_test(
+    name = "proof_inline",
+    srcs = ["inline/a.tokens.json"],
+    resolver = "inline/tokens.resolver.json",
+    tags = ["manual"],
+)
+
+expect_failure_test(
+    name = "proof_inline_fails",
+    pattern = r"proof/inline/tokens.resolver.json \(set base, source 2\): .*furlong",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_inline",
+)
+
+# Pruning follows aliases out of kept scales: brand.10 aliases red, and the
+# shadow's color part names glow.9, which aliases blue. Every var() the CSS
+# writes must be declared, and only the unused scale is left out.
+tokens_css(
+    name = "prune_css",
+    srcs = ["prune/a.tokens.json"],
+    resolver = "prune/tokens.resolver.json",
+)
+
+js_test(
+    name = "prune_test",
+    data = [":prune_css"],
+    entry_point = "prune_test.mjs",
+    env = {"TBHB_CSS": "$(rlocationpath :prune_css)"},
+    target_compatible_with = NOT_WINDOWS,
+)
+
+js_test(
+    name = "radix_test",
+    data = [
+        "//palette:radix/blue.dark.tokens.json",
+        "//palette:radix/gray.light.tokens.json",
+    ],
+    entry_point = "radix_test.mjs",
+    env = {"TBHB_PALETTES": "$(rlocationpath //palette:radix/blue.dark.tokens.json) $(rlocationpath //palette:radix/gray.light.tokens.json)"},
+    target_compatible_with = NOT_WINDOWS,
+)
+
+# tokens_css's prefix: every name it declares and refers to carries it.
+tokens_css(
+    name = "prefix_css",
+    srcs = ["prune/a.tokens.json"],
+    prefix = "smoke",
+    resolver = "prune/tokens.resolver.json",
+)
+
+js_test(
+    name = "prefix_test",
+    data = [":prefix_css"],
+    entry_point = "prefix_test.mjs",
+    env = {"TBHB_CSS": "$(rlocationpath :prefix_css)"},
+    target_compatible_with = NOT_WINDOWS,
+)

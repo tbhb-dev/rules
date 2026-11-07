@@ -1,0 +1,14 @@
+{
+  "name": "proof",
+  "version": "2025.10",
+  "sets": {
+    "base": { "sources": [{ "$ref": "a.tokens.json" }] }
+  },
+  "modifiers": {
+    "theme": { "contexts": {} }
+  },
+  "resolutionOrder": [
+    { "$ref": "#/sets/base" },
+    { "$ref": "#/modifiers/theme" }
+  ]
+}

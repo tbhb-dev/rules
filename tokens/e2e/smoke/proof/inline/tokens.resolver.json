@@ -1,0 +1,18 @@
+{
+  "name": "proof",
+  "version": "2025.10",
+  "sets": {
+    "base": {
+      "sources": [
+        { "$ref": "a.tokens.json" },
+        {
+          "space": {
+            "$type": "dimension",
+            "1": { "$value": { "value": 1, "unit": "furlong" } }
+          }
+        }
+      ]
+    }
+  },
+  "resolutionOrder": [{ "$ref": "#/sets/base" }]
+}

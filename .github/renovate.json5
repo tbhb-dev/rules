@@ -21,7 +21,8 @@
   // uv's required-version, npm the package.json and pnpm-lock.yaml pins
   // (lint/private/cspell, typescript/package.json with Biome's binaries,
   // cloudflare/package.json with wrangler, astro/package.json with
-  // @astrojs/check, storybook/package.json, e2e consumers), and bazelisk
+  // @astrojs/check, storybook/package.json, tokens/package.json with
+  // Terrazzo and Radix Colors, e2e consumers), and bazelisk
   // every .bazelversion as one group.
   packageRules: [
     {
@@ -119,11 +120,15 @@
       // tbhb_rules_playwright's browser archives come from Playwright's own
       // CDN, which no Renovate datasource reads, and belong to one
       // playwright-core release. Renovate moves playwright-core, and
-      // tbhb_rules_storybook's playwright with it; playwright/e2e/smoke's
-      // launch_test and storybook's versions_test then fail until the pins
-      // match.
+      // tbhb_rules_storybook's playwright and tokens/e2e/smoke's
+      // playwright-core with it; playwright/e2e/smoke's launch_test and
+      // storybook's versions_test then fail until the pins match.
       description: "Playwright bumps need the browser pins moved",
-      matchFileNames: ["playwright/**/package.json", "storybook/**/package.json"],
+      matchFileNames: [
+        "playwright/**/package.json",
+        "storybook/**/package.json",
+        "tokens/e2e/**/package.json",
+      ],
       matchPackageNames: ["playwright", "playwright-core"],
       prBodyNotes: [
         "Move the pins in playwright/private/browsers.bzl to the new playwright-core's browsers.json on this branch: PLAYWRIGHT_VERSION, the chromium-headless-shell revision and browser version, and each archive's URL and sha256. Until then `launch_test` in playwright/e2e/smoke and `//tests:versions_test` in storybook fail, as expected.",
@@ -136,6 +141,13 @@
       matchFileNames: ["typescript/**/package.json", "storybook/**/package.json"],
       matchPackageNames: ["storybook", "@storybook/**", "eslint-plugin-storybook"],
       groupName: "storybook",
+    },
+    {
+      // @terrazzo/plugin-css peers on @terrazzo/parser at its own release.
+      description: "Terrazzo's packages move together",
+      matchFileNames: ["tokens/**/package.json"],
+      matchPackageNames: ["@terrazzo/**"],
+      groupName: "terrazzo",
     },
     {
       // tbhb_rules_d2's PNG font. 2.045R-ro/1.095R-it is the last Source

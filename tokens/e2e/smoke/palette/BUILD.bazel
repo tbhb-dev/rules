@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_lib//lib:write_source_files.bzl", "write_source_files")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_tokens//:defs.bzl", "radix_palette_files", "radix_palettes")
+
+repo_files()
+
+# The palette layer, in a package of its own beside //tokens, whose
+# resolver refers to these files as ../palette/: Radix Colors scales,
+# generated and committed here with their REUSE sidecars. `bazel run
+# //palette:palettes` rewrites them; palettes_test (one per file) fails
+# when one differs. tomato is generated and resolved, but no theme refers
+# to it, so tokens_css leaves it out.
+SCALES = [
+    "blue",
+    "grass",
+    "gray",
+    "sand",
+    "tomato",
+]
+
+radix_palettes(
+    name = "radix",
+    scales = SCALES,
+    visibility = ["//proof:__pkg__"],
+)
+
+write_source_files(
+    name = "palettes",
+    files = {f: ":radix/" + f for f in radix_palette_files(SCALES)},
+)
+
+filegroup(
+    name = "tokens",
+    srcs = glob(["*.tokens.json"]),
+    visibility = ["//visibility:public"],
+)
