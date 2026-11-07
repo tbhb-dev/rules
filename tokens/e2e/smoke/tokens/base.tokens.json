@@ -1,0 +1,23 @@
+{
+  "space": {
+    "$type": "dimension",
+    "1": { "$value": { "value": 0.25, "unit": "rem" } },
+    "2": { "$value": { "value": 0.5, "unit": "rem" } }
+  },
+  "radius": {
+    "$type": "dimension",
+    "1": { "$value": { "value": 4, "unit": "px" } }
+  },
+  "font": {
+    "body": {
+      "$type": "fontFamily",
+      "$value": ["Inter", "system-ui", "sans-serif"]
+    }
+  },
+  "duration": {
+    "fast": {
+      "$type": "duration",
+      "$value": { "value": 150, "unit": "ms" }
+    }
+  }
+}

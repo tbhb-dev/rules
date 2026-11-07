@@ -78,4 +78,6 @@ run = [
   "cd astro/e2e/smoke && bazelisk test //...",
   "cd storybook && bazelisk test //...",
   "cd storybook/e2e/smoke && bazelisk test //...",
+  "cd tokens && bazelisk test //...",
+  "cd tokens/e2e/smoke && bazelisk test //...",
 ]

@@ -24,6 +24,7 @@ capsys
 cicd
 cmdlines
 cocogitto
+colorjs
 compgen
 complexipy
 cpus
@@ -36,6 +37,7 @@ depset
 deptry
 direnv
 docstrings
+DTCG
 dugite
 dunder
 dupl
@@ -115,6 +117,7 @@ nosandbox
 nosource
 nosystem
 NTFS
+oklch
 owenlamont
 oxipng
 perfsprint
@@ -186,6 +189,7 @@ unvalidated
 usefixtures
 usetesting
 vitest
+WCAG
 workerd
 worktrees
 xdist

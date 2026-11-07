@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("//private:radix.bzl", "RADIX_SCALES")
+load(":rules_tests.bzl", "rules_test_suite")
+
+repo_files()
+
+rules_test_suite(name = "rules_tests")
+
+# As for the rules (private/tokens.bzl): Node won't run the tool's .bat
+# launcher without a shell, and the module isn't proved on Windows.
+NOT_WINDOWS = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+SCALES_ENV = {
+    "TBHB_RADIX_SCALES": " ".join(RADIX_SCALES),
+    "TBHB_TOKENS_TOOL": "$(rlocationpath //:tokens)",
+}
+
+js_test(
+    name = "scales_test",
+    data = ["//:tokens"],
+    entry_point = "scales_test.mjs",
+    env = SCALES_ENV,
+    target_compatible_with = NOT_WINDOWS,
+)
+
+# Must fail: the same check against a list that lacks one scale and names
+# one Radix doesn't have.
+js_test(
+    name = "proof_scales_drift",
+    data = ["//:tokens"],
+    entry_point = "scales_test.mjs",
+    env = SCALES_ENV | {"TBHB_RADIX_SCALES": " ".join([s for s in RADIX_SCALES if s != "blue"] + ["cerulean"])},
+    tags = ["manual"],
+    target_compatible_with = NOT_WINDOWS,
+)
+
+expect_failure_test(
+    name = "proof_scales_drift_fails",
+    pattern = "scales_test: RADIX_SCALES in private/radix.bzl disagrees with the pinned @radix-ui/colors: add blue, remove cerulean",
+    target_compatible_with = NOT_WINDOWS,
+    test = ":proof_scales_drift",
+)

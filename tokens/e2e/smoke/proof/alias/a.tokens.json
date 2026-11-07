@@ -1,0 +1,7 @@
+{
+  "color": {
+    "$type": "color",
+    "surface": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1] } },
+    "text": { "$value": "{color.ink}" }
+  }
+}

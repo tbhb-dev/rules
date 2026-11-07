@@ -1,0 +1,19 @@
+{
+  "color": {
+    "$type": "color",
+    "surface": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1] } },
+    "text": {
+      "$value": { "colorSpace": "srgb", "components": [0.1, 0.1, 0.1] }
+    },
+    "text-faint": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.1, 0.1, 0.1],
+        "alpha": 0.4
+      }
+    },
+    "scrim": {
+      "$value": { "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.5 }
+    }
+  }
+}

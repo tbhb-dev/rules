@@ -1,0 +1,119 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@bazel_lib//lib:write_source_files.bzl", "write_source_files")
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules_playwright//:defs.bzl", "PLAYWRIGHT_VERSION")
+load("@tbhb_rules_tokens//:defs.bzl", "tokens_css", "tokens_test")
+
+repo_files()
+
+NOT_WINDOWS = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
+# The token files, with the palette layer from the sibling //palette
+# package: tokens_css and tokens_test read srcs from any package.
+TOKENS = glob(["**/*.tokens.json"]) + ["//palette:tokens"]
+
+exports_files(
+    ["tokens.resolver.json"],
+    visibility = ["//proof:__pkg__"],
+)
+
+filegroup(
+    name = "srcs",
+    srcs = TOKENS,
+    visibility = ["//proof:__pkg__"],
+)
+
+tokens_test(
+    name = "tokens_test",
+    srcs = TOKENS,
+    contrast = [
+        {
+            "background": "color.surface",
+            "foreground": "color.text",
+        },
+        {
+            "background": "color.surface",
+            "foreground": "color.text-muted",
+        },
+        {
+            "background": "color.surface-raised",
+            "foreground": "color.accent-text",
+        },
+    ],
+    resolver = "tokens.resolver.json",
+)
+
+tokens_css(
+    name = "css",
+    srcs = TOKENS,
+    out = "tokens.css",
+    resolver = "tokens.resolver.json",
+)
+
+# The selectors, the blocks' contents and the pruned palette, read from
+# the CSS text.
+js_test(
+    name = "css_test",
+    data = [":css"],
+    entry_point = "css_test.mjs",
+    env = {"TBHB_CSS": "$(rlocationpath :css)"},
+    target_compatible_with = NOT_WINDOWS,
+)
+
+# Reproducible: a second action over the same inputs writes the same bytes,
+# and those bytes are the committed golden/tokens.css (`bazel run
+# //tokens:golden` rewrites it after an intended change).
+tokens_css(
+    name = "css_again",
+    srcs = TOKENS,
+    out = "again/tokens.css",
+    resolver = "tokens.resolver.json",
+)
+
+diff_test(
+    name = "css_reproducible_test",
+    file1 = ":css",
+    file2 = ":css_again",
+    target_compatible_with = NOT_WINDOWS,
+)
+
+write_source_files(
+    name = "golden",
+    files = {"golden/tokens.css": ":css"},
+    target_compatible_with = NOT_WINDOWS,
+)
+
+# --color-surface as Chromium computes it, for every theme (and none) ×
+# data-mode (and none) × preferred color scheme, and in a nested subtree.
+js_test(
+    name = "browser_test",
+    # It reads the palette files, from //palette, where they are: data from
+    # another package can't be copied into this one's output tree.
+    copy_data_to_bin = False,
+    data = [
+        ":css",
+        "//:node_modules/playwright-core",
+        "//palette:tokens",
+        "@tbhb_rules_playwright//:browsers_path",
+        "@tbhb_rules_playwright//:chromium",
+    ],
+    entry_point = "browser_test.mjs",
+    env = {
+        "TBHB_CSS": "$(rlocationpath :css)",
+        "TBHB_PALETTES": "$(rlocationpaths //palette:tokens)",
+        "TBHB_PLAYWRIGHT_BROWSERS": "$(rlocationpath @tbhb_rules_playwright//:chromium)",
+        "TBHB_PLAYWRIGHT_HELPER": "$(rlocationpath @tbhb_rules_playwright//:browsers_path)",
+        "TBHB_PLAYWRIGHT_VERSION": PLAYWRIGHT_VERSION,
+    },
+    # Playwright follows the browsers' links to their real paths; rules_js's
+    # fs patch would keep the link paths instead.
+    patch_node_fs = False,
+    target_compatible_with = NOT_WINDOWS,
+)
