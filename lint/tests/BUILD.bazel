@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-load("//lint:defs.bzl", "gitleaks_history")
+load("//lint:defs.bzl", "gitleaks_history", "shellcheck_test", "shfmt_test")
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
@@ -150,11 +150,42 @@ gitleaks_text_scenario_test(
     tags = PROOF_TAGS,
 )
 
+# shellcheck_test and shfmt_test on a tree with no shell scripts: they pass
+# with allow_empty and fail without it.
+
+NO_SCRIPTS = ["testdata/root/a.txt"]
+
+[
+    rule(
+        name = name + "_allow_empty_test",
+        srcs = NO_SCRIPTS,
+        allow_empty = True,
+    )
+    for name, rule in [
+        ("shellcheck", shellcheck_test),
+        ("shfmt", shfmt_test),
+    ]
+]
+
+[
+    rule(
+        name = "proof_{}_empty".format(name),
+        srcs = NO_SCRIPTS,
+        tags = PROOF_TAGS,
+    )
+    for name, rule in [
+        ("shellcheck", shellcheck_test),
+        ("shfmt", shfmt_test),
+    ]
+]
+
 PROOF_REASONS = {
     "proof_history_corrupt": "gitleaks_history: FAIL: git cannot read the history",
     "proof_history_no_commits": "gitleaks_history: FAIL: the repository has no commits",
     "proof_history_other_branch": "leaks found: [1-9]",
     "proof_history_secret": "leaks found: [1-9]",
+    "proof_shellcheck_empty": "shell_select: no shell scripts found, so nothing was checked",
+    "proof_shfmt_empty": "shell_select: no shell scripts found, so nothing was checked",
     "proof_text_secret": "leaks found: [1-9]",
 }
 
