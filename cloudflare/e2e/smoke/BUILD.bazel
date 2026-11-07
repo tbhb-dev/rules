@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@aspect_rules_js//js:defs.bzl", "js_test")
 load("@bazel_lib//lib:copy_file.bzl", "copy_file")
+load("@bazel_lib//lib:copy_to_bin.bzl", "copy_to_bin")
 load("@bazel_lib//lib:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
@@ -115,6 +117,28 @@ build_test(
 worker_types_test(
     name = "worker_types_test",
     srcs = WORKER,
+)
+
+# Runs the .update target in a fresh work tree: it writes the types over an
+# empty or missing file, refuses a foreign one, and leaves no .wrangler.
+# wrangler caches what it fetches from Cloudflare (the request.cf data) only
+# when the network answers, so without it the .wrangler check proves little.
+# The tag would reach the sources' copy actions and clash with the bundles'
+# copies of them, so they're copied apart.
+copy_to_bin(
+    name = "update_srcs",
+    srcs = WORKER,
+)
+
+js_test(
+    name = "update_test",
+    data = [
+        ":update_srcs",
+        ":worker_types_test.update",
+    ],
+    entry_point = "update_test.mjs",
+    env = {"update": "$(rootpath :worker_types_test.update)"},
+    tags = ["requires-network"],
 )
 
 # The generated types are what tsc checks the Worker against.
