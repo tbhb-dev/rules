@@ -36,6 +36,21 @@ single_version_override(
 
 bazel_dep(name = "gazelle", version = "0.54.0")
 
+# rules_go's binaries resolve a C/C++ toolchain, and Bazel's autodetected one
+# fails on a Linux host with no compiler. zig's toolchain downloads one that
+# carries its own glibc headers and startup files, so a minimal Linux image
+# needs nothing installed. Only Linux targets are registered: macOS and
+# Windows keep their local toolchain.
+bazel_dep(name = "hermetic_cc_toolchain", version = "4.3.0")
+
+zig = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains")
+use_repo(zig, "zig_sdk")
+
+register_toolchains(
+    "@zig_sdk//toolchain:linux_amd64_gnu.2.28",
+    "@zig_sdk//toolchain:linux_arm64_gnu.2.28",
+)
+
 # Prebuilt tools (golangci-lint, go-arch-lint): literal per-platform
 # http_archive pins in private/tools.bzl that Renovate bumps, each behind a
 # tbhb_rules_<tool> hub, the same shape as tbhb_rules' own pins. gomutants'
