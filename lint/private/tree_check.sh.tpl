@@ -72,7 +72,10 @@ status=0
 "$tool" @@TOOL_ARGS@@ "$@" >"$log" 2>&1 || status=$?
 cat "$log"
 
-if [[ -n $output_guard ]] && ! grep -Eq -- "$output_guard" "$log"; then
+# A tool that failed has already said why, so the guard checks only a run
+# that passed: one that exits 0 without having scanned anything.
+if [[ -n $output_guard && $status -eq 0 ]] &&
+  ! grep -Eq -- "$output_guard" "$log"; then
   echo "tree_check: FAIL: tool output did not match the guard" \
     "'$output_guard', so the tool may have scanned nothing" >&2
   exit 1

@@ -100,7 +100,8 @@ tree_check_test = rule(
 (relative to `strip_prefix` when set).
 
 Fails when the copy holds fewer than `min_files` files or zero bytes, and,
-if `output_guard` is set, when the tool's combined output does not match it.
+if `output_guard` is set, when the tool exits 0 and its combined output
+does not match it; a tool that fails has reported its own failure.
 Both failures say what was scanned, so a check that silently stopped seeing
 its inputs is diagnosable.""",
     attrs = SHELL_ATTRS | {
