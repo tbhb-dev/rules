@@ -20,6 +20,11 @@ visibility(["//", "//private/...", "//tests/..."])
 # test. The flags attribute follows these, so a consumer's value wins.
 _DEFAULT_FLAGS = ["--timeout-min=20s", "--test-flags=-failfast"]
 
+# A timed-out mutant is unstable, so a slow Windows runner fails the gate when
+# the ceiling (the baseline times the coefficient) is too tight. Windows gets
+# a higher floor and ceiling; a timeout still never counts as killed.
+_WINDOWS_DEFAULT_FLAGS = ["--timeout-min=60s", "--timeout-coefficient=40", "--test-flags=-failfast"]
+
 def _gomutants_report_impl(ctx):
     unit = go_unit(ctx, "mutated")
     files = unit.files
@@ -41,7 +46,8 @@ def _gomutants_report_impl(ctx):
     if ctx.attr.cpus:
         args.add("-workers", str(ctx.attr.cpus))
     args.add("--")
-    args.add_all(_DEFAULT_FLAGS)
+    windows = ctx.target_platform_has_constraint(ctx.attr._windows[platform_common.ConstraintValueInfo])
+    args.add_all(_WINDOWS_DEFAULT_FLAGS if windows else _DEFAULT_FLAGS)
     args.add_all(ctx.attr.flags)
     ctx.actions.run(
         executable = ctx.executable._runner,
@@ -97,6 +103,7 @@ slice (the `changes` output group).""",
             executable = True,
             cfg = "exec",
         ),
+        "_windows": attr.label(default = Label("@platforms//os:windows")),
     },
     toolchains = [GO_TOOLCHAIN],
 )
@@ -123,7 +130,8 @@ def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], 
             when the module has requirements.
         data: Other files the tests read, in the module directory.
         flags: More gomutants flags, after the defaults
-            `--timeout-min=20s --test-flags=-failfast`.
+            `--timeout-min=20s --test-flags=-failfast`, or on Windows
+            `--timeout-min=60s --timeout-coefficient=40 --test-flags=-failfast`.
         cpus: CPUs to reserve per unit, and gomutants workers to run.
         changes: The change set; quality's `changes` flag when None.
         require_scope: `full` makes the gate fail on any diff-scope report,
