@@ -1,4 +1,5 @@
 {
   "entry": ["proof/knip/none/*.ts"],
-  "project": ["proof/knip/none/**/*.ts"]
+  "project": ["proof/knip/none/**/*.ts"],
+  "rules": { "dependencies": "off", "devDependencies": "off" }
 }

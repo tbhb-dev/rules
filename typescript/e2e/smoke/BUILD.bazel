@@ -301,7 +301,7 @@ vitest_test(
 
 expect_failure_test(
     name = "proof_vitest_no_tests_fails",
-    pattern = "tree_check: FAIL: tool output did not match the guard 'vitest: ran \\[1-9\\]",
+    pattern = "vitest: ran 0 tests in 0 files",
     test = ":proof_vitest_no_tests",
 )
 
