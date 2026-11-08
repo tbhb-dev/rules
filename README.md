@@ -104,6 +104,24 @@ override_repo(tools, tbhb_rules_gitleaks = "my_gitleaks")
 
 To refer to a pinned binary yourself, add `use_repo(tools, "tbhb_rules_gitleaks")`.
 
+### Go
+
+Binaries built with `rules_go` need a C/C++ toolchain. On Linux, register the zig toolchain from `hermetic_cc_toolchain` in your root `MODULE.bazel`, so a host with no compiler installed can still build:
+
+```starlark
+bazel_dep(name = "hermetic_cc_toolchain", version = "4.3.0")
+
+zig = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains")
+use_repo(zig, "zig_sdk")
+
+register_toolchains(
+    "@zig_sdk//toolchain:linux_amd64_gnu.2.28",
+    "@zig_sdk//toolchain:linux_arm64_gnu.2.28",
+)
+```
+
+`tbhb_rules_go` can't register it for you: the extension creates `zig_sdk` only for the root module. macOS and Windows keep their local toolchain. `go/e2e/smoke` is a consumer set up this way.
+
 ### D2 diagrams
 
 `tbhb_rules_d2` renders [D2](https://d2lang.com) diagrams and keeps the renders committed beside their sources. Each `x.d2` has an `x.d2.svg` (D2's own SVG), an `x.d2.png` (resvg draws the SVG at twice its size in Source Sans Pro and Source Code Pro, and oxipng shrinks the file), and an `x.d2.sha256` (the `shasum -a 256` lines of the three files).
