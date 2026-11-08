@@ -72,9 +72,11 @@ status=0
 "$tool" @@TOOL_ARGS@@ "$@" >"$log" 2>&1 || status=$?
 cat "$log"
 
-# A tool that already failed has said why; the guard only catches a run
-# that exits 0 without having scanned anything.
-if [[ $status -eq 0 && -n $output_guard ]] && ! grep -Eq -- "$output_guard" "$log"; then
+# A tool that failed and printed something has said why. The guard catches
+# a run that exits 0 without having scanned anything, and a failure that
+# printed nothing (vitest with no test files, knip with nothing to analyse).
+if [[ -n $output_guard ]] && ! grep -Eq -- "$output_guard" "$log" &&
+  { [[ $status -eq 0 ]] || ! grep -q '[^[:space:]]' "$log"; }; then
   echo "tree_check: FAIL: tool output did not match the guard" \
     "'$output_guard', so the tool may have scanned nothing" >&2
   exit 1
