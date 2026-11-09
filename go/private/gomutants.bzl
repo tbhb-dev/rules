@@ -21,9 +21,21 @@ visibility(["//", "//private/...", "//tests/..."])
 _DEFAULT_FLAGS = ["--timeout-min=20s", "--test-flags=-failfast"]
 
 # A timed-out mutant is unstable, so a slow Windows runner fails the gate when
-# the ceiling (the baseline times the coefficient) is too tight. Windows gets
-# a higher floor and ceiling; a timeout still never counts as killed.
+# the ceiling (the baseline times the coefficient) is too tight. A Windows
+# execution platform gets a higher floor and ceiling; a timeout still never
+# counts as killed.
 _WINDOWS_DEFAULT_FLAGS = ["--timeout-min=60s", "--timeout-coefficient=40", "--test-flags=-failfast"]
+
+def default_flags(exec_goos):
+    """The default gomutants flags for the platform the action runs on.
+
+    Args:
+        exec_goos: The Go SDK's goos, the OS of the execution platform.
+
+    Returns:
+        The flags that come before the rule's `flags`.
+    """
+    return _WINDOWS_DEFAULT_FLAGS if exec_goos == "windows" else _DEFAULT_FLAGS
 
 def _gomutants_report_impl(ctx):
     unit = go_unit(ctx, "mutated")
@@ -46,8 +58,10 @@ def _gomutants_report_impl(ctx):
     if ctx.attr.cpus:
         args.add("-workers", str(ctx.attr.cpus))
     args.add("--")
-    windows = ctx.target_platform_has_constraint(ctx.attr._windows[platform_common.ConstraintValueInfo])
-    args.add_all(_WINDOWS_DEFAULT_FLAGS if windows else _DEFAULT_FLAGS)
+
+    # The Go SDK is resolved for the execution platform, where the action
+    # runs, so its goos is the exec OS (the toolchain's own goos is the target's).
+    args.add_all(default_flags(ctx.toolchains[GO_TOOLCHAIN].sdk.goos))
     args.add_all(ctx.attr.flags)
     ctx.actions.run(
         executable = ctx.executable._runner,
@@ -103,7 +117,6 @@ slice (the `changes` output group).""",
             executable = True,
             cfg = "exec",
         ),
-        "_windows": attr.label(default = Label("@platforms//os:windows")),
     },
     toolchains = [GO_TOOLCHAIN],
 )
@@ -130,7 +143,8 @@ def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], 
             when the module has requirements.
         data: Other files the tests read, in the module directory.
         flags: More gomutants flags, after the defaults
-            `--timeout-min=20s --test-flags=-failfast`, or on Windows
+            `--timeout-min=20s --test-flags=-failfast`, or on a Windows
+            execution platform
             `--timeout-min=60s --timeout-coefficient=40 --test-flags=-failfast`.
         cpus: CPUs to reserve per unit, and gomutants workers to run.
         changes: The change set; quality's `changes` flag when None.
