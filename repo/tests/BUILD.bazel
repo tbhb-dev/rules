@@ -74,3 +74,11 @@ sh_test(
         "//conditions:default": [],
     }),
 )
+
+# The retries in repo-checks.yml must give up before the job's timeout.
+sh_test(
+    name = "retry_budget_test",
+    srcs = ["retry_budget_test.sh"],
+    data = ["//:.github/workflows/repo-checks.yml"],
+    env = {"WORKFLOW_RLOCATIONPATH": "$(rlocationpath //:.github/workflows/repo-checks.yml)"},
+)

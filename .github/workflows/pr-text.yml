@@ -115,6 +115,30 @@ jobs:
             fi
           fi
 
+      # The scan downloads the gitleaks binary from GitHub releases, which
+      # can fail for minutes. Build the target first, retrying for at most
+      # BUDGET minutes, so a long outage fails the step instead of the job's
+      # timeout cancelling it. The scan below runs once: a finding is real.
+      - name: Fetch gitleaks, retrying transient failures
+        env:
+          BUDGET: 5
+        run: |
+          now=$(date +%s)
+          deadline=$((now + BUDGET * 60))
+          out="$(mktemp)"
+          delay=30
+          set -o pipefail
+          until bazelisk build @tbhb_rules//lint:gitleaks_text 2>&1 | tee "${out}"; do
+            now=$(date +%s)
+            if ((now + delay > deadline)); then
+              url="$(grep -oE 'https?://[^][:space:]"]+' "${out}" | tail -1 || true)"
+              echo "::error::gave up after ${BUDGET} min: ${url:-no URL in the output} kept failing"
+              exit 1
+            fi
+            sleep "${delay}"
+            delay=$((delay * 2))
+          done
+
       - name: Scan the pull request's title and body for secrets
         env:
           GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
