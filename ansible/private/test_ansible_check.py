@@ -3,6 +3,7 @@
 
 import os
 import re
+import signal
 import sys
 import time
 from pathlib import Path
@@ -206,11 +207,35 @@ MARKER = "argv-marker-31415"
 HANG = "import os,time;print('pid',os.getpid(),flush=True);print('last: roles/web',flush=True);time.sleep(30)"  # noqa: E501
 
 
-def assert_group_gone(pid: int) -> None:
-    with pytest.raises(ProcessLookupError):
-        os.killpg(pid, 0)
+# The driver runs on Linux and macOS only, but this suite also runs on
+# Windows, which has no process groups. The tests of real groups skip there;
+# pyproject.toml excludes the functions behind this decorator from coverage.
+posix_only = pytest.mark.skipif(
+    sys.platform == "win32", reason="needs POSIX process groups"
+)
 
 
+def test_watchdog_ends_the_group_with_sigterm_then_sigkill(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Runs on every platform, with the group calls faked (no groups on Windows)."""
+    sent: list[int] = []
+
+    def fake_killpg(pid: int, sig: int) -> None:
+        sent.append(sig)
+        if len(sent) > 1:
+            raise ProcessLookupError  # the child is gone already
+        os.kill(pid, signal.SIGTERM)
+
+    monkeypatch.setattr(os, "killpg", fake_killpg, raising=False)
+    monkeypatch.setattr(signal, "SIGKILL", 9, raising=False)
+    code = ansible_check.run_watched([sys.executable, "-c", HANG], dict(os.environ), 1)
+    assert code == 124
+    assert sent == [signal.SIGTERM, 9]
+    assert "watchdog fired after 1s" in capsys.readouterr().out
+
+
+@posix_only
 def test_watchdog_reports_before_killing_and_clears_the_group(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -229,9 +254,11 @@ def test_watchdog_reports_before_killing_and_clears_the_group(
     assert "last: roles/web" in out.split("last output lines:")[1]
     match = re.search(r"^pid (\d+)$", out, re.MULTILINE)
     assert match
-    assert_group_gone(int(match[1]))
+    with pytest.raises(ProcessLookupError):
+        os.killpg(int(match[1]), 0)
 
 
+@posix_only
 def test_watchdog_never_prints_the_command_line_after_the_header(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -242,6 +269,7 @@ def test_watchdog_never_prints_the_command_line_after_the_header(
     assert MARKER not in report
 
 
+@posix_only
 def test_watchdog_kills_a_child_that_ignores_sigterm(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -253,7 +281,8 @@ def test_watchdog_kills_a_child_that_ignores_sigterm(
     )
     match = re.search(r"^pid (\d+)$", capsys.readouterr().out, re.MULTILINE)
     assert match
-    assert_group_gone(int(match[1]))
+    with pytest.raises(ProcessLookupError):
+        os.killpg(int(match[1]), 0)
 
 
 def test_watchdog_passes_the_exit_code_through(
@@ -270,6 +299,7 @@ def test_watchdog_passes_the_exit_code_through(
     assert "watchdog fired" not in out
 
 
+@posix_only
 def test_watchdog_keeps_only_the_last_twenty_lines(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
