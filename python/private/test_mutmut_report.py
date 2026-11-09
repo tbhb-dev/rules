@@ -74,6 +74,7 @@ def no_quota(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         ("", []),
         ("lots of CPUs\n", []),
         ("200000\n", []),
+        ("200000 100000 5\n", []),
         ("-1 100000\n", []),
         ("200000 0\n", []),
         ("\u0662 1\n", []),
@@ -140,6 +141,18 @@ def test_max_children_reads_cgroup_v1(
     monkeypatch.setattr(mr, "V1_QUOTA", tmp_path / "quota")
     monkeypatch.setattr(mr, "V1_PERIOD", tmp_path / "period")
     assert mr.max_children() == expected
+
+
+def test_max_children_does_not_fall_back_from_a_malformed_cgroup_v2_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "cpu.max").write_text("max 100000 5\n")
+    (tmp_path / "quota").write_text("200000\n")
+    (tmp_path / "period").write_text("100000\n")
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
+    monkeypatch.setattr(mr, "V1_QUOTA", tmp_path / "quota")
+    monkeypatch.setattr(mr, "V1_PERIOD", tmp_path / "period")
+    assert mr.max_children() == []
 
 
 def test_max_children_prefers_cgroup_v2(

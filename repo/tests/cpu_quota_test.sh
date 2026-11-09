@@ -47,7 +47,7 @@ expect "" "quota not below the host's CPUs" "$dir/f"
 fake g 'lots of CPUs'
 expect "" "garbage" "$dir/g"
 fake h ''
-expect "" "empty file" "$dir/h"
+expect "" "empty file" "$dir/h" "$dir/missing" "$dir/missing"
 fake i '200000 0'
 expect "" "zero period" "$dir/i"
 fake j '-1 100000'
@@ -64,6 +64,11 @@ fake p2 100000
 expect "" "v1 no quota" "$dir/missing" "$dir/q2" "$dir/p2"
 fake q3 200000
 expect "" "v1 missing period" "$dir/missing" "$dir/q3" "$dir/missing"
+# An empty cpu.max falls back to the v1 files.
+expect 2 "empty v2, v1 two CPUs" "$dir/h" "$dir/q1" "$dir/p1"
+# A malformed cpu.max does not.
+fake n 'max 100000 5'
+expect "" "three fields" "$dir/n" "$dir/q1" "$dir/p1"
 # cpu.max wins over v1 files.
 fake m '100000 100000'
 fake q4 300000

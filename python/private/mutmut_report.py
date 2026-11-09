@@ -281,12 +281,15 @@ def max_children() -> list[str]:
     cpu_quota.sh in setup-bazel-ci implements the same rule: keep the two in
     step.
     """
-    # partition and rpartition agree on the file's single space.
-    quota, _, period = read_text(CPU_MAX).partition(" ")  # pragma: no mutate
-    if not quota:
-        quota, period = read_text(V1_QUOTA), read_text(V1_PERIOD)
-    if not all(field.isascii() and field.isdecimal() for field in (quota, period)):
-        return []  # "max" and -1 end here too.
+    fields = read_text(CPU_MAX).split()
+    if not fields:
+        fields = [read_text(V1_QUOTA), read_text(V1_PERIOD)]
+    # Exactly "<quota> <period>"; "max" and -1 fail the integer test too.
+    if len(fields) != 2 or not all(  # noqa: PLR2004 - quota and period.
+        f.isascii() and f.isdecimal() for f in fields
+    ):
+        return []
+    quota, period = fields
     if int(period) == 0:
         return []
     workers = max(1, -(-int(quota) // int(period)))

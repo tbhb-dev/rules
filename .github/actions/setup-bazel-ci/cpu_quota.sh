@@ -15,8 +15,9 @@
 #
 # Usage: cpu_quota.sh [CPU_MAX [V1_QUOTA V1_PERIOD]]
 #
-# CPU_MAX is cgroup v2's cpu.max ("<quota|max> <period>"). Without it, cgroup
-# v1's cpu.cfs_quota_us (-1 for no quota) and cpu.cfs_period_us are read.
+# CPU_MAX is cgroup v2's cpu.max ("<quota|max> <period>"). Without it (or
+# with an empty one), cgroup v1's cpu.cfs_quota_us (-1 for no quota) and
+# cpu.cfs_period_us are read.
 # The arguments default to the kernel's paths and exist so a test can pass
 # fake files.
 
@@ -30,7 +31,9 @@ quota=
 period=
 if [[ -r $v2 ]]; then
   read -r quota period <"$v2" || true
-elif [[ -r $v1_quota && -r $v1_period ]]; then
+fi
+# An empty or missing cpu.max leaves no quota, and cgroup v1 gets its turn.
+if [[ -z $quota && -r $v1_quota && -r $v1_period ]]; then
   read -r quota <"$v1_quota" || true
   read -r period <"$v1_period" || true
 fi
