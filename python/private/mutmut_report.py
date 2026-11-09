@@ -26,6 +26,7 @@ gate fails.
 import ast
 import fnmatch
 import json
+import os
 import subprocess  # nosec B404
 import sys
 import tomllib
@@ -253,6 +254,18 @@ def _add(
     return None
 
 
+def max_children() -> list[str]:
+    """Return mutmut's worker cap from TBHB_CPU_QUOTA, or nothing.
+
+    mutmut sizes its workers from the host's CPUs, which a container's CPU
+    quota can be far below. Only a positive integer counts.
+    """
+    quota = os.environ.get("TBHB_CPU_QUOTA")
+    if quota is None or not (quota.isascii() and quota.isdecimal()):
+        return []
+    return ["--max-children", quota] if int(quota) > 0 else []
+
+
 def mutmut(args: list[str], log: Path) -> subprocess.CompletedProcess[str]:
     """Run one mutmut command, appending its output to log."""
     done = subprocess.run(  # nosec B603
@@ -397,7 +410,7 @@ def choose(changes: Path, prefix: str) -> Selection:
 
 def run_full(log: Path) -> str:
     """Run every mutant and return the report."""
-    mutmut(["run"], log)
+    mutmut(["run", *max_children()], log)
     stats = None
     if mutmut(["export-cicd-stats"], log).returncode == 0:
         stats = load_stats(STATS)
@@ -410,7 +423,7 @@ def run_diff(log: Path, selection: Selection) -> str:
     if not selection.globs:
         # Any text without a "name: status" line reads as no results.
         return diff_report("", selection)  # pragma: no mutate
-    mutmut(["run", *selection.globs], log)
+    mutmut(["run", *max_children(), *selection.globs], log)
     return diff_report(mutmut(["results", "--all", "true"], log).stdout, selection)
 
 

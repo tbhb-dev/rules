@@ -51,6 +51,39 @@ def test_mutmut_runs_the_module_and_appends_to_the_log(
     )
 
 
+@pytest.mark.parametrize(
+    ("quota", "expected"),
+    [
+        ("2", ["--max-children", "2"]),
+        ("1", ["--max-children", "1"]),
+        ("16", ["--max-children", "16"]),
+        (None, []),
+        ("", []),
+        ("0", []),
+        ("-1", []),
+        ("two", []),
+        ("\u0662", []),
+    ],
+)
+def test_max_children_comes_from_the_cpu_quota(
+    monkeypatch: pytest.MonkeyPatch, quota: str | None, expected: list[str]
+) -> None:
+    if quota is None:
+        monkeypatch.delenv("TBHB_CPU_QUOTA", raising=False)
+    else:
+        monkeypatch.setenv("TBHB_CPU_QUOTA", quota)
+    assert mr.max_children() == expected
+
+
+def test_main_caps_the_workers_at_the_cpu_quota(
+    fake_mutmut: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TBHB_CPU_QUOTA", "3")
+    assert mr.main(["report", "log"]) == 1
+    assert fake_mutmut[0] == ["run", "--max-children", "3"]
+
+
 def test_load_stats(tmp_path: Path) -> None:
     path = tmp_path / "stats.json"
     assert mr.load_stats(path) is None
@@ -160,6 +193,7 @@ def fake_mutmut(
     tmp_path: Path,
 ) -> list[list[str]]:
     monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("TBHB_CPU_QUOTA", raising=False)
     calls: list[list[str]] = []
     export_status = {"code": 0}
 

@@ -82,3 +82,16 @@ sh_test(
     data = ["//:.github/workflows/repo-checks.yml"],
     env = {"WORKFLOW_RLOCATIONPATH": "$(rlocationpath //:.github/workflows/repo-checks.yml)"},
 )
+
+# setup-bazel-ci's CPU quota script, against fake cgroup files. The cases
+# that expect a count need a host with more than 2 CPUs.
+sh_test(
+    name = "cpu_quota_test",
+    srcs = ["cpu_quota_test.sh"],
+    data = ["//:.github/actions/setup-bazel-ci/cpu_quota.sh"],
+    env = {"SCRIPT_RLOCATIONPATH": "$(rlocationpath //:.github/actions/setup-bazel-ci/cpu_quota.sh)"},
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)

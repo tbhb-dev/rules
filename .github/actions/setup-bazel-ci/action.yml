@@ -68,25 +68,6 @@ runs:
         fi
         echo 'BAZEL_SH=C:/msys64/usr/bin/bash.exe' >>"$GITHUB_ENV"
 
-    # nproc and Python's os.cpu_count() count the host's CPUs, not a
-    # container's CPU quota, so pytest-xdist's `-n auto` would start a worker
-    # per host CPU. Bazel already honors the quota. pytest_test passes this
-    # variable through, and xdist uses it for `-n auto`. A runner with no
-    # quota (cgroup v1, or cpu.max of "max") is left alone.
-    - name: Size test workers to the CPU quota
-      if: runner.os == 'Linux'
-      shell: bash
-      # The value written is an integer from shell arithmetic on a kernel
-      # file, so the write can't carry anything else.
-      run: |  # zizmor: ignore[github-env]
-        [ -r /sys/fs/cgroup/cpu.max ] || exit 0
-        read -r quota period </sys/fs/cgroup/cpu.max
-        [ "${quota}" != max ] || exit 0
-        workers=$(( (quota + period - 1) / period ))
-        [ "${workers}" -ge 1 ] || workers=1
-        [ "${workers}" -lt "$(nproc)" ] || exit 0
-        echo "PYTEST_XDIST_AUTO_NUM_WORKERS=${workers}" >>"$GITHUB_ENV"
-
     # GitHub release downloads return 504 for minutes at times, and
     # setup-bazel has no retry of its own, so a failed attempt is retried
     # after a pause. Attempts that follow a success are skipped.
@@ -155,6 +136,28 @@ runs:
             ln -s "${bazel}" "${dir}/bazelisk"
           fi
         fi
+
+    # nproc and Python's os.cpu_count() count the host's CPUs, not a
+    # container's CPU quota, and Bazel's own CPU count did not follow the
+    # quota either: a 2-CPU container scheduled actions as for 16. So the
+    # quota goes to pytest-xdist's `-n auto` (pytest_test passes the variable
+    # through), to mutmut's worker cap (TBHB_CPU_QUOTA, passed to actions by
+    # --action_env) and to Bazel's local CPU resources. A runner with no
+    # quota is left alone. After setup-bazel, which writes the user bazelrc
+    # too and leaves its last line unterminated, hence the leading newline.
+    - name: Size workers to the CPU quota
+      if: runner.os == 'Linux'
+      shell: bash
+      # The values written are integers that cpu_quota.sh printed from
+      # arithmetic on kernel files, so the writes can't carry anything else.
+      run: |  # zizmor: ignore[github-env]
+        cpus="$(bash "${GITHUB_ACTION_PATH}/cpu_quota.sh")"
+        [ -n "${cpus}" ] || exit 0
+        {
+          echo "PYTEST_XDIST_AUTO_NUM_WORKERS=${cpus}"
+          echo "TBHB_CPU_QUOTA=${cpus}"
+        } >>"$GITHUB_ENV"
+        printf '\nbuild --local_resources=cpu=%s\nbuild --action_env=TBHB_CPU_QUOTA\n' "${cpus}" >>"$HOME/.bazelrc"
 
     # complexipy publishes no Python 3.15 wheel for Linux arm64, so uv builds
     # it from source there with maturin, which needs Rust and a C compiler. A

@@ -44,6 +44,12 @@ exports_files(
     visibility = ["//repo/tests:__pkg__"],
 )
 
+# For //repo/tests:cpu_quota_test.
+exports_files(
+    [".github/actions/setup-bazel-ci/cpu_quota.sh"],
+    visibility = ["//repo/tests:__pkg__"],
+)
+
 # For //tools's vale_test and vale_sync.
 exports_files(
     [
@@ -186,6 +192,7 @@ zizmor_test(
 # Shell scripts. A shebang-based selection rule is planned for lint/; until
 # it lands, the scripts are listed here.
 SHELL_SCRIPTS = [
+    ".github/actions/setup-bazel-ci/cpu_quota.sh",
     "format/private/format.sh.tpl",
     "lint/private/codeowners.sh",
     "lint/private/commit_identity.sh.tpl",
@@ -200,6 +207,7 @@ SHELL_SCRIPTS = [
     "pins/tests/git_exec_path_test.sh",
     "pins/tests/git_network_test.sh",
     "quality/private/mutation_gate.sh.tpl",
+    "repo/tests/cpu_quota_test.sh",
     "repo/tests/retry_budget_test.sh",
     "testing/private/expect_failure.sh.tpl",
     "testing/tests/subject.sh",
