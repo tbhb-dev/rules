@@ -103,6 +103,14 @@ jobs:
       # GitHub release downloads return 504 for minutes at times, and
       # setup-bazel has no retry of its own, so a failed attempt is retried
       # after a pause. Attempts that follow a success are skipped.
+      #
+      # `bazelisk mod tidy` downloads a sha256-pinned buildozer from GitHub
+      # releases, and the repository cache is keyed by that hash, so a run
+      # that isn't a pull request saves the cache and later runs skip the
+      # download. A cache is immutable once saved, and setup-bazel names it
+      # from the platform, `cache-version` and a hash of MODULE.bazel alone.
+      # A consumer's own jobs save under the same name, and whichever saves
+      # first wins, so `cache-version` gives this job names of its own.
       - name: Set up Bazel
         id: setup_bazel_1
         uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
@@ -113,7 +121,8 @@ jobs:
           bazelisk-version: 1.30.0
           bazelisk-cache: true
           repository-cache: true
-          cache-save: false
+          cache-version: repo-checks-1
+          cache-save: ${{ github.event_name != 'pull_request' }}
 
       - name: Wait before retrying the Bazel setup
         if: steps.setup_bazel_1.outcome == 'failure'
@@ -130,7 +139,8 @@ jobs:
           bazelisk-version: 1.30.0
           bazelisk-cache: true
           repository-cache: true
-          cache-save: false
+          cache-version: repo-checks-1
+          cache-save: ${{ github.event_name != 'pull_request' }}
 
       - name: Wait before the last Bazel setup attempt
         if: steps.setup_bazel_2.outcome == 'failure'
@@ -145,7 +155,8 @@ jobs:
           bazelisk-version: 1.30.0
           bazelisk-cache: true
           repository-cache: true
-          cache-save: false
+          cache-version: repo-checks-1
+          cache-save: ${{ github.event_name != 'pull_request' }}
 
       # setup-bazel installs the pinned bazelisk under the name `bazel`, so a
       # runner without its own bazelisk has no `bazelisk` command. Link one next
