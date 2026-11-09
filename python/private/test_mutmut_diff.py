@@ -265,7 +265,8 @@ def test_diff_report_counts_only_the_selected_mutants() -> None:
             "pkg.x_none__mutmut_*",
         ],
     )
-    assert mr.diff_report(RESULTS, selection).splitlines() == [
+    report = mr.diff_report(mr.results_by_name(RESULTS), selection)
+    assert report.splitlines() == [
         "total=9",
         "killed=1",
         "lived=1",
@@ -290,7 +291,7 @@ def test_diff_report_counts_only_the_selected_mutants() -> None:
 
 
 def test_diff_report_of_nothing_selected() -> None:
-    assert mr.diff_report("", mr.Selection()).splitlines() == [
+    assert mr.diff_report({}, mr.Selection()).splitlines() == [
         "total=0",
         "killed=0",
         "lived=0",
@@ -366,7 +367,10 @@ def test_run_diff_caps_the_workers_at_the_cpu_quota(
 
 
 def test_run_diff_with_nothing_selected(runs: list[list[str]]) -> None:
-    assert "selected=0" in mr.run_diff(Path("log"), mr.Selection()).splitlines()
+    text = mr.run_diff(Path("log"), mr.Selection())
+    assert text == mr.diff_report({}, mr.Selection())
+    assert text.splitlines()[:2] == ["total=0", "killed=0"]
+    assert "selected=0" in text.splitlines()
     assert runs == []
 
 
