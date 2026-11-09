@@ -29,9 +29,12 @@ v1_period=${3:-/sys/fs/cgroup/cpu/cpu.cfs_period_us}
 
 quota=
 period=
+extra=
 if [[ -r $v2 ]]; then
-  read -r quota period <"$v2" || true
+  read -r quota period extra <"$v2" || true
 fi
+# Exactly two fields: a third means the file is not a cpu.max.
+[[ -z $extra ]] || exit 0
 # An empty or missing cpu.max leaves no quota, and cgroup v1 gets its turn.
 if [[ -z $quota && -r $v1_quota && -r $v1_period ]]; then
   read -r quota <"$v1_quota" || true

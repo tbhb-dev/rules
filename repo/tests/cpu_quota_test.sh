@@ -68,6 +68,8 @@ expect "" "v1 missing period" "$dir/missing" "$dir/q3" "$dir/missing"
 expect 2 "empty v2, v1 two CPUs" "$dir/h" "$dir/q1" "$dir/p1"
 # A malformed cpu.max does not.
 fake n 'max 100000 5'
+fake t '200000 100000 5'
+expect "" "three numeric fields" "$dir/t"
 expect "" "three fields" "$dir/n" "$dir/q1" "$dir/p1"
 # cpu.max wins over v1 files.
 fake m '100000 100000'
