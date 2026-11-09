@@ -334,6 +334,9 @@ def test_choose(unit: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def runs(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
+    monkeypatch.setattr(mr.os, "cpu_count", lambda: 16)
+    for name in ("CPU_MAX", "V1_QUOTA", "V1_PERIOD"):
+        monkeypatch.setattr(mr, name, Path("/nonexistent") / name)
     calls: list[list[str]] = []
 
     def fake(args: list[str], log: Path) -> subprocess.CompletedProcess[str]:
@@ -351,6 +354,15 @@ def test_run_diff(runs: list[list[str]]) -> None:
     text = mr.run_diff(Path("log"), selection)
     assert runs == [["run", "pkg.other.x_f__mutmut_*"], ["results", "--all", "true"]]
     assert "mutant.survived=pkg.other.x_f__mutmut_1" in text.splitlines()
+
+
+def test_run_diff_caps_the_workers_at_the_cpu_quota(
+    runs: list[list[str]], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "cpu.max").write_text("200000 100000\n")
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
+    mr.run_diff(Path("log"), mr.Selection(globs=["pkg.other.x_f__mutmut_*"]))
+    assert runs[0] == ["run", "--max-children", "2", "pkg.other.x_f__mutmut_*"]
 
 
 def test_run_diff_with_nothing_selected(runs: list[list[str]]) -> None:

@@ -51,6 +51,133 @@ def test_mutmut_runs_the_module_and_appends_to_the_log(
     )
 
 
+@pytest.fixture(autouse=True)
+def no_quota(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Keep every test off the host's cgroup files and on a 16-CPU host."""
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "no" / "cpu.max")
+    monkeypatch.setattr(mr, "V1_QUOTA", tmp_path / "no" / "quota")
+    monkeypatch.setattr(mr, "V1_PERIOD", tmp_path / "no" / "period")
+    monkeypatch.setattr(mr.os, "cpu_count", lambda: 16)
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        ("200000 100000\n", ["--max-children", "2"]),
+        ("150000 100000\n", ["--max-children", "2"]),
+        ("50000 100000\n", ["--max-children", "1"]),
+        ("0 100000\n", ["--max-children", "1"]),
+        ("1500000 100000\n", ["--max-children", "15"]),
+        ("1600000 100000\n", []),
+        ("9000000 100000\n", []),
+        ("max 100000\n", []),
+        ("", []),
+        ("lots of CPUs\n", []),
+        ("200000\n", []),
+        ("200000 100000 5\n", []),
+        ("-1 100000\n", []),
+        ("200000 0\n", []),
+        ("\u0662 1\n", []),
+    ],
+)
+def test_max_children_reads_cgroup_v2(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    content: str,
+    expected: list[str],
+) -> None:
+    (tmp_path / "cpu.max").write_text(content)
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
+    assert mr.max_children() == expected
+
+
+def test_max_children_without_cgroup_files() -> None:
+    assert mr.max_children() == []
+
+
+def test_max_children_ignores_an_unreadable_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path)  # a directory: OSError
+    assert mr.max_children() == []
+    (tmp_path / "bytes").write_bytes(b"\xff\xfe")
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "bytes")  # not UTF-8
+    assert mr.max_children() == []
+
+
+@pytest.mark.parametrize(
+    ("cpus", "expected"),
+    [(None, ["--max-children", "2"]), (3, ["--max-children", "2"]), (2, [])],
+)
+def test_max_children_compares_with_the_cpu_count(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    cpus: int | None,
+    expected: list[str],
+) -> None:
+    (tmp_path / "cpu.max").write_text("200000 100000\n")
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
+    monkeypatch.setattr(mr.os, "cpu_count", lambda: cpus)
+    assert mr.max_children() == expected
+
+
+@pytest.mark.parametrize(
+    ("quota", "period", "expected"),
+    [
+        ("200000", "100000", ["--max-children", "2"]),
+        ("-1", "100000", []),
+        ("200000", "", []),
+    ],
+)
+def test_max_children_reads_cgroup_v1(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    quota: str,
+    period: str,
+    expected: list[str],
+) -> None:
+    (tmp_path / "quota").write_text(quota + "\n")
+    (tmp_path / "period").write_text(period + "\n")
+    monkeypatch.setattr(mr, "V1_QUOTA", tmp_path / "quota")
+    monkeypatch.setattr(mr, "V1_PERIOD", tmp_path / "period")
+    assert mr.max_children() == expected
+
+
+def test_max_children_does_not_fall_back_from_a_malformed_cgroup_v2_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "cpu.max").write_text("max 100000 5\n")
+    (tmp_path / "quota").write_text("200000\n")
+    (tmp_path / "period").write_text("100000\n")
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
+    monkeypatch.setattr(mr, "V1_QUOTA", tmp_path / "quota")
+    monkeypatch.setattr(mr, "V1_PERIOD", tmp_path / "period")
+    assert mr.max_children() == []
+
+
+def test_max_children_prefers_cgroup_v2(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "cpu.max").write_text("100000 100000\n")
+    (tmp_path / "quota").write_text("300000\n")
+    (tmp_path / "period").write_text("100000\n")
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
+    monkeypatch.setattr(mr, "V1_QUOTA", tmp_path / "quota")
+    monkeypatch.setattr(mr, "V1_PERIOD", tmp_path / "period")
+    assert mr.max_children() == ["--max-children", "1"]
+
+
+def test_main_caps_the_workers_at_the_cpu_quota(
+    fake_mutmut: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "cpu.max").write_text("300000 100000\n")
+    monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
+    assert mr.main(["report", "log"]) == 1
+    assert fake_mutmut[0] == ["run", "--max-children", "3"]
+
+
 def test_load_stats(tmp_path: Path) -> None:
     path = tmp_path / "stats.json"
     assert mr.load_stats(path) is None

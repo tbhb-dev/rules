@@ -119,6 +119,10 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
     any verdict. A diff pass never stands for a full run (`require_scope`);
     mutants of unchanged functions are checked by full runs.
 
+    Under a cgroup CPU quota below the host's CPU count, the driver runs
+    mutmut with `--max-children` set to the quota, read at run time, so the
+    quota never enters the action's cache key.
+
     mutmut does not run on Windows (it points Windows users to WSL), so the
     targets are incompatible there: `bazel test //...` skips them.
 

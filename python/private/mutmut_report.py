@@ -26,6 +26,7 @@ gate fails.
 import ast
 import fnmatch
 import json
+import os
 import subprocess  # nosec B404
 import sys
 import tomllib
@@ -60,6 +61,11 @@ STATS = Path("mutants/mutmut-cicd-stats.json")
 PYPROJECT = "pyproject.toml"
 HEADER = "[tool.mutmut]"
 NO_GIT = "use_git_change_detection = false"
+# The container's CPU quota: cgroup v2's cpu.max ("<quota|max> <period>"),
+# else cgroup v1's quota (-1 for none) and period files.
+CPU_MAX = Path("/sys/fs/cgroup/cpu.max")
+V1_QUOTA = Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
+V1_PERIOD = Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
 # Verdicts that depend on the machine (load, signals) rather than the code:
 # the action fails on them, so Bazel never caches one.
 UNSTABLE = ("timeout", "errored", "interrupted")
@@ -253,6 +259,46 @@ def _add(
     return None
 
 
+def read_text(path: Path) -> str:
+    """Return a cgroup file's text without its newline, or "" when unreadable.
+
+    The files can be unreadable inside a Bazel sandbox.
+    """
+    try:
+        return path.read_text().strip()
+    # Python before 3.14 requires the parentheses that ruff's 3.15 target strips.
+    except (OSError, ValueError):  # fmt: skip
+        return ""
+
+
+def max_children() -> list[str]:
+    """Return mutmut's `--max-children` for a CPU quota below the host's CPUs.
+
+    mutmut sizes its workers from os.cpu_count(), which a container's cgroup
+    CPU quota can be far below. The count is the quota over its period,
+    rounded up, at least 1. Nothing is returned when no quota is set, the
+    files don't hold integers, or the count is not below the CPU count.
+    cpu_quota.sh in setup-bazel-ci implements the same rule: keep the two in
+    step.
+    """
+    fields = read_text(CPU_MAX).split()
+    if not fields:
+        fields = [read_text(V1_QUOTA), read_text(V1_PERIOD)]
+    # Exactly "<quota> <period>"; "max" and -1 fail the integer test too.
+    if len(fields) != 2 or not all(  # noqa: PLR2004 - quota and period.
+        f.isascii() and f.isdecimal() for f in fields
+    ):
+        return []
+    quota, period = fields
+    if int(period) == 0:
+        return []
+    workers = max(1, -(-int(quota) // int(period)))
+    cpus = os.cpu_count()
+    if cpus is not None and workers >= cpus:
+        return []
+    return ["--max-children", str(workers)]
+
+
 def mutmut(args: list[str], log: Path) -> subprocess.CompletedProcess[str]:
     """Run one mutmut command, appending its output to log."""
     done = subprocess.run(  # nosec B603
@@ -397,7 +443,7 @@ def choose(changes: Path, prefix: str) -> Selection:
 
 def run_full(log: Path) -> str:
     """Run every mutant and return the report."""
-    mutmut(["run"], log)
+    mutmut(["run", *max_children()], log)
     stats = None
     if mutmut(["export-cicd-stats"], log).returncode == 0:
         stats = load_stats(STATS)
@@ -410,7 +456,7 @@ def run_diff(log: Path, selection: Selection) -> str:
     if not selection.globs:
         # Any text without a "name: status" line reads as no results.
         return diff_report("", selection)  # pragma: no mutate
-    mutmut(["run", *selection.globs], log)
+    mutmut(["run", *max_children(), *selection.globs], log)
     return diff_report(mutmut(["results", "--all", "true"], log).stdout, selection)
 
 
