@@ -174,7 +174,8 @@ jobs:
           cache-save: ${{ github.event_name != 'pull_request' }}
 
       # One deadline for every retry loop below. A step output carries it to
-      # them, so nothing is written to the environment file.
+      # them, so nothing is written to the environment file. The same step
+      # writes the one `retry` function that they source.
       - name: Start the retry clock
         id: retry_clock
         env:
@@ -182,6 +183,27 @@ jobs:
         run: |
           now=$(date +%s)
           echo "deadline=$((now + BUDGET * 60))" >>"${GITHUB_OUTPUT}"
+          # Run a command in a directory until it succeeds. Before each
+          # pause, give up if the pause would pass the deadline, and name the
+          # last URL in the output, which is usually the download that failed.
+          cat >"${RUNNER_TEMP}/retry.sh" <<'SCRIPT'
+          set -o pipefail
+          retry() {
+            local dir=$1 delay=30 out url
+            shift
+            out="$(mktemp)"
+            until (cd "${dir}" && "$@") 2>&1 | tee "${out}"; do
+              now=$(date +%s)
+              if ((now + delay > DEADLINE)); then
+                url="$(grep -oE 'https?://[^[:space:]"]+' "${out}" | tail -1 || true)"
+                echo "::error::gave up after ${BUDGET} min: ${url:-no URL in the output} kept failing"
+                return 1
+              fi
+              sleep "${delay}"
+              delay=$((delay * 2))
+            done
+          }
+          SCRIPT
 
       # setup-bazel installs the pinned bazelisk under the name `bazel`, so a
       # runner without its own bazelisk has no `bazelisk` command. Link one next
@@ -208,25 +230,7 @@ jobs:
           DIRS: ${{ inputs.gazelle-dirs }}
         run: |
           read -ra dirs <<<"${DIRS}"
-          # Run a command in a directory until it succeeds. Before each pause, give
-          # up if the pause would pass the deadline, and name the last URL in the
-          # output, which is usually the download that failed.
-          set -o pipefail
-          retry() {
-            local dir=$1 delay=30 out url
-            shift
-            out="$(mktemp)"
-            until (cd "${dir}" && "$@") 2>&1 | tee "${out}"; do
-              now=$(date +%s)
-              if ((now + delay > DEADLINE)); then
-                url="$(grep -oE 'https?://[^[:space:]"]+' "${out}" | tail -1 || true)"
-                echo "::error::gave up after ${BUDGET} min: ${url:-no URL in the output} kept failing"
-                return 1
-              fi
-              sleep "${delay}"
-              delay=$((delay * 2))
-            done
-          }
+          source "${RUNNER_TEMP}/retry.sh"
           for dir in "${dirs[@]}"; do
             # Build gazelle first, retrying: that is where the downloads
             # happen. The diff run itself exits non-zero when gazelle has
@@ -244,25 +248,7 @@ jobs:
           DIRS: ${{ inputs.module-dirs }}
         run: |
           read -ra dirs <<<"${DIRS}"
-          # Run a command in a directory until it succeeds. Before each pause, give
-          # up if the pause would pass the deadline, and name the last URL in the
-          # output, which is usually the download that failed.
-          set -o pipefail
-          retry() {
-            local dir=$1 delay=30 out url
-            shift
-            out="$(mktemp)"
-            until (cd "${dir}" && "$@") 2>&1 | tee "${out}"; do
-              now=$(date +%s)
-              if ((now + delay > DEADLINE)); then
-                url="$(grep -oE 'https?://[^[:space:]"]+' "${out}" | tail -1 || true)"
-                echo "::error::gave up after ${BUDGET} min: ${url:-no URL in the output} kept failing"
-                return 1
-              fi
-              sleep "${delay}"
-              delay=$((delay * 2))
-            done
-          }
+          source "${RUNNER_TEMP}/retry.sh"
           files=()
           for dir in "${dirs[@]}"; do
             # mod tidy downloads a helper binary from GitHub, so retry it. The
@@ -271,6 +257,22 @@ jobs:
             files+=("${dir}/MODULE.bazel")
           done
           git diff --exit-code -- "${files[@]}"
+
+      # The scans download the gitleaks binary from GitHub releases, which
+      # can fail like the downloads above. Build their targets first, under
+      # the shared deadline. The scans below run once: a finding is real and
+      # a retry must not hide it.
+      - name: Fetch gitleaks, retrying transient failures
+        env:
+          BUDGET: ${{ inputs.retry-budget-minutes }}
+          DEADLINE: ${{ steps.retry_clock.outputs.deadline }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          source "${RUNNER_TEMP}/retry.sh"
+          retry . bazelisk build //:gitleaks_history
+          if [[ ${EVENT} == pull_request ]]; then
+            retry . bazelisk build @tbhb_rules//lint:gitleaks_text
+          fi
 
       # Git history is not a declared input, so the history scan runs
       # outside the test graph; //:gitleaks_test covers the working tree.
