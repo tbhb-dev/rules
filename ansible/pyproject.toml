@@ -216,6 +216,9 @@ exclude_also = [
   # The module-level entry guard fires only when a file runs as a script,
   # which the test suite never does; it imports the module.
   "if __name__ == \"__main__\":",
+  # Tests that need POSIX process groups skip on Windows, where their bodies
+  # never run. Excluding a decorator line excludes the whole function.
+  "^@posix_only",
 ]
 
 [tool.pytest]
