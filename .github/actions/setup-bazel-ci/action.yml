@@ -216,8 +216,8 @@ runs:
 
     # Fetching hits go.dev's release list (go_sdk.from_file), PyPI, GitHub
     # and the BCR mirror, which can fail for longer than Bazel's own
-    # download retries wait. Five attempts back off for 30, 60, 120 and 240
-    # seconds, about seven and a half minutes in all, enough for a GitHub
+    # download retries wait. Six attempts back off for 30, 60, 120, 240 and 480
+    # seconds, about fifteen and a half minutes in all, enough for a GitHub
     # release download that returns 504 for a few minutes. Only the fetch is
     # retried: a test failure never is.
     - name: Fetch, retrying transient failures
@@ -229,9 +229,9 @@ runs:
       run: |
         read -ra targets <<<"${TARGETS}"
         delay=30
-        for attempt in 1 2 3 4 5; do
+        for attempt in 1 2 3 4 5 6; do
           bazelisk fetch --config=ci "${targets[@]}" && break
-          if ((attempt == 5)); then exit 1; fi
+          if ((attempt == 6)); then exit 1; fi
           sleep "${delay}"
           delay=$((delay * 2))
         done
