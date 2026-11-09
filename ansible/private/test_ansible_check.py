@@ -223,6 +223,9 @@ def test_watchdog_reports_before_killing_and_clears_the_group(
     assert time.monotonic() - started < 20
     assert "ansible_check: watchdog fired after 1s, ansible-lint did not finish" in out
     assert "PID" in out
+    assert "load average" in out
+    # nproc is missing from a stock macOS.
+    assert re.search(r"^(\d+|nproc unavailable)$", out, re.MULTILINE)
     assert "last: roles/web" in out.split("last output lines:")[1]
     match = re.search(r"^pid (\d+)$", out, re.MULTILINE)
     assert match
@@ -334,3 +337,19 @@ def test_process_table_reports_a_failing_or_missing_ps(
 
     monkeypatch.setattr(ansible_check.subprocess, "run", missing)
     assert "ps is unavailable" in ansible_check.process_table()
+
+
+def test_host_load_says_when_a_binary_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Done:
+        stdout = "up 1 day\n"
+
+    def fake_run(command: list[str], **_: object) -> Done:
+        if command == ["nproc"]:
+            msg = "nproc"
+            raise FileNotFoundError(msg)
+        return Done()
+
+    monkeypatch.setattr(ansible_check.subprocess, "run", fake_run)
+    assert ansible_check.host_load() == "up 1 day\nnproc unavailable"

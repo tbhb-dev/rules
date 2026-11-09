@@ -28,10 +28,10 @@ tree root as .ansible-lint so its paths resolve there. `molecule` runs
 `lint` runs ansible-lint unbuffered and under a watchdog. The deadline is
 80% of Bazel's TEST_TIMEOUT (240 s without it), or the seconds of
 TBHB_ANSIBLE_CHECK_TIMEOUT. When it passes, the driver prints the process
-table (names only, never command lines, because the logs can be public)
-and the last lines of ansible-lint's output, kills ansible-lint's process
-group, and exits 124, so a hung run names where it stopped instead of
-dying silently at Bazel's timeout.
+table (names only, never command lines, because the logs can be public),
+the host's load (uptime and nproc) and the last lines of ansible-lint's
+output, kills ansible-lint's process group, and exits 124, so a hung run
+names where it stopped instead of dying silently at Bazel's timeout.
 
 Python 3.13 and later, standard library only: it runs on the consumer's
 Ansible environment.
@@ -155,6 +155,21 @@ def process_table() -> str:
     return "ps failed"
 
 
+def host_load() -> str:
+    """The output of `uptime` and `nproc`, saying so when one is missing."""
+    lines = []
+    for name in ("uptime", "nproc"):
+        try:
+            done = subprocess.run(  # nosec B603 B607
+                [name], capture_output=True, text=True, check=False
+            )
+        except OSError:
+            lines.append(f"{name} unavailable")
+        else:
+            lines.append(done.stdout.strip())
+    return "\n".join(lines)
+
+
 def run_watched(
     command: Sequence[str],
     env: Mapping[str, str],
@@ -164,9 +179,9 @@ def run_watched(
     """Run `command`, streaming its output, and kill it after `timeout` seconds.
 
     The child leads its own process group. On the deadline, before killing,
-    print the process table and the child's last lines, then SIGTERM the
-    group, and SIGKILL it after a grace period. Returns the child's exit
-    code, or 124 when the watchdog fired.
+    print the process table, the load (`uptime`, `nproc`) and the child's
+    last lines, then SIGTERM the group, and SIGKILL it after a grace period.
+    Returns the child's exit code, or 124 when the watchdog fired.
     """
     print("ansible_check: running " + " ".join(command), flush=True)
     child = subprocess.Popen(  # nosec B603
@@ -200,6 +215,7 @@ def run_watched(
             "ansible-lint did not finish\n" + process_table(),
             flush=True,
         )
+        print(host_load(), flush=True)
         print("ansible_check: last output lines:", flush=True)
         for line in list(tail):
             print(f"  {line}", flush=True)
