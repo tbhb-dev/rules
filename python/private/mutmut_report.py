@@ -61,6 +61,11 @@ STATS = Path("mutants/mutmut-cicd-stats.json")
 PYPROJECT = "pyproject.toml"
 HEADER = "[tool.mutmut]"
 NO_GIT = "use_git_change_detection = false"
+# The container's CPU quota: cgroup v2's cpu.max ("<quota|max> <period>"),
+# else cgroup v1's quota (-1 for none) and period files.
+CPU_MAX = Path("/sys/fs/cgroup/cpu.max")
+V1_QUOTA = Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
+V1_PERIOD = Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
 # Verdicts that depend on the machine (load, signals) rather than the code:
 # the action fails on them, so Bazel never caches one.
 UNSTABLE = ("timeout", "errored", "interrupted")
@@ -254,16 +259,41 @@ def _add(
     return None
 
 
-def max_children() -> list[str]:
-    """Return mutmut's worker cap from TBHB_CPU_QUOTA, or nothing.
+def read_text(path: Path) -> str:
+    """Return a cgroup file's text without its newline, or "" when unreadable.
 
-    mutmut sizes its workers from the host's CPUs, which a container's CPU
-    quota can be far below. Only a positive integer counts.
+    The files can be unreadable inside a Bazel sandbox.
     """
-    quota = os.environ.get("TBHB_CPU_QUOTA")
-    if quota is None or not (quota.isascii() and quota.isdecimal()):
+    try:
+        return path.read_text().strip()
+    # Python before 3.14 requires the parentheses that ruff's 3.15 target strips.
+    except (OSError, ValueError):  # fmt: skip
+        return ""
+
+
+def max_children() -> list[str]:
+    """Return mutmut's `--max-children` for a CPU quota below the host's CPUs.
+
+    mutmut sizes its workers from os.cpu_count(), which a container's cgroup
+    CPU quota can be far below. The count is the quota over its period,
+    rounded up, at least 1. Nothing is returned when no quota is set, the
+    files don't hold integers, or the count is not below the CPU count.
+    cpu_quota.sh in setup-bazel-ci implements the same rule: keep the two in
+    step.
+    """
+    # partition and rpartition agree on the file's single space.
+    quota, _, period = read_text(CPU_MAX).partition(" ")  # pragma: no mutate
+    if not quota:
+        quota, period = read_text(V1_QUOTA), read_text(V1_PERIOD)
+    if not all(field.isascii() and field.isdecimal() for field in (quota, period)):
+        return []  # "max" and -1 end here too.
+    if int(period) == 0:
         return []
-    return ["--max-children", quota] if int(quota) > 0 else []
+    workers = max(1, -(-int(quota) // int(period)))
+    cpus = os.cpu_count()
+    if cpus is not None and workers >= cpus:
+        return []
+    return ["--max-children", str(workers)]
 
 
 def mutmut(args: list[str], log: Path) -> subprocess.CompletedProcess[str]:

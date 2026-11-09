@@ -10,6 +10,9 @@
 # nproc and Python's os.cpu_count() count the host's CPUs and ignore the
 # quota.
 #
+# python/private/mutmut_report.py (max_children) implements the same rule
+# for mutmut. Keep the two in step.
+#
 # Usage: cpu_quota.sh [CPU_MAX [V1_QUOTA V1_PERIOD]]
 #
 # CPU_MAX is cgroup v2's cpu.max ("<quota|max> <period>"). Without it, cgroup

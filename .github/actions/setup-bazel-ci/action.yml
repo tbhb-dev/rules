@@ -141,9 +141,9 @@ runs:
     # container's CPU quota, and Bazel's own CPU count did not follow the
     # quota either: a 2-CPU container scheduled actions as for 16. So the
     # quota goes to pytest-xdist's `-n auto` (pytest_test passes the variable
-    # through), to mutmut's worker cap (TBHB_CPU_QUOTA, passed to actions by
-    # --action_env) and to Bazel's local CPU resources. A runner with no
-    # quota is left alone. After setup-bazel, which writes the user bazelrc
+    # through) and to Bazel's local CPU resources. mutmut's driver reads the
+    # quota itself, so it stays out of every action's cache key. A runner with
+    # no quota is left alone. After setup-bazel, which writes the user bazelrc
     # too and leaves its last line unterminated, hence the leading newline.
     - name: Size workers to the CPU quota
       if: runner.os == 'Linux'
@@ -153,11 +153,8 @@ runs:
       run: |  # zizmor: ignore[github-env]
         cpus="$(bash "${GITHUB_ACTION_PATH}/cpu_quota.sh")"
         [ -n "${cpus}" ] || exit 0
-        {
-          echo "PYTEST_XDIST_AUTO_NUM_WORKERS=${cpus}"
-          echo "TBHB_CPU_QUOTA=${cpus}"
-        } >>"$GITHUB_ENV"
-        printf '\nbuild --local_resources=cpu=%s\nbuild --action_env=TBHB_CPU_QUOTA\n' "${cpus}" >>"$HOME/.bazelrc"
+        echo "PYTEST_XDIST_AUTO_NUM_WORKERS=${cpus}" >>"$GITHUB_ENV"
+        printf '\nbuild --local_resources=cpu=%s\n' "${cpus}" >>"$HOME/.bazelrc"
 
     # complexipy publishes no Python 3.15 wheel for Linux arm64, so uv builds
     # it from source there with maturin, which needs Rust and a C compiler. A

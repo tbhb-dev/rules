@@ -58,9 +58,6 @@ def _mutmut_report_impl(ctx):
         inputs = depset([manifest] + ([changes] if changes else []), transitive = [depset(files)]),
         outputs = [report, log],
         tools = [launcher],
-        # TBHB_CPU_QUOTA (a container's CPU quota, exported by setup-bazel-ci
-        # and passed on with --action_env) caps mutmut's workers.
-        use_default_shell_env = True,
         mnemonic = "Mutmut",
         progress_message = "Mutation-testing %{label} with mutmut",
         # mutmut forks a worker per CPU and times each mutant against the
@@ -122,10 +119,9 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
     any verdict. A diff pass never stands for a full run (`require_scope`);
     mutants of unchanged functions are checked by full runs.
 
-    mutmut runs with `--max-children` set to the `TBHB_CPU_QUOTA` environment
-    variable when it holds a positive integer (pass it with
-    `--action_env=TBHB_CPU_QUOTA`; setup-bazel-ci does), so a container's
-    CPU quota, not the host's CPU count, sizes its workers.
+    Under a cgroup CPU quota below the host's CPU count, the driver runs
+    mutmut with `--max-children` set to the quota, read at run time, so the
+    quota never enters the action's cache key.
 
     mutmut does not run on Windows (it points Windows users to WSL), so the
     targets are incompatible there: `bazel test //...` skips them.
