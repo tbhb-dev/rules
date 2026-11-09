@@ -360,13 +360,12 @@ def report(stats: dict[str, object] | None, results: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-def diff_report(results: str, selection: Selection) -> str:
+def diff_report(statuses: dict[str, str], selection: Selection) -> str:
     """Format a diff run's report: only the selected mutants count.
 
     A selected mutant mutmut did not run, and one it ran that was not
     selected, are both unmapped: the selection and the tool disagree.
     """
-    statuses = results_by_name(results)
     selected = {
         name: status
         for name, status in statuses.items()
@@ -454,10 +453,10 @@ def run_full(log: Path) -> str:
 def run_diff(log: Path, selection: Selection) -> str:
     """Run the selected mutants and return the diff report."""
     if not selection.globs:
-        # Any text without a "name: status" line reads as no results.
-        return diff_report("", selection)  # pragma: no mutate
+        return diff_report({}, selection)
     mutmut(["run", *max_children(), *selection.globs], log)
-    return diff_report(mutmut(["results", "--all", "true"], log).stdout, selection)
+    results = mutmut(["results", "--all", "true"], log).stdout
+    return diff_report(results_by_name(results), selection)
 
 
 def main(argv: list[str]) -> int:
