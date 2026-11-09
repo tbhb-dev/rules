@@ -10,6 +10,7 @@ their source trees on the path instead). uv verifies each download against
 the hashes in uv.lock and in its own interpreter metadata.
 """
 
+load(":python_mismatch.bzl", "python_mismatch_hint")
 load(":versions.bzl", "UV_ASSETS", "UV_PLATFORMS")
 
 # Internal: load //runtime:defs.bzl.
@@ -94,10 +95,12 @@ environment marker in pyproject.toml, or lock a version that publishes a
 wheel for it.
 """
 
-def _run(rctx, args, env, what, working_directory = ""):
+def _run(rctx, args, env, what, working_directory = "", mismatch = None):
     result = rctx.execute(args, environment = env, working_directory = working_directory, quiet = True)
     if result.return_code != 0:
         hint = _SDIST_HINT if _SDIST_BUILD_FAILED in result.stderr else ""
+        if mismatch:
+            hint += python_mismatch_hint(result.stderr, mismatch[0], mismatch[1])
         fail("{}: {} failed ({}):\n{}{}{}".format(rctx.name, what, result.return_code, result.stdout, result.stderr, hint))
     return result.stdout
 
@@ -184,6 +187,7 @@ def _python_env_repo_impl(rctx):
         dict(env, UV_PROJECT_ENVIRONMENT = str(rctx.path("venv"))),
         "uv sync",
         working_directory = str(project),
+        mismatch = (version, rctx.read(pyproject)),
     )
     rctx.delete("uv-cache")
     rctx.delete("home")

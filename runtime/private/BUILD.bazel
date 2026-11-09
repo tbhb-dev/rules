@@ -3,6 +3,7 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("//repo:defs.bzl", "repo_files")
+load(":python_mismatch_tests.bzl", "python_mismatch_test_suite")
 
 repo_files()
 
@@ -22,8 +23,19 @@ bzl_library(
     name = "repo",
     srcs = ["repo.bzl"],
     visibility = ["//runtime:__subpackages__"],
-    deps = [":versions"],
+    deps = [
+        ":python_mismatch",
+        ":versions",
+    ],
 )
+
+bzl_library(
+    name = "python_mismatch",
+    srcs = ["python_mismatch.bzl"],
+    visibility = ["//runtime:__subpackages__"],
+)
+
+python_mismatch_test_suite(name = "python_mismatch_tests")
 
 bzl_library(
     name = "env_info",
