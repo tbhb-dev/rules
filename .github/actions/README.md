@@ -19,7 +19,7 @@ Run it after `checkout`. It runs these steps in order:
 4. Set up Bazel with `bazel-contrib/setup-bazel` and turn on the bazelisk cache plus the repository cache, trying up to three times with pauses of 60 and 120 seconds, since a GitHub release download can return 504 for minutes.
 5. On Linux arm64, download a pinned Rust toolchain and zig, check both against pinned hashes, and put them on `PATH` for the source build of complexipy, with `cc`, `c++` and `ar` running zig. A runner image without Rust or a C compiler works too.
 6. Shorten Bazel's output root and enable long paths, on Windows only.
-7. Fetch the targets, trying up to six times with pauses of 30, 60, 120, 240, and 480 seconds.
+7. Fetch the targets, retrying with pauses that start at 30 seconds and double. When the next pause would pass `retry-budget-minutes`, the step fails and prints the last URL from the output.
 
 | Input               | Default  | Meaning                                                                                                 |
 |---------------------|----------|---------------------------------------------------------------------------------------------------------|
@@ -27,6 +27,7 @@ Run it after `checkout`. It runs these steps in order:
 | `cache-save`        | `false`  | Whether the run saves the caches. Pass `${{ github.event_name != 'pull_request' }}`.                     |
 | `targets`           | `//...`  | The targets to fetch, split on whitespace. Empty skips the fetch.                                        |
 | `working-directory` | `.`      | The Bazel workspace the fetch runs in.                                                                   |
+| `retry-budget-minutes` | `8`   | Whole minutes the fetch may spend retrying, counted from the start of the fetch step. The setup attempts, with their 3 minutes of pauses, are outside it. |
 
 Because `checkout` runs first, the hardening starts after it, and the checkout itself goes unobserved.
 
@@ -62,6 +63,7 @@ On a pull request and on a push alike, the history scan covers only the tested c
 |---------------------------------|---------------------|--------------------------------------------------------------------|
 | `runs-on`                       | `ubuntu-26.04`      | The runner label.                                                  |
 | `timeout-minutes`               | `15`                | The job's timeout.                                                 |
+| `retry-budget-minutes`          | `8`                 | Whole minutes the gazelle build and `bazel mod tidy` retries may spend, all directories together, counted from the end of the Bazel setup. |
 | `pip-audit-target`              | `//tools:pip_audit` | The Python audit target.                                           |
 | `pnpm-audit-dirs`               | empty               | Directories with a pnpm lock to audit, split on whitespace.     |
 | `pnpm-audit-workspace`          | `.`                 | The workspace that contains `//:pnpm_audit`.                       |
@@ -69,6 +71,8 @@ On a pull request and on a push alike, the history scan covers only the tested c
 | `govulncheck-working-directory` | `.`                 | The workspace that contains the target.                            |
 | `gazelle-dirs`                  | empty               | Workspaces where gazelle must leave the Bazel package files alone, split on whitespace. |
 | `module-dirs`                   | empty               | Modules whose `MODULE.bazel` must match `bazel mod tidy`, split on whitespace. |
+
+When a retry would pause past the budget, the step fails and prints the last URL from the command's output. A long outage ends in a clear failure. Keep `retry-budget-minutes` below `timeout-minutes`, with time left for the other steps. `//repo/tests:retry_budget_test` checks the defaults.
 
 The calling job must grant `contents: read`, because a called workflow's token can never exceed its caller's.
 

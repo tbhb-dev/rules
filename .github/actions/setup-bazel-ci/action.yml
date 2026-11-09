@@ -35,6 +35,13 @@ inputs:
     description: The directory of the Bazel workspace the fetch runs in.
     required: false
     default: .
+  retry-budget-minutes:
+    description: >-
+      Whole minutes that the fetch may spend retrying, counted from the start
+      of the fetch step. The Bazel setup attempts are outside it. Keep it
+      below the job's timeout, with time left for the rest of the job.
+    required: false
+    default: "8"
 
 runs:
   using: composite
@@ -216,22 +223,32 @@ runs:
 
     # Fetching hits go.dev's release list (go_sdk.from_file), PyPI, GitHub
     # and the BCR mirror, which can fail for longer than Bazel's own
-    # download retries wait. Six attempts back off for 30, 60, 120, 240 and 480
-    # seconds, about fifteen and a half minutes in all, enough for a GitHub
-    # release download that returns 504 for a few minutes. Only the fetch is
+    # download retries wait. The fetch retries with pauses of 30 seconds,
+    # doubling, until the next pause would pass the retry budget. It then
+    # fails with the last URL in the output, so a long outage ends in a
+    # failure instead of the job's timeout cancelling it. Only the fetch is
     # retried: a test failure never is.
     - name: Fetch, retrying transient failures
       if: inputs.targets != ''
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
+        BUDGET: ${{ inputs.retry-budget-minutes }}
         TARGETS: ${{ inputs.targets }}
       run: |
         read -ra targets <<<"${TARGETS}"
+        now=$(date +%s)
+        deadline=$((now + BUDGET * 60))
+        out="$(mktemp)"
         delay=30
-        for attempt in 1 2 3 4 5 6; do
-          bazelisk fetch --config=ci "${targets[@]}" && break
-          if ((attempt == 6)); then exit 1; fi
+        set -o pipefail
+        until bazelisk fetch --config=ci "${targets[@]}" 2>&1 | tee "${out}"; do
+          now=$(date +%s)
+          if ((now + delay > deadline)); then
+            url="$(grep -oE 'https?://[^[:space:]"]+' "${out}" | tail -1 || true)"
+            echo "::error::gave up after ${BUDGET} min: ${url:-no URL in the output} kept failing"
+            exit 1
+          fi
           sleep "${delay}"
           delay=$((delay * 2))
         done

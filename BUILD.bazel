@@ -38,6 +38,12 @@ exports_files(
     visibility = ["//repo/tests:__pkg__"],
 )
 
+# For //repo/tests:retry_budget_test.
+exports_files(
+    [".github/workflows/repo-checks.yml"],
+    visibility = ["//repo/tests:__pkg__"],
+)
+
 # For //tools's vale_test and vale_sync.
 exports_files(
     [
@@ -194,6 +200,7 @@ SHELL_SCRIPTS = [
     "pins/tests/git_exec_path_test.sh",
     "pins/tests/git_network_test.sh",
     "quality/private/mutation_gate.sh.tpl",
+    "repo/tests/retry_budget_test.sh",
     "testing/private/expect_failure.sh.tpl",
     "testing/tests/subject.sh",
 ]
