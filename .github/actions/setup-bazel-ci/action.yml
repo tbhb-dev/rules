@@ -245,7 +245,7 @@ runs:
         until bazelisk fetch --config=ci "${targets[@]}" 2>&1 | tee "${out}"; do
           now=$(date +%s)
           if ((now + delay > deadline)); then
-            url="$(grep -oE 'https?://[^[:space:]"]+' "${out}" | tail -1 || true)"
+            url="$(grep -oE 'https?://[^][:space:]"]+' "${out}" | tail -1 || true)"
             echo "::error::gave up after ${BUDGET} min: ${url:-no URL in the output} kept failing"
             exit 1
           fi

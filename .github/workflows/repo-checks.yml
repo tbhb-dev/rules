@@ -195,7 +195,7 @@ jobs:
             until (cd "${dir}" && "$@") 2>&1 | tee "${out}"; do
               now=$(date +%s)
               if ((now + delay > DEADLINE)); then
-                url="$(grep -oE 'https?://[^[:space:]"]+' "${out}" | tail -1 || true)"
+                url="$(grep -oE 'https?://[^][:space:]"]+' "${out}" | tail -1 || true)"
                 echo "::error::gave up after ${BUDGET} min: ${url:-no URL in the output} kept failing"
                 return 1
               fi
