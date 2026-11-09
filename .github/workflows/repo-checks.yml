@@ -171,6 +171,16 @@ jobs:
         run: |
           read -ra dirs <<<"${DIRS}"
           for dir in "${dirs[@]}"; do
+            # Build gazelle first, retrying: that is where the downloads
+            # happen. The diff run itself exits non-zero when gazelle has
+            # changes, a real failure that a retry must not hide.
+            delay=30
+            for attempt in 1 2 3 4 5 6; do
+              (cd "${dir}" && bazelisk build //:gazelle) && break
+              if ((attempt == 6)); then exit 1; fi
+              sleep "${delay}"
+              delay=$((delay * 2))
+            done
             (cd "${dir}" && bazelisk run //:gazelle -- -mode=diff)
           done
 
@@ -183,7 +193,15 @@ jobs:
           read -ra dirs <<<"${DIRS}"
           files=()
           for dir in "${dirs[@]}"; do
-            (cd "${dir}" && bazelisk mod tidy)
+            # mod tidy downloads buildozer from GitHub, so retry it. The
+            # diff below is the real check and runs once.
+            delay=30
+            for attempt in 1 2 3 4 5 6; do
+              (cd "${dir}" && bazelisk mod tidy) && break
+              if ((attempt == 6)); then exit 1; fi
+              sleep "${delay}"
+              delay=$((delay * 2))
+            done
             files+=("${dir}/MODULE.bazel")
           done
           git diff --exit-code -- "${files[@]}"
