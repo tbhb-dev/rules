@@ -351,38 +351,43 @@ def runs(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[list[str]]:
     return calls
 
 
-def test_run_diff(runs: list[list[str]]) -> None:
+def test_run_diff(runs: list[list[str]], capsys: pytest.CaptureFixture[str]) -> None:
     selection = mr.Selection(globs=["pkg.other.x_f__mutmut_*"])
     text = mr.run_diff(Path("log"), selection)
     assert runs == [["run", "pkg.other.x_f__mutmut_*"], ["results", "--all", "true"]]
     assert "mutant.survived=pkg.other.x_f__mutmut_1" in text.splitlines()
-    assert text.splitlines()[-1] == (
-        "note=mutmut_report: no --max-children "
-        "(no cgroup CPU quota below the host's CPUs)"
+    assert capsys.readouterr().err == (
+        "mutmut_report: no --max-children (no cgroup CPU quota below the host's CPUs)\n"
     )
 
 
 def test_run_diff_caps_the_workers_at_the_cpu_quota(
-    runs: list[list[str]], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    runs: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     (tmp_path / "cpu.max").write_text("200000 100000\n")
     monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
-    text = mr.run_diff(Path("log"), mr.Selection(globs=["pkg.other.x_f__mutmut_*"]))
+    mr.run_diff(Path("log"), mr.Selection(globs=["pkg.other.x_f__mutmut_*"]))
     assert runs[0] == ["run", "--max-children", "2", "pkg.other.x_f__mutmut_*"]
-    assert text.splitlines()[-1] == (
-        "note=mutmut_report: --max-children 2 (cgroup CPU quota)"
+    assert capsys.readouterr().err == (
+        "mutmut_report: --max-children 2 (cgroup CPU quota)\n"
     )
     assert Path("log").read_text() == (
         "mutmut_report: --max-children 2 (cgroup CPU quota)\n"
     )
 
 
-def test_run_diff_with_nothing_selected(runs: list[list[str]]) -> None:
+def test_run_diff_with_nothing_selected(
+    runs: list[list[str]], capsys: pytest.CaptureFixture[str]
+) -> None:
     text = mr.run_diff(Path("log"), mr.Selection())
     assert text == mr.diff_report({}, mr.Selection())
     assert text.splitlines()[:2] == ["total=0", "killed=0"]
     assert "selected=0" in text.splitlines()
     assert runs == []
+    assert capsys.readouterr().err == ""
 
 
 def test_main_runs_a_diff(

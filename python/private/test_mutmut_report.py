@@ -171,6 +171,7 @@ def test_main_caps_the_workers_at_the_cpu_quota(
     fake_mutmut: list[list[str]],
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     (tmp_path / "cpu.max").write_text("300000 100000\n")
     monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
@@ -180,8 +181,11 @@ def test_main_caps_the_workers_at_the_cpu_quota(
         "mutmut_report: full: no change set\n"
         "mutmut_report: --max-children 3 (cgroup CPU quota)\n"
     )
-    assert Path("report").read_text().splitlines()[-1] == (
-        "note=mutmut_report: --max-children 3 (cgroup CPU quota)"
+    assert capsys.readouterr().err == (
+        "mutmut_report: --max-children 3 (cgroup CPU quota)\n"
+        "mutmut_report: not cacheable: interrupted\n"
+        "mutmut_report: full: no change set\n"
+        "mutmut_report: --max-children 3 (cgroup CPU quota)\n"
     )
 
 
@@ -311,6 +315,7 @@ def fake_mutmut(
 
 def test_main_writes_the_report_from_the_stats(
     fake_mutmut: list[list[str]],
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     stats = Path("mutants/mutmut-cicd-stats.json")
     stats.parent.mkdir()
@@ -338,11 +343,10 @@ def test_main_writes_the_report_from_the_stats(
         "interrupted=0",
         "scope=full",
         "mutant.survived=m__mutmut_1",
-        (
-            "note=mutmut_report: no --max-children "
-            "(no cgroup CPU quota below the host's CPUs)"
-        ),
     ]
+    assert capsys.readouterr().err == (
+        "mutmut_report: no --max-children (no cgroup CPU quota below the host's CPUs)\n"
+    )
 
 
 def test_main_reports_an_interrupted_run_when_the_export_fails(
@@ -429,6 +433,7 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
     assert mr.main(["report", "log"]) == 1
     assert len(fake_mutmut) == 3
     assert capsys.readouterr().err == (
+        "mutmut_report: no --max-children (no cgroup CPU quota below the host's CPUs)\n"
         "mutmut_report: not cacheable: timeout, errored\n"
         "mutmut_report: full: no change set\n"
         "mutmut_report: no --max-children "

@@ -16,8 +16,7 @@ lived, not_covered, timeout, errored, skipped and interrupted, plus
 optional `mutant.<status>=<name>` lines for mutants not killed (in the
 tool's own status names). A diff-scoped report adds `scope=diff`,
 `selected` (equal to total), `changed_units` and `mutant.unmapped=<name>`
-lines; optional `note=<text>` lines are printed by the gate.
-mutation_gate.sh.tpl has the details.""",
+lines; mutation_gate.sh.tpl has the details.""",
     fields = {"reports": "depset of report Files"},
 )
 
