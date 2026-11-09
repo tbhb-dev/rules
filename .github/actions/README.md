@@ -74,7 +74,7 @@ The calling job must grant `contents: read`, because a called workflow's token c
 
 This workflow sets up Bazel inline and doesn't call `setup-bazel-ci`. A `./` path in a called workflow resolves in the caller's checkout. That checkout lacks the action.
 
-It saves the Bazel repository and bazelisk caches when the caller's event isn't `pull_request`, so the pinned buildozer download from GitHub releases happens once. It sets `cache-version: repo-checks-1`, so its cache names can't collide with a consumer's own jobs, where the first run to save a name keeps it.
+It saves the Bazel repository and bazelisk caches when the caller's event isn't `pull_request`, so the pinned helper binary download from GitHub releases happens once. It sets `cache-version: repo-checks-1`, so its cache names can't collide with a consumer's own jobs, where the first run to save a name keeps it.
 
 ## `pr-text.yml`
 

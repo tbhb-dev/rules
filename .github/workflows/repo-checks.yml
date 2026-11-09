@@ -104,7 +104,7 @@ jobs:
       # setup-bazel has no retry of its own, so a failed attempt is retried
       # after a pause. Attempts that follow a success are skipped.
       #
-      # `bazelisk mod tidy` downloads a sha256-pinned buildozer from GitHub
+      # `bazelisk mod tidy` downloads a sha256-pinned helper binary from GitHub
       # releases, and the repository cache is keyed by that hash, so a run
       # that isn't a pull request saves the cache and later runs skip the
       # download. A cache is immutable once saved, and setup-bazel names it
