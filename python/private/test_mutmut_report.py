@@ -176,6 +176,13 @@ def test_main_caps_the_workers_at_the_cpu_quota(
     monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
     assert mr.main(["report", "log"]) == 1
     assert fake_mutmut[0] == ["run", "--max-children", "3"]
+    assert Path("log").read_text() == (
+        "mutmut_report: full: no change set\n"
+        "mutmut_report: --max-children 3 (cgroup CPU quota)\n"
+    )
+    assert Path("report").read_text().splitlines()[-1] == (
+        "note=mutmut_report: --max-children 3 (cgroup CPU quota)"
+    )
 
 
 def test_load_stats(tmp_path: Path) -> None:
@@ -315,7 +322,11 @@ def test_main_writes_the_report_from_the_stats(
     assert Path("pyproject.toml").read_text() == (
         "[tool.mutmut]\nuse_git_change_detection = false\nsource_paths = []\n"
     )
-    assert Path("log").read_text() == "mutmut_report: full: no change set\n"
+    assert Path("log").read_text() == (
+        "mutmut_report: full: no change set\n"
+        "mutmut_report: no --max-children "
+        "(no cgroup CPU quota below the host's CPUs)\n"
+    )
     assert Path("report").read_text().splitlines() == [
         "total=5",
         "killed=3",
@@ -327,6 +338,10 @@ def test_main_writes_the_report_from_the_stats(
         "interrupted=0",
         "scope=full",
         "mutant.survived=m__mutmut_1",
+        (
+            "note=mutmut_report: no --max-children "
+            "(no cgroup CPU quota below the host's CPUs)"
+        ),
     ]
 
 
@@ -416,4 +431,6 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
     assert capsys.readouterr().err == (
         "mutmut_report: not cacheable: timeout, errored\n"
         "mutmut_report: full: no change set\n"
+        "mutmut_report: no --max-children "
+        "(no cgroup CPU quota below the host's CPUs)\n"
     )

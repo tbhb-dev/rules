@@ -91,6 +91,14 @@ expect_failure_test(
     test = ":proof_diff_where_full_required",
 )
 
+# A report's note= lines are printed, and diff_ok_test above shows they do
+# not break parsing.
+expect_failure_test(
+    name = "proof_note_is_printed_fails",
+    pattern = "^mutation_gate: note: mutmut_report: --max-children 2 \\(cgroup CPU quota\\)$",
+    test = ":proof_diff_where_full_required",
+)
+
 # Full runs pass a full-scope gate.
 mutation_gate_test(
     name = "full_where_full_required_test",

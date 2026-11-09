@@ -121,7 +121,8 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
 
     Under a cgroup CPU quota below the host's CPU count, the driver runs
     mutmut with `--max-children` set to the quota, read at run time, so the
-    quota never enters the action's cache key.
+    quota never enters the action's cache key. The report's `note=` line and
+    the log say which cap ran, and the gate prints the note.
 
     mutmut does not run on Windows (it points Windows users to WSL), so the
     targets are incompatible there: `bazel test //...` skips them.

@@ -14,7 +14,8 @@
 # mutant.<status>=<name> for each mutant not killed, in the tool's own
 # status names, and mutant.unmapped=<name> for a mutant the runner's
 # selection and the tool disagree on (selected but not run, or run but not
-# selected). skipped counts mutants accounted for but not gating: excluded
+# selected). Optional, repeatable: note=<text>, which the gate prints.
+# skipped counts mutants accounted for but not gating: excluded
 # by a pragma, equivalent, or not viable (they don't compile); each stays
 # listed with its tool status.
 #
@@ -96,6 +97,9 @@ for report in "${reports[@]}"; do
 done
 
 echo "mutation_gate: ${#reports[@]} report(s): $total total, $killed killed, $skipped skipped"
+for report in "${reports[@]}"; do
+  sed -n 's/^note=/mutation_gate: note: /p' "$PWD/$report"
+done
 if ((diff_reports > 0)); then
   echo "mutation_gate: $diff_reports diff-scoped: $diff_total mutants of $changed_units changed unit(s)"
 fi

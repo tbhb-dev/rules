@@ -10,7 +10,8 @@ holds `[tool.mutmut]`), inside the scratch copy the mutmut_report action
 made, and writes REPORT in quality's shared format: one `key=value` per line
 with total, killed, lived, not_covered, timeout, errored, skipped,
 interrupted and scope, plus a `mutant.<status>=<name>` line, in mutmut's
-own status names, for each mutant not killed. mutmut's output goes to LOG.
+own status names, for each mutant not killed, and a `note=` line saying what
+worker cap the run used. mutmut's output goes to LOG.
 
 Without CHANGES the run is full (`scope=full`). CHANGES is the unit's slice
 of quality's change set, and PREFIX the run directory relative to the tree
@@ -440,23 +441,44 @@ def choose(changes: Path, prefix: str) -> Selection:
     return select(loaded, prefix, Path(), source_paths, do_not_mutate)
 
 
+def worker_cap(log: Path) -> tuple[list[str], str]:
+    """Return mutmut's worker cap and the `note=` report line saying what it is.
+
+    The line also goes to the log. The gate prints notes, so a passing run
+    shows whether the cap took effect.
+    """
+    cap = max_children()
+    if cap:
+        text = f"mutmut_report: --max-children {cap[1]} (cgroup CPU quota)"
+    else:
+        text = (
+            "mutmut_report: no --max-children "
+            "(no cgroup CPU quota below the host's CPUs)"
+        )
+    with log.open("a") as out:
+        out.write(text + "\n")
+    return cap, f"note={text}\n"
+
+
 def run_full(log: Path) -> str:
     """Run every mutant and return the report."""
-    mutmut(["run", *max_children()], log)
+    cap, note = worker_cap(log)
+    mutmut(["run", *cap], log)
     stats = None
     if mutmut(["export-cicd-stats"], log).returncode == 0:
         stats = load_stats(STATS)
     results = mutmut(["results", "--all", "true"], log).stdout
-    return report(stats, results)
+    return report(stats, results) + note
 
 
 def run_diff(log: Path, selection: Selection) -> str:
     """Run the selected mutants and return the diff report."""
     if not selection.globs:
         return diff_report({}, selection)
-    mutmut(["run", *max_children(), *selection.globs], log)
+    cap, note = worker_cap(log)
+    mutmut(["run", *cap, *selection.globs], log)
     results = mutmut(["results", "--all", "true"], log).stdout
-    return diff_report(results_by_name(results), selection)
+    return diff_report(results_by_name(results), selection) + note
 
 
 def main(argv: list[str]) -> int:
