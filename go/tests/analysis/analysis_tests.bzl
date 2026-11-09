@@ -11,6 +11,7 @@ load("@rules_testing//lib:unit_test.bzl", "unit_test")
 load("@rules_testing//lib:util.bzl", "util")
 load("//:defs.bzl", "GolangciLintInfo", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test", "golangci_lint_aspect_factory")
 load("//private:golangci_lint.bzl", "main_repo_label")
+load("//private:gomutants.bzl", "default_flags")
 load("//tests/golangci:linters.bzl", "fixture_lint", "fixture_lint_test")
 
 FIXTURE = "//tests/golangci/fixture"
@@ -164,6 +165,16 @@ def _test_main_repo_label_impl(env):
     label = Label("//tests/golangci/fixture:go.mod")
     env.expect.that_bool(main_repo_label(label) == label).equals(True)
 
+def _test_gomutants_flags_by_exec_os(name):
+    unit_test(name = name, impl = _test_gomutants_flags_by_exec_os_impl)
+
+def _test_gomutants_flags_by_exec_os_impl(env):
+    # The flags follow the execution platform's OS, which the Go SDK reports.
+    env.expect.that_collection(default_flags("windows")).contains("--timeout-coefficient=40")
+    env.expect.that_collection(default_flags("windows")).contains("--timeout-min=60s")
+    for goos in ["linux", "darwin", ""]:
+        env.expect.that_collection(default_flags(goos)).contains_exactly(["--timeout-min=20s", "--test-flags=-failfast"]).in_order()
+
 def analysis_test_suite(name):
     test_suite(
         name = name,
@@ -172,6 +183,7 @@ def analysis_test_suite(name):
             _test_binary_without_sources,
             _test_deadcode_without_go_targets,
             _test_follows_deps_and_embed,
+            _test_gomutants_flags_by_exec_os,
             _test_library,
             _test_lint_src_reaching_nothing,
             _test_main_repo_label,

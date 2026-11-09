@@ -14,6 +14,7 @@ bzl_library(
     srcs = ["analysis_tests.bzl"],
     deps = [
         "//:defs",
+        "//private:gomutants",
         "//tests/golangci:linters_bzl",
         "@rules_go//go:def",
     ],
