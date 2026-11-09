@@ -193,7 +193,7 @@ jobs:
           read -ra dirs <<<"${DIRS}"
           files=()
           for dir in "${dirs[@]}"; do
-            # mod tidy downloads buildozer from GitHub, so retry it. The
+            # mod tidy downloads a helper binary from GitHub, so retry it. The
             # diff below is the real check and runs once.
             delay=30
             for attempt in 1 2 3 4 5 6; do
