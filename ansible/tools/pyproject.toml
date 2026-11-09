@@ -22,4 +22,4 @@ dependencies = [
 package = false
 # The uv that @tbhb_rules//runtime/private:versions.bzl pins; Renovate moves
 # both.
-required-version = "==0.13.6"
+required-version = "==0.13.7"
