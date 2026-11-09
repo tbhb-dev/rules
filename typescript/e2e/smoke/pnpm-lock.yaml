@@ -13,16 +13,16 @@ importers:
         version: 4.4.3
     devDependencies:
       '@cloudflare/workers-types':
-        specifier: 5.20261102.1
-        version: 5.20261102.1
+        specifier: 5.20261104.1
+        version: 5.20261104.1
       '@types/debug':
         specifier: 4.1.13
         version: 4.1.13
 
 packages:
 
-  '@cloudflare/workers-types@5.20261102.1':
-    resolution: {integrity: sha512-rRNznLGla+8vRdToTN/5M+AzlopILSLLZ3qo2L5Ku/dY792iOlX/K9ZLkLnLYji1jycv7+FB12hiE+fFjVgMrw==}
+  '@cloudflare/workers-types@5.20261104.1':
+    resolution: {integrity: sha512-XSPcK88JXnW/oC82wuXvaP7vgyk2myydugbgOd/RcLKwqkwW0cP09Ozp9ItACa4IAZ7uKtMIfxZpUTXajYVd1Q==}
 
   '@types/debug@4.1.13':
     resolution: {integrity: sha512-KSVgmQmzMwPlmtljOomayoR89W4FynCAi3E8PPs7vmDVPe84hT+vGPKkJfThkmXs0x0jAaa9U8uW8bbfyS2fWw==}
@@ -44,7 +44,7 @@ packages:
 
 snapshots:
 
-  '@cloudflare/workers-types@5.20261102.1': {}
+  '@cloudflare/workers-types@5.20261104.1': {}
 
   '@types/debug@4.1.13':
     dependencies:
