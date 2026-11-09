@@ -334,7 +334,8 @@ def test_choose(unit: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def runs(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
+def runs(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[list[str]]:
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(mr.os, "cpu_count", lambda: 16)
     for name in ("CPU_MAX", "V1_QUOTA", "V1_PERIOD"):
         monkeypatch.setattr(mr, name, Path("/nonexistent") / name)
@@ -350,28 +351,43 @@ def runs(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
     return calls
 
 
-def test_run_diff(runs: list[list[str]]) -> None:
+def test_run_diff(runs: list[list[str]], capsys: pytest.CaptureFixture[str]) -> None:
     selection = mr.Selection(globs=["pkg.other.x_f__mutmut_*"])
     text = mr.run_diff(Path("log"), selection)
     assert runs == [["run", "pkg.other.x_f__mutmut_*"], ["results", "--all", "true"]]
     assert "mutant.survived=pkg.other.x_f__mutmut_1" in text.splitlines()
+    assert capsys.readouterr().err == (
+        "mutmut_report: no --max-children (no cgroup CPU quota below the host's CPUs)\n"
+    )
 
 
 def test_run_diff_caps_the_workers_at_the_cpu_quota(
-    runs: list[list[str]], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    runs: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     (tmp_path / "cpu.max").write_text("200000 100000\n")
     monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
     mr.run_diff(Path("log"), mr.Selection(globs=["pkg.other.x_f__mutmut_*"]))
     assert runs[0] == ["run", "--max-children", "2", "pkg.other.x_f__mutmut_*"]
+    assert capsys.readouterr().err == (
+        "mutmut_report: --max-children 2 (cgroup CPU quota)\n"
+    )
+    assert Path("log").read_text() == (
+        "mutmut_report: --max-children 2 (cgroup CPU quota)\n"
+    )
 
 
-def test_run_diff_with_nothing_selected(runs: list[list[str]]) -> None:
+def test_run_diff_with_nothing_selected(
+    runs: list[list[str]], capsys: pytest.CaptureFixture[str]
+) -> None:
     text = mr.run_diff(Path("log"), mr.Selection())
     assert text == mr.diff_report({}, mr.Selection())
     assert text.splitlines()[:2] == ["total=0", "killed=0"]
     assert "selected=0" in text.splitlines()
     assert runs == []
+    assert capsys.readouterr().err == ""
 
 
 def test_main_runs_a_diff(
@@ -384,7 +400,11 @@ def test_main_runs_a_diff(
     lines = Path("report").read_text().splitlines()
     assert "scope=diff" in lines
     assert "mutant.survived=pkg.other.x_f__mutmut_1" in lines
-    assert Path("log").read_text() == "mutmut_report: diff\n"
+    assert Path("log").read_text() == (
+        "mutmut_report: diff\n"
+        "mutmut_report: no --max-children "
+        "(no cgroup CPU quota below the host's CPUs)\n"
+    )
     assert runs[0] == ["run", "pkg.other.x_f__mutmut_*"]
 
 
@@ -395,6 +415,7 @@ def test_main_runs_nothing_for_an_empty_slice(
     assert mr.main(["report", "log", str(changes_file(unit, {})), "cli"]) == 0
     assert "changed_units=0" in Path("report").read_text().splitlines()
     assert runs == []
+    assert Path("log").read_text() == "mutmut_report: diff\n"
 
 
 def test_main_runs_full_when_the_slice_cannot_be_scoped(

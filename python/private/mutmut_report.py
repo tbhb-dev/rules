@@ -440,9 +440,30 @@ def choose(changes: Path, prefix: str) -> Selection:
     return select(loaded, prefix, Path(), source_paths, do_not_mutate)
 
 
+def worker_cap(log: Path) -> list[str]:
+    """Return mutmut's worker cap, and say which cap runs.
+
+    The line goes to the log and to stderr. Bazel shows a passing action's
+    stderr, so the line shows on a pass.
+    """
+    cap = max_children()
+    if cap:
+        text = f"mutmut_report: --max-children {cap[1]} (cgroup CPU quota)"
+    else:
+        text = (
+            "mutmut_report: no --max-children "
+            "(no cgroup CPU quota below the host's CPUs)"
+        )
+    with log.open("a") as out:
+        out.write(text + "\n")
+    print(text, file=sys.stderr)
+    return cap
+
+
 def run_full(log: Path) -> str:
     """Run every mutant and return the report."""
-    mutmut(["run", *max_children()], log)
+    cap = worker_cap(log)
+    mutmut(["run", *cap], log)
     stats = None
     if mutmut(["export-cicd-stats"], log).returncode == 0:
         stats = load_stats(STATS)
@@ -454,7 +475,8 @@ def run_diff(log: Path, selection: Selection) -> str:
     """Run the selected mutants and return the diff report."""
     if not selection.globs:
         return diff_report({}, selection)
-    mutmut(["run", *max_children(), *selection.globs], log)
+    cap = worker_cap(log)
+    mutmut(["run", *cap, *selection.globs], log)
     results = mutmut(["results", "--all", "true"], log).stdout
     return diff_report(results_by_name(results), selection)
 
