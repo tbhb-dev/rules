@@ -25,15 +25,27 @@ with the rules' default (TBHB_ANSIBLE_LINT_DEFAULT_CONFIG), copied to the
 tree root as .ansible-lint so its paths resolve there. `molecule` runs
 `molecule test` from the role directory.
 
+`lint` runs ansible-lint unbuffered and under a watchdog. The deadline is
+80% of Bazel's TEST_TIMEOUT (240 s without it), or the seconds of
+TBHB_ANSIBLE_CHECK_TIMEOUT. When it passes, the driver prints the process
+table (names only, never command lines, because the logs can be public)
+and the last lines of ansible-lint's output, kills ansible-lint's process
+group, and exits 124, so a hung run names where it stopped instead of
+dying silently at Bazel's timeout.
+
 Python 3.13 and later, standard library only: it runs on the consumer's
 Ansible environment.
 """
 
 import argparse
+import contextlib
 import os
 import shutil
+import signal
 import subprocess  # nosec B404
 import sys
+import threading
+from collections import deque
 
 # Imported at run time, not under TYPE_CHECKING: the consumer's interpreter
 # may be 3.13, which evaluates annotations eagerly.
@@ -48,6 +60,16 @@ LINT_CONFIGS = (
     ".config/ansible-lint.yml",
     ".config/ansible-lint.yaml",
 )
+
+# The watchdog: the share of Bazel's test timeout it may use, the deadline
+# without one, the seconds between SIGTERM and SIGKILL, the exit code of a
+# fired watchdog (that of timeout(1)), and how much output to keep.
+TIMEOUT_SHARE = 0.8
+DEFAULT_TIMEOUT = 240.0
+GRACE = 5.0
+TIMED_OUT = 124
+TAIL_LINES = 20
+PS_COLUMNS = "pid,ppid,etime,stat,comm"
 
 
 def environment(root: Path, tmp: Path, environ: Mapping[str, str]) -> dict[str, str]:
@@ -84,6 +106,8 @@ def environment(root: Path, tmp: Path, environ: Mapping[str, str]) -> dict[str, 
             # ansible-core refuses to start under a locale that is not UTF-8,
             # which is what a test's bare environment can have.
             "PYTHONUTF8": "1",
+            # Block-buffered output is lost when Bazel kills a hung test.
+            "PYTHONUNBUFFERED": "1",
         }
     )
     return env
@@ -92,6 +116,103 @@ def environment(root: Path, tmp: Path, environ: Mapping[str, str]) -> dict[str, 
 def run(command: Sequence[str], env: Mapping[str, str], cwd: Path | None = None) -> int:
     print("ansible_check: running " + " ".join(command), flush=True)
     return subprocess.run(command, env=env, cwd=cwd, check=False).returncode
+
+
+def seconds(value: str | None) -> float | None:
+    """`value` as a positive number of seconds, or None."""
+    try:
+        number = float(value or "")
+    except ValueError:
+        return None
+    return number if number > 0 else None
+
+
+def watchdog_timeout(environ: Mapping[str, str]) -> float:
+    """The lint deadline: the override, else 80% of TEST_TIMEOUT, else 240 s."""
+    override = seconds(environ.get("TBHB_ANSIBLE_CHECK_TIMEOUT"))
+    if override is not None:
+        return override
+    bazel = seconds(environ.get("TEST_TIMEOUT"))
+    return DEFAULT_TIMEOUT if bazel is None else bazel * TIMEOUT_SHARE
+
+
+def process_table() -> str:
+    """The process tree by name only: command lines can carry tokens."""
+    # --forest is procps; macOS ps rejects it, so fall back to a flat list.
+    flat: list[str] = []
+    for extra in (["--forest"], flat):
+        try:
+            done = subprocess.run(  # nosec B603 B607
+                ["ps", "-e", "-o", PS_COLUMNS, *extra],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except OSError as error:
+            return f"ps is unavailable: {error}"
+        if done.returncode == 0:
+            return done.stdout
+    return "ps failed"
+
+
+def run_watched(
+    command: Sequence[str],
+    env: Mapping[str, str],
+    timeout: float,
+    cwd: Path | None = None,
+) -> int:
+    """Run `command`, streaming its output, and kill it after `timeout` seconds.
+
+    The child leads its own process group. On the deadline, before killing,
+    print the process table and the child's last lines, then SIGTERM the
+    group, and SIGKILL it after a grace period. Returns the child's exit
+    code, or 124 when the watchdog fired.
+    """
+    print("ansible_check: running " + " ".join(command), flush=True)
+    child = subprocess.Popen(  # nosec B603
+        command,
+        env=env,
+        cwd=cwd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+        start_new_session=True,
+    )
+    tail: deque[str] = deque(maxlen=TAIL_LINES)
+
+    def stream() -> None:
+        assert child.stdout is not None  # noqa: S101
+        for line in child.stdout:
+            print(line, end="", flush=True)
+            tail.append(line.rstrip("\n"))
+
+    reader = threading.Thread(target=stream, daemon=True)
+    reader.start()
+    try:
+        code = child.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        # Whether ansible-lint prints per-file progress is unverified; if it
+        # does, the last lines name the file it hung on.
+        print(
+            f"ansible_check: watchdog fired after {timeout:g}s, "
+            "ansible-lint did not finish\n" + process_table(),
+            flush=True,
+        )
+        print("ansible_check: last output lines:", flush=True)
+        for line in list(tail):
+            print(f"  {line}", flush=True)
+        os.killpg(child.pid, signal.SIGTERM)
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            child.wait(timeout=GRACE)
+        # Also reaps members of the group that outlived the leader.
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(child.pid, signal.SIGKILL)
+        child.wait()
+        code = TIMED_OUT
+    reader.join(timeout=GRACE)
+    return code
 
 
 def syntax(inventory: str, playbooks: Sequence[str], env: Mapping[str, str]) -> int:
@@ -145,7 +266,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return syntax(options.inventory, [*options.playbooks, *extra], env)
     if options.mode == "lint":
         config = lint_config(root, options.config, os.environ)
-        return run(
+        return run_watched(
             [
                 "ansible-lint",
                 "--offline",
@@ -156,6 +277,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 *extra,
             ],
             env,
+            watchdog_timeout(os.environ),
         )
     env["MOLECULE_EPHEMERAL_DIRECTORY"] = str(tmp / "molecule")
     return run(

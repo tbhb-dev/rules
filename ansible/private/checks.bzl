@@ -158,6 +158,10 @@ def ansible_lint_test(name, srcs, python_env = DEFAULT_ENV, config = None, args 
     `ansible_syntax_check_test`, so ansible-lint resolves only the pinned
     collections. Linux and macOS only.
 
+    ansible-lint runs under a watchdog. At 80% of the test's
+    timeout (240 s without one) it prints the process table by name and
+    the last output lines, kills ansible-lint, and fails with exit code 124.
+
     Args:
         name: Target name.
         srcs: Files to copy, usually a `repo_files` target.
