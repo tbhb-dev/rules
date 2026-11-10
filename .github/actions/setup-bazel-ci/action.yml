@@ -259,6 +259,9 @@ runs:
         BUDGET: ${{ inputs.retry-budget-minutes }}
         TARGETS: ${{ inputs.targets }}
         WORKSPACES: . ${{ inputs.fetch-workspaces }}
+        # MSYS Bash turns a leading `//` into `/` in an argument to a native
+        # program, which breaks a label such as `//tools:pip_audit`.
+        MSYS2_ARG_CONV_EXCL: "*"
       run: bash "${GITHUB_ACTION_PATH}/fetch.sh"
 
     # setup-bazel's post-if is !cancelled(), even after a failed fetch. Remove
