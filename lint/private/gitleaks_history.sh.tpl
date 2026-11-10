@@ -7,8 +7,8 @@
 # time. Run with `bazel run`. A shallow clone scans only the commits it has.
 # Arguments go to `gitleaks git` before the path, so `--log-opts=HEAD` limits
 # the scan to the checked-out branch; without it gitleaks scans every ref.
-# A leading --merge-range selects a pull request merge commit's own history,
-# falling back to HEAD whenever that range cannot safely be established.
+# A leading --merge-range selects a pull request merge commit's own history
+# when HEAD matches EXPECTED_HEAD, falling back to HEAD on any uncertainty.
 
 set -euo pipefail
 
@@ -32,13 +32,21 @@ if [[ ${1:-} == --merge-range ]]; then
   shift
   scan_range=HEAD
   reason="HEAD does not have exactly two readable parents"
-  if git rev-parse --verify --quiet HEAD^1 >/dev/null &&
+  if [[ -z ${EXPECTED_HEAD:-} ]]; then
+    reason="EXPECTED_HEAD is unset"
+  elif ! head=$(git rev-parse --verify --quiet HEAD); then
+    reason="git could not resolve HEAD"
+  elif [[ $head != "$EXPECTED_HEAD" ]]; then
+    reason="HEAD is not the commit the event names"
+  elif git rev-parse --verify --quiet HEAD^1 >/dev/null &&
     git rev-parse --verify --quiet HEAD^2 >/dev/null &&
     parents=$(git show -s --format=%P HEAD) &&
     [[ $parents =~ ^[0-9a-f]+\ [0-9a-f]+$ ]]; then
     if changed=$(git diff --name-only HEAD^1 HEAD); then
       if grep -Fxq '.gitleaks.toml' <<<"$changed"; then
         reason="the pull request changes .gitleaks.toml"
+      elif grep -Fxq '.gitleaksignore' <<<"$changed"; then
+        reason="the pull request changes .gitleaksignore"
       else
         scan_range=HEAD^1..HEAD
         reason="the pull request's commits"
