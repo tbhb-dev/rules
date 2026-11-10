@@ -8,5 +8,5 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 
 ## Reference
 
-* [Decision records](reference/decision-records.md) - Where decision records live, how to name them, and what their bodies contain.
+* [Decision records](reference/decision-records.md) - Where decision records live, their names and frontmatter, and what the check enforces.
 * [Frontmatter reference](reference/frontmatter.md) - The frontmatter fields, their values, and how they map to commit trailers.
