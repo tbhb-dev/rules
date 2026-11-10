@@ -33,7 +33,9 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"io/fs"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -47,11 +49,13 @@ import (
 	"github.com/tbhb-dev/rules/go/private/scratch"
 )
 
+var mainExit = os.Exit
+
 func main() {
 	if strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe") == "git" {
-		os.Exit(fakeGit(os.Args[1:]))
+		mainExit(fakeGit(os.Args[1:]))
 	}
-	os.Exit(runMain(os.Args[1:]))
+	mainExit(runMain(os.Args[1:]))
 }
 
 // span is an inclusive range of lines.
@@ -376,15 +380,19 @@ func run(c runConfig) (result, []byte, error) {
 	return r, log.Bytes(), nil
 }
 
+// Fake git dependencies are replaceable for portable error and platform tests.
+var (
+	fakeGitWriteFile            = os.WriteFile
+	fakeGitExecutable           = os.Executable
+	fakeGitGOOS                 = runtime.GOOS
+	fakeGitOutput     io.Writer = os.Stdout
+)
+
 // setUpFakeGit writes the slice as a unified diff and puts this binary in
 // work/bin as git.
 func setUpFakeGit(work string, s slice) error {
 	var b strings.Builder
-	rels := make([]string, 0, len(s.Files))
-	for rel := range s.Files {
-		rels = append(rels, rel)
-	}
-	sort.Strings(rels)
+	rels := slices.Sorted(maps.Keys(s.Files))
 	for _, rel := range rels {
 		fmt.Fprintf(&b, "diff --git a/%s b/%s\n--- a/%s\n+++ b/%s\n", rel, rel, rel, rel)
 		for _, sp := range s.Files[rel] {
@@ -393,10 +401,10 @@ func setUpFakeGit(work string, s slice) error {
 			b.WriteString(strings.Repeat("-\n", n) + strings.Repeat("+\n", n))
 		}
 	}
-	if err := os.WriteFile(filepath.Join(work, "changes.diff"), []byte(b.String()), 0o644); err != nil {
+	if err := fakeGitWriteFile(filepath.Join(work, "changes.diff"), []byte(b.String()), 0o644); err != nil {
 		return err
 	}
-	self, err := os.Executable()
+	self, err := fakeGitExecutable()
 	if err != nil {
 		return err
 	}
@@ -405,16 +413,16 @@ func setUpFakeGit(work string, s slice) error {
 		return err
 	}
 	name := "git"
-	if runtime.GOOS == "windows" {
+	if fakeGitGOOS == "windows" {
 		name += ".exe"
 	}
-	return os.WriteFile(filepath.Join(work, "bin", name), data, 0o755)
+	return fakeGitWriteFile(filepath.Join(work, "bin", name), data, 0o755)
 }
 
 func fakeGit(args []string) int {
 	switch {
 	case len(args) == 2 && args[0] == "rev-parse" && args[1] == "--show-toplevel":
-		fmt.Println(os.Getenv("GOMUTANTS_FAKE_GIT_ROOT"))
+		_, _ = fmt.Fprintln(fakeGitOutput, os.Getenv("GOMUTANTS_FAKE_GIT_ROOT"))
 		return 0
 	case len(args) > 0 && args[0] == "diff":
 		data, err := os.ReadFile(os.Getenv("GOMUTANTS_FAKE_GIT_DIFF"))
@@ -422,7 +430,7 @@ func fakeGit(args []string) int {
 			fmt.Fprintf(os.Stderr, "fake git: %v\n", err)
 			return 1
 		}
-		_, err = os.Stdout.Write(data)
+		_, err = fakeGitOutput.Write(data)
 		if err != nil {
 			return 1
 		}

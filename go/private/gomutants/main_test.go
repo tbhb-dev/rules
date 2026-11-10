@@ -5,6 +5,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -983,3 +984,159 @@ func TestRunDiffInvocation(t *testing.T) {
 		t.Fatalf("log = %q, want %q", log, wantLog)
 	}
 }
+
+func TestEntryPoint(t *testing.T) {
+	c := runnerConfig(t)
+	oldArgs, oldExit, oldOutput := os.Args, mainExit, fakeGitOutput
+	t.Cleanup(func() { os.Args, mainExit, fakeGitOutput = oldArgs, oldExit, oldOutput })
+	mainExit = func(code int) { panic(code) }
+	for _, tc := range []struct {
+		name            string
+		args            []string
+		code            int
+		out, diagnostic string
+	}{
+		{"success", append([]string{"gomutants"}, runnerArgs(c)...), 0, "", ""},
+		{"runner", []string{"gomutants"}, 2, "", "gomutants: -gomutants, -go, -manifest, -pkg, -report and -log are required\n"},
+		{"git", []string{filepath.Join("bin", "git"), "rev-parse", "--show-toplevel"}, 0, "root\n", ""},
+		{"git exe", []string{filepath.Join("bin", "git.exe"), "diff"}, 0, "patch", ""},
+		{"git error", []string{"git", "log"}, 1, "", "fake git: unexpected command: git log\n"},
+		{"similar name", []string{"git.exe.exe"}, 2, "", "gomutants: -gomutants, -go, -manifest, -pkg, -report and -log are required\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("GOMUTANTS_FAKE_GIT_ROOT", "root")
+			t.Setenv("GOMUTANTS_FAKE_GIT_DIFF", write(t, t.TempDir(), "patch", "patch"))
+			var output bytes.Buffer
+			fakeGitOutput = &output
+			os.Args = tc.args
+			code, diagnostic := captureStderr(t, func() (code int) {
+				defer func() { code = recover().(int) }()
+				main()
+				return -1
+			})
+			if code != tc.code || output.String() != tc.out || diagnostic != tc.diagnostic {
+				t.Fatalf("exit %d, stdout %q, stderr %q", code, output.String(), diagnostic)
+			}
+		})
+	}
+}
+
+func TestSetUpFakeGit(t *testing.T) {
+	oldExecutable, oldGOOS, oldWrite := fakeGitExecutable, fakeGitGOOS, fakeGitWriteFile
+	t.Cleanup(func() { fakeGitExecutable, fakeGitGOOS, fakeGitWriteFile = oldExecutable, oldGOOS, oldWrite })
+	self := write(t, t.TempDir(), "self", "executable bytes")
+	fakeGitExecutable = func() (string, error) { return self, nil }
+	for _, goos := range []string{"linux", "windows"} {
+		t.Run(goos, func(t *testing.T) {
+			fakeGitGOOS = goos
+			work := t.TempDir()
+			if err := os.Mkdir(filepath.Join(work, "bin"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			var writes []string
+			fakeGitWriteFile = func(name string, data []byte, mode os.FileMode) error {
+				writes = append(writes, fmt.Sprintf("%s %o", filepath.Base(name), mode))
+				return os.WriteFile(name, data, mode)
+			}
+			s := slice{Scope: "diff", Files: map[string][]span{
+				"z.go": {{7, 7}}, "a.go": {{2, 3}, {8, 8}},
+			}}
+			if err := setUpFakeGit(work, s); err != nil {
+				t.Fatal(err)
+			}
+			want := "diff --git a/a.go b/a.go\n--- a/a.go\n+++ b/a.go\n@@ -2,2 +2,2 @@\n-\n-\n+\n+\n@@ -8,1 +8,1 @@\n-\n+\ndiff --git a/z.go b/z.go\n--- a/z.go\n+++ b/z.go\n@@ -7,1 +7,1 @@\n-\n+\n"
+			data, err := os.ReadFile(filepath.Join(work, "changes.diff"))
+			if err != nil || string(data) != want {
+				t.Fatalf("diff %q, %v; want %q", data, err, want)
+			}
+			name := "git"
+			if goos == "windows" {
+				name += ".exe"
+			}
+			if want := []string{"changes.diff 644", name + " 755"}; !reflect.DeepEqual(writes, want) {
+				t.Fatalf("writes %v; want %v", writes, want)
+			}
+			data, err = os.ReadFile(filepath.Join(work, "bin", name))
+			if err != nil || string(data) != "executable bytes" {
+				t.Fatalf("git %q, %v", data, err)
+			}
+		})
+	}
+}
+
+func TestSetUpFakeGitErrors(t *testing.T) {
+	old := fakeGitExecutable
+	t.Cleanup(func() { fakeGitExecutable = old })
+	want := errors.New("executable unavailable")
+	fakeGitExecutable = func() (string, error) { return "", want }
+	if err := setUpFakeGit(t.TempDir(), fullSlice); err != want {
+		t.Fatalf("executable: %v", err)
+	}
+	missing := filepath.Join(t.TempDir(), "missing")
+	fakeGitExecutable = func() (string, error) { return missing, nil }
+	_, readErr := os.ReadFile(missing)
+	if err := setUpFakeGit(t.TempDir(), fullSlice); err == nil || err.Error() != readErr.Error() {
+		t.Fatalf("read executable: %v; want %v", err, readErr)
+	}
+	diffErr := os.WriteFile(filepath.Join(missing, "changes.diff"), nil, 0o644)
+	if err := setUpFakeGit(missing, fullSlice); err == nil || err.Error() != diffErr.Error() {
+		t.Fatalf("write diff: %v; want %v", err, diffErr)
+	}
+	self := write(t, t.TempDir(), "self", "binary")
+	fakeGitExecutable = func() (string, error) { return self, nil }
+	work := t.TempDir()
+	gitName := "git"
+	if fakeGitGOOS == "windows" {
+		gitName += ".exe"
+	}
+	gitErr := os.WriteFile(filepath.Join(work, "bin", gitName), nil, 0o755)
+	if err := setUpFakeGit(work, fullSlice); err == nil || err.Error() != gitErr.Error() {
+		t.Fatalf("write git: %v; want %v", err, gitErr)
+	}
+}
+
+func TestFakeGit(t *testing.T) {
+	old := fakeGitOutput
+	t.Cleanup(func() { fakeGitOutput = old })
+	t.Setenv("GOMUTANTS_FAKE_GIT_ROOT", "root with spaces")
+	t.Setenv("GOMUTANTS_FAKE_GIT_DIFF", write(t, t.TempDir(), "diff", "diff bytes\n"))
+	for _, tc := range []struct {
+		args            []string
+		code            int
+		out, diagnostic string
+	}{
+		{[]string{"rev-parse", "--show-toplevel"}, 0, "root with spaces\n", ""},
+		{[]string{"diff"}, 0, "diff bytes\n", ""},
+		{[]string{"diff", "--merge-base", "base"}, 0, "diff bytes\n", ""},
+		{nil, 1, "", "fake git: unexpected command: git \n"},
+		{[]string{"rev-parse"}, 1, "", "fake git: unexpected command: git rev-parse\n"},
+		{[]string{"rev-parse", "wrong"}, 1, "", "fake git: unexpected command: git rev-parse wrong\n"},
+		{[]string{"diff", "--show-toplevel"}, 0, "diff bytes\n", ""},
+		{[]string{"log", "--show-toplevel"}, 1, "", "fake git: unexpected command: git log --show-toplevel\n"},
+		{[]string{"rev-parse", "--show-toplevel", "extra"}, 1, "", "fake git: unexpected command: git rev-parse --show-toplevel extra\n"},
+	} {
+		var output bytes.Buffer
+		fakeGitOutput = &output
+		code, diagnostic := captureStderr(t, func() int { return fakeGit(tc.args) })
+		if code != tc.code || output.String() != tc.out || diagnostic != tc.diagnostic {
+			t.Fatalf("%q: exit %d, stdout %q, stderr %q", tc.args, code, output.String(), diagnostic)
+		}
+	}
+	missing := filepath.Join(t.TempDir(), "missing")
+	t.Setenv("GOMUTANTS_FAKE_GIT_DIFF", missing)
+	_, want := os.ReadFile(missing)
+	code, diagnostic := captureStderr(t, func() int { return fakeGit([]string{"diff"}) })
+	if code != 1 || diagnostic != fmt.Sprintf("fake git: %v\n", want) {
+		t.Fatalf("read diff: exit %d, stderr %q", code, diagnostic)
+	}
+	t.Setenv("GOMUTANTS_FAKE_GIT_DIFF", write(t, t.TempDir(), "diff", "bytes"))
+	fakeGitOutput = failingWriter{}
+	code, diagnostic = captureStderr(t, func() int { return fakeGit([]string{"diff"}) })
+	if code != 1 || diagnostic != "" {
+		t.Fatalf("write diff: exit %d, stderr %q", code, diagnostic)
+	}
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("write failed") }

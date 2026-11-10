@@ -7,7 +7,7 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
-load("//:defs.bzl", "go_deadcode_test", "go_mod_tidy_test", "govulncheck", "govulncheck_test")
+load("//:defs.bzl", "go_deadcode_test", "go_mod_tidy_test", "gobco_test", "gomutants_test", "govulncheck", "govulncheck_test")
 load(":linters.bzl", "self_lint_test")
 
 repo_files()
@@ -82,4 +82,22 @@ govulncheck(
     go_mod = "//:go.mod",
     go_sum = "//:go.sum",
     proxy = "@self_go_mod_proxy//:proxy",
+)
+
+gobco_test(
+    name = "gobco_test",
+    go_mod = "//:go.mod",
+    go_sum = "//:go.sum",
+    proxy = "@self_go_mod_proxy//:proxy",
+    tests = ["//private/gomutants:gomutants_test"],
+)
+
+gomutants_test(
+    name = "gomutants_test",
+    cpus = 2,
+    go_mod = "//:go.mod",
+    go_sum = "//:go.sum",
+    proxy = "@self_go_mod_proxy//:proxy",
+    require_scope = "full",
+    tests = ["//private/gomutants:gomutants_test"],
 )
