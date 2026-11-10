@@ -298,14 +298,15 @@ jobs:
 
       # Git history is not a declared input, so the history scan runs
       # outside the test graph; //:gitleaks_test covers the working tree.
-      # The full-depth checkout fetches every branch, so the scan keeps to
-      # the tested commit's history: a pull request's merge commit, or the
-      # pushed commit. Another open pull request's findings stay on that
-      # pull request instead of failing main.
+      # Pull requests scan HEAD^1..HEAD, the merge commit and the PR's own
+      # commits. Changes to .gitleaks.toml or unexpected Git state require
+      # the full checked-out history, so tightened rules also meet old history.
+      # Every other event scans the full checked-out history with HEAD.
       - name: Scan Git history for secrets
         env:
           GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
-        run: bazelisk run //:gitleaks_history -- --log-opts=HEAD
+          SCAN_MODE: ${{ github.event_name == 'pull_request' && '--merge-range' || '--log-opts=HEAD' }}
+        run: bazelisk run //:gitleaks_history -- "$SCAN_MODE"
 
       # A pull request's title and body become the squash commit's message,
       # so they get the same rules as the history. pr-text.yml scans them
