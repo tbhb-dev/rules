@@ -38,6 +38,42 @@ case {scenario} in
     commit secret
     git -C "$repo" checkout -q -
     ;;
+  range_secret|range_base_secret|range_config)
+    echo hello >"$repo/a.txt"
+    commit base
+    if [[ {scenario} != range_secret ]]; then
+      printf 'aws_access_key_id = %s%s\\n' AKIA Z7Q3XK2M5TNB4VWR >"$repo/creds.txt"
+      commit secret
+      rm "$repo/creds.txt"
+      commit removed
+    fi
+    git -C "$repo" branch -m base
+    git -C "$repo" checkout -q -b pr
+    case {scenario} in
+      range_secret)
+        printf 'aws_access_key_id = %s%s\\n' AKIA Z7Q3XK2M5TNB4VWR >"$repo/creds.txt"
+        commit secret
+        rm "$repo/creds.txt"
+        commit removed
+        ;;
+      range_base_secret)
+        echo change >>"$repo/a.txt"
+        commit change
+        ;;
+      range_config)
+        printf '[extend]\\nuseDefault = true\\n' >"$repo/.gitleaks.toml"
+        commit config
+        ;;
+    esac
+    git -C "$repo" checkout -q base
+    git -C "$repo" merge -q --no-ff pr -m merge
+    ;;
+  range_linear)
+    printf 'aws_access_key_id = %s%s\\n' AKIA Z7Q3XK2M5TNB4VWR >"$repo/creds.txt"
+    commit secret
+    rm "$repo/creds.txt"
+    commit removed
+    ;;
   no_commits) ;;
   no_content) commit empty ;;
   corrupt)
@@ -47,7 +83,14 @@ case {scenario} in
     rm -f "$repo/.git/objects/${{blob:0:2}}/${{blob:2}}"
     ;;
 esac
-BUILD_WORKSPACE_DIRECTORY="$repo" "$PWD/{subject}" {args}
+status=0
+BUILD_WORKSPACE_DIRECTORY="$repo" "$PWD/{subject}" {args} >"$TEST_TMPDIR/output" 2>&1 || status=$?
+if [[ -n {expected_scan} ]] && ! grep -Fxq -- {expected_scan} "$TEST_TMPDIR/output"; then
+  echo "expected scan announcement was missing" >&2
+  exit 1
+fi
+cat "$TEST_TMPDIR/output"
+exit "$status"
 """
 
 def _gitleaks_history_scenario_test_impl(ctx):
@@ -56,6 +99,7 @@ def _gitleaks_history_scenario_test_impl(ctx):
         output = driver,
         content = _DRIVER.format(
             args = " ".join([shell.quote(arg) for arg in ctx.attr.subject_args]),
+            expected_scan = shell.quote(ctx.attr.expected_scan),
             git_dir = path_dir(ctx.attr.git),
             scenario = ctx.attr.scenario,
             subject = ctx.executable.subject.short_path,
@@ -73,8 +117,9 @@ gitleaks_history_scenario_test = rule(
     test = True,
     toolchains = SHELL_TOOLCHAINS,
     attrs = SHELL_ATTRS | {
+        "expected_scan": attr.string(doc = "Exact scan announcement required before accepting the result."),
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["clean", "corrupt", "no_commits", "no_content", "other_branch", "secret"]),
+        "scenario": attr.string(mandatory = True, values = ["clean", "corrupt", "no_commits", "no_content", "other_branch", "range_base_secret", "range_config", "range_linear", "range_secret", "secret"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
         "subject_args": attr.string_list(doc = "Arguments passed to the subject."),
     },
