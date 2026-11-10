@@ -39,6 +39,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -154,7 +155,6 @@ func funcSpans(name string, ranges []span) ([]span, bool, error) {
 			if f[0] <= r[0] && r[1] <= f[1] {
 				picked[f] = true
 				found = true
-				break
 			}
 		}
 		if !found {
@@ -162,10 +162,12 @@ func funcSpans(name string, ranges []span) ([]span, bool, error) {
 		}
 	}
 	spans := make([]span, 0, len(picked))
-	for s := range picked {
-		spans = append(spans, s)
+	// AST declarations are already in source order. Emit each picked function once.
+	for _, f := range funcs {
+		if picked[f] {
+			spans = append(spans, f)
+		}
 	}
-	sort.Slice(spans, func(i, j int) bool { return spans[i][0] < spans[j][0] })
 	return spans, true, nil
 }
 
@@ -442,6 +444,9 @@ var (
 	dryFound = regexp.MustCompile(`Discovering mutants\.\.\. (\d+) found`)
 )
 
+// maxDryRunLineBytes includes the newline, as bufio.Scanner requires.
+const maxDryRunLineBytes = 16777216
+
 // parseDryRun reads gomutants' --dry-run listing. A record starts with
 // `[STATUS] file:line:col` and ends, possibly lines later when the
 // original code spans lines, with `(MUTATOR)`. The number of records must
@@ -451,7 +456,7 @@ func parseDryRun(out string) ([]mutantKey, error) {
 	var open *mutantKey
 	found := -1
 	scanner := bufio.NewScanner(strings.NewReader(out))
-	scanner.Buffer(make([]byte, 0, 64*1024), 16*1024*1024)
+	scanner.Buffer(nil, maxDryRunLineBytes)
 	for scanner.Scan() {
 		line := scanner.Text()
 		if m := dryFound.FindStringSubmatch(line); m != nil {
@@ -560,12 +565,11 @@ func (r *result) read(data []byte, prefix string) error {
 func (r *result) crossCheck(listed []mutantKey, s slice, data []byte, prefix string) {
 	selected := map[mutantKey]int{}
 	for _, k := range listed {
-		for _, sp := range s.Files[k.file] {
-			if sp[0] <= k.line && k.line <= sp[1] {
-				selected[k]++
-				r.selected++
-				break
-			}
+		if slices.ContainsFunc(s.Files[k.file], func(sp span) bool {
+			return sp[0] <= k.line && k.line <= sp[1]
+		}) {
+			selected[k]++
+			r.selected++
 		}
 	}
 	var rep report
@@ -581,7 +585,7 @@ func (r *result) crossCheck(listed []mutantKey, s slice, data []byte, prefix str
 		}
 	}
 	for k, n := range selected {
-		for ; n > 0; n-- {
+		for range n {
 			r.mutants = append(r.mutants, fmt.Sprintf("mutant.unmapped=%s%s (selected, not reported)", prefix, k))
 		}
 	}
