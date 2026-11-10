@@ -8,6 +8,7 @@ load(
     "//lint:defs.bzl",
     "actionlint_test",
     "cspell_test",
+    "decision_records_test",
     "editorconfig_checker_test",
     "gitleaks_history",
     "gitleaks_test",
@@ -329,6 +330,11 @@ cspell_test(
 
 okf_docs_test(
     name = "okf_docs_test",
+    srcs = [":repo_files"],
+)
+
+decision_records_test(
+    name = "decision_records_test",
     srcs = [":repo_files"],
 )
 
