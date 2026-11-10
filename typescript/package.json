@@ -14,7 +14,7 @@
     "eslint-plugin-sonarjs": "4.2.2",
     "eslint-plugin-storybook": "10.6.5",
     "knip": "6.44.1",
-    "pnpm": "12.17.0",
+    "pnpm": "12.18.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",
     "vitest": "5.1.0"
