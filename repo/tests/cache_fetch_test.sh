@@ -5,6 +5,10 @@
 set -euo pipefail
 script=${TEST_SRCDIR:?}/${SCRIPT_RLOCATIONPATH:?}
 scratch=${TEST_TMPDIR:?}/fetch
+# On Windows TEST_TMPDIR is D:/..., and the drive colon would split PATH.
+if command -v cygpath >/dev/null; then
+  scratch=$(cygpath -u "$scratch")
+fi
 mkdir -p "$scratch/bin" "$scratch/root/go" "$scratch/root/typescript"
 cat >"$scratch/bin/bazelisk" <<'MOCK'
 #!/usr/bin/env bash
