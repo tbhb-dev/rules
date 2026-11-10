@@ -185,6 +185,13 @@ type runConfig struct {
 	flags     []string
 }
 
+// Runner filesystem operations are replaceable to exercise failures portably.
+var (
+	runnerAbs       = filepath.Abs
+	runnerMkdir     = os.Mkdir
+	runnerWriteFile = os.WriteFile
+)
+
 func runMain(args []string) int {
 	var c runConfig
 	fs := flag.NewFlagSet("gomutants", flag.ContinueOnError)
@@ -208,10 +215,10 @@ func runMain(args []string) int {
 	}
 	r, log, err := run(c)
 	if err == nil {
-		err = os.WriteFile(c.log, log, 0o644)
+		err = runnerWriteFile(c.log, log, 0o644)
 	}
 	if err == nil {
-		err = os.WriteFile(c.report, []byte(r.format()), 0o644)
+		err = runnerWriteFile(c.report, []byte(r.format()), 0o644)
 	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "gomutants: %v\n", err)
@@ -282,7 +289,7 @@ func run(c runConfig) (result, []byte, error) {
 		return r, log.Bytes(), nil
 	}
 
-	if c.gomutants, err = filepath.Abs(c.gomutants); err != nil {
+	if c.gomutants, err = runnerAbs(c.gomutants); err != nil {
 		return result{}, nil, err
 	}
 	w, err := scratch.New("gomutants-", entries, c.goBin, c.proxy)
@@ -293,7 +300,7 @@ func run(c runConfig) (result, []byte, error) {
 	// The fake git answers with this exact root, and gomutants compares
 	// it with the paths of the files it mutates.
 	work, mod := w.Dir, w.Mod
-	if err := os.Mkdir(filepath.Join(work, "bin"), 0o755); err != nil {
+	if err := runnerMkdir(filepath.Join(work, "bin"), 0o755); err != nil {
 		return result{}, nil, err
 	}
 	pattern := "./" + c.pkg
@@ -301,7 +308,7 @@ func run(c runConfig) (result, []byte, error) {
 		pattern = "."
 	}
 	common := []string{"--cache=off", "--config", filepath.Join(work, "gomutants.yml")}
-	if err := os.WriteFile(filepath.Join(work, "gomutants.yml"), nil, 0o644); err != nil {
+	if err := runnerWriteFile(filepath.Join(work, "gomutants.yml"), nil, 0o644); err != nil {
 		return result{}, nil, err
 	}
 	if c.workers > 0 {
