@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# Bazel convenience symlinks (--symlink_prefix=.bazel-); the old bazel-*
+# links stay listed for one transition, since clones that have not run Bazel
+# since the prefix change still have them.
+.bazel-*
+bazel-*
+.bazelrc.user
+
+# A local `pnpm install`; the checks use the npm_link_all_packages tree.
+/node_modules/

@@ -1,0 +1,13 @@
+{
+  "name": "tbhb-rules-tokens-toolchain",
+  "private": true,
+  "type": "module",
+  "description": "The npm tools behind @tbhb_rules_tokens//:defs.bzl: Terrazzo's parser, CSS plugin and token tools (for prefixed variable names), Radix Colors for radix_palettes, and colorjs.io, the color library Terrazzo itself uses, for the Display P3 to oklch conversion.",
+  "dependencies": {
+    "@radix-ui/colors": "3.0.0",
+    "@terrazzo/parser": "2.10.0",
+    "@terrazzo/plugin-css": "2.10.0",
+    "@terrazzo/token-tools": "2.10.0",
+    "colorjs.io": "0.7.1"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "palette": {
+    "$type": "color",
+    "brand": {
+      "9": {
+        "$value": { "colorSpace": "srgb", "components": [0.2, 0.4, 0.9] }
+      },
+      "10": { "$value": "{palette.red.10}" }
+    },
+    "glow": {
+      "9": { "$value": "{palette.blue.9}" }
+    },
+    "red": {
+      "10": {
+        "$value": { "colorSpace": "srgb", "components": [0.8, 0.1, 0.1] }
+      }
+    },
+    "blue": {
+      "9": { "$value": { "colorSpace": "srgb", "components": [0, 0.5, 1] } }
+    },
+    "unused": {
+      "9": { "$value": { "colorSpace": "srgb", "components": [0, 1, 0] } }
+    }
+  },
+  "color": {
+    "brand": { "$type": "color", "$value": "{palette.brand.9}" }
+  },
+  "shadow": {
+    "glow": {
+      "$type": "shadow",
+      "$value": {
+        "color": "{palette.glow.9}",
+        "offsetX": { "value": 0, "unit": "px" },
+        "offsetY": { "value": 2, "unit": "px" },
+        "blur": { "value": 8, "unit": "px" },
+        "spread": { "value": 0, "unit": "px" }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "role": {
+    "$type": "color",
+    "neutral": {
+      "1": { "$value": { "colorSpace": "srgb", "components": [1, 1, 1] } }
+    },
+    "accent": {
+      "9": { "$value": { "colorSpace": "srgb", "components": [0, 0.4, 1] } }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# A local `pnpm install`; the tests use the npm_link_all_packages tree.
+/node_modules/

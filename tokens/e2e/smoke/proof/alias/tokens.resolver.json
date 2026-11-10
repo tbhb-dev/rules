@@ -1,0 +1,8 @@
+{
+  "name": "proof",
+  "version": "2025.10",
+  "sets": {
+    "base": { "sources": [{ "$ref": "a.tokens.json" }] }
+  },
+  "resolutionOrder": [{ "$ref": "#/sets/base" }]
+}

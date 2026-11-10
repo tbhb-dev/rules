@@ -1,0 +1,47 @@
+{
+  "name": "smoke",
+  "version": "2025.10",
+  "description": "Base tokens, a light and dark palette layer from Radix Colors, two themes that map roles onto it, and semantic tokens over the roles.",
+  "sets": {
+    "base": {
+      "sources": [{ "$ref": "base.tokens.json" }]
+    },
+    "semantic": {
+      "sources": [{ "$ref": "semantic.tokens.json" }]
+    }
+  },
+  "modifiers": {
+    "mode": {
+      "contexts": {
+        "light": [
+          { "$ref": "../palette/blue.light.tokens.json" },
+          { "$ref": "../palette/grass.light.tokens.json" },
+          { "$ref": "../palette/gray.light.tokens.json" },
+          { "$ref": "../palette/sand.light.tokens.json" },
+          { "$ref": "../palette/tomato.light.tokens.json" }
+        ],
+        "dark": [
+          { "$ref": "../palette/blue.dark.tokens.json" },
+          { "$ref": "../palette/grass.dark.tokens.json" },
+          { "$ref": "../palette/gray.dark.tokens.json" },
+          { "$ref": "../palette/sand.dark.tokens.json" },
+          { "$ref": "../palette/tomato.dark.tokens.json" }
+        ]
+      },
+      "default": "light"
+    },
+    "theme": {
+      "contexts": {
+        "ocean": [{ "$ref": "themes/ocean.tokens.json" }],
+        "forest": [{ "$ref": "themes/forest.tokens.json" }]
+      },
+      "default": "ocean"
+    }
+  },
+  "resolutionOrder": [
+    { "$ref": "#/sets/base" },
+    { "$ref": "#/modifiers/mode" },
+    { "$ref": "#/modifiers/theme" },
+    { "$ref": "#/sets/semantic" }
+  ]
+}

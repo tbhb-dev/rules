@@ -1,0 +1,8 @@
+{
+  "role": {
+    "$type": "color",
+    "neutral": {
+      "1": { "$value": { "colorSpace": "srgb", "components": [1, 1, 0.9] } }
+    }
+  }
+}

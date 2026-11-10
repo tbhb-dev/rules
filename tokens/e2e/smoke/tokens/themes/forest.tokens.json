@@ -1,0 +1,16 @@
+{
+  "role": {
+    "$type": "color",
+    "neutral": {
+      "1": { "$value": "{palette.sand.1}" },
+      "2": { "$value": "{palette.sand.2}" },
+      "6": { "$value": "{palette.sand.6}" },
+      "11": { "$value": "{palette.sand.11}" },
+      "12": { "$value": "{palette.sand.12}" }
+    },
+    "accent": {
+      "9": { "$value": "{palette.grass.9}" },
+      "11": { "$value": "{palette.grass.11}" }
+    }
+  }
+}

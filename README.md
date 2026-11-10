@@ -11,7 +11,7 @@ Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned 
 | runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
 | testing | `@tbhb_rules//testing:defs.bzl` | `expect_failure_test` |
 
-Language and diagram rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/`, `tbhb_rules_python` in `python/`, `tbhb_rules_typescript` in `typescript/`, `tbhb_rules_cloudflare` in `cloudflare/`, which builds on the TypeScript module, `tbhb_rules_astro` in `astro/`, `tbhb_rules_playwright` in `playwright/`, which pins Playwright's browsers, `tbhb_rules_storybook` in `storybook/`, which builds, tests and serves Storybooks on those browsers, `tbhb_rules_ansible` in `ansible/`, which checks Ansible playbooks, roles and inventories, and `tbhb_rules_d2` in `diagrams/d2/`.
+Language and diagram rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/`, `tbhb_rules_python` in `python/`, `tbhb_rules_typescript` in `typescript/`, `tbhb_rules_cloudflare` in `cloudflare/`, which builds on the TypeScript module, `tbhb_rules_astro` in `astro/`, `tbhb_rules_playwright` in `playwright/`, which pins Playwright's browsers, `tbhb_rules_storybook` in `storybook/`, which builds, tests and serves Storybooks on those browsers, `tbhb_rules_ansible` in `ansible/`, which checks Ansible playbooks, roles and inventories, `tbhb_rules_tokens` in `tokens/`, which checks W3C design tokens and builds them into CSS with Terrazzo, and `tbhb_rules_d2` in `diagrams/d2/`.
 
 The modules require Bazel 9 or newer (`bazel_compatibility = [">=9.0.0"]`), the only release line tbhb-dev repositories use.
 

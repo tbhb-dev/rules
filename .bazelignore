@@ -7,4 +7,5 @@ go/
 playwright/
 python/
 storybook/
+tokens/
 typescript/
