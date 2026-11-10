@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load(
@@ -13,6 +14,7 @@ load(
     "python_library",
     "ruff_test",
 )
+load(":report_proof.bzl", "mutation_report_file")
 
 repo_files()
 
@@ -161,6 +163,27 @@ mutmut_test(
     chdir = "app",
     cpus = 2,
     require_scope = "full",
+)
+
+# With explicit source paths the same neighbour edit selects no mutants.
+mutmut_test(
+    name = "mutmut_app_dependency_skipped_test",
+    srcs = [":app"],
+    changes = "changes/core.json",
+    chdir = "app",
+    cpus = 2,
+    source_paths = ["src"],
+)
+
+mutation_report_file(
+    name = "dependency_skipped_report",
+    report = ":mutmut_app_dependency_skipped_test.report",
+)
+
+diff_test(
+    name = "mutmut_app_dependency_skipped_report_test",
+    file1 = ":dependency_skipped_report",
+    file2 = "changes/testdata/empty.report",
 )
 
 # The change set CI writes with `bazel run @tbhb_rules//quality:mutation_changes`,

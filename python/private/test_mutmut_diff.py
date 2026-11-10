@@ -148,23 +148,30 @@ def test_module_name(name: str, expected: str) -> None:
 def test_under() -> None:
     assert mr.under(PurePosixPath("src/a.py"), ["lib", "src"])
     assert not mr.under(PurePosixPath("srcx/a.py"), ["src"])
+    assert not mr.under(PurePosixPath("../core/lib.py"), ["."])
+    assert mr.under(PurePosixPath("calc.py"), ["."])
+    assert mr.under(PurePosixPath("calc.py"), ["calc.py"])
+    assert mr.under(PurePosixPath("../core/lib.py"), ["../core"])
+    assert not mr.under(PurePosixPath("../other/lib.py"), ["../core"])
+    assert not mr.under(PurePosixPath("calc.py"), [])
 
 
 @pytest.fixture
-def unit(tmp_path: Path) -> Path:
+def unit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    monkeypatch.chdir(tmp_path)
     (tmp_path / "src" / "pkg").mkdir(parents=True)
     (tmp_path / "src" / "pkg" / "mod.py").write_text(SOURCE)
     (tmp_path / "src" / "pkg" / "other.py").write_text("def f():\n    return 1\n")
     return tmp_path
 
 
-def choose_in(unit: Path, files: dict[str, mr.Change]) -> mr.Selection:
-    return mr.select(files, "cli", unit, ["src"], ["src/gen/*"])
+def choose_in(files: dict[str, mr.Change]) -> mr.Selection:
+    return mr.select(files, "cli", ["src"], ["src/gen/*"])
 
 
-def test_select_picks_the_changed_functions(unit: Path) -> None:
+@pytest.mark.usefixtures("unit")
+def test_select_picks_the_changed_functions() -> None:
     selection = choose_in(
-        unit,
         {
             "cli/src/pkg/mod.py": [(9, 9), (14, 14), (28, 30), (8, 9)],
             "cli/src/pkg/other.py": [(2, 2)],
@@ -182,13 +189,15 @@ def test_select_picks_the_changed_functions(unit: Path) -> None:
     )
 
 
-def test_select_from_the_tree_root(unit: Path) -> None:
-    selection = mr.select({"src/pkg/other.py": [(1, 1)]}, "", unit, ["src"], [])
+@pytest.mark.usefixtures("unit")
+def test_select_from_the_tree_root() -> None:
+    selection = mr.select({"src/pkg/other.py": [(1, 1)]}, "", ["src"], [])
     assert selection.globs == ["pkg.other.x_f__mutmut_*"]
 
 
-def test_select_of_nothing(unit: Path) -> None:
-    assert choose_in(unit, {}) == mr.Selection()
+@pytest.mark.usefixtures("unit")
+def test_select_of_nothing() -> None:
+    assert choose_in({}) == mr.Selection()
 
 
 @pytest.mark.parametrize(
@@ -227,11 +236,102 @@ def test_select_of_nothing(unit: Path) -> None:
         ),
     ],
 )
-def test_select_falls_back_to_full(
-    unit: Path, name: str, change: mr.Change, reason: str
-) -> None:
+@pytest.mark.usefixtures("unit")
+def test_select_falls_back_to_full(name: str, change: mr.Change, reason: str) -> None:
     files: dict[str, mr.Change] = {"cli/src/pkg/other.py": [(1, 1)], name: change}
-    assert choose_in(unit, files) == mr.Selection(full=True, reason=reason)
+    assert choose_in(files) == mr.Selection(full=True, reason=reason)
+
+
+@pytest.mark.parametrize("change", [[(1, 1)], [], "added", "deleted"])
+@pytest.mark.parametrize("name", ["core/lib.py", "cli/tools/x.py", "cli/srcx/a.py"])
+@pytest.mark.usefixtures("unit")
+def test_select_skips_unrelated_sources(name: str, change: mr.Change) -> None:
+    assert (
+        mr.select({name: change}, "cli", ["src"], [], explicit_source_paths=True)
+        == mr.Selection()
+    )
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "core/test_lib.py",
+        "core/lib_test.py",
+        "core/conftest.py",
+        "cli/tests/helper.py",
+        "cli/tests/nested/helper.py",
+        "cli/fixtures/helper.py",
+        "cli/tools/test_x.py",
+        "cli/tools/x_test.py",
+        "cli/tools/conftest.py",
+        "cli/tools/data.json",
+        "config.toml",
+        "cli/src/pkg/mod.py",
+    ],
+)
+@pytest.mark.parametrize("change", [[(1, 1)], "added", "deleted"])
+@pytest.mark.usefixtures("unit")
+@pytest.mark.parametrize("paths", [["src"], ["."]])
+def test_select_keeps_full_fallbacks_with_explicit_paths(
+    name: str, change: mr.Change, paths: list[str]
+) -> None:
+    assert mr.select(
+        {name: change},
+        "cli",
+        paths,
+        ["fixtures/*"],
+        explicit_source_paths=True,
+    ).full
+
+
+@pytest.mark.usefixtures("unit")
+def test_select_skips_sources_but_keeps_changed_functions() -> None:
+    assert mr.select(
+        {"cli/src/pkg/other.py": [(2, 2)], "aaa/lib.py": [(1, 1)]},
+        "cli",
+        ["lib", "src"],
+        [],
+        explicit_source_paths=True,
+    ) == mr.Selection(globs=["pkg.other.x_f__mutmut_*"])
+    assert mr.select(
+        {"src/pkg/mod.py": [(5, 5)]},
+        "",
+        ["src"],
+        [],
+        explicit_source_paths=True,
+    ).full
+
+
+@pytest.mark.parametrize("prefix", ["", "cli"])
+@pytest.mark.usefixtures("unit")
+def test_select_explicit_dot_path_still_selects_sources(prefix: str) -> None:
+    name = str(PurePosixPath(prefix) / "src/pkg/other.py")
+    assert mr.select(
+        {name: [(2, 2)]},
+        prefix,
+        ["."],
+        [],
+        explicit_source_paths=True,
+    ) == mr.Selection(globs=["pkg.other.x_f__mutmut_*"])
+
+
+@pytest.mark.parametrize("paths", [[], ["src"]])
+@pytest.mark.usefixtures("unit")
+def test_select_default_still_runs_full_for_neighbour(paths: list[str]) -> None:
+    assert mr.select({"core/lib.py": [(1, 1)]}, "cli", paths, []) == mr.Selection(
+        full=True, reason="core/lib.py, outside the unit, changed"
+    )
+
+
+@pytest.mark.usefixtures("unit")
+def test_select_keeps_neighbour_in_explicit_source_paths() -> None:
+    assert mr.select(
+        {"core/lib.py": [(1, 1)]},
+        "cli",
+        ["../core"],
+        [],
+        explicit_source_paths=True,
+    ) == mr.Selection(full=True, reason="core/lib.py, outside the unit, changed")
 
 
 RESULTS = """\
@@ -331,6 +431,11 @@ def test_choose(unit: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     assert mr.choose(changes, "cli").reason == "src/pkg/other.py is a test file"
     (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["src"]\n')
     assert mr.choose(changes, "cli").globs == ["pkg.other.x_f__mutmut_*"]
+    neighbour = changes_file(unit, {"core/lib.py": [[1, 1]]})
+    assert mr.choose(neighbour, "cli") == mr.Selection(
+        full=True, reason="core/lib.py, outside the unit, changed"
+    )
+    assert mr.choose(neighbour, "cli", explicit_source_paths=True) == mr.Selection()
 
 
 @pytest.fixture
@@ -481,3 +586,25 @@ def test_main_overrides_the_worker_cap_in_a_diff(
     message = "mutmut_report: --max-children 7 (set by --mutmut_max_children)\n"
     assert capsys.readouterr().err == message
     assert Path("log").read_text() == "mutmut_report: diff\n" + message
+
+
+@pytest.mark.parametrize("children", [0, 7])
+@pytest.mark.parametrize("name", ["core/lib.py", "cli/tools/x.py"])
+def test_main_skips_only_with_the_source_paths_attribute(
+    unit: Path,
+    runs: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    children: int,
+) -> None:
+    monkeypatch.chdir(unit)
+    (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["src"]\n')
+    changes = changes_file(unit, {name: [[1, 1]]})
+    assert mr.main(["report", "log", str(children), str(changes), "cli", "src"]) == 0
+    assert Path("report").read_text() == mr.diff_report({}, mr.Selection())
+    assert Path("log").read_text() == "mutmut_report: diff\n"
+    assert runs == []
+    assert mr.main(["report", "log", str(children), str(changes), "cli"]) == 1
+    assert "scope=full" in Path("report").read_text().splitlines()
+    cap = ["--max-children", str(children)] if children else []
+    assert runs[0] == ["run", *cap]

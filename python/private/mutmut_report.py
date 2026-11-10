@@ -211,40 +211,60 @@ def module_name(rel: PurePosixPath) -> str:
 
 def under(rel: PurePosixPath, source_paths: list[str]) -> bool:
     """Tell whether rel is under one of mutmut's source paths."""
-    return any(rel.is_relative_to(PurePosixPath(path)) for path in source_paths)
+    absolute = Path(rel).resolve()
+    return any(absolute.is_relative_to(Path(path).resolve()) for path in source_paths)
 
 
 def select(
     changes: dict[str, Change],
     prefix: str,
-    root: Path,
     source_paths: list[str],
     do_not_mutate: list[str],
+    *,
+    explicit_source_paths: bool = False,
 ) -> Selection:
-    """Choose the mutants of the unit at root (prefix in the repository).
+    """Choose the mutants from the current run directory (prefix in the repository).
 
     Every path in the slice is an input of the unit. One outside the run
     directory (a dependency's source, the root config) can change any
     verdict, so it makes the run full, as do the changes the line filter
     cannot reason about: an added or deleted file, a test file, a file that
     is not Python source under the mutated paths, and code outside every
-    function.
+    function. With explicit source paths, unrelated Python files are skipped.
     """
     selection = Selection()
     base = PurePosixPath(prefix)
     for name, change in sorted(changes.items()):
         path = PurePosixPath(name)
+        rel = path.relative_to(base, walk_up=True)
+        if explicit_source_paths and _skip_source(rel, source_paths, do_not_mutate):
+            continue
         if not path.is_relative_to(base):
             return Selection(full=True, reason=f"{path}, outside the unit, changed")
-        rel = path.relative_to(base)
-        reason = _full_reason(rel, change, source_paths, do_not_mutate)
+        reason = (
+            f"{rel} is a test file"
+            if explicit_source_paths and under(rel, ["tests"])
+            else _full_reason(rel, change, source_paths, do_not_mutate)
+        )
         # A change with no text hunks (mode only) changes no function.
         if reason is None and isinstance(change, list) and change:
-            reason = _add(selection, rel, (root / rel).read_text(), change)
+            reason = _add(selection, rel, Path(rel).read_text(), change)
         if reason:
             return Selection(full=True, reason=reason)
     selection.globs = sorted(set(selection.globs))
     return selection
+
+
+def _skip_source(
+    rel: PurePosixPath, source_paths: list[str], do_not_mutate: list[str]
+) -> bool:
+    """Skip unrelated Python sources only, keeping tests and test support."""
+    return (
+        rel.suffix == ".py"
+        and not under(rel, source_paths)
+        and not is_test(rel, do_not_mutate)
+        and not under(rel, ["tests"])
+    )
 
 
 def _full_reason(
@@ -473,7 +493,9 @@ def mutmut_paths(path: Path) -> tuple[list[str], list[str]]:
     return [str(p) for p in source_paths], [str(p) for p in do_not_mutate]
 
 
-def choose(changes: Path, prefix: str) -> Selection:
+def choose(
+    changes: Path, prefix: str, *, explicit_source_paths: bool = False
+) -> Selection:
     """Choose the run's mutants from the unit's slice of the change set."""
     loaded = load_changes(changes)
     if not loaded:
@@ -481,7 +503,13 @@ def choose(changes: Path, prefix: str) -> Selection:
     source_paths, do_not_mutate = mutmut_paths(Path(PYPROJECT))
     if not source_paths:
         return Selection(full=True, reason="[tool.mutmut] sets no source_paths")
-    return select(loaded, prefix, Path(), source_paths, do_not_mutate)
+    return select(
+        loaded,
+        prefix,
+        source_paths,
+        do_not_mutate,
+        explicit_source_paths=explicit_source_paths,
+    )
 
 
 def worker_cap(log: Path, children: int) -> list[str]:
@@ -556,7 +584,9 @@ def main(argv: list[str]) -> int:
     selection = Selection(full=True, reason="no change set")
     if len(argv) >= 5 and argv[3]:  # noqa: PLR2004 - optional change set.
         try:
-            selection = choose(Path(argv[3]), argv[4])
+            selection = choose(
+                Path(argv[3]), argv[4], explicit_source_paths=bool(argv[5:])
+            )
         except ChangesError as error:
             print(f"mutmut_report: {error}", file=sys.stderr)
             return 2

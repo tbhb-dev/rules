@@ -22,5 +22,8 @@ local_path_override(
     path = "../..",
 )
 
+# Compare the empty-selection report with its expected contents.
+bazel_dep(name = "bazel_skylib", version = "1.9.2", dev_dependency = True)
+
 python = use_extension("@tbhb_rules_python//:extensions.bzl", "python")
 python.project()
