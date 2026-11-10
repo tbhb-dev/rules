@@ -4,6 +4,6 @@
   "type": "module",
   "description": "Consumes tbhb_rules_playwright the way a browser test would: its own playwright-core, at the release the pinned browsers belong to.",
   "dependencies": {
-    "playwright-core": "1.64.1"
+    "playwright-core": "1.65.0"
   }
 }
