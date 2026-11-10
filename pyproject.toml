@@ -349,6 +349,7 @@ max-complexity = 15
 "tools/**/*.py" = ["T201", "S603", "S607", "INP001"]
 "runtime/private/**/*.py" = ["T201", "S603", "S607", "INP001"]
 "lint/private/okf_docs/*.py" = ["T201", "INP001"]
+"lint/private/decision_records/*.py" = ["T201", "INP001"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

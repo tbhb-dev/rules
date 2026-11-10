@@ -44,6 +44,7 @@ bzl_library(
         "//lint/private:checks",
         "//lint/private:codeowners",
         "//lint/private:cspell",
+        "//lint/private:decision_records",
         "//lint/private:gitleaks_history",
         "//lint/private:gitleaks_tool",
         "//lint/private:okf_docs",

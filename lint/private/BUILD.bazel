@@ -111,6 +111,18 @@ bzl_library(
 
 exports_files(["okf_docs/check_docs.py"])
 
+exports_files(["decision_records/check_decisions.py"])
+
+bzl_library(
+    name = "decision_records",
+    srcs = ["decision_records.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        ":tree_check",
+        "//runtime:defs",
+    ],
+)
+
 bzl_library(
     name = "okf_docs",
     srcs = ["okf_docs.bzl"],
