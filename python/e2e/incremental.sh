@@ -134,6 +134,20 @@ changes 2222222222222222222222222222222222222222 \
   '    "app/src/apppkg/__init__.py": [[11, 11]],
     "core/src/corepkg/__init__.py": [[9, 9]]' app
 
+# A worker override enters the report action's cache key. Changing it
+# reruns every unit; repeating the same override leaves them cached.
+for cap in 2 3; do
+  flag="--@tbhb_rules_python//:mutmut_max_children=$cap"
+  mark
+  rebuild "worker cap $cap" "${units[@]}" -- "$flag"
+  for unit in "${units[@]}"; do
+    path=$(report "$unit")
+    grep -Fx "mutmut_report: --max-children $cap (set by --mutmut_max_children)" "${path%.report}.log"
+  done
+  mark
+  rebuild "worker cap $cap cached" -- "$flag"
+done
+
 if ((failed)); then
   exit 1
 fi

@@ -9,6 +9,9 @@
 
 set -euo pipefail
 
+max_children=$1
+shift
+
 execroot=$PWD
 launcher="$execroot/@@LAUNCHER@@"
 report="$execroot/@@REPORT@@"
@@ -31,7 +34,7 @@ export HOME="$tree/.home"
 mkdir -p "$HOME"
 # With no change set the run is full; with one, the runner scopes it.
 if [[ -n $changes ]]; then
-  "$launcher" "$report" "$log" "$execroot/$changes" "@@CHDIR@@" "$@"
+  "$launcher" "$report" "$log" "$max_children" "$execroot/$changes" "@@CHDIR@@" "$@"
 else
-  "$launcher" "$report" "$log" "" "@@CHDIR@@" "$@"
+  "$launcher" "$report" "$log" "$max_children" "" "@@CHDIR@@" "$@"
 fi
