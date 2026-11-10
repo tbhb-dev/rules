@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""Tests for the decision record filename checker."""
+"""Tests for decision record names, numbers, and replacement references."""
 
 import sys
 from pathlib import Path
@@ -18,7 +18,7 @@ def write(root: Path, names: list[str], directory: str = "docs/decisions") -> No
     folder = root / directory
     folder.mkdir(parents=True, exist_ok=True)
     for name in names:
-        # Invalid UTF-8 and an unterminated block prove contents are not read.
+        # Unreadable frontmatter belongs to okf_docs_test.
         (folder / name).write_bytes(b"---\n\xff\n")
 
 
@@ -171,7 +171,8 @@ def test_main_reports_ok(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> 
     write(tmp_path, ["0000-a.md"])
     assert check_decisions.main([str(tmp_path)]) == 0
     assert (
-        capsys.readouterr().out == "OK: decision record filenames and numbers conform\n"
+        capsys.readouterr().out
+        == "OK: decision record filenames, numbers, and replacements conform\n"
     )
 
 
@@ -210,5 +211,136 @@ def test_main_help_describes_the_tool(capsys: pytest.CaptureFixture[str]) -> Non
         check_decisions.main(["--help"])
     assert caught.value.code == 0
     out = " ".join(capsys.readouterr().out.split())
-    assert " Check decision record filenames. " in out
+    assert " Check decision record filenames and replacements. " in out
     assert "--directory DIRECTORY the decision records directory, under ROOT" in out
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("---\nsuperseded_by: 2\n---\nBody", 2),
+        ("---\nsuperseded_by: 0\n---", 0),
+        ("---\nsuperseded_by: -1\n--- \t\n", -1),
+        ("---\ndecided: 2026-11-09\nsuperseded_by: 12\n---\n", 12),
+        ("---\n---\n", None),
+        ("---\nnull\n---\n", None),
+        ("---\n42\n---\n", None),
+        ("---\n[superseded_by, 2]\n---\n", None),
+        ("---\nstatus: deprecated\n---\n", None),
+        ("---\nsuperseded_by: null\n---\n", None),
+        ("---\nsuperseded_by: true\n---\n", None),
+        ("---\nsuperseded_by: 2.5\n---\n", None),
+        ('---\nsuperseded_by: "2"\n---\n', None),
+        ("---\nsuperseded_by: [2]\n---\n", None),
+        ("---\nsuperseded_by: {a: 2}\n---\n", None),
+        ("---\nsuperseded_by: [\n---\n", None),
+        ("---\nsuperseded_by: 2\n", None),
+        ("Text\n---\nsuperseded_by: 2\n---\n", None),
+        ("---\nstatus: stable\n---\nsuperseded_by: 2\n", None),
+        ("---\ndecided: 2026-02-30\nsuperseded_by: 2\n---\n", None),
+    ],
+)
+def test_replacement_reads_only_integer_frontmatter(
+    tmp_path: Path, text: str, expected: int | None
+) -> None:
+    path = tmp_path / "record.md"
+    path.write_text(text, encoding="utf-8")
+    actual = check_decisions.replacement(path)
+    assert actual == expected
+    assert type(actual) is type(expected)
+
+
+def test_replacement_ignores_invalid_utf8(tmp_path: Path) -> None:
+    path = tmp_path / "record.md"
+    path.write_bytes(b"---\nsuperseded_by: 2\n---\n\xff")
+    assert check_decisions.replacement(path) is None
+
+
+def test_replacement_ignores_read_error(tmp_path: Path) -> None:
+    assert check_decisions.replacement(tmp_path / "missing.md") is None
+
+
+def record(
+    root: Path, name: str, target: int, directory: str = "docs/decisions"
+) -> None:
+    write(root, [name], directory)
+    (root / directory / name).write_text(
+        f"---\nsuperseded_by: {target}\n---\n", encoding="utf-8"
+    )
+
+
+def test_replacements_can_point_forward_and_backward_including_zero(
+    tmp_path: Path,
+) -> None:
+    record(tmp_path, "0000-first.md", 42)
+    record(tmp_path, "0042-next.md", 0)
+    assert check_decisions.check(tmp_path) == []
+
+
+@pytest.mark.parametrize("target", [-1, 2, 10000])
+def test_replacement_must_exist(tmp_path: Path, target: int) -> None:
+    record(tmp_path, "0001-first.md", target)
+    assert check_decisions.check(tmp_path) == [
+        f"docs/decisions/0001-first.md: superseded_by {target} names no record"
+    ]
+
+
+@pytest.mark.parametrize("number", [0, 1, 9999])
+def test_record_cannot_name_itself(tmp_path: Path, number: int) -> None:
+    name = f"{number:04d}-record.md"
+    record(tmp_path, name, number)
+    assert check_decisions.check(tmp_path) == [
+        f"docs/decisions/{name}: superseded_by names itself"
+    ]
+
+
+def test_replacement_uses_only_records_in_the_same_directory(tmp_path: Path) -> None:
+    record(tmp_path, "0001-first.md", 2, "records")
+    write(tmp_path, ["0002-other.md"])
+    assert check_decisions.check(tmp_path, "records") == [
+        "records/0001-first.md: superseded_by 2 names no record"
+    ]
+    write(tmp_path, ["0002-replacement.md"], "records")
+    assert check_decisions.check(tmp_path, "records") == []
+
+
+def test_invalid_names_do_not_count_as_replacement_targets(tmp_path: Path) -> None:
+    record(tmp_path, "0001-first.md", 2)
+    write(tmp_path, ["0002-Upper.md"])
+    assert check_decisions.check(tmp_path) == [
+        "docs/decisions/0002-Upper.md: expected NNNN-<slug>.md",
+        "docs/decisions/0001-first.md: superseded_by 2 names no record",
+    ]
+
+
+@pytest.mark.parametrize("name", ["bad.md", "index.md", "AGENTS.md", "CLAUDE.md"])
+def test_references_are_checked_only_for_valid_record_names(
+    tmp_path: Path, name: str
+) -> None:
+    record(tmp_path, name, 99)
+    expected = (
+        ["docs/decisions/bad.md: expected NNNN-<slug>.md"] if name == "bad.md" else []
+    )
+    assert check_decisions.check(tmp_path) == expected
+
+
+def test_duplicate_records_still_have_their_references_checked(tmp_path: Path) -> None:
+    record(tmp_path, "0001-a.md", 1)
+    record(tmp_path, "0001-b.md", 9)
+    assert check_decisions.check(tmp_path) == [
+        "docs/decisions/0001-b.md: duplicate number 0001 with docs/decisions/0001-a.md",
+        "docs/decisions/0001-a.md: superseded_by names itself",
+        "docs/decisions/0001-b.md: superseded_by 9 names no record",
+    ]
+
+
+def test_main_reports_reference_errors(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    record(tmp_path, "0001-a.md", 9)
+    record(tmp_path, "0002-b.md", 2)
+    assert check_decisions.main([str(tmp_path)]) == 1
+    assert capsys.readouterr().out == (
+        "docs/decisions/0001-a.md: superseded_by 9 names no record\n"
+        "docs/decisions/0002-b.md: superseded_by names itself\n"
+    )

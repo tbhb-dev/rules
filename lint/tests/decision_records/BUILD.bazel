@@ -12,6 +12,8 @@ PREFIX = "lint/tests/decision_records/testdata/tree"
 PLANTED = {
     "bad_name": "testdata/tree/docs/decisions/bad.md",
     "duplicate_number": "testdata/tree/docs/decisions/0000-other.md",
+    "missing_replacement": "testdata/tree/docs/decisions/0002-missing.md",
+    "self_replacement": "testdata/tree/docs/decisions/0003-self.md",
     "stray_subdirectory": "testdata/tree/docs/decisions/nested/0001-child.md",
 }
 
@@ -52,6 +54,8 @@ decision_records_test(
 PROOF_REASONS = {
     "proof_bad_name": "docs/decisions/bad.md: expected NNNN-<slug>.md",
     "proof_duplicate_number": "docs/decisions/0000-other.md: duplicate number 0000 with docs/decisions/0000-first.md",
+    "proof_missing_replacement": "docs/decisions/0002-missing.md: superseded_by 99 names no record",
+    "proof_self_replacement": "docs/decisions/0003-self.md: superseded_by names itself",
     "proof_stray_subdirectory": "docs/decisions/nested: expected a Markdown file",
 }
 

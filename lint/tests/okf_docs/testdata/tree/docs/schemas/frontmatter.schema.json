@@ -46,6 +46,16 @@
       "description": "Lifecycle state: draft for work in progress, stable for current content, deprecated for retired content.",
       "enum": ["draft", "stable", "deprecated"]
     },
+    "decided": {
+      "description": "The date the decision was made, for Decision Records only.",
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "superseded_by": {
+      "description": "The replacement record number, for deprecated Decision Records only.",
+      "type": "integer"
+    },
     "generated": {
       "description": "Who or what wrote the document, one entry per contributor. Agents fill it from their own identity. Omit it for a document no agent touched.",
       "type": "array",
@@ -57,6 +67,20 @@
       "$ref": "#/$defs/verified"
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "required": ["type"],
+        "properties": { "type": { "const": "Decision Record" } }
+      },
+      "then": {
+        "required": ["decided"],
+        "if": { "required": ["superseded_by"] },
+        "then": { "properties": { "status": { "const": "deprecated" } } }
+      },
+      "else": { "properties": { "decided": false, "superseded_by": false } }
+    }
+  ],
   "$defs": {
     "contributor": {
       "description": "One agent contribution. The fields are the attributes of a Generated-by or Assisted-by trailer, except that role is the trailer key and at is added because a document has no commit date.",

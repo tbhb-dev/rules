@@ -243,7 +243,8 @@
             "model": "anthropic:claude-sonnet-5-5",
             "at": "2026-11-02T09:30:00Z"
           }
-        ]
+        ],
+        "decided": "2026-11-09"
       }
     },
     {
@@ -264,6 +265,46 @@
             "at": "2026-11-02T09:30:00Z"
           }
         ]
+      }
+    },
+    {
+      "name": "stable decision record",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "stable",
+        "decided": "2026-11-09"
+      }
+    },
+    {
+      "name": "superseded decision record",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09",
+        "superseded_by": 2
+      }
+    },
+    {
+      "name": "withdrawn decision record",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09"
       }
     }
   ],
@@ -1013,6 +1054,344 @@
       },
       "errors": [
         "$.verified: 'at' is a required property"
+      ]
+    },
+    {
+      "name": "decision record without decided",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "stable"
+      },
+      "errors": [
+        "$: 'decided' is a required property"
+      ]
+    },
+    {
+      "name": "decision record bad date",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "stable",
+        "decided": "2026-02-30"
+      },
+      "errors": [
+        "$.decided: '2026-02-30' is not a 'date'"
+      ]
+    },
+    {
+      "name": "decision record date not zero padded",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "stable",
+        "decided": "2026-1-9"
+      },
+      "errors": [
+        "$.decided: '2026-1-9' is not a 'date'",
+        "$.decided: '2026-1-9' does not match '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'"
+      ]
+    },
+    {
+      "name": "stable decision record with superseded_by",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "stable",
+        "decided": "2026-11-09",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$.status: 'deprecated' was expected"
+      ]
+    },
+    {
+      "name": "non-integer superseded_by",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09",
+        "superseded_by": "0002"
+      },
+      "errors": [
+        "$.superseded_by: '0002' is not of type 'integer'"
+      ]
+    },
+    {
+      "name": "decided on Readme",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-09'"
+      ]
+    },
+    {
+      "name": "superseded_by on Readme",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Agent Instructions",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-09'"
+      ]
+    },
+    {
+      "name": "superseded_by on Agent Instructions",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Overview",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-09'"
+      ]
+    },
+    {
+      "name": "superseded_by on Overview",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Architecture Overview",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-09'"
+      ]
+    },
+    {
+      "name": "superseded_by on Architecture Overview",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Reference",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-09'"
+      ]
+    },
+    {
+      "name": "superseded_by on Reference",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on How-to",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-09'"
+      ]
+    },
+    {
+      "name": "superseded_by on How-to",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Design Draft",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-09'"
+      ]
+    },
+    {
+      "name": "superseded_by on Design Draft",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Policy",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-09"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-09'"
+      ]
+    },
+    {
+      "name": "superseded_by on Policy",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "decisions"
+        ],
+        "status": "deprecated",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
       ]
     }
   ]

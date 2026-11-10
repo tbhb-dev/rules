@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
-"""Check decision record filenames and unique numbers.
+"""Check decision record filenames, unique numbers, and replacement references.
 
 Usage: check_decisions.py [--directory DIR] [ROOT]
 
 ROOT defaults to the current directory and DIR to docs/decisions, relative
-to ROOT. Only immediate children are checked; file contents are never read.
+to ROOT. Only immediate children are checked. A superseded_by frontmatter
+value must name another record in that directory. Unreadable frontmatter
+is left to okf_docs_test.
 Each failure is printed as `path: problem` before the script exits 1.
 """
 
@@ -14,10 +16,44 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 DIRECTORY = "docs/decisions"
 DIRECTORY_HELP = "the decision records directory, under ROOT"
 EXEMPT = frozenset({"index.md", "AGENTS.md", "CLAUDE.md"})
 FILENAME = re.compile(r"(?P<number>\d{4})-[a-z0-9]+(?:-[a-z0-9]+)*\.md")
+
+FRONTMATTER = re.compile(r"---\n(?P<yaml>.*?)^---[ \t]*$\n?", re.DOTALL | re.MULTILINE)
+
+
+def replacement(path: Path) -> int | None:
+    """Read an integer superseded_by, leaving invalid frontmatter to okf_docs_test."""
+    try:
+        match = FRONTMATTER.match(path.read_text())
+        if match is None:
+            return None
+        data: object = yaml.safe_load(match["yaml"])
+    except OSError, ValueError, yaml.YAMLError:
+        return None
+    if isinstance(data, dict):
+        value: object = data.get("superseded_by")
+        if type(value) is int:
+            return value
+    return None
+
+
+def check_replacements(root: Path, records: list[tuple[Path, int]]) -> list[str]:
+    """Check references against the numbers of files with valid record names."""
+    errors: list[str] = []
+    existing = {number for _, number in records}
+    for path, number in records:
+        target = replacement(path)
+        rel = path.relative_to(root).as_posix()
+        if target == number:
+            errors.append(f"{rel}: superseded_by names itself")
+        elif target is not None and target not in existing:
+            errors.append(f"{rel}: superseded_by {target} names no record")
+    return errors
 
 
 def check(root: Path, directory: str = DIRECTORY) -> list[str]:
@@ -29,6 +65,7 @@ def check(root: Path, directory: str = DIRECTORY) -> list[str]:
         return [f"{directory}: not a directory"]
     errors: list[str] = []
     numbers: dict[str, str] = {}
+    records: list[tuple[Path, int]] = []
     for path in sorted(folder.iterdir()):
         rel = path.relative_to(root).as_posix()
         if not path.is_file() or path.suffix != ".md":
@@ -41,16 +78,19 @@ def check(root: Path, directory: str = DIRECTORY) -> list[str]:
             errors.append(f"{rel}: expected NNNN-<slug>.md")
             continue
         number = match["number"]
+        records.append((path, int(number)))
         if number in numbers:
             errors.append(f"{rel}: duplicate number {number} with {numbers[number]}")
         else:
             numbers[number] = rel
-    return errors
+    return errors + check_replacements(root, records)
 
 
 def main(argv: list[str] | None = None) -> int:
     """Check ROOT and report every error."""
-    parser = argparse.ArgumentParser(description="Check decision record filenames.")
+    parser = argparse.ArgumentParser(
+        description="Check decision record filenames and replacements."
+    )
     parser.add_argument("--directory", default=DIRECTORY, help=DIRECTORY_HELP)
     parser.add_argument("root", nargs="?", type=Path, default=Path())
     args = parser.parse_args(argv)
@@ -59,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
         print(error)
     if errors:
         return 1
-    print("OK: decision record filenames and numbers conform")
+    print("OK: decision record filenames, numbers, and replacements conform")
     return 0
 
 

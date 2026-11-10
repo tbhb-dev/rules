@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""`decision_records_test`: decision record filenames and unique numbers."""
+"""`decision_records_test`: decision record filenames, numbers, and replacements."""
 
 load("//runtime:defs.bzl", "python_tool")
 load(":tree_check.bzl", "tree_check_test")
@@ -10,15 +10,16 @@ load(":tree_check.bzl", "tree_check_test")
 visibility("//lint/...")
 
 def decision_records_test(name, srcs, directory = "docs/decisions", **kwargs):
-    """Checks decision record filenames and unique four-digit numbers.
+    """Checks decision record filenames, unique numbers, and replacements.
 
     Checks the immediate children of `directory`, when present. Every child
     must be a Markdown file. Apart from index.md, AGENTS.md and CLAUDE.md,
     filenames must be NNNN-<slug>.md with a lowercase kebab-case slug and a
-    unique number. File contents are never read.
+    unique number. A frontmatter superseded_by must name another record in
+    the same directory. Unreadable frontmatter is left to okf_docs_test.
 
     The files are exactly `srcs`, copied, never `git ls-files`. The checker
-    runs on tbhb_rules' own pinned Python.
+    runs on tbhb_rules' own pinned Python (PyYAML).
 
     Args:
         name: Target name.
