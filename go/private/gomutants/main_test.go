@@ -5,6 +5,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -175,11 +176,12 @@ func TestMakeSlice(t *testing.T) {
 func TestMakeSliceRejects(t *testing.T) {
 	dir, entries := unit(t)
 	for name, changes := range map[string]string{
-		"another version":   `{"version":2,"files":{}}`,
-		"no files":          `{"version":1}`,
-		"not JSON":          `{`,
-		"another file":      `{"version":1,"files":{"mod/r/r.go":[[1,1]]}}`,
-		"an unknown change": `{"version":1,"files":{"mod/p/p.go":"renamed"}}`,
+		"another version":     `{"version":2,"files":{}}`,
+		"no files":            `{"version":1}`,
+		"not JSON":            `{`,
+		"another file":        `{"version":1,"files":{"mod/r/r.go":[[1,1]]}}`,
+		"an unknown change":   `{"version":1,"files":{"mod/p/p.go":"renamed"}}`,
+		"a non-string change": `{"version":1,"files":{"mod/p/p.go":42}}`,
 	} {
 		if _, err := makeSlice(write(t, dir, "c.json", changes), entries, "mod/"); err == nil {
 			t.Errorf("%s: no error", name)
@@ -474,6 +476,33 @@ func TestFakeGitRejectsOtherCommands(t *testing.T) {
 	}
 }
 
+func TestSpanJSON(t *testing.T) {
+	data, err := json.Marshal(span{2, 3})
+	if err != nil || string(data) != "[2,3]" {
+		t.Fatalf("span = %s, %v", data, err)
+	}
+}
+
+func TestMakeSliceErrors(t *testing.T) {
+	dir, entries := unit(t)
+	missing := filepath.Join(dir, "missing")
+	got, err := makeSlice(missing, entries, "mod/")
+	if !errors.Is(err, os.ErrNotExist) || !reflect.DeepEqual(got, slice{}) {
+		t.Fatalf("missing changes: %+v, %v", got, err)
+	}
+	name := write(t, dir, "changes.json", "{")
+	got, err = makeSlice(name, entries, "mod/")
+	var syntax *json.SyntaxError
+	if !errors.As(err, &syntax) || !strings.HasPrefix(err.Error(), name+": ") || !reflect.DeepEqual(got, slice{}) {
+		t.Fatalf("invalid changes: %+v, %v", got, err)
+	}
+	entries[0].Src = missing
+	got, err = makeSlice(write(t, dir, "changes.json", `{"version":1,"files":{"mod/p/p.go":[[7,7]]}}`), entries, "mod/")
+	if !errors.Is(err, os.ErrNotExist) || !reflect.DeepEqual(got, slice{}) {
+		t.Fatalf("missing source: %+v, %v", got, err)
+	}
+}
+
 func TestFuncSpans(t *testing.T) {
 	name := write(t, t.TempDir(), "p.go", pkgSource)
 	for _, tc := range []struct {
@@ -498,6 +527,33 @@ func TestFuncSpans(t *testing.T) {
 	}
 }
 
+func TestFuncSpansErrors(t *testing.T) {
+	dir := t.TempDir()
+	for _, name := range []string{filepath.Join(dir, "missing.go"), write(t, dir, "bad.go", "package p\nfunc (")} {
+		got, ok, err := funcSpans(name, []span{{1, 1}})
+		if err == nil || ok || got != nil {
+			t.Errorf("%s: spans = %v, %v, %v", name, got, ok, err)
+		}
+	}
+}
+
+func TestParseDryRunDiagnostics(t *testing.T) {
+	for _, tc := range []struct{ out, want string }{
+		{"", "listed 0 mutants, announced -1"},
+		{"Discovering mutants... 2 found\n[PENDING] p.go:2:3  {\n[PENDING] q.go:4:5  x → y (X)\n", "record for p.go:2:3 never ends"},
+		{"Discovering mutants... 0 found\n[PENDING] p.go:2:3  {\n", "record for p.go:2:3 never ends"},
+	} {
+		keys, err := parseDryRun(tc.out)
+		if err == nil || err.Error() != tc.want || keys != nil {
+			t.Errorf("parse = %v, %v; want %s", keys, err, tc.want)
+		}
+	}
+	keys, err := parseDryRun("banner (X)\nDiscovering mutants... 0 found\n")
+	if err != nil || len(keys) != 0 {
+		t.Fatalf("empty listing = %v, %v", keys, err)
+	}
+}
+
 func TestParseDryRunLineLimit(t *testing.T) {
 	// Scanner's limit includes the newline. Keep this independent of the
 	// production constant so both sides of the exact limit are pinned.
@@ -510,6 +566,41 @@ func TestParseDryRunLineLimit(t *testing.T) {
 			}
 		} else if !errors.Is(err, bufio.ErrTooLong) || keys != nil {
 			t.Errorf("line of %d bytes: %v, %v", size, keys, err)
+		}
+	}
+}
+
+func TestReadMalformed(t *testing.T) {
+	var r result
+	var syntax *json.SyntaxError
+	if err := r.read([]byte("{"), "mod/"); !errors.As(err, &syntax) || !reflect.DeepEqual(r, result{}) {
+		t.Fatalf("malformed report: %+v, %v", r, err)
+	}
+}
+
+func TestFormat(t *testing.T) {
+	r := result{scope: "diff", total: 45, killed: 1, lived: 2, notCovered: 3, timeout: 4, errored: 5, skipped: 6, interrupted: 7, selected: 8, changedUnits: 9, mutants: []string{"z", "a", "z"}}
+	want := "total=45\nkilled=1\nlived=2\nnot_covered=3\ntimeout=4\nerrored=5\nskipped=6\ninterrupted=7\nscope=diff\nselected=8\nchanged_units=9\na\nz\nz\n"
+	if got := r.format(); got != want {
+		t.Errorf("format = %q, want %q", got, want)
+	}
+	if !reflect.DeepEqual(r.mutants, []string{"z", "a", "z"}) {
+		t.Errorf("format changed the input: %v", r.mutants)
+	}
+}
+
+func TestCrossCheckBoundaries(t *testing.T) {
+	for _, tc := range []struct{ line, selected int }{{4, 0}, {5, 1}, {8, 1}, {9, 0}, {12, 1}, {14, 1}, {15, 0}} {
+		r := result{scope: "diff"}
+		k := mutantKey{"p.go", tc.line, 3, "X"}
+		s := slice{Files: map[string][]span{"p.go": {{5, 8}, {12, 14}}}}
+		r.crossCheck([]mutantKey{k}, s, []byte(`{}`), "mod/")
+		var want []string
+		if tc.selected != 0 {
+			want = []string{fmt.Sprintf("mutant.unmapped=mod/p.go:%d:3 X (selected, not reported)", tc.line)}
+		}
+		if r.selected != tc.selected || !reflect.DeepEqual(r.mutants, want) {
+			t.Errorf("line %d: selected %d, mutants %v; want %d, %v", tc.line, r.selected, r.mutants, tc.selected, want)
 		}
 	}
 }
