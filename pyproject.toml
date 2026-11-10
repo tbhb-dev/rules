@@ -54,7 +54,7 @@ package = false
 required-version = "==0.13.7"
 
 [tool.complexipy]
-paths = ["lint/private/okf_docs", "runtime/private"]
+paths = ["lint/private/decision_records", "lint/private/okf_docs", "runtime/private"]
 # Sonar's default cognitive complexity ceiling, pinned so an upstream
 # default change cannot move the gate without a visible diff here.
 max-complexity-allowed = 15
@@ -90,7 +90,7 @@ ignore-imports = true
 ignore-docstrings = true
 
 [tool.pyrefly]
-project-includes = ["lint/private/okf_docs", "runtime/private", "tools"]
+project-includes = ["lint/private/decision_records", "lint/private/okf_docs", "runtime/private", "tools"]
 # The strict preset is pyrefly's hardest baseline: it demands parameter
 # annotations and refuses implicit Any. The errors table below names each
 # diagnostic kind at error severity on top of it, so the gate holds even if
@@ -281,16 +281,16 @@ addopts = [
   "--strict-config",
   "--import-mode=importlib",
 ]
-testpaths = ["lint/private/okf_docs", "runtime/private"]
+testpaths = ["lint/private/decision_records", "lint/private/okf_docs", "runtime/private"]
 
 [tool.mutmut]
 # Mutate this repository's Python; every mutant must be killed.
-source_paths = ["lint/private/okf_docs", "runtime/private"]
+source_paths = ["lint/private/decision_records", "lint/private/okf_docs", "runtime/private"]
 # Tests are copied and run, never mutated.
-do_not_mutate = ["lint/private/okf_docs/test_*.py", "runtime/private/test_*.py", "runtime/private/boot/*"]
+do_not_mutate = ["lint/private/decision_records/test_*.py", "lint/private/okf_docs/test_*.py", "runtime/private/test_*.py", "runtime/private/boot/*"]
 # The docs checker's tests read the real schemas.
 also_copy = ["docs/schemas"]
-pytest_add_cli_args_test_selection = ["lint/private/okf_docs", "runtime/private"]
+pytest_add_cli_args_test_selection = ["lint/private/decision_records", "lint/private/okf_docs", "runtime/private"]
 
 [tool.ruff]
 line-length = 88
@@ -349,6 +349,7 @@ max-complexity = 15
 "tools/**/*.py" = ["T201", "S603", "S607", "INP001"]
 "runtime/private/**/*.py" = ["T201", "S603", "S607", "INP001"]
 "lint/private/okf_docs/*.py" = ["T201", "INP001"]
+"lint/private/decision_records/*.py" = ["T201", "INP001"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -359,6 +360,6 @@ convention = "google"
 # vulture_allowlist.py (and name it in `paths`) the first time something
 # hides its caller from vulture's static view, with a comment per entry
 # explaining where the real caller lives.
-paths = ["lint/private/okf_docs", "runtime/private"]
+paths = ["lint/private/decision_records", "lint/private/okf_docs", "runtime/private"]
 # pytest calls fixtures by name, which vulture cannot see.
 ignore_decorators = ["@pytest.fixture"]

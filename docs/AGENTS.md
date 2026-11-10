@@ -24,4 +24,6 @@ Never write `verified`. Only a human adds it, after reading the doc.
 
 ## Checks
 
+Decision records go in docs/decisions/ as NNNN-<slug>.md, and `bazelisk test //:decision_records_test` checks the names.
+
 Run `bazelisk test //:okf_docs_test` after each change. It validates the frontmatter of the bundle and of the other Markdown files. It also checks the index entries and that an index lists each doc. Run `bazelisk test //:rumdl_test` for structure and relative links.

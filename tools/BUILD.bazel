@@ -57,7 +57,7 @@ vale_sync(
 )
 
 # The Python gates for this repository's own Python: tools/, the shared
-# runtime (runtime/private) and the docs checker (lint/private/okf_docs).
+# runtime (runtime/private) and the docs checkers under lint/private/.
 # Each runs over a copy of the tree with pyproject.toml as its
 # configuration, from the environment the root uv.lock pins.
 PYTHON_SRCS = ["//:repo_files"]
@@ -180,10 +180,12 @@ pytest_test(
     name = "pytest_test",
     srcs = PYTHON_SRCS,
     args = [
+        "lint/private/decision_records",
         "lint/private/okf_docs",
         "runtime/private",
     ],
     coverage = [
+        "lint/private/decision_records",
         "lint/private/okf_docs",
         "runtime/private",
     ],

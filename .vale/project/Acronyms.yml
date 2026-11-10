@@ -54,6 +54,8 @@ exceptions:
   - LTS
   - MAL
   - NET
+  # Four-digit filename placeholder, not an abbreviation.
+  - NNNN
   - NOTE
   - NVDA
   - OKF
