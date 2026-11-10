@@ -54,3 +54,10 @@ bzl_library(
         "//lint/private:vale",
     ],
 )
+
+# Resolve the binary through this module's tool repository mapping.
+alias(
+    name = "zizmor",
+    actual = "@tbhb_rules_zizmor//:zizmor",
+    visibility = ["//visibility:public"],
+)

@@ -7,6 +7,10 @@
 # this repository is only reachable by a local path after checkout, and
 # Bazel needs the sources anyway.
 name: Set up Bazel for CI
+outputs:
+  fetch-seconds:
+    description: Seconds spent selecting and fetching the targets.
+    value: ${{ steps.fetch.outputs.seconds }}
 description: >-
   Harden the runner, set up Bazel with its caches, make Windows and Linux
   arm64 runners build, and fetch the dependencies with retries.
@@ -20,17 +24,23 @@ inputs:
     default: "false"
   cache-save:
     description: >-
-      Whether this run may save the Bazel caches: "true" or "false". Pull
-      requests should not, so pass true only for events other than
-      pull_request (see the README).
+      Whether this run may save the Bazel caches. Only the main-branch
+      cache-warm job passes true (see the README).
     required: false
     default: "false"
   targets:
     description: >-
       The Bazel targets to fetch, retrying transient failures, split on
-      whitespace. Empty skips the fetch.
+      whitespace. The default reads fetch-targets.txt beside this action;
+      it includes the tools each workspace declares. Empty skips the fetch.
     required: false
-    default: //...
+    default: "@default"
+  fetch-workspaces:
+    description: >-
+      Additional workspace directories to fetch with the default list, split
+      on whitespace, relative to working-directory.
+    required: false
+    default: ""
   working-directory:
     description: The directory of the Bazel workspace the fetch runs in.
     required: false
@@ -81,7 +91,11 @@ runs:
         bazelisk-version: 1.30.0
         bazelisk-cache: true
         disk-cache: ${{ inputs.disk-cache }}
-        repository-cache: true
+        # cache_contract_test checks every copy of this hash list.
+        repository-cache: |
+          - MODULE.bazel
+          - MODULE.bazel.lock
+          - pins/*.bzl
         cache-save: ${{ inputs.cache-save }}
 
     - name: Wait before retrying the Bazel setup
@@ -100,7 +114,11 @@ runs:
         bazelisk-version: 1.30.0
         bazelisk-cache: true
         disk-cache: ${{ inputs.disk-cache }}
-        repository-cache: true
+        # cache_contract_test checks every copy of this hash list.
+        repository-cache: |
+          - MODULE.bazel
+          - MODULE.bazel.lock
+          - pins/*.bzl
         cache-save: ${{ inputs.cache-save }}
 
     - name: Wait before the last Bazel setup attempt
@@ -117,7 +135,11 @@ runs:
         bazelisk-version: 1.30.0
         bazelisk-cache: true
         disk-cache: ${{ inputs.disk-cache }}
-        repository-cache: true
+        # cache_contract_test checks every copy of this hash list.
+        repository-cache: |
+          - MODULE.bazel
+          - MODULE.bazel.lock
+          - pins/*.bzl
         cache-save: ${{ inputs.cache-save }}
 
     # setup-bazel installs the pinned bazelisk under the name `bazel`, so a
@@ -229,26 +251,27 @@ runs:
     # failure instead of the job's timeout cancelling it. Only the fetch is
     # retried: a test failure never is.
     - name: Fetch, retrying transient failures
+      id: fetch
       if: inputs.targets != ''
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
         BUDGET: ${{ inputs.retry-budget-minutes }}
         TARGETS: ${{ inputs.targets }}
+        WORKSPACES: . ${{ inputs.fetch-workspaces }}
+      run: bash "${GITHUB_ACTION_PATH}/fetch.sh"
+
+    # setup-bazel's post-if is !cancelled(), even after a failed fetch. Remove
+    # the incomplete repository cache so its post step cannot archive it.
+    - name: Discard an incomplete warm cache
+      if: failure() && inputs.cache-save == 'true'
+      shell: bash
       run: |
-        read -ra targets <<<"${TARGETS}"
-        now=$(date +%s)
-        deadline=$((now + BUDGET * 60))
-        out="$(mktemp)"
-        delay=30
-        set -o pipefail
-        until bazelisk fetch --config=ci "${targets[@]}" 2>&1 | tee "${out}"; do
-          now=$(date +%s)
-          if ((now + delay > deadline)); then
-            url="$(grep -oE 'https?://[^][:space:]"]+' "${out}" | tail -1 || true)"
-            echo "::error::gave up after ${BUDGET} min: ${url:-no URL in the output} kept failing"
-            exit 1
-          fi
-          sleep "${delay}"
-          delay=$((delay * 2))
-        done
+        cache="$HOME/.cache/bazel-repo"
+        if [[ $RUNNER_OS == Windows ]]; then
+          case "$GITHUB_WORKSPACE" in
+            [Dd]:*) cache=D:/_bazel-repo ;;
+            *) cache=C:/_bazel-repo ;;
+          esac
+        fi
+        rm -rf -- "$cache"

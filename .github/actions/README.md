@@ -19,17 +19,24 @@ Run it after `checkout`. It runs these steps in order:
 4. On Linux under a container CPU quota, size the workers to it. The step exports the quota (rounded up, from `cpu.max` or cgroup v1) as `PYTEST_XDIST_AUTO_NUM_WORKERS`, for `-n auto` in a `pytest_test`, and adds `build --local_resources=cpu=N` to `~/.bazelrc`, because Bazel counts the host's CPUs. `mutmut_test` reads the quota itself. Without a quota the step does nothing.
 5. On Linux arm64, download a pinned Rust toolchain and zig, check both against pinned hashes, and put them on `PATH` for the source build of complexipy, with `cc`, `c++` and `ar` running zig. A runner image without Rust or a C compiler works too.
 6. Shorten Bazel's output root and enable long paths, on Windows only.
-7. Fetch the targets, retrying with pauses that start at 30 seconds and double. When the next pause would pass `retry-budget-minutes`, the step fails and prints the last URL from the output.
+7. Read `fetch-targets.txt` beside the action and fetch `//...`, the Bazel subcommand tools (including `buildozer` for `bazel mod tidy`), and each run-only target that the workspace declares. The list covers `gitleaks`, `zizmor`, `gazelle`, `pip-audit`, `pnpm audit`, `govulncheck`, and the tools that scan the title and body of a pull request. `@tbhb_rules//lint:zizmor` resolves `@tbhb_rules_zizmor//:zizmor` through the rules module's repository mapping, including from nested workspaces. Retry with pauses that start at 30 seconds and double. When the next pause would pass `retry-budget-minutes`, the step fails and prints the last URL from the output.
 
 | Input               | Default  | Meaning                                                                                                 |
 |---------------------|----------|---------------------------------------------------------------------------------------------------------|
 | `disk-cache`        | `false`  | The disk cache key, unique per job, such as `${{ github.workflow }}-${{ matrix.os }}`. `false` is none. |
-| `cache-save`        | `false`  | Whether the run saves the caches. Pass `${{ github.event_name != 'pull_request' }}`.                     |
-| `targets`           | `//...`  | The targets to fetch, split on whitespace. Empty skips the fetch.                                        |
+| `cache-save`        | `false`  | Whether the run saves the caches. Only `cache-warm` passes `true`.                     |
+| `targets`           | `@default` | Read `fetch-targets.txt` beside the action. Other values name targets, split on whitespace. Empty skips the fetch.                                        |
+| `fetch-workspaces` | empty | Other workspace directories to fetch with the default list, relative to `working-directory`, split on whitespace. |
 | `working-directory` | `.`      | The Bazel workspace the fetch runs in.                                                                   |
 | `retry-budget-minutes` | `8`   | Whole minutes the fetch may spend retrying, counted from the start of the fetch step. The setup attempts, with their 3 minutes of pauses, are outside it. |
 
-Because `checkout` runs first, the hardening starts after it, and the checkout itself goes unobserved.
+The `fetch-seconds` output counts target selection and fetch time. `//repo/tests:cache_fetch_test` checks workspace selection and failure handling. `//repo/tests:cache_contract_test` checks the run-only tool list, every hash list, the cache writer, and the setup action pin against the lookup key format.
+
+The root `MODULE.bazel`, `MODULE.bazel.lock`, and `pins/*.bzl` determine the repository cache key for every job, including jobs that fetch from nested workspaces. `hashFiles` accepts a `pins/*.bzl` glob when a consumer lacks that directory. The setup attempts use this file list. Disk caches also use these inputs, plus the build files that `setup-bazel` adds.
+
+Only the `cache-warm` job saves caches. It runs on pushes to `main`, across the four test platforms. The exact lookup skips setup and fetch when an archive exists. On a miss, `setup-bazel` restores the newest archive in the shared platform and architecture family before the script fetches the full list. Successful runs save the new key. If the fetch fails, the action discards the incomplete repository cache before the setup action's post step. The job summary reports fetch seconds and repository cache size. Linux and macOS use `~/.cache/bazel-repo`. Windows uses `<output base>-repo`. The lookup uses the same absolute path, because the cache toolkit includes it in the archive version.
+
+Because `checkout` runs first, the hardening starts after it.
 
 ## `ci-conclusion`
 
@@ -78,7 +85,7 @@ The calling job must grant `contents: read`, because a called workflow's token c
 
 This workflow sets up Bazel inline and doesn't call `setup-bazel-ci`. A `./` path in a called workflow resolves in the caller's checkout. That checkout lacks the action.
 
-It saves the Bazel repository and bazelisk caches when the caller's event isn't `pull_request`, so the pinned helper binary download from GitHub releases happens once. It sets `cache-version: repo-checks-1`, so its cache names can't collide with a consumer's own jobs, where the first run to save a name keeps it.
+Both reusable workflows set `cache-save: false` and use the same key family as `cache-warm`. After setup, `bazel query --output=location` locates `fetch-targets.txt` in the `tbhb_rules` module that the caller pins in `MODULE.bazel`. The script beside that file fetches the declared run-only tools. The source archive includes both files under `.github/actions/`. The caller's checkout needs only its own sources. Keep the workflow, action, and Bazel module pins on the same rules revision when Renovate updates them.
 
 ## `pr-text.yml`
 
@@ -98,11 +105,26 @@ jobs:
       GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
 ```
 
-It takes one input, `runs-on`, with the default `ubuntu-26.04`.
+It takes one input, `runs-on`, with the default `ubuntu-26.04`. It reads the same fetch list from the pinned Bazel module and restores caches without saving them.
 
 ## In a consumer's `ci.yml`
 
-Pin `tbhb-dev/rules` by commit and put the branch in a trailing comment, as the other first-party callers do. The `bazel` job stands for the consumer's test jobs. Copy it, change it, or replace it.
+Adopt the rules pin update from Renovate, then edit the consumer's `ci.yml`: set `cache-save: false` on every test job and add one `cache-warm` job for pushes to `main`. Copy the `cache-warm` job from [this repository's `ci.yml`](../workflows/ci.yml), replace its local action reference with the same pinned remote reference as the test job, and set `fetch-workspaces` to the consumer's other workspace directories. Keep the four OS entries from the test matrix. The warm job hashes the root workspace files even when it fetches tools from another workspace. Keep `cache-warm` outside the required `conclusion` dependencies, because pull requests skip it.
+
+Pin `tbhb-dev/rules` by commit and put the branch in a trailing comment. Renovate updates those action and workflow references along with the Bazel module pin. A rules pin update alone leaves an existing consumer's test jobs as cache writers until the `ci.yml` edit merges. The consumer changes the copied warm job's setup step to:
+
+```yaml
+- name: Warm the complete repository cache
+  id: warm
+  if: steps.cache.outputs.cache-hit != 'true'
+  uses: tbhb-dev/rules/.github/actions/setup-bazel-ci@<sha>  # main
+  with:
+    cache-save: true
+    # Omit this input for a single workspace.
+    fetch-workspaces: additional-workspace
+```
+
+The rest of the consumer's `ci.yml` uses these jobs:
 
 ```yaml
 jobs:
@@ -127,7 +149,7 @@ jobs:
         uses: tbhb-dev/rules/.github/actions/setup-bazel-ci@<sha>  # main
         with:
           disk-cache: ${{ github.workflow }}-${{ matrix.os }}
-          cache-save: ${{ github.event_name != 'pull_request' }}
+          cache-save: false
 
       - name: Test
         # Only for a repository that sets the private gitleaks config; see
