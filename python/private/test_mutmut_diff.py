@@ -353,7 +353,7 @@ def runs(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> list[list[str]]:
 
 def test_run_diff(runs: list[list[str]], capsys: pytest.CaptureFixture[str]) -> None:
     selection = mr.Selection(globs=["pkg.other.x_f__mutmut_*"])
-    text = mr.run_diff(Path("log"), selection)
+    text = mr.run_diff(Path("log"), selection, 0)
     assert runs == [["run", "pkg.other.x_f__mutmut_*"], ["results", "--all", "true"]]
     assert "mutant.survived=pkg.other.x_f__mutmut_1" in text.splitlines()
     assert capsys.readouterr().err == (
@@ -369,7 +369,7 @@ def test_run_diff_caps_the_workers_at_the_cpu_quota(
 ) -> None:
     (tmp_path / "cpu.max").write_text("200000 100000\n")
     monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
-    mr.run_diff(Path("log"), mr.Selection(globs=["pkg.other.x_f__mutmut_*"]))
+    mr.run_diff(Path("log"), mr.Selection(globs=["pkg.other.x_f__mutmut_*"]), 0)
     assert runs[0] == ["run", "--max-children", "2", "pkg.other.x_f__mutmut_*"]
     assert capsys.readouterr().err == (
         "mutmut_report: --max-children 2 (cgroup CPU quota)\n"
@@ -382,7 +382,7 @@ def test_run_diff_caps_the_workers_at_the_cpu_quota(
 def test_run_diff_with_nothing_selected(
     runs: list[list[str]], capsys: pytest.CaptureFixture[str]
 ) -> None:
-    text = mr.run_diff(Path("log"), mr.Selection())
+    text = mr.run_diff(Path("log"), mr.Selection(), 0)
     assert text == mr.diff_report({}, mr.Selection())
     assert text.splitlines()[:2] == ["total=0", "killed=0"]
     assert "selected=0" in text.splitlines()
@@ -396,7 +396,7 @@ def test_main_runs_a_diff(
     monkeypatch.chdir(unit)
     (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["src"]\n')
     changes = changes_file(unit, {"cli/src/pkg/other.py": [[2, 2]]})
-    assert mr.main(["report", "log", str(changes), "cli"]) == 0
+    assert mr.main(["report", "log", "0", str(changes), "cli"]) == 0
     lines = Path("report").read_text().splitlines()
     assert "scope=diff" in lines
     assert "mutant.survived=pkg.other.x_f__mutmut_1" in lines
@@ -412,7 +412,7 @@ def test_main_runs_nothing_for_an_empty_slice(
     unit: Path, runs: list[list[str]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.chdir(unit)
-    assert mr.main(["report", "log", str(changes_file(unit, {})), "cli"]) == 0
+    assert mr.main(["report", "log", "0", str(changes_file(unit, {})), "cli"]) == 0
     assert "changed_units=0" in Path("report").read_text().splitlines()
     assert runs == []
     assert Path("log").read_text() == "mutmut_report: diff\n"
@@ -424,7 +424,7 @@ def test_main_runs_full_when_the_slice_cannot_be_scoped(
     monkeypatch.chdir(unit)
     (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["src"]\n')
     changes = changes_file(unit, {"core/lib.py": [[1, 1]]})
-    assert mr.main(["report", "log", str(changes), "cli"]) == 1
+    assert mr.main(["report", "log", "0", str(changes), "cli"]) == 1
     assert "scope=full" in Path("report").read_text().splitlines()
     assert (
         Path("log")
@@ -443,21 +443,41 @@ def test_main_rejects_a_bad_change_set(
     monkeypatch.chdir(unit)
     bad = unit / "bad.json"
     bad.write_text("[]")
-    assert mr.main(["report", "log", str(bad), "cli"]) == 2
+    assert mr.main(["report", "log", "0", str(bad), "cli"]) == 2
     assert capsys.readouterr().err == (
         f"mutmut_report: {bad}: not a version 1 change set\n"
     )
     assert runs == []
 
 
+@pytest.mark.parametrize("children", [0, 7])
 def test_main_uses_overridden_paths_for_diff_selection(
     unit: Path,
     runs: list[list[str]],
     monkeypatch: pytest.MonkeyPatch,
+    children: int,
 ) -> None:
     (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["wrong"]\n')
     monkeypatch.chdir(unit)
     changes = changes_file(unit, {"cli/src/pkg/other.py": [[2, 2]]})
-    assert mr.main(["report", "log", str(changes), "cli", "src"]) == 0
-    assert runs[0] == ["run", "pkg.other.x_f__mutmut_*"]
+    assert mr.main(["report", "log", str(children), str(changes), "cli", "src"]) == 0
+    cap = ["--max-children", str(children)] if children else []
+    assert runs[0] == ["run", *cap, "pkg.other.x_f__mutmut_*"]
     assert "scope=diff" in Path("report").read_text().splitlines()
+
+
+def test_main_overrides_the_worker_cap_in_a_diff(
+    unit: Path,
+    runs: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(unit)
+    monkeypatch.setattr(mr, "max_children", None)
+    (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["src"]\n')
+    changes = changes_file(unit, {"cli/src/pkg/other.py": [[2, 2]]})
+    assert mr.main(["report", "log", "7", str(changes), "cli"]) == 0
+    assert runs[0] == ["run", "--max-children", "7", "pkg.other.x_f__mutmut_*"]
+    message = "mutmut_report: --max-children 7 (set by --mutmut_max_children)\n"
+    assert capsys.readouterr().err == message
+    assert Path("log").read_text() == "mutmut_report: diff\n" + message

@@ -62,6 +62,7 @@ bzl_library(
     visibility = ["//:__subpackages__"],
     deps = [
         ":tool",
+        "@bazel_skylib//rules:common_settings",
         "@tbhb_rules//quality:defs",
     ],
 )

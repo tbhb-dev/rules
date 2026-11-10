@@ -3,6 +3,7 @@
 
 """Mutation testing with mutmut: a cached report action and its gate."""
 
+load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load(
     "@tbhb_rules//quality:defs.bzl",
     "MUTATION_CHANGES_ATTRS",
@@ -55,7 +56,7 @@ def _mutmut_report_impl(ctx):
     )
     ctx.actions.run(
         executable = script,
-        arguments = ctx.attr.source_paths,
+        arguments = [str(ctx.attr._max_children[BuildSettingInfo].value)] + ctx.attr.source_paths,
         inputs = depset([manifest] + ([changes] if changes else []), transitive = [depset(files)]),
         outputs = [report, log],
         tools = [launcher],
@@ -90,6 +91,7 @@ in `<name>.report` (MutationReportInfo) and mutmut's output in
         ),
         "source_paths": attr.string_list(doc = "Paths relative to chdir overriding the scratch copy's mutmut source_paths; empty keeps the config."),
         "srcs": attr.label_list(allow_files = True, mandatory = True, doc = "Files to copy: python_library units (their deps' files come along) plus config, or a `repo_files` target."),
+        "_max_children": attr.label(default = Label("//:mutmut_max_children")),
         "_template": attr.label(default = ":mutmut.sh.tpl", allow_single_file = True),
     },
 )
@@ -123,8 +125,11 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
 
     Under a cgroup CPU quota below the host's CPU count, the driver runs
     mutmut with `--max-children` set to the quota, read at run time, so the
-    quota never enters the action's cache key. The driver prints the cap it
-    used to stderr, which Bazel shows for a passing action, and to the log.
+    quota never enters the action's cache key. The build setting
+    `--@tbhb_rules_python//:mutmut_max_children=N` overrides this decision
+    when N > 0; its default, 0, keeps cgroup quota detection. The flag enters
+    the action's cache key. The driver prints the cap it used to stderr,
+    which Bazel shows for a passing action, and to the log.
 
     mutmut does not run on Windows (it points Windows users to WSL), so the
     targets are incompatible there: `bazel test //...` skips them.

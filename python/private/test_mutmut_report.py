@@ -167,15 +167,17 @@ def test_max_children_prefers_cgroup_v2(
     assert mr.max_children() == ["--max-children", "1"]
 
 
+@pytest.mark.parametrize("children", [0, -1])
 def test_main_caps_the_workers_at_the_cpu_quota(
     fake_mutmut: list[list[str]],
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    children: int,
 ) -> None:
     (tmp_path / "cpu.max").write_text("300000 100000\n")
     monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "cpu.max")
-    assert mr.main(["report", "log"]) == 1
+    assert mr.main(["report", "log", str(children)]) == 1
     assert fake_mutmut[0] == ["run", "--max-children", "3"]
     assert Path("log").read_text() == (
         "mutmut_report: full: no change set\n"
@@ -277,7 +279,7 @@ def test_report_of_a_clean_run() -> None:
     )
 
 
-@pytest.mark.parametrize("argv", [[], ["one"], ["a", "b", "c"]])
+@pytest.mark.parametrize("argv", [[], ["one"], ["a", "b"], ["a", "b", "c", "d"]])
 def test_main_needs_a_report_and_a_log(
     argv: list[str],
     capsys: pytest.CaptureFixture[str],
@@ -287,8 +289,8 @@ def test_main_needs_a_report_and_a_log(
     monkeypatch.setattr(mr, "mutmut", None)
     assert mr.main(argv) == 2
     assert (
-        capsys.readouterr().err
-        == "usage: mutmut_report.py REPORT LOG [CHANGES PREFIX [SOURCE_PATH ...]]\n"
+        capsys.readouterr().err == "usage: mutmut_report.py REPORT LOG MAX_CHILDREN "
+        "[CHANGES PREFIX [SOURCE_PATH ...]]\n"
     )
 
 
@@ -322,7 +324,7 @@ def test_main_writes_the_report_from_the_stats(
     stats.write_text(json.dumps(ALL_KILLED | {"survived": 1, "total": 5}))
     Path("log").write_text("stale")
     Path("pyproject.toml").write_text("[tool.mutmut]\nsource_paths = []\n")
-    assert mr.main(["report", "log"]) == 0
+    assert mr.main(["report", "log", "0"]) == 0
     assert fake_mutmut == [["run"], ["export-cicd-stats"], ["results", "--all", "true"]]
     assert Path("pyproject.toml").read_text() == (
         "[tool.mutmut]\nuse_git_change_detection = false\nsource_paths = []\n"
@@ -361,7 +363,7 @@ def test_main_reports_an_interrupted_run_when_the_export_fails(
     read: list[Path] = []
     monkeypatch.setattr(mr, "load_stats", read.append)
     Path("log").write_text("")
-    assert mr.main(["report", "log"]) == 1
+    assert mr.main(["report", "log", "0"]) == 1
     assert "interrupted=1" in Path("report").read_text().splitlines()
     assert len(fake_mutmut) == 3
     assert read == []
@@ -430,7 +432,7 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
     stats.parent.mkdir()
     stats.write_text(json.dumps(ALL_KILLED | {"timeout": 1, "segfault": 2}))
     Path("pyproject.toml").write_text("")
-    assert mr.main(["report", "log"]) == 1
+    assert mr.main(["report", "log", "0"]) == 1
     assert len(fake_mutmut) == 3
     assert capsys.readouterr().err == (
         "mutmut_report: no --max-children (no cgroup CPU quota below the host's CPUs)\n"
@@ -541,10 +543,46 @@ def test_rewrite_source_paths_at_the_end_of_a_long_table(tmp_path: Path) -> None
     assert path.read_text() == before + 'source_paths = ["src"]' + after
 
 
+@pytest.mark.parametrize("children", [0, 7])
 def test_main_rewrites_paths_before_running(
     fake_mutmut: list[list[str]],
+    children: int,
 ) -> None:
     Path("pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["old"]\n')
-    assert mr.main(["report", "log", "", "unit", "src"]) == 1
+    assert mr.main(["report", "log", str(children), "", "unit", "src"]) == 1
     assert mr.mutmut_paths(Path("pyproject.toml")) == (["src"], [])
-    assert fake_mutmut[0] == ["run"]
+    cap = ["--max-children", str(children)] if children else []
+    assert fake_mutmut[0] == ["run", *cap]
+
+
+@pytest.mark.parametrize("children", [1, 2, 20])
+def test_main_overrides_the_worker_cap(
+    fake_mutmut: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    children: int,
+) -> None:
+    # An explicit cap must bypass quota detection, even above the host's CPUs.
+    monkeypatch.setattr(mr, "max_children", None)
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(json.dumps(ALL_KILLED))
+    assert mr.main(["report", "log", str(children)]) == 0
+    assert fake_mutmut[0] == ["run", "--max-children", str(children)]
+    message = (
+        f"mutmut_report: --max-children {children} (set by --mutmut_max_children)\n"
+    )
+    assert capsys.readouterr().err == message
+    assert Path("log").read_text() == "mutmut_report: full: no change set\n" + message
+
+
+def test_main_rejects_a_noninteger_worker_cap(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    assert mr.main(["report", "log", "two"]) == 2
+    assert capsys.readouterr().err == "mutmut_report: MAX_CHILDREN must be an integer\n"
+    assert not Path("report").exists()
+    assert not Path("log").exists()

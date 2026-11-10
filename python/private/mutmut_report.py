@@ -3,7 +3,7 @@
 
 """Run mutmut and write its outcome in tbhb_rules' mutation report format.
 
-Usage: mutmut_report.py REPORT LOG [CHANGES PREFIX [SOURCE_PATH ...]]
+Usage: mutmut_report.py REPORT LOG MAX_CHILDREN [CHANGES PREFIX [SOURCE_PATH ...]]
 
 Runs from the directory mutmut should run in (the one whose pyproject.toml
 holds `[tool.mutmut]`), inside the scratch copy the mutmut_report action
@@ -12,7 +12,11 @@ with total, killed, lived, not_covered, timeout, errored, skipped,
 interrupted and scope, plus a `mutant.<status>=<name>` line, in mutmut's
 own status names, for each mutant not killed. mutmut's output goes to LOG.
 
-Without CHANGES the run is full (`scope=full`). CHANGES is the unit's slice
+MAX_CHILDREN > 0 overrides the cgroup worker cap; 0 keeps quota detection.
+Omitted or empty CHANGES runs full (`scope=full`). SOURCE_PATH arguments
+replace the scratch config's source_paths before diff selection and mutmut;
+omitting them keeps the config. Supply empty CHANGES and a PREFIX to
+override source paths in a full run. CHANGES is the unit's slice
 of quality's change set, and PREFIX the run directory relative to the tree
 root. A slice that changes nothing in the unit runs nothing (`scope=diff`,
 no mutants). A change the selection cannot scope by function makes the run
@@ -480,29 +484,35 @@ def choose(changes: Path, prefix: str) -> Selection:
     return select(loaded, prefix, Path(), source_paths, do_not_mutate)
 
 
-def worker_cap(log: Path) -> list[str]:
+def worker_cap(log: Path, children: int) -> list[str]:
     """Return mutmut's worker cap, and say which cap runs.
 
     The line goes to the log and to stderr. Bazel shows a passing action's
     stderr, so the line shows on a pass.
     """
-    cap = max_children()
-    if cap:
-        text = f"mutmut_report: --max-children {cap[1]} (cgroup CPU quota)"
-    else:
+    if children > 0:
+        cap = ["--max-children", str(children)]
         text = (
-            "mutmut_report: no --max-children "
-            "(no cgroup CPU quota below the host's CPUs)"
+            f"mutmut_report: --max-children {children} (set by --mutmut_max_children)"
         )
+    else:
+        cap = max_children()
+        if cap:
+            text = f"mutmut_report: --max-children {cap[1]} (cgroup CPU quota)"
+        else:
+            text = (
+                "mutmut_report: no --max-children "
+                "(no cgroup CPU quota below the host's CPUs)"
+            )
     with log.open("a") as out:
         out.write(text + "\n")
     print(text, file=sys.stderr)
     return cap
 
 
-def run_full(log: Path) -> str:
+def run_full(log: Path, children: int) -> str:
     """Run every mutant and return the report."""
-    cap = worker_cap(log)
+    cap = worker_cap(log, children)
     mutmut(["run", *cap], log)
     stats = None
     if mutmut(["export-cicd-stats"], log).returncode == 0:
@@ -511,11 +521,11 @@ def run_full(log: Path) -> str:
     return report(stats, results)
 
 
-def run_diff(log: Path, selection: Selection) -> str:
+def run_diff(log: Path, selection: Selection, children: int) -> str:
     """Run the selected mutants and return the diff report."""
     if not selection.globs:
         return diff_report({}, selection)
-    cap = worker_cap(log)
+    cap = worker_cap(log, children)
     mutmut(["run", *cap, *selection.globs], log)
     results = mutmut(["results", "--all", "true"], log).stdout
     return diff_report(results_by_name(results), selection)
@@ -527,27 +537,37 @@ def main(argv: list[str]) -> int:
     Returns 2 on bad usage and 1 when the run timed out, errored or was
     interrupted, so that verdict is not cached.
     """
-    if len(argv) != 2 and len(argv) < 4:  # noqa: PLR2004 - positional arguments.
+    if len(argv) != 3 and len(argv) < 5:  # noqa: PLR2004 - positional arguments.
         print(
-            "usage: mutmut_report.py REPORT LOG [CHANGES PREFIX [SOURCE_PATH ...]]",
+            "usage: mutmut_report.py REPORT LOG MAX_CHILDREN "
+            "[CHANGES PREFIX [SOURCE_PATH ...]]",
             file=sys.stderr,
         )
         return 2
+    try:
+        children = int(argv[2])
+    except ValueError:
+        print("mutmut_report: MAX_CHILDREN must be an integer", file=sys.stderr)
+        return 2
     out, log = Path(argv[0]), Path(argv[1])
     log.write_text("")
-    rewrite_source_paths(Path(PYPROJECT), argv[4:])
+    rewrite_source_paths(Path(PYPROJECT), argv[5:])
     scratch_config(Path(PYPROJECT))
     selection = Selection(full=True, reason="no change set")
-    if len(argv) >= 4 and argv[2]:  # noqa: PLR2004 - optional change set.
+    if len(argv) >= 5 and argv[3]:  # noqa: PLR2004 - optional change set.
         try:
-            selection = choose(Path(argv[2]), argv[3])
+            selection = choose(Path(argv[3]), argv[4])
         except ChangesError as error:
             print(f"mutmut_report: {error}", file=sys.stderr)
             return 2
     mode = f"full: {selection.reason}" if selection.full else "diff"
     with log.open("a") as out_log:
         out_log.write(f"mutmut_report: {mode}\n")
-    text = run_full(log) if selection.full else run_diff(log, selection)
+    text = (
+        run_full(log, children)
+        if selection.full
+        else run_diff(log, selection, children)
+    )
     out.write_text(text)
     found = unstable(text)
     if found:
