@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load(":analysis_tests.bzl", "analysis_test_suite")
+
+repo_files()
+
+analysis_test_suite(name = "analysis_tests")
+
+bzl_library(
+    name = "analysis_tests_bzl",
+    srcs = ["analysis_tests.bzl"],
+    deps = [
+        "//:defs",
+        "@tbhb_rules//quality:defs",
+    ],
+)
