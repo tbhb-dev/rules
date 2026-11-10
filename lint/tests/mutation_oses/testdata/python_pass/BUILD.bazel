@@ -6,7 +6,11 @@ load("//repo:defs.bzl", "repo_files")
 
 mutmut_test(
     name = "mutation_test",
-    mutation_oses = ["linux", "macos", "windows"],
+    mutation_oses = [
+        "linux",
+        "macos",
+        "windows",
+    ],
 )
 
 filegroup(
