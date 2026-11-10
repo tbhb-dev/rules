@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -23,8 +24,10 @@ import (
 // otherwise.
 func TestMain(m *testing.M) {
 	// scratch drops GO* variables; restore gobco's statistics for the stand-ins.
+	// Each child needs its own file: gobco overwrites rather than merges counts.
+	// Measurement combines these files with the parent's statistics by location.
 	if stats := os.Getenv("FAKE_GOBCO_STATS"); stats != "" {
-		_ = os.Setenv("GOBCO_STATS", stats)
+		_ = os.Setenv("GOBCO_STATS", stats+".child."+strconv.Itoa(os.Getpid()))
 	}
 	if strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe") == "git" {
 		os.Exit(fakeGit(os.Args[1:]))
