@@ -355,6 +355,8 @@ async function build(outDir, manifest) {
     );
     const { code } = await exited;
     process.exitCode = code ?? 1;
+    // Vite's manifest/cache is build metadata, not part of the static site.
+    rmSync(join(outDir, ".vite"), { recursive: true, force: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
