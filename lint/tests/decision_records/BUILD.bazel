@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//lint:defs.bzl", "decision_records_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+PREFIX = "lint/tests/decision_records/testdata/tree"
+
+PLANTED = {
+    "bad_name": "testdata/tree/docs/decisions/bad.md",
+    "duplicate_number": "testdata/tree/docs/decisions/0000-other.md",
+    "stray_subdirectory": "testdata/tree/docs/decisions/nested/0001-child.md",
+}
+
+CLEAN = glob(
+    ["testdata/tree/**"],
+    exclude = PLANTED.values(),
+)
+
+decision_records_test(
+    name = "clean_test",
+    srcs = CLEAN,
+    strip_prefix = PREFIX,
+)
+
+decision_records_test(
+    name = "missing_directory_test",
+    srcs = ["testdata/tree/README.md"],
+    strip_prefix = PREFIX,
+)
+
+decision_records_test(
+    name = "custom_directory_test",
+    srcs = ["testdata/tree/records/0001-custom.md"],
+    directory = "records",
+    strip_prefix = PREFIX,
+)
+
+[
+    decision_records_test(
+        name = "proof_" + proof,
+        srcs = CLEAN + [planted],
+        strip_prefix = PREFIX,
+        tags = ["manual"],
+    )
+    for proof, planted in PLANTED.items()
+]
+
+PROOF_REASONS = {
+    "proof_bad_name": "docs/decisions/bad.md: expected NNNN-<slug>.md",
+    "proof_duplicate_number": "docs/decisions/0000-other.md: duplicate number 0000 with docs/decisions/0000-first.md",
+    "proof_stray_subdirectory": "docs/decisions/nested: expected a Markdown file",
+}
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, pattern in PROOF_REASONS.items()
+]
