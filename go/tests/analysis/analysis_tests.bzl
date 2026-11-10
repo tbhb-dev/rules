@@ -9,6 +9,7 @@ load("@rules_testing//lib:analysis_test.bzl", "analysis_test", "test_suite")
 load("@rules_testing//lib:truth.bzl", "matching")
 load("@rules_testing//lib:unit_test.bzl", "unit_test")
 load("@rules_testing//lib:util.bzl", "util")
+load("@tbhb_rules//quality:defs.bzl", "mutation_os_constraints")
 load("//:defs.bzl", "GolangciLintInfo", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test", "golangci_lint_aspect_factory", "gomutants_test")
 load("//private:golangci_lint.bzl", "main_repo_label")
 load("//private:gomutants.bzl", "default_flags")
@@ -203,6 +204,56 @@ def _test_gomutants_target_compatible_with(name):
 
     unit_test(name = name, impl = impl)
 
+def _test_gomutants_mutation_oses(name):
+    cases = []
+    for suffix, oses, caller in [
+        ("linux", ["linux"], []),
+        ("macos", ["macos"], []),
+        ("windows", ["windows"], []),
+        ("multiple", ["linux", "windows"], []),
+        ("empty", [], []),
+        ("combined", ["linux"], [Label("@platforms//cpu:arm64")]),
+        ("caller_select", ["macos"], select({"@platforms//cpu:arm64": [], "//conditions:default": [Label("@platforms//:incompatible")]})),
+    ]:
+        subject = name + "_" + suffix
+        util.helper_target(
+            gomutants_test,
+            name = subject,
+            tests = [FIXTURE + "/a:a_test", FIXTURE + "/b:b_test"],
+            go_mod = FIXTURE + ":go.mod",
+            mutation_oses = oses,
+            target_compatible_with = caller,
+        )
+        expected = caller + select(dict(
+            [(Label("@platforms//os:" + os), []) for os in oses] +
+            [("//conditions:default", [Label("@platforms//:incompatible")])],
+        ))
+        native.filegroup(name = subject + "_expected", target_compatible_with = expected)
+        expected_value = str(native.existing_rule(subject + "_expected")["target_compatible_with"])
+        for target in [subject, subject + ".tests_golangci_fixture_a", subject + ".tests_golangci_fixture_b"]:
+            cases.append((str(native.existing_rule(target)["target_compatible_with"]), expected_value))
+
+    def impl(env):
+        for actual, expected in cases:
+            env.expect.that_str(actual).equals(expected)
+
+    unit_test(name = name, impl = impl)
+
+def _invalid_oses_impl(_ctx):
+    mutation_os_constraints(["darwin"])
+    return []
+
+_invalid_oses = rule(implementation = _invalid_oses_impl)
+
+def _test_mutation_oses_bad_name(name):
+    util.helper_target(_invalid_oses, name = name + "_subject")
+    analysis_test(
+        name = name,
+        impl = _expect_failure("mutation_oses: unknown OS 'darwin'; expected linux, macos, windows"),
+        target = name + "_subject",
+        expect_failure = True,
+    )
+
 def analysis_test_suite(name):
     test_suite(
         name = name,
@@ -213,6 +264,8 @@ def analysis_test_suite(name):
             _test_follows_deps_and_embed,
             _test_gomutants_flags_by_exec_os,
             _test_gomutants_target_compatible_with,
+            _test_gomutants_mutation_oses,
+            _test_mutation_oses_bad_name,
             _test_library,
             _test_lint_src_reaching_nothing,
             _test_main_repo_label,

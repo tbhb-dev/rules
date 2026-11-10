@@ -10,6 +10,7 @@ load(
     "MutationReportInfo",
     "mutation_changes_slice",
     "mutation_gate_test",
+    "mutation_os_constraints",
 )
 load(":tool.bzl", "DEFAULT_ENV", "python_tool")
 
@@ -96,7 +97,7 @@ in `<name>.report` (MutationReportInfo) and mutmut's output in
     },
 )
 
-def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, changes = None, source_paths = [], **kwargs):
+def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, changes = None, source_paths = [], mutation_oses = None, **kwargs):
     """Mutation-tests the tree with mutmut and fails unless every mutant was killed.
 
     Creates `<name>.report` (the cached mutmut run) and `<name>`, a
@@ -154,6 +155,11 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
         cpus: CPUs to reserve for the mutmut action.
         changes: A change set file overriding quality's `changes` flag, for
             fixtures and proofs; it must have mutation_changes' layout.
+        mutation_oses: None preserves every OS the target already runs on.
+            Otherwise a list of linux, macos, windows: reports and gate run
+            only on a listed OS that also meets target_compatible_with.
+            Windows remains incompatible because mutmut requires fork.
+            An empty list skips all OSes; unknown names fail at load time.
         **kwargs: Passed to the gate test.
     """
     not_windows = select({
@@ -161,6 +167,8 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
         "//conditions:default": [],
     })
     compatible = kwargs.pop("target_compatible_with", []) + not_windows
+    if mutation_oses != None:
+        compatible = compatible + mutation_os_constraints(mutation_oses)
     python_tool(
         name = name + ".runner",
         main = Label(":mutmut_report.py"),

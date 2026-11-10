@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//lint/tests/mutation_oses:fixtures.bzl", "mutmut_test")
+load("//repo:defs.bzl", "repo_files")
+
+mutmut_test(
+    name = "mutation_test",
+    mutation_oses = [
+        "linux",
+        "macos",
+        "windows",
+    ],
+)
+
+filegroup(
+    name = "files",
+    srcs = glob(["*"]),
+    visibility = ["//lint/tests/mutation_oses:__pkg__"],
+)
+
+repo_files()

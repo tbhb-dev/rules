@@ -13,6 +13,7 @@ bzl_library(
     visibility = ["//visibility:public"],
     deps = [
         "//quality/private:mutation_gate",
+        "//quality/private:mutation_oses",
         "//quality/private:slice",
     ],
 )

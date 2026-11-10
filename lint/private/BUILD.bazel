@@ -142,3 +142,15 @@ bzl_library(
         "//runtime:defs",
     ],
 )
+
+exports_files(["mutation_oses/check_mutation_oses.py"])
+
+bzl_library(
+    name = "mutation_oses",
+    srcs = ["mutation_oses.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        ":tree_check",
+        "//runtime:defs",
+    ],
+)

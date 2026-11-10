@@ -9,6 +9,7 @@ load(
     "MutationReportInfo",
     "mutation_changes_slice",
     "mutation_gate_test",
+    "mutation_os_constraints",
 )
 load(":go_unit.bzl", "GO_TOOLCHAIN", "UNIT_ATTRS", "go_unit", "sdk_files", "tool_binary")
 
@@ -121,7 +122,7 @@ slice (the `changes` output group).""",
     toolchains = [GO_TOOLCHAIN],
 )
 
-def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], flags = [], cpus = 0, changes = None, require_scope = "any", **kwargs):
+def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], flags = [], cpus = 0, changes = None, require_scope = "any", mutation_oses = None, **kwargs):
     """Mutation-tests Go packages with gomutants and fails unless every mutant was killed.
 
     Creates one gomutants_report per package that a test in `tests` is in,
@@ -150,9 +151,15 @@ def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], 
         changes: The change set; quality's `changes` flag when None.
         require_scope: `full` makes the gate fail on any diff-scope report,
             for main and nightly runs.
+        mutation_oses: None preserves every OS the target already runs on.
+            Otherwise a list of linux, macos, windows: reports and gate run
+            only on a listed OS that also meets target_compatible_with.
+            An empty list skips all OSes; unknown names fail at load time.
         **kwargs: Passed to the gate test; target_compatible_with is applied
             to the reports and the gate.
     """
+    if mutation_oses != None:
+        kwargs["target_compatible_with"] = kwargs.get("target_compatible_with", []) + mutation_os_constraints(mutation_oses)
     by_package = {}
     for test in tests:
         package = native.package_relative_label(test).package

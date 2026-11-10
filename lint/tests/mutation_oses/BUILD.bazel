@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//lint:defs.bzl", "mutation_oses_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+[
+    mutation_oses_test(
+        name = case + "_test",
+        srcs = ["//lint/tests/mutation_oses/testdata/" + case + ":files"],
+        strip_prefix = "lint/tests/mutation_oses/testdata/" + case,
+    )
+    for case in [
+        "go_pass",
+        "go_unset",
+        "python_pass",
+        "python_unset",
+    ]
+]
+
+[
+    mutation_oses_test(
+        name = "proof_" + case,
+        srcs = ["//lint/tests/mutation_oses/testdata/" + case + ":files"],
+        strip_prefix = "lint/tests/mutation_oses/testdata/" + case,
+        tags = ["manual"],
+    )
+    for case in [
+        "go_fail",
+        "python_fail",
+    ]
+]
+
+[
+    expect_failure_test(
+        name = case + "_fails_test",
+        pattern = pattern,
+        test = ":proof_" + case,
+    )
+    for case, pattern in {
+        "go_fail": "mutation_oses missing windows",
+        "python_fail": "mutation_oses missing macos, windows",
+    }.items()
+]
