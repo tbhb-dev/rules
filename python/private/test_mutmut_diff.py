@@ -448,3 +448,16 @@ def test_main_rejects_a_bad_change_set(
         f"mutmut_report: {bad}: not a version 1 change set\n"
     )
     assert runs == []
+
+
+def test_main_uses_overridden_paths_for_diff_selection(
+    unit: Path,
+    runs: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["wrong"]\n')
+    monkeypatch.chdir(unit)
+    changes = changes_file(unit, {"cli/src/pkg/other.py": [[2, 2]]})
+    assert mr.main(["report", "log", str(changes), "cli", "src"]) == 0
+    assert runs[0] == ["run", "pkg.other.x_f__mutmut_*"]
+    assert "scope=diff" in Path("report").read_text().splitlines()
