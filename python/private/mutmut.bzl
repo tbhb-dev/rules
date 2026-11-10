@@ -55,6 +55,7 @@ def _mutmut_report_impl(ctx):
     )
     ctx.actions.run(
         executable = script,
+        arguments = ctx.attr.source_paths,
         inputs = depset([manifest] + ([changes] if changes else []), transitive = [depset(files)]),
         outputs = [report, log],
         tools = [launcher],
@@ -87,12 +88,13 @@ in `<name>.report` (MutationReportInfo) and mutmut's output in
             cfg = "exec",
             doc = "The python_tool that runs mutmut_report.py.",
         ),
+        "source_paths": attr.string_list(doc = "Paths relative to chdir overriding the scratch copy's mutmut source_paths; empty keeps the config."),
         "srcs": attr.label_list(allow_files = True, mandatory = True, doc = "Files to copy: python_library units (their deps' files come along) plus config, or a `repo_files` target."),
         "_template": attr.label(default = ":mutmut.sh.tpl", allow_single_file = True),
     },
 )
 
-def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, changes = None, **kwargs):
+def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, changes = None, source_paths = [], **kwargs):
     """Mutation-tests the tree with mutmut and fails unless every mutant was killed.
 
     Creates `<name>.report` (the cached mutmut run) and `<name>`, a
@@ -133,6 +135,9 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
         chdir: Directory, relative to the tree root, to run mutmut from; its
             pyproject.toml holds `[tool.mutmut]`. mutmut maps source files to
             module names only for a src layout or the run directory itself.
+        source_paths: Paths relative to chdir to mutate. A non-empty list
+            replaces `[tool.mutmut] source_paths` in the scratch copy only,
+            for both mutmut and diff selection. Empty keeps the config.
         python_env: The Python environment, which must provide mutmut and pytest.
         cpus: CPUs to reserve for the mutmut action.
         changes: A change set file overriding quality's `changes` flag, for
@@ -160,6 +165,7 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
         chdir = chdir,
         changes = changes,
         cpus = cpus,
+        source_paths = source_paths,
         tags = kwargs.get("tags", []),
         target_compatible_with = compatible,
         visibility = ["//visibility:private"],

@@ -20,6 +20,7 @@ CLEAN = glob(
     ["**"],
     exclude = [
         "planted/**",
+        "source_paths/**",
         "weak/**",
         "*.importlinter.toml",
     ],
@@ -56,6 +57,24 @@ mutmut_test(
     srcs = CLEAN,
     cpus = 2,
 )
+
+# Each config is rewritten in the scratch tree only; the default keeps
+# the existing source_paths. All four cases must find and kill mutants.
+[
+    mutmut_test(
+        name = "mutmut_source_paths_" + case + "_test",
+        srcs = glob(["source_paths/" + case + "/**"]),
+        chdir = "source_paths/" + case,
+        cpus = 2,
+        source_paths = [] if case == "empty" else ["calc.py"],
+    )
+    for case in [
+        "replace",
+        "key_absent",
+        "table_absent",
+        "empty",
+    ]
+]
 
 # Proofs: each target must fail, for the reason expect_failure_test states.
 # They are manual so `bazel test //...` runs them only through the proofs.

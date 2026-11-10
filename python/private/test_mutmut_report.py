@@ -288,7 +288,7 @@ def test_main_needs_a_report_and_a_log(
     assert mr.main(argv) == 2
     assert (
         capsys.readouterr().err
-        == "usage: mutmut_report.py REPORT LOG [CHANGES PREFIX]\n"
+        == "usage: mutmut_report.py REPORT LOG [CHANGES PREFIX [SOURCE_PATH ...]]\n"
     )
 
 
@@ -439,3 +439,112 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
         "mutmut_report: no --max-children "
         "(no cgroup CPU quota below the host's CPUs)\n"
     )
+
+
+@pytest.mark.parametrize(
+    ("text", "paths", "expected"),
+    [
+        (
+            '[tool.mutmut]\nsource_paths = ["old"] # keep\ndo_not_mutate = ["gen/*"]\n',
+            ["src", "lib"],
+            (
+                "[tool.mutmut]\n"
+                'source_paths = ["src", "lib"] # keep\n'
+                'do_not_mutate = ["gen/*"]\n'
+            ),
+        ),
+        (
+            '[tool.mutmut]\ndo_not_mutate = ["gen/*"]\n[tool.other]\nx = 1\n',
+            ["src"],
+            (
+                "[tool.mutmut]\n"
+                'source_paths = ["src"]\n'
+                'do_not_mutate = ["gen/*"]\n'
+                "[tool.other]\n"
+                "x = 1\n"
+            ),
+        ),
+        (
+            '[project]\nname = "unit"\n',
+            ["src"],
+            '[project]\nname = "unit"\n\n[tool.mutmut]\nsource_paths = ["src"]\n',
+        ),
+        ('[tool.mutmut]\nsource_paths = ["old"]\n', [], None),
+        ('[project]\nname = "unit"\n', [], None),
+        (
+            (
+                "[tool.mutmut]\n"
+                "source_paths = [\n"
+                '  "old]", # ]\n'
+                '  "more",\n'
+                "]\n"
+                "do_not_mutate = []\n"
+            ),
+            ["src"],
+            '[tool.mutmut]\nsource_paths = ["src"]\ndo_not_mutate = []\n',
+        ),
+        (
+            (
+                "[tool.mutmut] # keep\n"
+                '"source_paths" = ["old"]\n'
+                "[tool.other]\n"
+                'source_paths = ["other"]\n'
+            ),
+            ["src"],
+            (
+                "[tool.mutmut] # keep\n"
+                'source_paths = ["src"]\n'
+                "[tool.other]\n"
+                'source_paths = ["other"]\n'
+            ),
+        ),
+        ("[tool.mutmut]", ["src"], '[tool.mutmut]\nsource_paths = ["src"]'),
+        (
+            (
+                "[tool.mutmut]\ndo_not_mutate = []\n"
+                '  [tool.other]\nsource_paths = ["other"]\n'
+            ),
+            ["src"],
+            (
+                '[tool.mutmut]\nsource_paths = ["src"]\ndo_not_mutate = []\n'
+                '  [tool.other]\nsource_paths = ["other"]\n'
+            ),
+        ),
+    ],
+)
+def test_rewrite_source_paths(
+    tmp_path: Path,
+    text: str,
+    paths: list[str],
+    expected: str | None,
+) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text(text)
+    mr.rewrite_source_paths(path, paths)
+    assert path.read_text() == (text if expected is None else expected)
+
+
+def test_rewrite_source_paths_quotes_paths(tmp_path: Path) -> None:
+    path = tmp_path / "pyproject.toml"
+    path.write_text("[tool.mutmut]\n")
+    paths = ['src/quote"', "src/with space", "src/\\backslash", "src/🚀"]
+    mr.rewrite_source_paths(path, paths)
+    assert mr.mutmut_paths(path) == (paths, [])
+
+
+def test_rewrite_source_paths_at_the_end_of_a_long_table(tmp_path: Path) -> None:
+    path = tmp_path / "pyproject.toml"
+    before = "[tool.mutmut]\n" + "# keep this comment\n" * 12
+    after = "\n[tool.other]\nx = 1\n"
+    path.write_text(before + 'source_paths = ["old"]' + after)
+    mr.rewrite_source_paths(path, ["src"])
+    assert path.read_text() == before + 'source_paths = ["src"]' + after
+
+
+def test_main_rewrites_paths_before_running(
+    fake_mutmut: list[list[str]],
+) -> None:
+    Path("pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["old"]\n')
+    assert mr.main(["report", "log", "", "unit", "src"]) == 1
+    assert mr.mutmut_paths(Path("pyproject.toml")) == (["src"], [])
+    assert fake_mutmut[0] == ["run"]

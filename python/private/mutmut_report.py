@@ -3,7 +3,7 @@
 
 """Run mutmut and write its outcome in tbhb_rules' mutation report format.
 
-Usage: mutmut_report.py REPORT LOG [CHANGES PREFIX]
+Usage: mutmut_report.py REPORT LOG [CHANGES PREFIX [SOURCE_PATH ...]]
 
 Runs from the directory mutmut should run in (the one whose pyproject.toml
 holds `[tool.mutmut]`), inside the scratch copy the mutmut_report action
@@ -27,6 +27,7 @@ import ast
 import fnmatch
 import json
 import os
+import re
 import subprocess  # nosec B404
 import sys
 import tomllib
@@ -77,6 +78,20 @@ NOT_CHECKED = "mutant." + NOT_RUN.replace(" ", "_") + "="
 SEPARATOR = "ǁ"
 TEST_NAMES = ("test_*.py", "*_test.py", "conftest.py")
 SOURCE_PREFIXES = ("src.", "source.")
+# TOML strings may contain brackets, comments and escaped quotes.
+TOML_STRING = (
+    r'"""(?:[^"\\]|\\.|"(?!""))*"""'
+    r"|'''[\s\S]*?'''"
+    r'|"(?:[^"\\]|\\.)*"'
+    r"|'[^']*'"
+)
+# JSON arrays of strings are TOML arrays too. Keep non-ASCII characters
+# literal: JSON's surrogate-pair escapes are not valid TOML escapes.
+TOML_ARRAY = json.JSONEncoder(ensure_ascii=False)
+SOURCE_PATHS = (
+    r"(?m)^[ \t]*(?:source_paths|\"source_paths\"|'source_paths')[ \t]*=[ \t]*"
+    r"\[(?:" + TOML_STRING + r"|#[^\n]*|[^\]\"'#])*\]"
+)
 WHOLE_FILE = ("added", "deleted")
 
 type Change = str | list[tuple[int, int]]
@@ -411,6 +426,31 @@ def scratch_config(path: Path) -> None:
             return
 
 
+def rewrite_source_paths(path: Path, source_paths: list[str]) -> None:
+    """Replace only the scratch config's source_paths, when paths were supplied."""
+    if not source_paths:
+        return
+    text = path.read_text()
+    section = re.search(r"(?m)^[ \t]*\[tool\.mutmut\][ \t]*(?:#[^\n]*)?$", text)
+    value = "source_paths = " + TOML_ARRAY.encode(source_paths)
+    if section is None:
+        text += "\n" + HEADER + "\n" + value + "\n"
+    else:
+        start = section.end()
+        following = re.search(r"(?m)^[ \t]*\[", text[start:])
+        end = start + following.start() if following else len(text)
+        body = text[start:end]
+        # Consume quoted strings and comments before closing the array, so
+        # brackets in paths and multiline arrays keep their TOML meaning.
+        assignment = re.search(SOURCE_PATHS, body)
+        if assignment:
+            body = body[: assignment.start()] + value + body[assignment.end() :]
+        else:
+            body = "\n" + value + body
+        text = text[:start] + body + text[end:]
+    path.write_text(text)
+
+
 def unstable(text: str) -> list[str]:
     """Return the machine-dependent verdicts a report records."""
     lines = text.splitlines()
@@ -487,14 +527,18 @@ def main(argv: list[str]) -> int:
     Returns 2 on bad usage and 1 when the run timed out, errored or was
     interrupted, so that verdict is not cached.
     """
-    if len(argv) not in {2, 4}:
-        print("usage: mutmut_report.py REPORT LOG [CHANGES PREFIX]", file=sys.stderr)
+    if len(argv) != 2 and len(argv) < 4:  # noqa: PLR2004 - positional arguments.
+        print(
+            "usage: mutmut_report.py REPORT LOG [CHANGES PREFIX [SOURCE_PATH ...]]",
+            file=sys.stderr,
+        )
         return 2
     out, log = Path(argv[0]), Path(argv[1])
     log.write_text("")
+    rewrite_source_paths(Path(PYPROJECT), argv[4:])
     scratch_config(Path(PYPROJECT))
     selection = Selection(full=True, reason="no change set")
-    if len(argv) == 4:  # noqa: PLR2004 - REPORT, LOG, CHANGES and PREFIX.
+    if len(argv) >= 4 and argv[2]:  # noqa: PLR2004 - optional change set.
         try:
             selection = choose(Path(argv[2]), argv[3])
         except ChangesError as error:
