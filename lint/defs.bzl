@@ -18,6 +18,7 @@ load("//lint/private:codeowners.bzl", _codeowners_test = "codeowners_test")
 load("//lint/private:cspell.bzl", _cspell_test = "cspell_test")
 load("//lint/private:decision_records.bzl", _decision_records_test = "decision_records_test")
 load("//lint/private:gitleaks_history.bzl", _gitleaks_history = "gitleaks_history")
+load("//lint/private:mutation_oses.bzl", _mutation_oses_test = "mutation_oses_test")
 load("//lint/private:okf_docs.bzl", _okf_docs_test = "okf_docs_test")
 load("//lint/private:reuse.bzl", _reuse_test = "reuse_test")
 load("//lint/private:shell.bzl", _shellcheck_test = "shellcheck_test", _shfmt_test = "shfmt_test")
@@ -32,6 +33,7 @@ decision_records_test = _decision_records_test
 editorconfig_checker_test = _editorconfig_checker_test
 gitleaks_history = _gitleaks_history
 gitleaks_test = _gitleaks_test
+mutation_oses_test = _mutation_oses_test
 okf_docs_test = _okf_docs_test
 reuse_test = _reuse_test
 rumdl_test = _rumdl_test

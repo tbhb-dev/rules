@@ -12,6 +12,7 @@ load(
     "editorconfig_checker_test",
     "gitleaks_history",
     "gitleaks_test",
+    "mutation_oses_test",
     "okf_docs_test",
     "reuse_test",
     "rumdl_test",
@@ -343,5 +344,10 @@ decision_records_test(
 
 reuse_test(
     name = "reuse_test",
+    srcs = [":repo_files"],
+)
+
+mutation_oses_test(
+    name = "mutation_oses_test",
     srcs = [":repo_files"],
 )

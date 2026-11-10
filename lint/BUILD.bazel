@@ -47,6 +47,7 @@ bzl_library(
         "//lint/private:decision_records",
         "//lint/private:gitleaks_history",
         "//lint/private:gitleaks_tool",
+        "//lint/private:mutation_oses",
         "//lint/private:okf_docs",
         "//lint/private:reuse",
         "//lint/private:shell",
