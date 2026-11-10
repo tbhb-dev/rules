@@ -37,15 +37,31 @@ for (const dist of process.argv.slice(2)) {
         .toString("latin1")
         .replace(/C:\\+fakepath\\+/g, "");
       for (const [label, fragment] of Object.entries(fragments)) {
+        const text = fragment instanceof RegExp ? `${entry}\n${content}` : content;
         const matches =
           fragment instanceof RegExp
-            ? [...`${entry}\n${content}`.matchAll(fragment)].length
+            ? [...text.matchAll(fragment)]
             : fragment
-              ? content.split(fragment).length - 1
-              : 0;
-        counts[label] += matches;
-        if (matches > 0) {
-          console.error(`dist_paths_test: ${dist}/${entry}: ${label}: ${matches}`);
+              ? [
+                  ...text.matchAll(
+                    new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
+                  ),
+                ]
+              : [];
+        counts[label] += matches.length;
+        if (matches.length > 0) {
+          console.error(
+            `dist_paths_test: ${dist}/${entry}: ${label}: ${matches.length}`,
+          );
+          for (const match of matches) {
+            const context = text.slice(
+              Math.max(0, match.index - 60),
+              match.index + match[0].length + 60,
+            );
+            console.error(
+              `dist_paths_test: ${dist}/${entry}: ${label}: ${JSON.stringify(context)}`,
+            );
+          }
           failed = true;
         }
       }
