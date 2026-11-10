@@ -39,6 +39,7 @@ path = [
   "**/.bazelignore",
   ".rylignore",
   ".cspell-words.txt",
+  ".github/actions/setup-bazel-ci/fetch-targets.txt",
   ".vale/config/vocabularies/project/*.txt",
 ]
 SPDX-FileCopyrightText = "Tony Burns"

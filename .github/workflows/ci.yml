@@ -107,6 +107,87 @@ jobs:
           ids="$(jq -r 'map(.id) | join(", ")' <<<"${selected}")"
           echo "Testing: ${ids}" >>"${GITHUB_STEP_SUMMARY}"
 
+  # One writer per platform, from the root whose module files form the key.
+  # An exact immutable cache already contains the complete fetch list.
+  cache-warm:
+    name: "cache-warm (${{ matrix.os }})"
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-26.04, ubuntu-26.04-arm, macos-26, windows-2025]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # KEY-FORMAT setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3
+      # Recheck config.js, index.js, and post.js when this pin changes.
+      # cache_contract_test pairs this implementation with that exact pin.
+      - name: Compute the repository cache key
+        id: key
+        env:
+          OS: ${{ runner.os }}
+          ARCH: ${{ runner.arch }}
+          # cache_contract_test checks this against repository-cache lists.
+          HASH: ${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'pins/*.bzl') }}
+        run: |
+          case "$OS" in
+            Linux) platform=linux ;;
+            macOS) platform=darwin ;;
+            Windows) platform=win32 ;;
+            *) exit 1 ;;
+          esac
+          case "$ARCH" in
+            X64) arch=x64 ;;
+            ARM64) arch=arm64 ;;
+            *) exit 1 ;;
+          esac
+          echo "key=setup-bazel-1-${platform}-${arch}-repository-${HASH}" >>"$GITHUB_OUTPUT"
+          # The cache toolkit includes paths in its archive version.
+          node >>"$GITHUB_OUTPUT" <<'JS'
+            const os = require("os");
+            let path = `${os.homedir()}/.cache/bazel-repo`.replaceAll("\\", "/");
+            if (os.platform() === "win32") {
+              path = process.env.GITHUB_WORKSPACE.toLowerCase().startsWith("d:")
+                ? "D:/_bazel-repo" : "C:/_bazel-repo";
+            }
+            console.log(`path=${path}`);
+          JS
+
+      - name: Look up the exact repository cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ${{ steps.key.outputs.path }}
+          key: ${{ steps.key.outputs.key }}
+          lookup-only: true
+
+      - name: Warm the complete repository cache
+        id: warm
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/setup-bazel-ci
+        with:
+          cache-save: true
+          fetch-workspaces: go typescript
+
+      - name: Report fetch time and repository cache size
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          FETCH_SECONDS: ${{ steps.warm.outputs.fetch-seconds }}
+        run: |
+          # Windows uses <output base>-repo, usually D:/_bazel-repo.
+          # Reading the effective option also handles a different drive.
+          cache=$(bazelisk info repository_cache)
+          size=$(du -sk "$cache" | cut -f1)
+          printf 'Fetch: %s seconds\n\nRepository cache: %s KiB\n' "$FETCH_SECONDS" "$size" >>"$GITHUB_STEP_SUMMARY"
+
   # tbhb_rules targets Bazel 9.x only (bazel_compatibility >= 9.0.0, and
   # .bazelversion pins the release), so the matrix varies only the platform
   # and the workspace: one job per pair, on each platform the tool pins cover
@@ -143,7 +224,7 @@ jobs:
         uses: ./.github/actions/setup-bazel-ci
         with:
           disk-cache: ${{ github.workflow }}-${{ matrix.os }}-${{ matrix.workspace.id }}
-          cache-save: ${{ github.event_name != 'pull_request' }}
+          cache-save: false
           working-directory: ${{ matrix.workspace.dir }}
 
       - name: Test

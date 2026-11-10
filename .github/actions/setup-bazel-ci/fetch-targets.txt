@@ -1,0 +1,10 @@
+//...
+@bazel_tools//tools:tools_for_bazel_subcommands
+@tbhb_rules//lint:zizmor
+@tbhb_rules//lint:gitleaks_text
+@tbhb_rules//lint:commit_identity
+//:gitleaks_history
+//:gazelle
+//tools:pip_audit
+//:pnpm_audit
+//tests/self:govulncheck

@@ -119,13 +119,9 @@ jobs:
       # setup-bazel has no retry of its own, so a failed attempt is retried
       # after a pause. Attempts that follow a success are skipped.
       #
-      # `bazelisk mod tidy` downloads a sha256-pinned helper binary from GitHub
-      # releases, and the repository cache is keyed by that hash, so a run
-      # that isn't a pull request saves the cache and later runs skip the
-      # download. A cache is immutable once saved, and setup-bazel names it
-      # from the platform, `cache-version` and a hash of MODULE.bazel alone.
-      # A consumer's own jobs save under the same name, and whichever saves
-      # first wins, so `cache-version` gives this job names of its own.
+      # cache-warm alone saves the shared repository cache. Every reader
+      # hashes the root module, its lock, and pins/*.bzl, even when a later
+      # command runs in a nested workspace.
       - name: Set up Bazel
         id: setup_bazel_1
         uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
@@ -135,9 +131,12 @@ jobs:
           # action downloads it when it's missing, as `bazel`.
           bazelisk-version: 1.30.0
           bazelisk-cache: true
-          repository-cache: true
-          cache-version: repo-checks-1
-          cache-save: ${{ github.event_name != 'pull_request' }}
+          # cache_contract_test checks every copy of this hash list.
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - pins/*.bzl
+          cache-save: false
 
       - name: Wait before retrying the Bazel setup
         if: steps.setup_bazel_1.outcome == 'failure'
@@ -153,9 +152,12 @@ jobs:
           # action downloads it when it's missing, as `bazel`.
           bazelisk-version: 1.30.0
           bazelisk-cache: true
-          repository-cache: true
-          cache-version: repo-checks-1
-          cache-save: ${{ github.event_name != 'pull_request' }}
+          # cache_contract_test checks every copy of this hash list.
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - pins/*.bzl
+          cache-save: false
 
       - name: Wait before the last Bazel setup attempt
         if: steps.setup_bazel_2.outcome == 'failure'
@@ -169,9 +171,12 @@ jobs:
           # action downloads it when it's missing, as `bazel`.
           bazelisk-version: 1.30.0
           bazelisk-cache: true
-          repository-cache: true
-          cache-version: repo-checks-1
-          cache-save: ${{ github.event_name != 'pull_request' }}
+          # cache_contract_test checks every copy of this hash list.
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - pins/*.bzl
+          cache-save: false
 
       # One deadline for every retry loop below. A step output carries it to
       # them, so nothing is written to the environment file. The same step
@@ -220,6 +225,23 @@ jobs:
               ln -s "${bazel}" "${dir}/bazelisk"
             fi
           fi
+
+      # The caller's checkout lacks this action. Locate the list and script
+      # in its Bazel-pinned rules module; Renovate updates that module pin.
+      # Only cache-warm saves, so these fetches never publish partial caches.
+      - name: Fetch the shared CI tools
+        env:
+          BUDGET: ${{ inputs.retry-budget-minutes }}
+          DEADLINE: ${{ steps.retry_clock.outputs.deadline }}
+          TARGETS: "@default"
+          FETCH_ALL: "false"
+          WORKSPACES: >-
+            . ${{ inputs.gazelle-dirs }} ${{ inputs.pnpm-audit-workspace }}
+            ${{ inputs.govulncheck-working-directory }}
+        run: |
+          location=$(bazelisk query --output=location @tbhb_rules//:.github/actions/setup-bazel-ci/fetch-targets.txt)
+          manifest=${location%%:[0-9]*}
+          bash "$(dirname "$manifest")/fetch.sh"
 
       # The Go workspaces' BUILD files, as gazelle would write them.
       - name: Check that gazelle has nothing to change
@@ -356,7 +378,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
-          bazelisk run @tbhb_rules_zizmor//:zizmor --
+          bazelisk run @tbhb_rules//lint:zizmor --
           --persona pedantic --no-progress "${GITHUB_WORKSPACE}/.github"
 
       # //:codeowners_test checks that every pattern matches a path; owner

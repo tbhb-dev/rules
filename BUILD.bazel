@@ -351,3 +351,17 @@ mutation_oses_test(
     name = "mutation_oses_test",
     srcs = [":repo_files"],
 )
+
+# Reusable workflows locate their shared fetch script in the pinned module.
+exports_files([".github/actions/setup-bazel-ci/fetch-targets.txt"])
+
+exports_files(
+    [
+        ".github/actions/setup-bazel-ci/action.yml",
+        ".github/actions/setup-bazel-ci/fetch.sh",
+        ".github/workflows/ci.yml",
+        ".github/workflows/pr-text.yml",
+        "BUILD.bazel",
+    ],
+    visibility = ["//repo/tests:__pkg__"],
+)

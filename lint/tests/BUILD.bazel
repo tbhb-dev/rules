@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-load("//lint:defs.bzl", "gitleaks_history", "shellcheck_test", "shfmt_test")
+load("//lint:defs.bzl", "gitleaks_history", "gitleaks_test", "shellcheck_test", "shfmt_test")
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
@@ -9,6 +9,7 @@ load(":commit_identity_scenario.bzl", "commit_identity_scenario_test")
 load(":cspell_tests.bzl", "cspell_test_suite")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
 load(":gitleaks_private_scenario.bzl", "gitleaks_private_scenario_test")
+load(":gitleaks_redact_scenario.bzl", "GITLEAKS_REDACT_FIXTURE", "gitleaks_redact_scenario_test")
 load(":gitleaks_text_scenario.bzl", "gitleaks_text_scenario_test")
 load(":tree_check_tests.bzl", "tree_check_test_suite")
 
@@ -177,6 +178,35 @@ gitleaks_text_scenario_test(
     subject = "//lint:gitleaks_text",
     tags = PROOF_TAGS,
 )
+
+# Exercise the real tree macro and the history/text executables. The tree
+# fixture is assembled by an action so no complete token is checked in.
+genrule(
+    name = "redact_fixture",
+    testonly = True,
+    outs = ["redact_creds.txt"],
+    cmd = "(\n" + GITLEAKS_REDACT_FIXTURE + ") >$@",
+    tags = ["manual"],
+)
+
+gitleaks_test(
+    name = "redact_tree_subject",
+    srcs = [":redact_fixture"],
+    tags = ["manual"],
+)
+
+[
+    gitleaks_redact_scenario_test(
+        name = "{}_redact_test".format(scenario),
+        scenario = scenario,
+        subject = subject,
+    )
+    for scenario, subject in [
+        ("history", ":history_subject"),
+        ("text", "//lint:gitleaks_text"),
+        ("tree", ":redact_tree_subject"),
+    ]
+]
 
 # shellcheck_test and shfmt_test on a tree with no shell scripts: they pass
 # with allow_empty and fail without it.
