@@ -37,6 +37,8 @@ func TestMain(m *testing.M) {
 		os.Exit(fakeGit(os.Args[1:]))
 	}
 	if rc, ok := os.LookupEnv("FAKE_GOMUTANTS_RC"); ok {
+		// scratch removes GOCOVERDIR; keep instrumented stand-ins quiet on failure.
+		_ = os.Setenv("GOCOVERDIR", os.Getenv("FAKE_GOCOVERDIR"))
 		os.Exit(fakeGomutants(rc))
 	}
 	os.Exit(m.Run())
@@ -52,12 +54,27 @@ func fakeGomutants(rc string) int {
 		}
 		return false
 	}
-	if !has("--cache=off") || os.Getenv("GOPROXY") != "off" {
+	proxy := os.Getenv("FAKE_GOMUTANTS_PROXY")
+	if proxy == "" {
+		proxy = "off"
+	}
+	if !has("--cache=off") || os.Getenv("GOPROXY") != proxy {
 		return 3
+	}
+	if name := os.Getenv("FAKE_GOMUTANTS_DIRECTORY"); name != "" {
+		if err := os.Mkdir(filepath.Join("..", name), 0o755); err != nil {
+			return 3
+		}
+		if name == "report.json" {
+			return 0
+		}
 	}
 	if has("--dry-run") {
 		if _, err := os.Stdout.WriteString(os.Getenv("FAKE_GOMUTANTS_DRY")); err != nil {
 			return 3
+		}
+		if os.Getenv("FAKE_GOMUTANTS_DRY_RC") == "1" {
+			return 1
 		}
 		return 0
 	}
@@ -633,5 +650,336 @@ func TestCrossCheckMultiplicity(t *testing.T) {
 		if r.selected != 4+tc.listed+tc.suppressed || !reflect.DeepEqual(r.mutants, want) {
 			t.Errorf("%+v: selected %d, mutants %v; want %v", tc, r.selected, r.mutants, want)
 		}
+	}
+}
+
+// runnerConfig uses this test binary as the external tool, without Go's Bazel wrapper.
+func runnerConfig(t *testing.T) runConfig {
+	t.Helper()
+	dir, entries := unit(t)
+	var manifest strings.Builder
+	for _, e := range entries {
+		fmt.Fprintf(&manifest, "%s\t%s\t%s\n", e.Role, e.Src, e.Rel)
+	}
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("FAKE_GOMUTANTS_RC", "0")
+	t.Setenv("FAKE_GOMUTANTS_JSON", "{}")
+	t.Setenv("FAKE_GOCOVERDIR", t.TempDir())
+	t.Setenv("FAKE_GOBCO_STATS", os.Getenv("GOBCO_STATS"))
+	t.Setenv("FAKE_GOMUTANTS_DRY", "Discovering mutants... 0 found\n")
+	unsetenv(t, "XML_OUTPUT_FILE")
+	return runConfig{
+		gomutants: self, goBin: filepath.Join(dir, "sdk", "bin", "go"),
+		manifest: write(t, dir, "manifest", manifest.String()), pkg: "p",
+		report: filepath.Join(dir, "report"), log: filepath.Join(dir, "log"),
+	}
+}
+
+func runnerArgs(c runConfig) []string {
+	return []string{
+		"-gomutants", c.gomutants, "-go", c.goBin,
+		"-manifest", c.manifest, "-pkg", c.pkg, "-report", c.report, "-log", c.log,
+	}
+}
+
+func captureStderr(t *testing.T, f func() int) (int, string) {
+	t.Helper()
+	file, err := os.CreateTemp(t.TempDir(), "stderr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	old := os.Stderr
+	os.Stderr = file
+	defer func() { os.Stderr = old; _ = file.Close() }()
+	code := f()
+	data, err := os.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return code, string(data)
+}
+
+func TestRunMainArguments(t *testing.T) {
+	c := runnerConfig(t)
+	for i := 0; i < 12; i += 2 {
+		args := runnerArgs(c)
+		t.Run(args[i], func(t *testing.T) {
+			args[i+1] = ""
+			code, diagnostic := captureStderr(t, func() int { return runMain(args) })
+			if code != 2 || diagnostic != "gomutants: -gomutants, -go, -manifest, -pkg, -report and -log are required\n" {
+				t.Fatalf("exit %d, stderr %q", code, diagnostic)
+			}
+		})
+	}
+	code, diagnostic := captureStderr(t, func() int { return runMain([]string{"-workers=invalid"}) })
+	want := "invalid value \"invalid\" for flag -workers: parse error\n" +
+		"Usage of gomutants:\n" +
+		"  -changes string\n" +
+		"    \tthe unit's change set; a full run when empty\n" +
+		"  -go string\n" +
+		"    \tthe go command of the SDK to test with\n" +
+		"  -gomutants string\n" +
+		"    \tthe gomutants binary\n" +
+		"  -log string\n" +
+		"    \twhere gomutants' output goes\n" +
+		"  -manifest string\n" +
+		"    \tthe unit's manifest\n" +
+		"  -pkg string\n" +
+		"    \tthe unit's package directory, relative to the module\n" +
+		"  -prefix string\n" +
+		"    \tthe module directory, prefixed to the file names reported\n" +
+		"  -proxy string\n" +
+		"    \tGOPROXY directory with the module's dependencies; none when empty\n" +
+		"  -report string\n" +
+		"    \tthe report to write\n" +
+		"  -workers int\n" +
+		"    \tgomutants workers; its default when 0\n"
+	if code != 2 || diagnostic != want {
+		t.Fatalf("exit %d, stderr %q", code, diagnostic)
+	}
+}
+
+func TestRunMainErrors(t *testing.T) {
+	for _, stage := range []string{"run", "log", "report"} {
+		t.Run(stage, func(t *testing.T) {
+			c := runnerConfig(t)
+			blocked := write(t, t.TempDir(), "file", "")
+			var want error
+			switch stage {
+			case "run":
+				c.manifest = filepath.Join(blocked, "manifest")
+				_, want = os.ReadFile(c.manifest)
+			case "log":
+				c.log = filepath.Join(blocked, "log")
+				want = os.WriteFile(c.log, nil, 0o644)
+			case "report":
+				c.report = filepath.Join(blocked, "report")
+				want = os.WriteFile(c.report, nil, 0o644)
+			}
+			code, diagnostic := captureStderr(t, func() int { return runMain(runnerArgs(c)) })
+			if code != 1 || diagnostic != fmt.Sprintf("gomutants: %v\n", want) {
+				t.Fatalf("exit %d, stderr %q; want %v", code, diagnostic, want)
+			}
+			if stage != "report" {
+				if _, err := os.Stat(c.report); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("report after %s error: %v", stage, err)
+				}
+			}
+		})
+	}
+}
+
+func TestRunSetupErrors(t *testing.T) {
+	for _, stage := range []string{"manifest", "slice", "absolute", "scratch", "directory", "config", "fake git", "read report"} {
+		t.Run(stage, func(t *testing.T) {
+			c := runnerConfig(t)
+			missing := filepath.Join(t.TempDir(), "missing")
+			var want error
+			var suffix string
+			switch stage {
+			case "manifest":
+				c.manifest = missing
+				_, want = os.ReadFile(missing)
+			case "slice":
+				c.changes = missing
+				_, want = os.ReadFile(missing)
+			case "absolute":
+				want = errors.New("absolute path failed")
+				old := runnerAbs
+				runnerAbs = func(name string) (string, error) {
+					if name != c.gomutants {
+						t.Errorf("absolute path of %q", name)
+					}
+					return "", want
+				}
+				t.Cleanup(func() { runnerAbs = old })
+			case "scratch":
+				c.manifest = write(t, t.TempDir(), "manifest", "mut\t"+missing+"\tp.go\n")
+				_, want = os.ReadFile(missing)
+			case "directory", "config":
+				// Manifest paths are relative to mod; place a blocker beside it.
+				rel := "../bin"
+				if stage == "config" {
+					rel = "../gomutants.yml/child"
+				}
+				c.manifest = write(t, t.TempDir(), "manifest", "data\t"+c.manifest+"\t"+rel+"\n")
+				suffix = filepath.Base(filepath.Dir(rel))
+				if stage == "directory" {
+					suffix = "bin"
+				}
+			case "fake git":
+				c.changes = write(t, t.TempDir(), "changes", `{"version":1,"files":{"p/p.go":[[7,7]]}}`)
+				t.Setenv("FAKE_GOMUTANTS_DIRECTORY", "changes.diff")
+				suffix = "changes.diff"
+			case "read report":
+				t.Setenv("FAKE_GOMUTANTS_DIRECTORY", "report.json")
+				suffix = "report.json"
+			}
+			r, log, err := run(c)
+			if want != nil {
+				if err == nil || err.Error() != want.Error() {
+					t.Fatalf("error = %v, want %v", err, want)
+				}
+			} else {
+				var pe *os.PathError
+				if !errors.As(err, &pe) || filepath.Base(pe.Path) != suffix {
+					t.Fatalf("error = %v, want path ending in %s", err, suffix)
+				}
+				// Obtain the host's precise filesystem diagnostic for the same obstruction.
+				dir := t.TempDir()
+				var expected error
+				if stage == "directory" {
+					name := write(t, dir, suffix, "")
+					expected = os.Mkdir(name, 0o755)
+				} else {
+					if e := os.Mkdir(filepath.Join(dir, suffix), 0o755); e != nil {
+						t.Fatal(e)
+					}
+					if stage == "read report" {
+						_, expected = os.ReadFile(filepath.Join(dir, suffix))
+					} else {
+						expected = os.WriteFile(filepath.Join(dir, suffix), nil, 0o644)
+					}
+				}
+				var ep *os.PathError
+				if !errors.As(expected, &ep) || pe.Op != ep.Op || pe.Err.Error() != ep.Err.Error() {
+					t.Fatalf("error = %v, want operation/error from %v", err, expected)
+				}
+			}
+			if !reflect.DeepEqual(r, result{}) || log != nil {
+				t.Fatalf("error returned result %+v, log %q", r, log)
+			}
+		})
+	}
+}
+
+func TestRunExecutionFailures(t *testing.T) {
+	for _, stage := range []string{"dry execution", "dry parsing", "execution", "missing report", "report parsing"} {
+		t.Run(stage, func(t *testing.T) {
+			c := runnerConfig(t)
+			want := ""
+			scope := "full"
+			switch stage {
+			case "dry execution", "dry parsing":
+				c.changes = write(t, t.TempDir(), "changes", `{"version":1,"files":{"p/p.go":[[7,7]]}}`)
+				scope = "diff"
+				if stage == "dry execution" {
+					t.Setenv("FAKE_GOMUTANTS_DRY_RC", "1")
+					want = "Discovering mutants... 0 found\ngomutants: dry run failed: exit status 1\n"
+				} else {
+					t.Setenv("FAKE_GOMUTANTS_DRY", "bad listing\n")
+					want = "bad listing\ngomutants: unreadable dry run: listed 0 mutants, announced -1\n"
+				}
+			case "execution":
+				t.Setenv("FAKE_GOMUTANTS_RC", "1")
+				want = "gomutants: run failed: exit status 1\n"
+			case "missing report":
+				unsetenv(t, "FAKE_GOMUTANTS_JSON")
+				want = "gomutants: no report\n"
+			case "report parsing":
+				t.Setenv("FAKE_GOMUTANTS_JSON", `{"mutants_suppressed":4,"files":[{"mutations":[{"status":"KILLED"},{"status":"UNKNOWN"}]}]}`)
+				want = "gomutants: unreadable report: unknown mutant status \"UNKNOWN\"\n"
+			}
+			r, log, err := run(c)
+			_, diagnostic, ok := strings.Cut(string(log), "\n")
+			if err != nil || !reflect.DeepEqual(r, result{scope: scope, interrupted: 1}) || !ok || diagnostic != want {
+				t.Fatalf("result %+v, log %q, error %v; want %q", r, log, err, want)
+			}
+		})
+	}
+}
+
+func TestRunnerOptionsAndWrites(t *testing.T) {
+	for _, workers := range []int{-1, 0, 1, 2} {
+		t.Run(strconv.Itoa(workers), func(t *testing.T) {
+			c := runnerConfig(t)
+			c.pkg = "."
+			c.prefix = "module/"
+			c.changes = write(t, t.TempDir(), "changes", `{"version":1,"files":{"module/p/p.go":"added"}}`)
+			args := append(runnerArgs(c), "-changes", c.changes, "-prefix", c.prefix, "-workers", strconv.Itoa(workers), "--", "--timeout-min=20s")
+			if workers == 2 {
+				proxy := t.TempDir()
+				t.Setenv("FAKE_GOMUTANTS_PROXY", scratch.FileURL(proxy))
+				args = append(args[:len(args)-2], "-proxy", proxy, "--", "--timeout-min=20s")
+			}
+			oldWrite, oldMkdir := runnerWriteFile, runnerMkdir
+			var written []string
+			runnerWriteFile = func(name string, data []byte, mode os.FileMode) error {
+				if mode != 0o644 {
+					t.Errorf("write %s mode = %o", name, mode)
+				}
+				written = append(written, filepath.Base(name))
+				return oldWrite(name, data, mode)
+			}
+			made := false
+			runnerMkdir = func(name string, mode os.FileMode) error {
+				made = true
+				if filepath.Base(name) != "bin" || mode != 0o755 {
+					t.Errorf("mkdir %s mode = %o", name, mode)
+				}
+				return oldMkdir(name, mode)
+			}
+			t.Cleanup(func() { runnerWriteFile, runnerMkdir = oldWrite, oldMkdir })
+			code, diagnostic := captureStderr(t, func() int { return runMain(args) })
+			if code != 0 || diagnostic != "" || !made || !reflect.DeepEqual(written, []string{"gomutants.yml", "log", "report"}) {
+				t.Fatalf("exit %d, stderr %q, mkdir %v, writes %v", code, diagnostic, made, written)
+			}
+			log, err := os.ReadFile(c.log)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, configAndRest, _ := strings.Cut(string(log), " --config ")
+			config, _, _ := strings.Cut(configAndRest, " --")
+			work := filepath.Dir(config)
+			want := "$ gomutants --cache=off --config " + filepath.Join(work, "gomutants.yml")
+			if workers > 0 {
+				want += " --workers " + strconv.Itoa(workers)
+			}
+			want += " --timeout-min=20s --output " + filepath.Join(work, "report.json") + " .\n"
+			if string(log) != want {
+				t.Errorf("log = %q, want %q", log, want)
+			}
+			data, err := os.ReadFile(c.report)
+			if err != nil || string(data) != (result{scope: "full"}).format() {
+				t.Fatalf("report %q, %v", data, err)
+			}
+		})
+	}
+}
+
+func TestRunNoChangeLog(t *testing.T) {
+	c := runnerConfig(t)
+	c.changes = write(t, t.TempDir(), "changes", `{"version":1,"files":{}}`)
+	c.gomutants = filepath.Join(t.TempDir(), "missing")
+	r, log, err := run(c)
+	if err != nil || !reflect.DeepEqual(r, result{scope: "diff"}) || string(log) != "gomutants: no change reaches this package; nothing to mutate\n" {
+		t.Fatalf("result %+v, log %q, error %v", r, log, err)
+	}
+}
+
+func TestRunDiffInvocation(t *testing.T) {
+	c := runnerConfig(t)
+	c.changes = write(t, t.TempDir(), "changes", `{"version":1,"files":{"p/p.go":[[7,7]]}}`)
+	listing := "Discovering mutants... 1 found\n[PENDING] p.go:7:15 >= -> > (CONDITIONALS_BOUNDARY)\n"
+	t.Setenv("FAKE_GOMUTANTS_DRY", listing)
+	t.Setenv("FAKE_GOMUTANTS_JSON", oneLived)
+	r, log, err := run(c)
+	want := result{
+		scope: "diff", total: 1, lived: 1, selected: 1, changedUnits: 1,
+		mutants: []string{"mutant.lived=p/p.go:7:15 CONDITIONALS_BOUNDARY (p/p.go:Pass:CONDITIONALS_BOUNDARY#1)"},
+	}
+	if err != nil || !reflect.DeepEqual(r, want) {
+		t.Fatalf("result %+v, error %v; want %+v", r, err, want)
+	}
+	_, configAndRest, _ := strings.Cut(string(log), " --config ")
+	config, _, _ := strings.Cut(configAndRest, " --")
+	work := filepath.Dir(config)
+	command := "$ gomutants --cache=off --config " + filepath.Join(work, "gomutants.yml")
+	wantLog := command + " --dry-run ./p\n" + listing + command + " --changed-since base --output " + filepath.Join(work, "report.json") + " ./p\n"
+	if string(log) != wantLog {
+		t.Fatalf("log = %q, want %q", log, wantLog)
 	}
 }
