@@ -46,10 +46,14 @@ export function astroBuild(root) {
       if (existsSync(path)) {
         const stories = JSON.parse(readFileSync(path));
         for (const id of Object.keys(stories)) {
-          stories[id] = stories[id].replaceAll(
-            `data-astro-source-file="${root}${sep}`,
-            'data-astro-source-file="/',
-          );
+          // No real Windows Astro annotation has been observed. Accept either
+          // separator after the root rather than assuming the host's separator.
+          for (const separator of ["/", "\\"]) {
+            stories[id] = stories[id].replaceAll(
+              `data-astro-source-file="${root}${separator}`,
+              'data-astro-source-file="/',
+            );
+          }
         }
         writeFileSync(path, JSON.stringify(stories));
       }

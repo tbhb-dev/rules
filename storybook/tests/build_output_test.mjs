@@ -60,31 +60,39 @@ test("only the emitted resolveFrom option is removed", () => {
   );
 });
 
-test("prerender annotations are portable; other content stays byte-identical", () => {
-  const outDir = mkdtempSync(join(tmpdir(), "storybook-output-"));
-  try {
-    const plugin = astroBuild("/project");
-    plugin.configResolved({ build: { outDir } });
-    plugin.closeBundle(); // Non-static builds have no prerender file.
-    const path = join(outDir, "astro-prerendered-stories.json");
-    writeFileSync(
-      path,
-      JSON.stringify({
-        story:
-          '<h1 data-astro-source-file="/project/src/Greeting.astro">Hello</h1>',
+test.each(["/", "\\"])(
+  "prerender annotations accept %s after the root",
+  (separator) => {
+    const outDir = mkdtempSync(join(tmpdir(), "storybook-output-"));
+    try {
+      const plugin = astroBuild("/project");
+      plugin.configResolved({ build: { outDir } });
+      plugin.closeBundle(); // Non-static builds have no prerender file.
+      const path = join(outDir, "astro-prerendered-stories.json");
+      writeFileSync(
+        path,
+        JSON.stringify({
+          story: `<h1 data-astro-source-file="/project${separator}src/Greeting.astro">Hello</h1>`,
+          plain: "unchanged",
+          sibling:
+            '<h1 data-astro-source-file="/project-other/src/Other.astro">Other</h1>',
+          source: `/project${separator}src/Greeting.astro`,
+        }),
+      );
+      const other = join(outDir, "other.bin");
+      const bytes = Buffer.from([0, 255, 42]);
+      writeFileSync(other, bytes);
+      plugin.closeBundle();
+      assert.deepEqual(JSON.parse(readFileSync(path, "utf8")), {
+        story: '<h1 data-astro-source-file="/src/Greeting.astro">Hello</h1>',
         plain: "unchanged",
-      }),
-    );
-    const other = join(outDir, "other.bin");
-    const bytes = Buffer.from([0, 255, 42]);
-    writeFileSync(other, bytes);
-    plugin.closeBundle();
-    assert.deepEqual(JSON.parse(readFileSync(path, "utf8")), {
-      story: '<h1 data-astro-source-file="/src/Greeting.astro">Hello</h1>',
-      plain: "unchanged",
-    });
-    assert.deepEqual(readFileSync(other), bytes);
-  } finally {
-    rmSync(outDir, { recursive: true, force: true });
-  }
-});
+        sibling:
+          '<h1 data-astro-source-file="/project-other/src/Other.astro">Other</h1>',
+        source: `/project${separator}src/Greeting.astro`,
+      });
+      assert.deepEqual(readFileSync(other), bytes);
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  },
+);
