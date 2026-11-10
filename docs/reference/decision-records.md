@@ -4,6 +4,14 @@ status: draft
 tags: [decisions, docs]
 title: Decision records
 type: Reference
+generated:
+  - role: generated
+    harness: codex:0.164.0
+    model: openai:gpt-6.1-sol
+    effort: high
+    surface: exec
+    session: sha-256-64:dad369cdbe656815
+    at: "2026-11-10T03:32:44Z"
 ---
 
 # Decision records
@@ -33,7 +41,7 @@ The title states the decision. Use these sections in order:
 
 `decision_records_test` checks the filename pattern and unique numbers. It scans only the directory's immediate children and rejects subdirectories and non-Markdown files. It exempts `index.md`, `AGENTS.md`, and `CLAUDE.md` from the filename and number rules. A missing directory passes.
 
-Run `bazelisk test //:decision_records_test` to check the repository's record names. The check never reads file contents.
+Run `bazelisk test //:decision_records_test` to check the repository's record names. The check reads frontmatter replacement references.
 
 ## Frontmatter
 
