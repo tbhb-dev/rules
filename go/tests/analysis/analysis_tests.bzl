@@ -9,7 +9,7 @@ load("@rules_testing//lib:analysis_test.bzl", "analysis_test", "test_suite")
 load("@rules_testing//lib:truth.bzl", "matching")
 load("@rules_testing//lib:unit_test.bzl", "unit_test")
 load("@rules_testing//lib:util.bzl", "util")
-load("//:defs.bzl", "GolangciLintInfo", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test", "golangci_lint_aspect_factory")
+load("//:defs.bzl", "GolangciLintInfo", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test", "golangci_lint_aspect_factory", "gomutants_test")
 load("//private:golangci_lint.bzl", "main_repo_label")
 load("//private:gomutants.bzl", "default_flags")
 load("//tests/golangci:linters.bzl", "fixture_lint", "fixture_lint_test")
@@ -175,6 +175,34 @@ def _test_gomutants_flags_by_exec_os_impl(env):
     for goos in ["linux", "darwin", ""]:
         env.expect.that_collection(default_flags(goos)).contains_exactly(["--timeout-min=20s", "--test-flags=-failfast"]).in_order()
 
+def _test_gomutants_target_compatible_with(name):
+    cases = []
+    for suffix, kwargs in [
+        ("unspecified", {}),
+        ("empty", {"target_compatible_with": []}),
+        ("incompatible", {"target_compatible_with": [Label("@platforms//:incompatible")]}),
+    ]:
+        subject = name + "_" + suffix
+        util.helper_target(
+            gomutants_test,
+            name = subject,
+            tests = [FIXTURE + "/a:a_test", FIXTURE + "/b:b_test"],
+            go_mod = FIXTURE + ":go.mod",
+            **kwargs
+        )
+        for target in [subject, subject + ".tests_golangci_fixture_a", subject + ".tests_golangci_fixture_b"]:
+            constraints = native.existing_rule(target).get("target_compatible_with", [])
+            cases.append((
+                [native.package_relative_label(constraint) for constraint in constraints],
+                kwargs.get("target_compatible_with", []),
+            ))
+
+    def impl(env):
+        for actual, expected in cases:
+            env.expect.that_collection(actual).contains_exactly(expected)
+
+    unit_test(name = name, impl = impl)
+
 def analysis_test_suite(name):
     test_suite(
         name = name,
@@ -184,6 +212,7 @@ def analysis_test_suite(name):
             _test_deadcode_without_go_targets,
             _test_follows_deps_and_embed,
             _test_gomutants_flags_by_exec_os,
+            _test_gomutants_target_compatible_with,
             _test_library,
             _test_lint_src_reaching_nothing,
             _test_main_repo_label,
