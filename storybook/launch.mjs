@@ -175,6 +175,7 @@ function writeConfig(root, gen, { allow = [], ...options } = {}) {
   linkPinned(join(gen, "node_modules"));
   const vite = {
     roots: [root, gen],
+    framework: FRAMEWORK,
     stores: [...allow, ...stores(root, gen)],
     ...options,
   };

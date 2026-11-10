@@ -5,11 +5,31 @@ load("@aspect_rules_js//js:defs.bzl", "js_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load("@tbhb_rules_playwright//:defs.bzl", "PLAYWRIGHT_VERSION")
+load("@tbhb_rules_typescript//:defs.bzl", "stryker_test", "vitest_test")
 load(":rules_tests.bzl", "rules_test_suite")
 
 repo_files()
 
 rules_test_suite(name = "rules_tests")
+
+BUILD_OUTPUT_SRCS = [
+    "build_output_test.mjs",
+    "vitest.config.mjs",
+    "stryker.config.mjs",
+    "//:launcher_data",
+]
+
+vitest_test(
+    name = "build_output_test",
+    srcs = BUILD_OUTPUT_SRCS,
+    config = ":vitest.config.mjs",
+)
+
+stryker_test(
+    name = "build_output_mutation_test",
+    srcs = BUILD_OUTPUT_SRCS,
+    config = ":stryker.config.mjs",
+)
 
 VERSIONS_ENV = {
     "TBHB_LAUNCHER_DATA": "$(rlocationpaths //:launcher_data)",
