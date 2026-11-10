@@ -2,12 +2,12 @@
 description: The frontmatter fields of a Markdown file, their values, and how they map to commit trailers.
 generated:
   - role: generated
-    harness: claude-code:2.1.316
-    model: anthropic:claude-opus-5-5
-    effort: medium
-    surface: cli
-    session: sha-256-64:debb814921f029ad
-    at: "2026-11-03T05:13:54Z"
+    harness: codex:0.164.0
+    model: openai:gpt-6.1-sol
+    effort: high
+    surface: exec
+    session: sha-256-64:dad369cdbe656815
+    at: "2026-11-10T03:30:00Z"
 status: stable
 tags: [docs, frontmatter, schema]
 title: Frontmatter reference
@@ -27,6 +27,8 @@ Each Markdown file in the repository starts with a YAML frontmatter block, excep
 | `description` | yes | A non-empty string, reused as the index entry description. |
 | `tags` | yes | A non-empty list of unique lowercase kebab-case strings. |
 | `status` | yes | `draft`, `stable`, or `deprecated`. |
+| `decided` | for Decision Records | The decision date as `YYYY-MM-DD`. Quote it. Other types reject this field. |
+| `superseded_by` | no | An integer replacement record number, allowed only on a `Decision Record` with `status: deprecated`. |
 | `generated` | no | A non-empty list of contributor entries. |
 | `verified` | no | A human sign-off. Only a human adds it. |
 
