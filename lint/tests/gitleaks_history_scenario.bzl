@@ -38,10 +38,10 @@ case {scenario} in
     commit secret
     git -C "$repo" checkout -q -
     ;;
-  range_secret|range_base_secret|range_config)
+  range_secret|range_base_secret|range_config|range_empty)
     echo hello >"$repo/a.txt"
     commit base
-    if [[ {scenario} != range_secret ]]; then
+    if [[ {scenario} == range_base_secret || {scenario} == range_config ]]; then
       printf 'aws_access_key_id = %s%s\\n' AKIA Z7Q3XK2M5TNB4VWR >"$repo/creds.txt"
       commit secret
       rm "$repo/creds.txt"
@@ -60,6 +60,7 @@ case {scenario} in
         echo change >>"$repo/a.txt"
         commit change
         ;;
+      range_empty) commit empty ;;
       range_config)
         printf '[extend]\\nuseDefault = true\\n' >"$repo/.gitleaks.toml"
         commit config
@@ -119,7 +120,7 @@ gitleaks_history_scenario_test = rule(
     attrs = SHELL_ATTRS | {
         "expected_scan": attr.string(doc = "Exact scan announcement required before accepting the result."),
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["clean", "corrupt", "no_commits", "no_content", "other_branch", "range_base_secret", "range_config", "range_linear", "range_secret", "secret"]),
+        "scenario": attr.string(mandatory = True, values = ["clean", "corrupt", "no_commits", "no_content", "other_branch", "range_base_secret", "range_config", "range_empty", "range_linear", "range_secret", "secret"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
         "subject_args": attr.string_list(doc = "Arguments passed to the subject."),
     },

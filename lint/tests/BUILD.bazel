@@ -166,6 +166,14 @@ gitleaks_history_scenario_test(
     subject_args = ["--merge-range"],
 )
 
+gitleaks_history_scenario_test(
+    name = "history_range_empty_test",
+    expected_scan = "gitleaks_history: scanning HEAD^1..HEAD (2 commits): the pull request's commits",
+    scenario = "range_empty",
+    subject = ":history_subject",
+    subject_args = ["--merge-range"],
+)
+
 [
     gitleaks_history_scenario_test(
         name = "proof_history_" + scenario,

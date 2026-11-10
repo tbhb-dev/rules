@@ -80,7 +80,7 @@ fi
 
 # gitleaks exits 0 when its git invocation fails, after scanning nothing.
 if ! grep -Eq '[1-9][0-9]* commits scanned' "$log"; then
-  if ! git log -p --format= HEAD >"$history"; then
+  if ! git log -p --format= "${scan_range:-HEAD}" >"$history"; then
     echo "gitleaks_history: FAIL: git cannot read the history that gitleaks scanned 0 commits of" >&2
     exit 1
   fi
