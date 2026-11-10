@@ -134,8 +134,7 @@ gitleaks_history_scenario_test(
 )
 
 # A key on another branch fails the default scan of every ref, and passes a
-# scan limited to the checked-out branch, as repo-checks.yml runs on pull
-# requests.
+# scan limited to the checked-out branch.
 gitleaks_history_scenario_test(
     name = "history_head_only_test",
     scenario = "other_branch",
@@ -157,6 +156,70 @@ gitleaks_history_scenario_test(
         "secret",
     ]
 ]
+
+# The merge range excludes the base history but still catches keys removed
+# before the merge. Full scans of the same base-secret fixture still fail.
+gitleaks_history_scenario_test(
+    name = "history_range_base_secret_test",
+    expected_head = "head",
+    expected_scan = "gitleaks_history: scanning HEAD^1..HEAD (2 commits): the pull request's commits",
+    scenario = "range_base_secret",
+    subject = ":history_subject",
+    subject_args = ["--merge-range"],
+)
+
+gitleaks_history_scenario_test(
+    name = "history_range_empty_test",
+    expected_head = "head",
+    expected_scan = "gitleaks_history: scanning HEAD^1..HEAD (2 commits): the pull request's commits",
+    scenario = "range_empty",
+    subject = ":history_subject",
+    subject_args = ["--merge-range"],
+)
+
+[
+    gitleaks_history_scenario_test(
+        name = "proof_history_" + scenario,
+        expected_head = "head",
+        expected_scan = announcement,
+        scenario = scenario,
+        subject = ":history_subject",
+        subject_args = ["--merge-range"],
+        tags = PROOF_TAGS,
+    )
+    for scenario, announcement in [
+        ("range_secret", "gitleaks_history: scanning HEAD^1..HEAD (3 commits): the pull request's commits"),
+        ("range_linear", "gitleaks_history: scanning full history HEAD (2 commits): HEAD does not have exactly two readable parents"),
+        ("range_config", "gitleaks_history: scanning full history HEAD (5 commits): the pull request changes .gitleaks.toml"),
+        ("range_ignore", "gitleaks_history: scanning full history HEAD (5 commits): the pull request changes .gitleaksignore"),
+    ]
+]
+
+# A branch tip that merges the base into the PR has the author's commits on
+# the first-parent line. Missing or mismatched event commits must scan them.
+[
+    gitleaks_history_scenario_test(
+        name = "proof_history_range_branch_merge_" + expected_head,
+        expected_head = expected_head,
+        expected_scan = "gitleaks_history: scanning full history HEAD (5 commits): " + reason,
+        scenario = "range_branch_merge",
+        subject = ":history_subject",
+        subject_args = ["--merge-range"],
+        tags = PROOF_TAGS,
+    )
+    for expected_head, reason in [
+        ("unset", "EXPECTED_HEAD is unset"),
+        ("other", "HEAD is not the commit the event names"),
+    ]
+]
+
+gitleaks_history_scenario_test(
+    name = "proof_history_range_base_secret_full",
+    scenario = "range_base_secret",
+    subject = ":history_subject",
+    subject_args = ["--log-opts=HEAD"],
+    tags = PROOF_TAGS,
+)
 
 # gitleaks_text on piped text, with and without a committed config.
 
@@ -243,6 +306,13 @@ PROOF_REASONS = {
     "proof_history_corrupt": "gitleaks_history: FAIL: git cannot read the history",
     "proof_history_no_commits": "gitleaks_history: FAIL: the repository has no commits",
     "proof_history_other_branch": "leaks found: [1-9]",
+    "proof_history_range_base_secret_full": "leaks found: [1-9]",
+    "proof_history_range_branch_merge_other": "leaks found: [1-9]",
+    "proof_history_range_branch_merge_unset": "leaks found: [1-9]",
+    "proof_history_range_config": "leaks found: [1-9]",
+    "proof_history_range_ignore": "leaks found: [1-9]",
+    "proof_history_range_linear": "leaks found: [1-9]",
+    "proof_history_range_secret": "leaks found: [1-9]",
     "proof_history_secret": "leaks found: [1-9]",
     "proof_shellcheck_empty": "shell_select: no shell scripts found, so nothing was checked",
     "proof_shfmt_empty": "shell_select: no shell scripts found, so nothing was checked",
