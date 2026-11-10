@@ -332,7 +332,9 @@ async function build(outDir, manifest) {
   // js_binary runs in the output tree; the action's paths are relative to
   // the execution root.
   const execroot = process.env.JS_BINARY__EXECROOT ?? process.cwd();
-  const root = mkdtempSync(join(tmpdir(), "storybook-"));
+  // Vite and Storybook resolve symlinks in cwd. Match their root spelling
+  // before computing relative paths (macOS /var points into /private/var).
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "storybook-")));
   for (const line of readFileSync(resolve(execroot, manifest), "utf8").split(
     "\n",
   )) {
