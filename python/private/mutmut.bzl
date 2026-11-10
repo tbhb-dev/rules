@@ -120,7 +120,14 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
     conftest.py, a non-Python file (config, data, the lock), a module-level
     statement, an added or deleted file, or any file outside the run
     directory (a dependency's source or the root config): those can change
-    any verdict. A diff pass never stands for a full run (`require_scope`);
+    any verdict. With a non-empty `source_paths` attribute, a changed .py
+    outside those paths contributes no mutants and does not force a full
+    run, unless it is a test file, conftest.py, or under the run directory's
+    own tests. A slice of only these skipped files runs nothing and passes
+    with `scope=diff`. A neighbour's edit that changes this unit's verdicts
+    is only caught by a full run. Empty `source_paths` keeps the behavior
+    above, including when the config sets source_paths.
+    A diff pass never stands for a full run (`require_scope`);
     mutants of unchanged functions are checked by full runs.
 
     Under a cgroup CPU quota below the host's CPU count, the driver runs
