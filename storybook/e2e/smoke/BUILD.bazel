@@ -12,6 +12,13 @@ repo_files()
 # The renderer libraries, for every Storybook in a subpackage.
 npm_link_all_packages(name = "node_modules")
 
+# Every file in each fixture's build, including lazy chunks and metadata.
+copy_to_bin(
+    name = "dist_paths_test",
+    srcs = ["dist_paths_test.mjs"],
+    visibility = ["//:__subpackages__"],
+)
+
 # The test each fixture serves its built Storybook with, in the output tree,
 # where rules_js runs JavaScript from.
 copy_to_bin(
