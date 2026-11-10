@@ -4,6 +4,9 @@
 package main
 
 import (
+	"bufio"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -468,5 +471,76 @@ func TestRunUnstable(t *testing.T) {
 func TestFakeGitRejectsOtherCommands(t *testing.T) {
 	if fakeGit([]string{"log"}) == 0 {
 		t.Error("git log answered")
+	}
+}
+
+func TestFuncSpans(t *testing.T) {
+	name := write(t, t.TempDir(), "p.go", pkgSource)
+	for _, tc := range []struct {
+		name         string
+		ranges, want []span
+		ok           bool
+	}{
+		{"doc through end", []span{{5, 8}}, []span{{5, 8}}, true},
+		{"signature", []span{{6, 6}}, []span{{5, 8}}, true},
+		{"closing brace", []span{{8, 8}}, []span{{5, 8}}, true},
+		{"before doc", []span{{4, 5}}, nil, false},
+		{"past end", []span{{8, 9}}, nil, false},
+		{"ordered and unique", []span{{16, 16}, {12, 14}, {5, 8}, {7, 7}}, []span{{5, 8}, {12, 14}, {16, 16}}, true},
+		{"empty", nil, []span{}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok, err := funcSpans(name, tc.ranges)
+			if err != nil || ok != tc.ok || !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("spans = %v, %v, %v; want %v, %v", got, ok, err, tc.want, tc.ok)
+			}
+		})
+	}
+}
+
+func TestParseDryRunLineLimit(t *testing.T) {
+	// Scanner's limit includes the newline. Keep this independent of the
+	// production constant so both sides of the exact limit are pinned.
+	for _, size := range []int{(1 << 24) - 1, 1 << 24} {
+		out := "Discovering mutants... 0 found\n" + strings.Repeat("x", size) + "\n"
+		keys, err := parseDryRun(out)
+		if size == (1<<24)-1 {
+			if err != nil || len(keys) != 0 {
+				t.Errorf("line of %d bytes: %v, %v", size, keys, err)
+			}
+		} else if !errors.Is(err, bufio.ErrTooLong) || keys != nil {
+			t.Errorf("line of %d bytes: %v, %v", size, keys, err)
+		}
+	}
+}
+
+func TestCrossCheckMultiplicity(t *testing.T) {
+	k := mutantKey{"p.go", 5, 3, "X"}
+	mutation := `{"id":"p.go:F:X#1","type":"X","line":5,"column":3}`
+	for _, tc := range []struct{ listed, reported, suppressed int }{
+		{0, 0, 0}, {0, 2, 0}, {1, 0, 0}, {2, 0, 0}, {2, 1, 0}, {1, 2, 0}, {2, 2, 3},
+	} {
+		listed := make([]mutantKey, tc.listed)
+		for i := range listed {
+			listed[i] = k
+		}
+		mutations := make([]string, tc.reported)
+		for i := range mutations {
+			mutations[i] = mutation
+		}
+		data := fmt.Sprintf(`{"mutants_suppressed":%d,"files":[{"mutations":[%s]}]}`, tc.suppressed, strings.Join(mutations, ","))
+		s := slice{Files: map[string][]span{"p.go": {{5, 8}, {5, 8}}}}
+		r := result{selected: 4}
+		r.crossCheck(listed, s, []byte(data), "mod/")
+		var want []string
+		for range max(tc.listed-tc.reported, 0) {
+			want = append(want, "mutant.unmapped=mod/p.go:5:3 X (selected, not reported)")
+		}
+		for range max(tc.reported-tc.listed, 0) {
+			want = append(want, "mutant.unmapped=mod/p.go:5:3 X (reported, not selected)")
+		}
+		if r.selected != 4+tc.listed+tc.suppressed || !reflect.DeepEqual(r.mutants, want) {
+			t.Errorf("%+v: selected %d, mutants %v; want %v", tc, r.selected, r.mutants, want)
+		}
 	}
 }
