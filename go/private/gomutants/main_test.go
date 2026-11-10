@@ -22,6 +22,10 @@ import (
 // that the fake git answers with the slice's diff, and fails (exit 3)
 // otherwise.
 func TestMain(m *testing.M) {
+	// scratch drops GO* variables; restore gobco's statistics for the stand-ins.
+	if stats := os.Getenv("FAKE_GOBCO_STATS"); stats != "" {
+		_ = os.Setenv("GOBCO_STATS", stats)
+	}
 	if strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe") == "git" {
 		os.Exit(fakeGit(os.Args[1:]))
 	}
@@ -325,6 +329,7 @@ func runFake(t *testing.T, changes, rc string, js *string) (int, string) {
 		t.Fatal(err)
 	}
 	t.Setenv("FAKE_GOMUTANTS_RC", rc)
+	t.Setenv("FAKE_GOBCO_STATS", os.Getenv("GOBCO_STATS"))
 	t.Setenv("FAKE_GOMUTANTS_DRY", "Discovering mutants... 1 found\n[PENDING] p.go:7:15  >= → >  (CONDITIONALS_BOUNDARY)\n")
 	if js != nil {
 		t.Setenv("FAKE_GOMUTANTS_JSON", *js)
@@ -398,6 +403,62 @@ func TestRunNoReportIsInterrupted(t *testing.T) {
 	code, report := runFake(t, "", "0", nil)
 	if code != 1 || !strings.Contains(report, "interrupted=1\n") {
 		t.Errorf("exit %d, report:\n%s", code, report)
+	}
+}
+
+func TestRunUnstable(t *testing.T) {
+	for _, tc := range []struct {
+		name, rc, js, reason, mutants string
+	}{
+		{
+			"timeout", "0", strings.Replace(oneLived, "LIVED", "TIMED OUT", 1), "timeout",
+			"mutant.timed_out=p/p.go:7:15 CONDITIONALS_BOUNDARY (p/p.go:Pass:CONDITIONALS_BOUNDARY#1)\n",
+		},
+		{
+			"errored", "0", `{"files":[{"file_name":"p.go","mutations":[
+				{"id":"p/p.go:Pass:Z#1","type":"Z","status":"INFRA ERROR","line":7,"column":15},
+				{"id":"p/p.go:Double:A#1","type":"A","status":"INFRA ERROR","line":13,"column":9},
+				{"id":"p/p.go:Pass:K#1","type":"K","status":"KILLED","line":7,"column":15}
+			]}]}`, "errored",
+			"mutant.infra_error=p/p.go:13:9 A (p/p.go:Double:A#1)\n" +
+				"mutant.infra_error=p/p.go:7:15 Z (p/p.go:Pass:Z#1)\n",
+		},
+		{"no report", "0", "", "interrupted", ""},
+		{"run failed", "1", "", "interrupted", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stderr := write(t, t.TempDir(), "stderr", "")
+			f, err := os.OpenFile(stderr, os.O_WRONLY, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			old := os.Stderr
+			os.Stderr = f
+			t.Cleanup(func() {
+				os.Stderr = old
+				_ = f.Close()
+			})
+			var js *string
+			if tc.js != "" {
+				js = &tc.js
+			}
+			code, report := runFake(t, "", tc.rc, js)
+			data, err := os.ReadFile(stderr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if code != 1 || !strings.HasPrefix(string(data), "gomutants: not cacheable: "+tc.reason+"\n$ gomutants ") {
+				t.Errorf("exit %d, stderr:\n%s", code, data)
+			}
+			_, list, found := strings.Cut(string(data), "mutants not killed:\n")
+			if found != (tc.mutants != "") || list != tc.mutants {
+				t.Errorf("stderr:\n%s\nwant mutants:\n%s", data, tc.mutants)
+			}
+			_, mutants, _ := strings.Cut(report, "mutant.")
+			if mutants != strings.TrimPrefix(tc.mutants, "mutant.") {
+				t.Errorf("report:\n%s\nwant mutants:\n%s", report, tc.mutants)
+			}
+		})
 	}
 }
 

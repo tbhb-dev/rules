@@ -217,6 +217,10 @@ func runMain(args []string) int {
 	}
 	if found := r.unstable(); len(found) > 0 {
 		fmt.Fprintf(os.Stderr, "gomutants: not cacheable: %s\n%s", strings.Join(found, ", "), log)
+		if len(r.mutants) > 0 {
+			sort.Strings(r.mutants)
+			fmt.Fprintf(os.Stderr, "mutants not killed:\n%s\n", strings.Join(r.mutants, "\n"))
+		}
 		return 1
 	}
 	return 0
