@@ -150,13 +150,16 @@ def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], 
         changes: The change set; quality's `changes` flag when None.
         require_scope: `full` makes the gate fail on any diff-scope report,
             for main and nightly runs.
-        **kwargs: Passed to the gate test.
+        **kwargs: Passed to the gate test; target_compatible_with is applied
+            to the reports and the gate.
     """
     by_package = {}
     for test in tests:
         package = native.package_relative_label(test).package
         by_package.setdefault(package, []).append(test)
     report_kwargs = {"changes": changes} if changes else {}
+    if kwargs.get("target_compatible_with") != None:
+        report_kwargs["target_compatible_with"] = kwargs.get("target_compatible_with")
     reports = []
     for package, package_tests in sorted(by_package.items()):
         report = "{}.{}".format(name, package.replace("/", "_") or "_root")
