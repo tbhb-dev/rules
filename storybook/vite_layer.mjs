@@ -17,6 +17,7 @@
 
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { astroBuild } from "./build_output.mjs";
 
 // A package name, not a path, URL, virtual module or builtin.
 function isBare(source) {
@@ -120,8 +121,15 @@ export function fsAllow(config, [root, ...stores]) {
   };
 }
 
-export function tbhbVite(config, { roots, stores, base, clientPort }) {
-  const plugins = [fallbackResolve(roots), ...(config.plugins ?? [])];
+export function tbhbVite(
+  config,
+  { roots, stores, base, clientPort, framework },
+) {
+  const plugins = [
+    fallbackResolve(roots),
+    ...(config.plugins ?? []),
+    ...(framework === "astro" ? [astroBuild(roots[0])] : []),
+  ];
   const server = fsAllow(config, [roots[0], ...stores]);
   if (!base) {
     return { ...config, server, plugins };

@@ -30,6 +30,14 @@ def storybook_fixture(framework, heading, refusals = False, node_modules = "//:n
         node_modules = node_modules,
     )
 
+    js_test(
+        name = "dist_paths_test",
+        args = ["$(rootpath :dist)"],
+        data = [":dist", "//:dist_paths_test"],
+        entry_point = "//:dist_paths_test",
+        target_compatible_with = NOT_WINDOWS,
+    )
+
     # The built Storybook served from the base path a Pages site gives it.
     js_test(
         name = "dist_test",

@@ -52,6 +52,7 @@ copy_to_bin(
 copy_to_bin(
     name = "launcher_data",
     srcs = [
+        "build_output.mjs",
         "package.json",
         "resolve_hooks.mjs",
         "resolve_loader.mjs",
