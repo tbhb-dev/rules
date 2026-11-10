@@ -17,5 +17,6 @@ bzl_library(
         "//private:gomutants",
         "//tests/golangci:linters_bzl",
         "@rules_go//go:def",
+        "@tbhb_rules//quality:defs",
     ],
 )

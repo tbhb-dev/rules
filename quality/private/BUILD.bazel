@@ -31,3 +31,9 @@ bzl_library(
     srcs = ["slice.bzl"],
     visibility = ["//quality:__subpackages__"],
 )
+
+bzl_library(
+    name = "mutation_oses",
+    srcs = ["mutation_oses.bzl"],
+    visibility = ["//quality:__subpackages__"],
+)
