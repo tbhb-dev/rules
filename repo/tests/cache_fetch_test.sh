@@ -13,7 +13,13 @@ mkdir -p "$scratch/bin" "$scratch/root/go" "$scratch/root/typescript"
 cat >"$scratch/bin/bazelisk" <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ $1 == query ]]; then
+if [[ $1 == mod ]]; then
+  [[ ${FAIL_MAPPING:-false} != true ]]
+  case "$PWD" in
+    */go) echo '{"tbhb_rules_go":""}' ;;
+    *) echo '{}' ;;
+  esac
+elif [[ $1 == query ]]; then
   case "$PWD" in
     */go) echo //:gazelle; echo //tests/self:govulncheck ;;
     */typescript) echo //:pnpm_audit ;;
@@ -44,13 +50,26 @@ if grep '^root ' "$LOG" | grep -qF '//:pnpm_audit'; then
 fi
 fetch_count=$(wc -l <"$LOG" | tr -d ' ')
 [[ $fetch_count == 3 ]]
-# External tools must fetch in all workspaces, even when local tools differ.
+# Shared external tools must fetch in every workspace.
 for workspace in root go typescript; do
   for tool in '@bazel_tools//tools:tools_for_bazel_subcommands' '@tbhb_rules//lint:zizmor'; do
     grep "^$workspace " "$LOG" | grep -qF -- "$tool"
   done
 done
+# The SDK checker is required only where the Go rules module is visible.
+grep '^go ' "$LOG" | grep -qF '@tbhb_rules_go//tools:go_sdk_checksums'
+if grep -E '^(root|typescript) ' "$LOG" | grep -qF '@tbhb_rules_go//'; then
+  echo 'FAIL: selected Go tools without the Go rules module'
+  exit 1
+fi
 grep -q '^seconds=[0-9][0-9]*$' "$GITHUB_OUTPUT"
+# A mapping failure must stop selection rather than skip required Go tools.
+: >"$GITHUB_OUTPUT"
+if FAIL_MAPPING=true bash "$script"; then
+  echo 'FAIL: failed mapping returned success'
+  exit 1
+fi
+[[ ! -s $GITHUB_OUTPUT ]]
 # A failed fetch must fail the composite, with no success output.
 : >"$GITHUB_OUTPUT"
 if FAIL_FETCH=true bash "$script"; then
