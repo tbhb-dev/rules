@@ -23,7 +23,10 @@ bzl_library(
     name = "commit_identity",
     srcs = ["commit_identity.bzl"],
     visibility = ["//lint:__subpackages__"],
-    deps = ["//shell:defs"],
+    deps = [
+        "//runtime:defs",
+        "//shell:defs",
+    ],
 )
 
 bzl_library(
@@ -154,3 +157,5 @@ bzl_library(
         "//runtime:defs",
     ],
 )
+
+exports_files(["commit_identity/check_trailers.py"])

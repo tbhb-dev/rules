@@ -8,6 +8,7 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 
 ## Reference
 
+* [Commit identity](reference/commit-identity.md) - Allowed identities and required agent identity trailers.
 * [Decision records](reference/decision-records.md) - Where decision records live, their names and frontmatter, and what the check enforces.
 * [Frontmatter reference](reference/frontmatter.md) - The frontmatter fields, their values, and how they map to commit trailers.
 * [Mutation operating systems](reference/mutation-oses.md) - Mutation OS selection and checks for platform-specific source code.
