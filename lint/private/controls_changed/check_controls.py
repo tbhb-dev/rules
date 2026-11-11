@@ -11,8 +11,26 @@ import os
 import re
 import subprocess  # nosec B404  # Only the pinned Git executable is launched.
 from pathlib import Path
-from typing import NotRequired, TypedDict, cast
+from typing import NotRequired, TypedDict
 lazy from collections.abc import Iterator
+
+# Fixed Git protocol options, independent of the caller's configuration.
+DIFF_FLAGS = (
+    "diff",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--no-relative",
+    "--no-color",
+    "--find-renames",
+    "-l0",
+    "--ignore-submodules=all",
+    "--raw",
+    "--no-abbrev",
+    "-z",
+)
+REVISION_FLAGS = ("rev-parse", "--verify", "--end-of-options")
+# Repeated lines must remain anchors when finding newly added pragmas.
+AUTOJUNK = False
 
 
 class Category(TypedDict):
@@ -41,12 +59,12 @@ def git(executable: str, *args: str) -> str:
         [executable, *args],
         check=True,
         capture_output=True,
-    ).stdout.decode("utf-8", errors="surrogateescape")
+    ).stdout.decode(errors="surrogateescape")
 
 
 def added_lines(before: str, after: str) -> str:
     old, new = before.splitlines(), after.splitlines()
-    matcher = difflib.SequenceMatcher(None, old, new, autojunk=False)
+    matcher = difflib.SequenceMatcher(None, old, new, autojunk=AUTOJUNK)
     return "\n".join(
         line
         for operation, _, _, start, end in matcher.get_opcodes()
@@ -81,9 +99,7 @@ def source_entries(
     return entries
 
 
-def called_test(node: ast.AST, pattern: str) -> bool:
-    if not isinstance(node, ast.Call):
-        return False
+def called_test(node: ast.Call, pattern: str) -> bool:
     function = node.func
     if isinstance(function, ast.Name):
         return re.search(pattern, function.id) is not None
@@ -106,9 +122,8 @@ def test_inventory(
     }
     inventory: dict[str, set[str]] = {}
     for node in ast.walk(tree):
-        if not called_test(node, pattern):
+        if not isinstance(node, ast.Call) or not called_test(node, pattern):
             continue
-        node = cast("ast.Call", node)
         keywords = {keyword.arg: keyword.value for keyword in node.keywords}
         name = keywords.get("name")
         if not isinstance(name, ast.Constant) or not isinstance(name.value, str):
@@ -163,25 +178,7 @@ def matches(category: Category, path: str, before: str, after: str) -> bool:
 def changed_blobs(
     executable: str, base: str, head: str
 ) -> Iterator[tuple[str, str, str]]:
-    records = iter(
-        git(
-            executable,
-            "diff",
-            "--no-ext-diff",
-            "--no-textconv",
-            "--no-relative",
-            "--no-color",
-            "--find-renames",
-            "-l0",
-            "--ignore-submodules=all",
-            "--raw",
-            "--no-abbrev",
-            "-z",
-            base,
-            head,
-            "--",
-        ).split("\0")[:-1]
-    )
+    records = iter(git(executable, *DIFF_FLAGS, base, head).split("\0")[:-1])
     for header in records:
         _, _, old, new, status = header.split()
         path = next(records)
@@ -195,9 +192,7 @@ def changed_blobs(
 
 def detect(executable: str, base: str, head: str, categories: list[Category]) -> Report:
     base, head = (
-        git(
-            executable, "rev-parse", "--verify", "--end-of-options", rev + "^{commit}"
-        ).strip()
+        git(executable, *REVISION_FLAGS, rev + "^{commit}").strip()
         for rev in (base, head)
     )
     files: list[Hit] = []
@@ -240,9 +235,7 @@ def github_output(report: Report) -> None:
     # from closing the HTML block in the Markdown step summary.
     summary = "\n".join(lines(report)).replace("&", "&amp;").replace("<", "&lt;")
     try:
-        with Path(os.environ["GITHUB_STEP_SUMMARY"]).open(
-            "a", encoding="utf-8"
-        ) as stream:
+        with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a") as stream:
             stream.write(
                 "\n## Review controls changed\n\n<pre>\n" + summary + "\n</pre>\n"
             )
@@ -272,9 +265,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     report: Report
     try:
-        categories = cast(
-            "list[Category]",
-            json.loads(Path(__file__).with_name("categories.json").read_text("utf-8")),
+        categories: list[Category] = json.loads(
+            Path(__file__).with_name("categories.json").read_text()
         )
         report = detect(args.git, args.base, args.head, categories)
     except OSError, ValueError, subprocess.CalledProcessError:

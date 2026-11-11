@@ -294,7 +294,7 @@ def test_github_summary_and_annotations(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     assert repository.is_dir()
-    path = ".github/actions/<check%>/a\nwarning.yml"
+    path = ".github/actions/<check%&>/a\nwarning.yml"
     commit(path, "# gitleaks:allow\n# noqa\n")
     summary = tmp_path / "summary"
     summary.write_text("earlier\n", encoding="utf-8")
@@ -310,7 +310,7 @@ def test_github_summary_and_annotations(
     assert capsys.readouterr().out == text + "\n" + warnings
     assert summary.read_text("utf-8") == (
         "earlier\n\n## Review controls changed\n\n<pre>\n"
-        + text.replace("<", "&lt;")
+        + text.replace("&", "&amp;").replace("<", "&lt;")
         + "\n</pre>\n"
     )
     assert checker.escape_annotation("%\r\n") == "%25%0D%0A"
@@ -411,3 +411,95 @@ def test_source_constants_and_suites() -> None:
     assert not checker.matches(CATEGORIES[6], "BUILD", tuples, "")
     suite = 'test_suite(name="suite", tests=[":one", ":two"])'
     assert checker.matches(CATEGORIES[6], "BUILD", suite, suite.replace(', ":two"', ""))
+
+
+def test_added_lines_preserve_repeated_context() -> None:
+    assert checker.added_lines("old\nvalue", "new\nlines") == "new\nlines"
+    repeated = "repeated\n" * 300 + "end\n"
+    assert checker.added_lines("old\n" + repeated, "new\n" + repeated) == "new"
+
+
+def test_sections_preserve_names_and_ignore_preamble() -> None:
+    assert checker.sections(
+        "# preamble\n[tool.ruff]\na=1\n[tool.pylint]\nb=2\n", r"^tool\."
+    ) == {
+        "tool.ruff": ["[tool.ruff]", "a=1"],
+        "tool.pylint": ["[tool.pylint]", "b=2"],
+    }
+    assert checker.sections("preamble\n[project]\nname='demo'", "^$") == {
+        "": ["preamble"]
+    }
+
+
+def test_source_expression_changes_and_unnamed_calls() -> None:
+    before = 'FILES = ["a"]\npy_test(name="unit", srcs=FILES)'
+    after = 'FILES = ["a"]\npy_test(name="unit", srcs=["a"])'
+    assert checker.matches(CATEGORIES[6], "BUILD", before, after)
+    before = 'py_test(name=NAME)\npy_test(name="unit", srcs=["a"])'
+    assert checker.matches(CATEGORIES[6], "BUILD", before, "py_test(name=NAME)")
+    category: checker.Category = {
+        "name": "tests",
+        "paths": [],
+        "removed_test_calls": "^py_test$",
+    }
+    assert checker.matches(category, "BUILD", before, "")
+    assert not checker.matches(CATEGORIES[0], "ordinary.toml", "", "[tool.ruff]")
+    assert not checker.matches(CATEGORIES[1], "pyproject.toml", "", "[tool.ruff]")
+
+
+def test_git_preserves_non_utf8_content(repository: Path) -> None:
+    path = repository / "source-\udcff.py"
+    path.write_bytes(b"value = '\xff'\n# noqa\n")
+    checker.git("git", "add", "--", str(path))
+    checker.git("git", "commit", "-qm", "non UTF-8 fixture")
+    assert checker.detect("git", "HEAD^", "HEAD", CATEGORIES)["files"] == [
+        {"path": path.name, "categories": ["coverage-mutation-pragmas"]}
+    ]
+
+
+def test_explicit_range_and_empty_blobs(repository: Path) -> None:
+    assert repository.is_dir()
+    base = checker.git("git", "rev-parse", "HEAD").strip()
+    head = commit("new.py", "XXXX")
+    commit("later.py", "XXXX")
+    category: checker.Category = {"name": "literal", "paths": [], "added": ["^XXXX$"]}
+    assert checker.detect("git", base, head, [category]) == {
+        "files": [{"path": "new.py", "categories": ["literal"]}],
+        "categories": ["literal"],
+        "error": None,
+    }
+
+
+def test_multiple_paths_in_one_annotation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    summary = tmp_path / "summary"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    checker.github_output(
+        {
+            "files": [
+                {"path": ".vale.ini", "categories": ["lint-format"]},
+                {"path": ".cspell.jsonc", "categories": ["lint-format"]},
+            ],
+            "categories": ["lint-format"],
+            "error": None,
+        }
+    )
+    assert capsys.readouterr().out == (
+        '::warning::lint-format: ".vale.ini", ".cspell.jsonc"\n'
+    )
+
+
+def test_cli_help(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exited:
+        checker.main(["--help"])
+    assert exited.value.code == 0
+    help_text = capsys.readouterr().out
+    assert (
+        "Report changes to review controls without making them a merge gate."
+        in help_text
+    )
+    help_lines = [" ".join(line.split()) for line in help_text.splitlines()]
+    assert "--json emit a JSON report" in help_lines
+    assert "--github write summary and warnings" in help_lines
+    assert "--git" not in help_text.split()
