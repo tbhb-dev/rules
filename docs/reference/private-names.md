@@ -10,8 +10,8 @@ generated:
     model: openai:gpt-6.1-sol
     effort: high
     surface: exec
-    session: sha-256-64:bf4e75db256939ba
-    at: "2026-11-11T20:18:56Z"
+    session: sha-256-64:175bf24d1c155640
+    at: "2026-11-11T20:29:31Z"
 ---
 
 # Private repository names
@@ -22,11 +22,11 @@ Callers set the optional `PRIVATE_NAMES` secret and pass it to the reusable work
 
 ## Token grammar
 
-A token is a run of ASCII letters, digits, `_` and `-`, joined by single dots. The matcher uses `(?<![\w.-])[\w-]+(?:\.[\w-]+)*(?![\w-])` with `re.ASCII`. A preceding letter, digit, underscore, hyphen or dot prevents a new token from starting there. Letters, digits, underscores and hyphens continue a token; single dots join its parts. A final punctuation dot is outside the match, as specified by the regex.
+Tokens contain letters and digits from the American Standard Code for Information Interchange (ASCII), plus `_` and `-`, with single dots joining their parts. Matching uses the regular expression `(?<![\w.-])[\w-]+(?:\.[\w-]+)*(?![\w-])` with `re.ASCII`. Preceding letters, digits, `_`, `-` or dots prevent a new token from starting there. Final punctuation dots fall outside the match.
 
-Matching ignores case and a trailing `.git`. A token is private when it ends in `-private` and doesn't start with `-`, or when it equals a configured name. The token `-private` alone doesn't satisfy the suffix rule. Configured names use the same case and `.git` normalization.
+Matching ignores case and a trailing `.git`. A token is private when it ends in `-private` and doesn't start with `-`, or when it equals a configured name. By itself, `-private` doesn't match the suffix rule. Configured names use the same case and `.git` normalization.
 
-Each line produces one problem per distinct private token, after normalization. The problem is `'<token>' names a private repository; describe it generically instead`. Repeated tokens on different lines each produce a problem.
+Each line produces one problem per distinct private token, after normalization. Diagnostics use `'<token>' names a private repository; describe it generically instead`. Repeated tokens on different lines each produce a problem.
 
 ## Run the checker
 
@@ -38,10 +38,10 @@ printf '%s\n\n%s\n' "$PR_TITLE" "$PR_BODY" |
   bazelisk run @tbhb_rules//lint:private_names -- --text
 ```
 
-Set `PRIVATE_NAMES` in the environment for a local run. Each commit diagnostic starts with `private_names: FAIL:`, the full commit hash, and either `message` or `path:line`. Text diagnostics use `text`. The checker prints a summary and exits 1 on a hit; a clean range prints its commit count and exits 0. An unreadable repository or invalid revision fails.
+Set `PRIVATE_NAMES` in the environment for a local run. Each commit diagnostic starts with `private_names: FAIL:`, the full commit hash, and either `message` or `path:line`. Text diagnostics use `text`. A hit causes the checker to print a summary and exit 1. For a clean range, it prints the commit count and exits 0. An unreadable repository or invalid revision fails.
 
-If the running repository's `origin` name satisfies the private-name rule, the checker prints `private_names: skipped private repository` and exits 0. This applies to both range and text mode. A repository without an origin still gets checked.
+If the running repository's `origin` name satisfies the private-name rule, the checker prints `private_names: skipped private repository` and exits 0. This applies to both range and text mode. Repositories without an origin still undergo the check.
 
 ## Fixture exclusions
 
-`PRIVATE_NAMES_EXCLUDE` accepts newline- or comma-separated path globs, relative to the repository root. Matching uses case-sensitive Python `fnmatch` semantics: `*` can match `/`. Matching paths' added lines are excluded; commit messages and stdin remain checked. For example, `PRIVATE_NAMES_EXCLUDE='testdata/*'` allows fixture content under that path. For workflow runs, set the repository configuration variable `PRIVATE_NAMES_EXCLUDE`; for local runs, set the environment variable. This repository's tests construct example tokens at runtime, so their source passes without exclusions.
+`PRIVATE_NAMES_EXCLUDE` accepts newline- or comma-separated path globs, relative to the repository root. Python's case-sensitive `fnmatch` rules apply, and `*` can match `/`. The checker skips added lines in matching paths. It still checks commit messages and stdin. To allow fixture content under `testdata/`, set `PRIVATE_NAMES_EXCLUDE='testdata/*'` in the repository configuration variable for workflow runs or in the environment for local runs. At runtime, this repository's tests construct tokens from separate parts and pass without exclusions.
