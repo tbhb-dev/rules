@@ -6,8 +6,8 @@ generated:
     model: openai:gpt-6.1-sol
     effort: high
     surface: exec
-    session: sha-256-64:dad369cdbe656815
-    at: "2026-11-10T03:30:00Z"
+    session: sha-256-64:536a70d26bf7bfc1
+    at: "2026-11-11T18:34:12Z"
 status: stable
 tags: [docs, frontmatter, schema]
 title: Frontmatter reference
@@ -26,17 +26,34 @@ Each Markdown file in the repository starts with a YAML frontmatter block, excep
 | `title` | yes | A non-empty string. |
 | `description` | yes | A non-empty string, reused as the index entry description. |
 | `tags` | yes | A non-empty list of unique lowercase kebab-case strings. |
-| `status` | yes | `draft`, `stable`, or `deprecated`. |
+| `status` | yes | A lifecycle state from the type's allowed set below. |
+| `owner` | for Design Draft | The responsible role as a non-empty string. Optional on other types. |
+| `updated` | for Design Draft | The latest update date as `YYYY-MM-DD`. Quote it. Optional on other types. |
+| `decisions_open` | no | An integer of zero or more, allowed only on Design Draft. |
+| `parent` | for Design Appendix | A path to a `.md` file relative to the appendix's directory. Exclusive to this type. |
+| `id` | no | A string matching `^[a-z0-9-]+/[SR]-[0-9]{6}$`, such as `docs/S-000001` or `docs/R-000001`. Allowed only on Spike and Research Report. |
+| `platform` | no | A non-empty string, allowed only on Spike. |
 | `decided` | for Decision Records | The decision date as `YYYY-MM-DD`. Quote it. Other types reject this field. |
 | `superseded_by` | no | An integer replacement record number, allowed only on a `Decision Record` with `status: deprecated`. |
 | `generated` | no | A non-empty list of contributor entries. |
 | `verified` | no | A human sign-off. Only a human adds it. |
 
-The `type` values are `Readme`, `Agent Instructions`, `Overview`, `Architecture Overview`, `Reference`, `How-to`, `Design Draft`, `Decision Record`, and `Policy`. The schema doesn't accept other values, so add a new type to it in the same change as the first doc that uses it.
+Accepted `type` values are `Readme`, `Agent Instructions`, `Overview`, `Architecture Overview`, `Reference`, `How-to`, `Design Draft`, `Design Appendix`, `Spike`, `Research Report`, `Runbook`, `Incident Report`, `Brief`, `Review Packet`, `Writing Checklist`, `Review Checklist`, `Content Template`, `Decision Record`, and `Policy`. The schema doesn't accept other values. A design's main document uses `Design Draft`. Supporting documents use `Design Appendix` and reference the main document in `parent`.
+
+Choose a value for the required `status` field from the document's type:
+
+| Type | Allowed `status` values |
+| --- | --- |
+| Design Draft, Design Appendix | `draft`, `decided`, `superseded` |
+| Incident Report | `open`, `mitigated`, `resolved` |
+| Spike | `not-started`, `started`, `blocked`, `partial`, `complete`, `invalid` |
+| Every other type | `draft`, `stable`, `deprecated` |
 
 ## Contributor entries
 
 The `generated` list names the agents behind the latest change to the file. Each commit an agent contributes to replaces the list with the contributors to that commit, so it may name more than one agent but doesn't grow from one commit to the next. The fields mirror the attributes of the `Generated-by` and `Assisted-by` commit trailers (`<Key>: LLM attr=value;...`), so a commit and a doc name an agent the same way. As in a trailer, you omit a field you can't determine and never guess it.
+
+Only the list form is valid. Mappings such as `{by: ...}` and `{by: ..., at: ...}` are invalid.
 
 | Field | Required | Value |
 | --- | --- | --- |
@@ -55,7 +72,9 @@ A hashed ID is the leftmost 64 bits of the Secure Hash Algorithm 256 hash of the
 
 `verified` is a mapping with `by` and `at`. The `by` value reads `human:<name>` with a lowercase name, and `at` has the same format as a contributor's. Agents never write it.
 
-## Example
+## Examples
+
+### How-to
 
 ```yaml
 ---
@@ -74,6 +93,34 @@ type: How-to
 verified:
   by: human:tony
   at: "2026-11-02T10:15:00Z"
+---
+```
+
+### Design draft
+
+```yaml
+---
+description: Define the frontmatter used by documents.
+owner: Documentation maintainer
+updated: "2026-11-11"
+decisions_open: 0
+status: decided
+tags: [docs, schema]
+title: Document frontmatter design
+type: Design Draft
+---
+```
+
+### Design appendix
+
+```yaml
+---
+description: List the validation cases for the frontmatter design.
+parent: ../frontmatter-design.md
+status: draft
+tags: [docs, schema]
+title: Frontmatter validation cases
+type: Design Appendix
 ---
 ```
 

@@ -161,7 +161,27 @@ def test_schemas_are_valid_2020_12(name: str) -> None:
     schema = json.loads((SCHEMAS / f"{name}.schema.json").read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
-    assert schema["$id"].endswith(f"/{name}.schema.json")
+    assert schema["$id"] == (
+        f"https://raw.githubusercontent.com/tbhb-dev/rules/main/docs/schemas/{name}.schema.json"
+    )
+
+
+@pytest.mark.parametrize("name", ["frontmatter", "index-frontmatter"])
+def test_fixture_schemas_match_the_repository(name: str) -> None:
+    root = SCHEMAS.parent.parent
+    fixture = root / "lint/tests/okf_docs/testdata/tree/docs/schemas"
+    assert (fixture / f"{name}.schema.json").read_bytes() == (
+        SCHEMAS / f"{name}.schema.json"
+    ).read_bytes()
+
+
+def test_pull_request_draft_schema_id() -> None:
+    path = SCHEMAS.parent.parent / ".github/schemas/pull-request-draft.schema.json"
+    schema = json.loads(path.read_text(encoding="utf-8"))
+    assert schema["$id"] == (
+        "https://raw.githubusercontent.com/tbhb-dev/rules/main/"
+        ".github/schemas/pull-request-draft.schema.json"
+    )
 
 
 def test_load_validator_rejects_an_invalid_schema(tmp_path: Path) -> None:
