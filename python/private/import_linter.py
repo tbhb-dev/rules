@@ -7,9 +7,10 @@ Usage: import_linter.py [LINT_IMPORTS_OPTION]...
 
 Runs `lint-imports --no-cache` with the given options from the current
 directory, where the contracts live in pyproject.toml's
-`[tool.importlinter]` or in `.importlinter`. lint-imports passes when no
-contract is defined and when it analysed no module, both of which prove
-nothing, so this fails on either, after printing lint-imports' own output.
+`[tool.importlinter]` or in `.importlinter`. lint-imports 2.16 and later
+fail by themselves when no contract is defined. A run that passes still
+proves nothing if it analysed no module or counted no contract, so this
+fails on either, after printing lint-imports' own output.
 """
 
 import re
