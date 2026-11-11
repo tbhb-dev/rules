@@ -7,7 +7,7 @@
 # no lifecycle script may run.
 
 overrides:
-  minimatch@<11.0.1: 11.0.4
+  minimatch@<11.0.1: 11.0.5
   qs@<6.16.1: 6.17.1
 
 allowBuilds: {}
