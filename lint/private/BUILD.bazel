@@ -3,6 +3,7 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("//repo:defs.bzl", "repo_files")
+load("//runtime:defs.bzl", "python_tool")
 load(":gitleaks_tool.bzl", "gitleaks_tool")
 
 repo_files()
@@ -153,4 +154,22 @@ bzl_library(
         ":tree_check",
         "//runtime:defs",
     ],
+)
+
+exports_files([
+    "controls_changed/categories.json",
+    "controls_changed/check_controls.py",
+])
+
+python_tool(
+    name = "controls_changed_python",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//lint:__subpackages__"],
+)
+
+bzl_library(
+    name = "controls_changed",
+    srcs = ["controls_changed.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = ["//shell:defs"],
 )

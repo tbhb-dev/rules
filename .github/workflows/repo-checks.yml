@@ -342,6 +342,16 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: bazelisk run @tbhb_rules//lint:commit_identity -- "${BASE_SHA}" "${HEAD_SHA}"
 
+      - name: Review controls changed
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          bazelisk run @tbhb_rules//lint:controls_changed -- --github "${BASE_SHA}" "${HEAD_SHA}" ||
+            echo "::warning::Review control detection could not run"
+
       # Advisories change without any input changing, so the audit is never
       # a cached test.
       - name: Audit the locked Python dependencies

@@ -180,17 +180,28 @@ pytest_test(
     name = "pytest_test",
     srcs = PYTHON_SRCS,
     args = [
+        "lint/private/controls_changed",
         "lint/private/decision_records",
         "lint/private/mutation_oses",
         "lint/private/okf_docs",
         "runtime/private",
     ],
     coverage = [
+        "lint/private/controls_changed",
         "lint/private/decision_records",
         "lint/private/mutation_oses",
         "lint/private/okf_docs",
         "runtime/private",
     ],
+    path_tools = ["@tbhb_rules_git//:git"],
+)
+
+pytest_test(
+    name = "controls_changed_test",
+    srcs = PYTHON_SRCS,
+    args = ["lint/private/controls_changed"],
+    coverage = ["lint/private/controls_changed"],
+    path_tools = ["@tbhb_rules_git//:git"],
 )
 
 # Every mutant of this repository's Python killed ([tool.mutmut]); a cached

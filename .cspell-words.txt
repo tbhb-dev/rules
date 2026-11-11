@@ -5,6 +5,7 @@ afakt
 AKIA
 ascm
 astrojs
+autojunk
 autouse
 awrel
 bazelignore
@@ -131,6 +132,7 @@ prek
 presubmit
 pretooluse
 purelib
+pylintrc
 pylock
 PYTHONDONTWRITEBYTECODE
 pythonista
@@ -177,6 +179,7 @@ clipkg
 testifylint
 testonly
 testpaths
+textconv
 tombi
 toolu
 tricolon

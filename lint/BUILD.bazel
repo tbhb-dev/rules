@@ -4,6 +4,7 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("//lint/private:commit_identity.bzl", "commit_identity")
+load("//lint/private:controls_changed.bzl", "controls_changed")
 load("//lint/private:gitleaks_text.bzl", "gitleaks_text")
 load("//repo:defs.bzl", "repo_files")
 
@@ -33,6 +34,11 @@ gitleaks_text(
 # repo-checks.yml runs it on a pull request's commits.
 commit_identity(
     name = "commit_identity",
+    visibility = ["//visibility:public"],
+)
+
+controls_changed(
+    name = "controls_changed",
     visibility = ["//visibility:public"],
 )
 

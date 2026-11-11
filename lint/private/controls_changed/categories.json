@@ -1,0 +1,71 @@
+[
+  {
+    "name": "lint-format",
+    "paths": [
+      "(^|/)(\\.vale\\.ini|\\.cspell[^/]*|cspell[^/]*|\\.rumdl\\.toml|\\.ryl\\.toml|\\.golangci[^/]*|biome\\.json[^/]*|ruff\\.toml|\\.ruff\\.toml|pyrefly\\.toml|\\.?pylintrc)$",
+      "(^|/)\\.vale/",
+      "(^|/)\\.?cspell[^/]*/"
+    ],
+    "exclude_paths": [
+      "(^|/)\\.vale/(Google|write-good|proselint|ai-tells[^/]*)/"
+    ],
+    "sections": "^tool\\.(ruff|pyrefly|pylint)(\\.|$)"
+  },
+  {
+    "name": "ci-workflows",
+    "paths": [
+      "(^|/)\\.github/(workflows|actions)/"
+    ]
+  },
+  {
+    "name": "secret-scanning",
+    "paths": [
+      "(^|/)(\\.gitleaks\\.toml|\\.gitleaksignore)$"
+    ],
+    "added": [
+      "gitleaks:allow"
+    ]
+  },
+  {
+    "name": "coverage-mutation-pragmas",
+    "paths": [],
+    "added": [
+      "pragma:\\s*no (cover|mutate)\\b",
+      "//\\s*nolint\\b",
+      "#\\s*noqa\\b",
+      "#\\s*type:\\s*ignore\\b",
+      "eslint-disable",
+      "pyrefly:\\s*ignore\\b",
+      "#\\s*nosec\\b",
+      "(shellcheck|yamllint)\\s+disable",
+      "buildifier:\\s*disable",
+      "zizmor:\\s*ignore",
+      "gomutants:\\s*disable",
+      "Stryker disable",
+      "(istanbul|c8|v8) ignore"
+    ]
+  },
+  {
+    "name": "hooks",
+    "paths": [
+      "(^|/)\\.pre-commit-config\\.yaml$",
+      "(^|/)\\.?[^/]*hooks/"
+    ]
+  },
+  {
+    "name": "ownership-review",
+    "paths": [
+      "^(CODEOWNERS|docs/CODEOWNERS|\\.github/CODEOWNERS)$",
+      "(^|/)\\.github/(pull-request-sections\\.toml|settings\\.ya?ml|rulesets?(/|\\.))"
+    ]
+  },
+  {
+    "name": "test-lists",
+    "paths": [],
+    "removed_test_calls": "(^|_)(test|test_suite)$",
+    "test_attributes": [
+      "srcs",
+      "tests"
+    ]
+  }
+]
