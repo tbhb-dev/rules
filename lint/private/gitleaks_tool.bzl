@@ -1,20 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""`gitleaks_tool`: gitleaks behind the private-config check.
+"""Shared gitleaks wrapper: module base, local policy, and optional private rules.
 
-With `required` set, the tool reads a private gitleaks config from the
-`GITLEAKS_CONFIG_TOML` environment variable and fails closed: it refuses to
-scan when the variable is unset or empty, or when the config has no rule
-with the id `tbhb-private-canary`. The private config starts with
-`[extend] path = ".gitleaks.toml"`, so it adds its rules to the committed
-config, which the caller's `--config .gitleaks.toml` names. The tool passes
-gitleaks the private config instead, and gitleaks reaches the committed one
-through `[extend]`. Without `required`, it runs gitleaks unchanged.
-
-`//lint:gitleaks_private_config` sets `required` for the default tool of
-`gitleaks_test` and `gitleaks_history`.
+Local policy has no extension. The wrapper attaches the module-provided base
+in a temporary config, then redirects the private config's extension to it.
+Private -> effective local -> base uses exactly two extension levels.
 """
+
+load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 
 # Internal: consumers load //lint:defs.bzl.
 visibility("//lint/...")
@@ -25,25 +19,26 @@ def _gitleaks_tool_impl(ctx):
         template = ctx.file._runner,
         output = script,
         substitutions = {
+            "@@BASE@@": ctx.file._base.short_path,
             "@@GITLEAKS@@": ctx.executable.gitleaks.short_path,
+            "@@PREPARE@@": ctx.executable._prepare.short_path,
             "@@REQUIRED@@": "1" if ctx.attr.required else "",
             "@@SELF@@": script.short_path,
         },
         is_executable = True,
     )
-    runfiles = ctx.runfiles(files = [script, ctx.executable.gitleaks])
+    runfiles = ctx.runfiles(files = [ctx.file._base, ctx.executable._prepare, ctx.executable.gitleaks])
     runfiles = runfiles.merge(ctx.attr.gitleaks[DefaultInfo].default_runfiles)
-    return [DefaultInfo(executable = script, runfiles = runfiles)]
+    runfiles = runfiles.merge(ctx.attr._prepare[DefaultInfo].default_runfiles)
+    executable, runfiles = shell_executable(ctx, script, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 gitleaks_tool = rule(
     implementation = _gitleaks_tool_impl,
     executable = True,
-    doc = """gitleaks, requiring a private config from `GITLEAKS_CONFIG_TOML` when `required` is set.
-
-The executable is a Bash script that the Bash runners of `gitleaks_test`
-and `gitleaks_history` start, on Windows too; it isn't meant for
-`bazel run`.""",
-    attrs = {
+    toolchains = SHELL_TOOLCHAINS,
+    doc = "gitleaks with the module base, local policy, and optional private config.",
+    attrs = SHELL_ATTRS | {
         "gitleaks": attr.label(
             default = "@tbhb_rules_gitleaks//:gitleaks",
             executable = True,
@@ -54,6 +49,8 @@ and `gitleaks_history` start, on Windows too; it isn't meant for
         "required": attr.bool(
             doc = "Require the private config and its canary rule.",
         ),
+        "_base": attr.label(default = "//lint/gitleaks:base.toml", allow_single_file = True),
+        "_prepare": attr.label(default = ":gitleaks_config", executable = True, cfg = "target"),
         "_runner": attr.label(
             default = ":gitleaks_tool.sh.tpl",
             allow_single_file = True,

@@ -7,7 +7,7 @@
     ".venv/**/*",
     ".bazel-*/**/*",
     "bazel-*/**/*",
-    "**/.gitleaks-rules.toml",
+    "lint/gitleaks/base.toml",
     "lint/gitleaks/upstream.toml",
     "coverage.xml",
     "go.sum",

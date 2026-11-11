@@ -79,6 +79,36 @@ gitleaks_tool(name = "gitleaks_optional")
             ],
         ),
         (
+            "local_rule",
+            1,
+            ["RuleID: +local-word"],
+        ),
+        (
+            "local_allowlist",
+            0,
+            ["no leaks found"],
+        ),
+        (
+            "old_extend",
+            1,
+            ["remove \\[extend\\] from the committed config"],
+        ),
+        (
+            "private_extend",
+            1,
+            ["the private config must extend only"],
+        ),
+        (
+            "config_equals",
+            0,
+            ["no leaks found"],
+        ),
+        (
+            "config_short",
+            0,
+            ["no leaks found"],
+        ),
+        (
             "optional",
             0,
             ["no leaks found"],
@@ -193,6 +223,7 @@ gitleaks_history_scenario_test(
         ("range_linear", "gitleaks_history: scanning full history HEAD (2 commits): HEAD does not have exactly two readable parents"),
         ("range_config", "gitleaks_history: scanning full history HEAD (5 commits): the pull request changes .gitleaks.toml"),
         ("range_rules", "gitleaks_history: scanning full history HEAD (5 commits): the pull request changes .gitleaks-rules.toml"),
+        ("range_module_base", "gitleaks_history: scanning full history HEAD (5 commits): the pull request changes lint/gitleaks/base.toml"),
         ("range_ignore", "gitleaks_history: scanning full history HEAD (5 commits): the pull request changes .gitleaksignore"),
     ]
 ]
@@ -314,6 +345,7 @@ PROOF_REASONS = {
     "proof_history_range_config": "leaks found: [1-9]",
     "proof_history_range_ignore": "leaks found: [1-9]",
     "proof_history_range_linear": "leaks found: [1-9]",
+    "proof_history_range_module_base": "leaks found: [1-9]",
     "proof_history_range_rules": "leaks found: [1-9]",
     "proof_history_range_secret": "leaks found: [1-9]",
     "proof_history_secret": "leaks found: [1-9]",
@@ -357,7 +389,6 @@ gitleaks_test(
     name = "allowlist_tree_subject",
     srcs = [":allowlist_fixture"],
     config = "//:.gitleaks.toml",
-    data = ["//:.gitleaks-rules.toml"],
     tags = ["manual"],
 )
 

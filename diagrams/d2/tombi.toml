@@ -17,7 +17,7 @@ toml-version = "v1.0.0"
 # undocumented ignore is a review defect).
 exclude = [
   # Preserve the generated Gitleaks rules and their upstream source byte for byte.
-  "**/.gitleaks-rules.toml",
+  "lint/gitleaks/base.toml",
   "**/lint/gitleaks/upstream.toml",
   ".venv/**/*.toml",
   "tmp/**/*.toml",

@@ -6,6 +6,7 @@ load(
     "actionlint_test",
     "cspell_test",
     "editorconfig_checker_test",
+    "gitleaks_history",
     "gitleaks_test",
     "rumdl_test",
     "ryl_test",
@@ -13,6 +14,7 @@ load(
     "tree_check_test",
     "zizmor_test",
 )
+load("@tbhb_rules//lint/tests:gitleaks_allowlist_scenario.bzl", "GITLEAKS_ALLOWLIST_FIXTURE", "GITLEAKS_PATH_FIXTURE", "gitleaks_allowlist_scenario_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 
@@ -171,3 +173,42 @@ expect_failure_test(
     pattern = "notes\\.md:3:[0-9]+ - Unknown word \\(sentance\\)",
     test = ":proof_cspell",
 )
+
+# A consumer supplies only local policy; all entry points obtain the base
+# from the locally overridden rules module, including the bazel_env tool.
+genrule(
+    name = "allowlist_fixture",
+    outs = [
+        "allowlist_creds.txt",
+        "nuget.config",
+    ],
+    cmd = "(\n" + GITLEAKS_ALLOWLIST_FIXTURE + ") >$(execpath allowlist_creds.txt)\n(\n" + GITLEAKS_PATH_FIXTURE + ") >$(execpath nuget.config)",
+)
+
+gitleaks_test(
+    name = "gitleaks_base_tree_subject",
+    srcs = [":allowlist_fixture"],
+    config = ".gitleaks.toml",
+    tags = ["manual"],
+)
+
+gitleaks_history(
+    name = "gitleaks_base_history_subject",
+    config = ".gitleaks.toml",
+    tags = ["manual"],
+)
+
+[
+    gitleaks_allowlist_scenario_test(
+        name = "gitleaks_base_" + scenario + "_test",
+        config = ".gitleaks.toml",
+        scenario = scenario,
+        subject = subject,
+    )
+    for scenario, subject in [
+        ("tree", ":gitleaks_base_tree_subject"),
+        ("text", "@tbhb_rules//lint:gitleaks_text"),
+        ("history", ":gitleaks_base_history_subject"),
+        ("staged", "@tbhb_rules//lint:gitleaks"),
+    ]
+]

@@ -41,5 +41,5 @@ uv.lock export-ignore
 mise.toml export-ignore
 mise.lock export-ignore
 
-.gitleaks-rules.toml linguist-generated whitespace=-blank-at-eof
+lint/gitleaks/base.toml linguist-generated whitespace=-blank-at-eof
 lint/gitleaks/upstream.toml linguist-vendored whitespace=-blank-at-eof

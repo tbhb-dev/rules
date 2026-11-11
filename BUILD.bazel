@@ -28,7 +28,6 @@ load("//repo:defs.bzl", "repo_files", "repo_layout_test")
 exports_files([
     ".editorconfig",
     ".editorconfig-checker.json",
-    ".gitleaks-rules.toml",
     ".gitleaks.toml",
     ".rumdl.toml",
     ".ryl.toml",

@@ -45,6 +45,8 @@ if [[ ${1:-} == --merge-range ]]; then
     if changed=$(git diff --name-only HEAD^1 HEAD); then
       if grep -Fxq '.gitleaks.toml' <<<"$changed"; then
         reason="the pull request changes .gitleaks.toml"
+      elif grep -Fxq 'lint/gitleaks/base.toml' <<<"$changed"; then
+        reason="the pull request changes lint/gitleaks/base.toml"
       elif grep -Fxq '.gitleaks-rules.toml' <<<"$changed"; then
         reason="the pull request changes .gitleaks-rules.toml"
       elif grep -Fxq '.gitleaksignore' <<<"$changed"; then

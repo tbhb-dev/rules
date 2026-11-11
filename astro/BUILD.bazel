@@ -79,7 +79,6 @@ bzl_library(
 LINT_CONFIGS = [
     ".editorconfig",
     ".editorconfig-checker.json",
-    ".gitleaks-rules.toml",
     ".gitleaks.toml",
     ".rumdl.toml",
     ".ryl.toml",
