@@ -6,7 +6,7 @@ load("//quality:defs.bzl", "mutation_gate_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":mutation_changes_test.bzl", "mutation_changes_test")
-load(":slice_test.bzl", "changes_slice")
+load(":slice_test.bzl", "changes_slice", "diff_ignore_failures")
 
 repo_files()
 
@@ -173,4 +173,47 @@ changes_slice(
         ("slice_of_an_untouched_unit_is_stable_test", ":other_pr1", ":other_pr2"),
         ("slice_without_changes_is_none_test", ":unit_without_changes", "testdata/slice/none.txt"),
     ]
+]
+
+# Exact entries, directory prefixes, literal glob characters and an empty
+# unit-paths file all use the same shared slice implementation.
+diff_ignore_failures(name = "diff_ignore")
+
+[
+    changes_slice(
+        name = "ignore_" + case,
+        srcs = SLICE_UNIT,
+        changes = "testdata/slice/pr1.json",
+        diff_ignore = entries,
+    )
+    for case, entries in {
+        "all_files": [
+            "quality/tests/testdata/slice/unit/a.py",
+            "quality/tests/testdata/slice/unit/b.txt",
+        ],
+        "boundary": [
+            "quality/tests/testdata/slice/uni/",
+            "quality/tests/testdata/slice/unit/a",
+        ],
+        "directory": ["quality/tests/testdata/slice/unit/"],
+        "empty": [],
+        "file": ["quality/tests/testdata/slice/unit/b.txt"],
+        "literal_glob": ["quality/tests/testdata/slice/unit/*.py"],
+    }.items()
+]
+
+[
+    diff_test(
+        name = "diff_ignore_" + case + "_slice_test",
+        file1 = ":ignore_" + case,
+        file2 = expected,
+    )
+    for case, expected in {
+        "all_files": "testdata/slice/empty.json",
+        "boundary": ":unit_pr1",
+        "directory": "testdata/slice/empty.json",
+        "empty": ":unit_pr1",
+        "file": "testdata/slice/source.json",
+        "literal_glob": ":unit_pr1",
+    }.items()
 ]

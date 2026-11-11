@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@tbhb_rules//quality/tests:report_test.bzl", "mutation_report_file", "mutation_report_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load(
@@ -146,4 +148,94 @@ PROOF_REASONS = {
         test = ":" + proof,
     )
     for proof, pattern in PROOF_REASONS.items()
+]
+
+# Listed lock changes select nothing; a changed source function still runs.
+# Empty and omitted lists keep the full fallback, as does an unlisted test.
+[
+    mutmut_test(
+        name = "mutmut_diff_ignore_" + case + "_test",
+        srcs = CLEAN,
+        changes = "changes/ignore_" + change + ".json",
+        cpus = 2,
+        diff_ignore = ignored,
+        require_scope = "full" if case in [
+            "empty",
+            "test",
+        ] else "any",
+    )
+    for case, change, ignored in [
+        (
+            "lock",
+            "lock",
+            ["uv.lock"],
+        ),
+        (
+            "mixed",
+            "mixed",
+            ["uv.lock"],
+        ),
+        ("source", "source", []),
+        ("empty", "lock", []),
+        (
+            "test",
+            "test",
+            ["uv.lock"],
+        ),
+    ]
+]
+
+mutmut_test(
+    name = "mutmut_diff_ignore_default_test",
+    srcs = CLEAN,
+    changes = "changes/ignore_lock.json",
+    cpus = 2,
+    require_scope = "full",
+)
+
+[
+    mutation_report_test(
+        name = "mutmut_diff_ignore_" + case + "_report_test",
+        empty = case == "lock",
+        report = ":mutmut_diff_ignore_" + case + "_test.report",
+        scope = "full" if case in [
+            "empty",
+            "default",
+            "test",
+        ] else "diff",
+    )
+    for case in [
+        "lock",
+        "mixed",
+        "source",
+        "empty",
+        "default",
+        "test",
+    ]
+]
+
+[
+    mutation_report_file(
+        name = "ignore_" + case + "_report",
+        testonly = True,
+        report = ":mutmut_diff_ignore_" + case + "_test.report",
+    )
+    for case in [
+        "mixed",
+        "source",
+        "empty",
+        "default",
+    ]
+]
+
+[
+    diff_test(
+        name = "mutmut_diff_ignore_" + case + "_identical_test",
+        file1 = ":ignore_" + case + "_report",
+        file2 = ":ignore_" + baseline + "_report",
+    )
+    for case, baseline in [
+        ("mixed", "source"),
+        ("empty", "default"),
+    ]
 ]

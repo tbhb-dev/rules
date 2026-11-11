@@ -122,7 +122,7 @@ slice (the `changes` output group).""",
     toolchains = [GO_TOOLCHAIN],
 )
 
-def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], flags = [], cpus = 0, changes = None, require_scope = "any", mutation_oses = None, **kwargs):
+def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], flags = [], cpus = 0, changes = None, require_scope = "any", mutation_oses = None, diff_ignore = [], **kwargs):
     """Mutation-tests Go packages with gomutants and fails unless every mutant was killed.
 
     Creates one gomutants_report per package that a test in `tests` is in,
@@ -151,6 +151,13 @@ def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], 
         changes: The change set; quality's `changes` flag when None.
         require_scope: `full` makes the gate fail on any diff-scope report,
             for main and nightly runs.
+        diff_ignore: Repository-relative paths to omit from diff selection,
+            exactly as spelled in the change set. A trailing `/` matches
+            every path below that directory; no other glob syntax applies.
+            Empty keeps the existing selection. Files remain action inputs.
+            A repository using this must run full-scope mutation elsewhere,
+            such as a scheduled run without a change set. A listed file's
+            change that alters a verdict is caught only by that full run.
         mutation_oses: None preserves every OS the target already runs on.
             Otherwise a list of linux, macos, windows: reports and gate run
             only on a listed OS that also meets target_compatible_with.
@@ -179,6 +186,7 @@ def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], 
             data = data,
             flags = flags,
             cpus = cpus,
+            diff_ignore = diff_ignore,
             # tests holds go_test targets.
             testonly = True,
             tags = kwargs.get("tags", []),

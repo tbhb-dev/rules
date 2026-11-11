@@ -4,6 +4,7 @@
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@gazelle//:def.bzl", "gazelle")
 load("@tbhb_rules//format:defs.bzl", "format_test")
+load("@tbhb_rules//quality/tests:report_test.bzl", "mutation_report_file", "mutation_report_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load("@tbhb_rules_go//:defs.bzl", "go_arch_lint_test", "go_deadcode_test", "go_mod_tidy_test", "govulncheck", "govulncheck_test")
@@ -508,3 +509,105 @@ test_suite(
         ":proof_vulnerable_called_verdict_fails",
     ],
 )
+
+# Listed lock changes select nothing; a changed source function still runs.
+# Empty and omitted lists keep the full fallback, as does an unlisted test.
+[
+    gomutants_test(
+        name = "gomutants_diff_ignore_" + case + "_test",
+        changes = "mutation/changes/ignore_" + change + ".json",
+        diff_ignore = ignored,
+        tags = ["manual"] if case in [
+            "empty",
+            "test",
+        ] else [],
+        tests = ["//mutation/weak:weak_test"],
+    )
+    for case, change, ignored in [
+        (
+            "lock",
+            "lock",
+            ["go.sum"],
+        ),
+        (
+            "mixed",
+            "mixed",
+            ["go.sum"],
+        ),
+        ("source", "source", []),
+        ("empty", "lock", []),
+        (
+            "test",
+            "test",
+            ["go.sum"],
+        ),
+    ]
+]
+
+gomutants_test(
+    name = "gomutants_diff_ignore_default_test",
+    changes = "mutation/changes/ignore_lock.json",
+    tags = ["manual"],
+    tests = ["//mutation/weak:weak_test"],
+)
+
+[
+    mutation_report_test(
+        name = "gomutants_diff_ignore_" + case + "_report_test",
+        empty = case == "lock",
+        report = ":gomutants_diff_ignore_" + case + "_test.mutation_weak",
+        scope = "full" if case in [
+            "empty",
+            "default",
+            "test",
+        ] else "diff",
+    )
+    for case in [
+        "lock",
+        "mixed",
+        "source",
+        "empty",
+        "default",
+        "test",
+    ]
+]
+
+[
+    mutation_report_file(
+        name = "ignore_" + case + "_report",
+        testonly = True,
+        report = ":gomutants_diff_ignore_" + case + "_test.mutation_weak",
+    )
+    for case in [
+        "mixed",
+        "source",
+        "empty",
+        "default",
+    ]
+]
+
+[
+    diff_test(
+        name = "gomutants_diff_ignore_" + case + "_identical_test",
+        file1 = ":ignore_" + case + "_report",
+        file2 = ":ignore_" + baseline + "_report",
+    )
+    for case, baseline in [
+        ("mixed", "source"),
+        ("empty", "default"),
+    ]
+]
+
+# The full fallback also exposes the weak fixture's surviving mutants.
+[
+    expect_failure_test(
+        name = "gomutants_diff_ignore_" + case + "_fails",
+        pattern = "FAIL: 3 lived, 4 not_covered$",
+        test = ":gomutants_diff_ignore_" + case + "_test",
+    )
+    for case in [
+        "empty",
+        "default",
+        "test",
+    ]
+]

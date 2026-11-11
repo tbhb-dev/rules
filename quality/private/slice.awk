@@ -6,7 +6,8 @@
 # UNIT_PATHS (one JSON-escaped path per line), as a change set without its
 # base. Fails on anything else in CHANGES.
 
-FNR == NR { unit[$0] = 1; next }
+# An empty UNIT_PATHS still leaves CHANGES to parse.
+FILENAME == ARGV[1] { unit[$0] = 1; next }
 FNR == 1 { if ($0 != "{") bad(); next }
 /^  "version": 1,$/ { version = 1; next }
 /^  "base": "[0-9a-f]*",$/ { next }

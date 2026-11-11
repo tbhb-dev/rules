@@ -97,7 +97,7 @@ in `<name>.report` (MutationReportInfo) and mutmut's output in
     },
 )
 
-def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, changes = None, source_paths = [], mutation_oses = None, **kwargs):
+def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, changes = None, source_paths = [], mutation_oses = None, diff_ignore = [], **kwargs):
     """Mutation-tests the tree with mutmut and fails unless every mutant was killed.
 
     Creates `<name>.report` (the cached mutmut run) and `<name>`, a
@@ -155,6 +155,13 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
         cpus: CPUs to reserve for the mutmut action.
         changes: A change set file overriding quality's `changes` flag, for
             fixtures and proofs; it must have mutation_changes' layout.
+        diff_ignore: Repository-relative paths to omit from diff selection,
+            exactly as spelled in the change set. A trailing `/` matches
+            every path below that directory; no other glob syntax applies.
+            Empty keeps the existing selection. Files remain action inputs.
+            A repository using this must run full-scope mutation elsewhere,
+            such as a scheduled run without a change set. A listed file's
+            change that alters a verdict is caught only by that full run.
         mutation_oses: None preserves every OS the target already runs on.
             Otherwise a list of linux, macos, windows: reports and gate run
             only on a listed OS that also meets target_compatible_with.
@@ -185,6 +192,7 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
         chdir = chdir,
         changes = changes,
         cpus = cpus,
+        diff_ignore = diff_ignore,
         source_paths = source_paths,
         tags = kwargs.get("tags", []),
         target_compatible_with = compatible,

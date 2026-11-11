@@ -32,6 +32,14 @@ git_override(
 
 To develop against a local clone, put `common --override_module=tbhb_rules=/path/to/rules` in `.bazelrc.user`.
 
+### Diff-scoped mutation tests
+
+`mutmut_test` and `gomutants_test` accept `diff_ignore = []`. List repository-relative paths exactly as the change set spells them, such as `uv.lock` or `packages/x/uv.lock`. A trailing `/`, such as `.github/workflows/`, matches every path below that directory. Matching supports only exact paths and directory prefixes. Empty entries, leading `/`, and `..` path segments fail at analysis time.
+
+Listed files stay action inputs, so changing one reruns the report, but the unit's change-set slice leaves them out. With only listed files, the slice becomes empty and the run passes with `scope=diff` and zero mutants. Source changes beside listed files still select their changed functions. An empty list preserves the existing behavior. An unlisted test file still forces a full run. `require_scope = "full"` still rejects every diff-scoped report.
+
+A repository using `diff_ignore` must run full-scope mutation elsewhere, such as a scheduled run without a change set. Only that full run catches a verdict change caused by a listed file.
+
 ### Whole-tree checks
 
 `glob()` stops at package boundaries, so a check over the whole repository needs every package to contribute its files. Call `repo_files()` in every `BUILD.bazel`, root included. Each call collects its package's files plus the `repo_files` target of each direct subpackage, so a package that forgets the call breaks analysis of its parent instead of dropping out of the checks unnoticed.

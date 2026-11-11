@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "files": {
+    "uv.lock": [[1, 1]],
+    "tools/test_calc.py": [[1, 1]]
+  }
+}
