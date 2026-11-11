@@ -7,6 +7,7 @@ load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":commit_identity_scenario.bzl", "commit_identity_scenario_test")
 load(":cspell_tests.bzl", "cspell_test_suite")
+load(":gitleaks_allowlist_scenario.bzl", "GITLEAKS_ALLOWLIST_FIXTURE", "GITLEAKS_PATH_FIXTURE", "gitleaks_allowlist_scenario_test", "gitleaks_configs_test")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
 load(":gitleaks_private_scenario.bzl", "gitleaks_private_scenario_test")
 load(":gitleaks_redact_scenario.bzl", "GITLEAKS_REDACT_FIXTURE", "gitleaks_redact_scenario_test")
@@ -191,6 +192,7 @@ gitleaks_history_scenario_test(
         ("range_secret", "gitleaks_history: scanning HEAD^1..HEAD (3 commits): the pull request's commits"),
         ("range_linear", "gitleaks_history: scanning full history HEAD (2 commits): HEAD does not have exactly two readable parents"),
         ("range_config", "gitleaks_history: scanning full history HEAD (5 commits): the pull request changes .gitleaks.toml"),
+        ("range_rules", "gitleaks_history: scanning full history HEAD (5 commits): the pull request changes .gitleaks-rules.toml"),
         ("range_ignore", "gitleaks_history: scanning full history HEAD (5 commits): the pull request changes .gitleaksignore"),
     ]
 ]
@@ -312,6 +314,7 @@ PROOF_REASONS = {
     "proof_history_range_config": "leaks found: [1-9]",
     "proof_history_range_ignore": "leaks found: [1-9]",
     "proof_history_range_linear": "leaks found: [1-9]",
+    "proof_history_range_rules": "leaks found: [1-9]",
     "proof_history_range_secret": "leaks found: [1-9]",
     "proof_history_secret": "leaks found: [1-9]",
     "proof_shellcheck_empty": "shell_select: no shell scripts found, so nothing was checked",
@@ -326,4 +329,55 @@ PROOF_REASONS = {
         test = ":" + proof,
     )
     for proof, pattern in PROOF_REASONS.items()
+]
+
+# This policy check reads all tracked configs, including ignored Bazel modules.
+# It runs locally without a sandbox so Git sees the checkout and new modules.
+gitleaks_configs_test(
+    name = "gitleaks_configs_test",
+    tags = [
+        "local",
+        "no-cache",
+        "no-sandbox",
+    ],
+)
+
+genrule(
+    name = "allowlist_fixture",
+    testonly = True,
+    outs = [
+        "allowlist_creds.txt",
+        "nuget.config",
+    ],
+    cmd = "(\n" + GITLEAKS_ALLOWLIST_FIXTURE + ") >$(execpath allowlist_creds.txt)\n(\n" + GITLEAKS_PATH_FIXTURE + ") >$(execpath nuget.config)",
+    tags = ["manual"],
+)
+
+gitleaks_test(
+    name = "allowlist_tree_subject",
+    srcs = [":allowlist_fixture"],
+    config = "//:.gitleaks.toml",
+    data = ["//:.gitleaks-rules.toml"],
+    tags = ["manual"],
+)
+
+gitleaks_history(
+    name = "allowlist_history_subject",
+    config = "//:.gitleaks.toml",
+    tags = ["manual"],
+)
+
+[
+    gitleaks_allowlist_scenario_test(
+        name = "{}_default_allowlist_test".format(scenario),
+        scenario = scenario,
+        subject = subject,
+    )
+    for scenario, subject in [
+        ("defaults", "@tbhb_rules_gitleaks//:gitleaks"),
+        ("tree", ":allowlist_tree_subject"),
+        ("text", "//lint:gitleaks_text"),
+        ("history", ":allowlist_history_subject"),
+        ("private", ":gitleaks_required"),
+    ]
 ]
