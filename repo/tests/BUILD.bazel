@@ -4,7 +4,7 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
-load(":repo_layout_tests.bzl", "repo_layout_test_suite", "scripts_layout_test")
+load(":repo_layout_tests.bzl", "repo_layout_test_suite", "required_files_layout_test", "scripts_layout_test")
 
 repo_files()
 
@@ -55,6 +55,86 @@ expect_failure_test(
     pattern = "repo_layout: FAIL: no files to check",
     test = ":proof_no_files",
 )
+
+REQUIRED_FILES = {"templates": [
+    "TEMPLATE.md",
+    "WRITING.md",
+    "REVIEW.md",
+]}
+
+required_files_layout_test(
+    name = "required_files_test",
+    fixture = "required_good",
+    required_files = REQUIRED_FILES | {
+        "docs/templates": ["TEMPLATE.md"],
+        "templates/alpha/nested": ["UNUSED.md"],
+    },
+)
+
+required_files_layout_test(
+    name = "required_files_empty_list_test",
+    fixture = "required_good",
+    required_files = {"templates": []},
+)
+
+required_files_layout_test(
+    name = "proof_required_file",
+    fixture = "required_missing_file",
+    required_files = REQUIRED_FILES,
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_required_file_fails",
+    pattern = "^templates/alpha/: missing required file REVIEW\\.md$",
+    test = ":proof_required_file",
+)
+
+required_files_layout_test(
+    name = "proof_required_directory",
+    fixture = "required_missing_directory",
+    required_files = REQUIRED_FILES,
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_required_directory_fails",
+    pattern = "^templates/: required_files directory does not exist in srcs$",
+    test = ":proof_required_directory",
+)
+
+required_files_layout_test(
+    name = "proof_required_directory_empty_list",
+    fixture = "required_missing_directory",
+    required_files = {"templates": []},
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_required_directory_empty_list_fails",
+    pattern = "^templates/: required_files directory does not exist in srcs$",
+    test = ":proof_required_directory_empty_list",
+)
+
+required_files_layout_test(
+    name = "proof_required_two_files",
+    fixture = "required_missing_two_files",
+    required_files = REQUIRED_FILES,
+    tags = PROOF_TAGS,
+)
+
+# Both diagnostics must appear, even though they belong to one directory.
+[
+    expect_failure_test(
+        name = "proof_required_two_files_" + file.lower() + "_fails",
+        pattern = "^templates/alpha/: missing required file " + file + "\\.md$",
+        test = ":proof_required_two_files",
+    )
+    for file in [
+        "WRITING",
+        "REVIEW",
+    ]
+]
 
 # The source archive keeps the composite actions that consumers call by
 # commit. Windows has no wrapped Git to run.

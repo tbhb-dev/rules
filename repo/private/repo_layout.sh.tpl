@@ -7,7 +7,8 @@
 #
 # The manifest lists each file as `path<TAB>runfile`, the path relative to
 # the layout's root. The rules file holds `top<TAB>dir`,
-# `script<TAB>dir<TAB>kind` and `subdir<TAB>dir<TAB>name` lines.
+# `script<TAB>dir<TAB>kind`, `subdir<TAB>dir<TAB>name` and
+# `required<TAB>dir<TAB>file...` lines.
 
 set -euo pipefail
 
@@ -39,8 +40,10 @@ member() {
 problems=()
 unknown=()
 count=0
+paths=()
 while IFS=$'\t' read -r path runfile; do
   count=$((count + 1))
+  paths+=("$path")
   [[ $path == */* ]] || continue
   dir=${path%%/*}
   if ! member "$dir" ${top[@]+"${top[@]}"}; then
@@ -75,6 +78,34 @@ fi
 while IFS= read -r dir; do
   [[ -n $dir ]] && problems+=("$dir/: top-level directory is not in the layout")
 done < <(printf '%s\n' ${unknown[@]+"${unknown[@]}"} | LC_ALL=C sort)
+
+# Derive directories from the manifest, just as the top-level checks do.
+# Each required name belongs directly in every immediate child directory.
+while IFS=$'\t' read -r -a requirement; do
+  [[ ${requirement[0]} == required ]] || continue
+  dir=${requirement[1]}
+  found=false
+  children=()
+  for path in "${paths[@]}"; do
+    [[ $path == "$dir/"* ]] || continue
+    found=true
+    rest=${path#"$dir/"}
+    [[ $rest == */* ]] || continue
+    child=${rest%%/*}
+    member "$child" ${children[@]+"${children[@]}"} || children+=("$child")
+  done
+  if [[ $found == false ]]; then
+    problems+=("$dir/: required_files directory does not exist in srcs")
+    continue
+  fi
+  for child in ${children[@]+"${children[@]}"}; do
+    for file in "${requirement[@]:2}"; do
+      if ! member "$dir/$child/$file" "${paths[@]}"; then
+        problems+=("$dir/$child/: missing required file $file")
+      fi
+    done
+  done
+done <"$rules"
 
 if ((${#problems[@]} > 0)); then
   printf '%s\n' "${problems[@]}"

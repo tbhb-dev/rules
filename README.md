@@ -69,6 +69,23 @@ Notes on individual tools:
 - `gitleaks_test` scans the working tree. `gitleaks_history` scans the Git history of every branch, with `bazel run` (in CI, after a full-depth checkout). `bazel run //:gitleaks_history -- --log-opts=HEAD` scans the full checked-out history. A leading `--merge-range` instead scans `HEAD^1..HEAD`: the pull request's own commits plus the merge commit, provided `HEAD` matches the full commit hash in `EXPECTED_HEAD`. Unset or different `EXPECTED_HEAD`, changes to `.gitleaks.toml` or `.gitleaksignore`, or unexpected Git state fall back to the full checked-out history, so tightened rules also meet old history. `repo-checks.yml` uses range mode for pull requests with `EXPECTED_HEAD` set to `github.sha` and the full scan for every other event. The private config (`GITLEAKS_CONFIG_TOML`) changes out of band. The next full scan (push to main) applies its changes to old history, the same accepted limit as a rules version bump. It fails when gitleaks walks no commits of a range with content, which gitleaks itself reports as success. `bazel run @tbhb_rules//lint:gitleaks_text < file` scans text, such as a pull request's body, under the workspace's `.gitleaks.toml`.
 - `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD` fails on any commit in `BASE..HEAD` whose author and committer aren't one of the allowed pairs in `ALLOWED_PAIRS`, in `lint/private/commit_identity.bzl`. `repo-checks.yml` runs it on a pull request's commits.
 
+### Repository layout
+
+`repo_layout_test` checks allowed top-level directories and script formats. Its optional `required_files` dictionary requires named files in every immediate subdirectory of a directory:
+
+```starlark
+load("@tbhb_rules//repo:defs.bzl", "repo_layout_test")
+
+repo_layout_test(
+    name = "layout_test",
+    srcs = [":repo_files"],
+    required_files = {"templates": ["TEMPLATE.md", "WRITING.md", "REVIEW.md"]},
+    top_level_dirs = ["templates"],
+)
+```
+
+Each directory key is relative to `strip_prefix`. The checker reports a missing file with its subdirectory and permits extra files. A missing directory key fails the test. Leaving `required_files` at its default `{}` preserves existing behavior. See the [repository layout reference](docs/reference/repo-layout.md) for all attributes and how `srcs` determines which directories the test sees.
+
 ### Failure proofs
 
 Only a run on bad input that ends in the expected rejection, for the right reason, proves that a check rejects bad input. `expect_failure_test` wraps a test and passes only when that test fails and its output matches `pattern`, an extended regular expression:

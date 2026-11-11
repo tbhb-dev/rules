@@ -23,6 +23,16 @@ def scripts_layout_test(name, fixture, **kwargs):
         **kwargs
     )
 
+def required_files_layout_test(name, fixture, **kwargs):
+    """A layout over a fixture tree of template directories."""
+    repo_layout_test(
+        name = name,
+        srcs = native.glob(["testdata/layout/{}/**".format(fixture)]),
+        strip_prefix = "repo/tests/testdata/layout/" + fixture,
+        top_level_dirs = ["docs", "templates", "templates-other"],
+        **kwargs
+    )
+
 def _failure_test(name, message, **attrs):
     util.helper_target(
         repo_layout_test,
@@ -52,6 +62,24 @@ def _test_unknown_script_kind(name):
 def _test_subdirs_without_scripts(name):
     _failure_test(name, "allowed_subdirs names tools, which is not a scripts directory", allowed_subdirs = {"tools": ["interim"]}, top_level_dirs = ["tools"])
 
+def _test_required_files_absolute_dir(name):
+    _failure_test(name, "a required_files key must be a relative directory path", required_files = {"/templates": ["TEMPLATE.md"]}, top_level_dirs = ["templates"])
+
+def _test_required_files_parent_dir(name):
+    _failure_test(name, "a required_files key must be a relative directory path", required_files = {"templates/../docs": ["TEMPLATE.md"]}, top_level_dirs = ["templates"])
+
+def _test_required_files_empty_dir(name):
+    _failure_test(name, "a required_files key must be a relative directory path", required_files = {"": []}, top_level_dirs = ["templates"])
+
+def _test_required_files_nested_name(name):
+    _failure_test(name, "a required_files entry must be a single file name", required_files = {"templates": ["nested/TEMPLATE.md"]}, top_level_dirs = ["templates"])
+
+def _test_required_files_tab_dir(name):
+    _failure_test(name, "a required_files key must be a relative directory path", required_files = {"templates\tother": []}, top_level_dirs = ["templates"])
+
+def _test_required_files_newline_name(name):
+    _failure_test(name, "a required_files entry must not contain tabs or newlines", required_files = {"templates": ["TEMPLATE\n.md"]}, top_level_dirs = ["templates"])
+
 def repo_layout_test_suite(name):
     test_suite(
         name = name,
@@ -61,5 +89,11 @@ def repo_layout_test_suite(name):
             _test_script_dir_not_top_level,
             _test_unknown_script_kind,
             _test_subdirs_without_scripts,
+            _test_required_files_absolute_dir,
+            _test_required_files_parent_dir,
+            _test_required_files_empty_dir,
+            _test_required_files_nested_name,
+            _test_required_files_tab_dir,
+            _test_required_files_newline_name,
         ],
     )

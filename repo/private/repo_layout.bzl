@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""`repo_layout_test`: the repository's top-level directories and script dirs."""
+"""`repo_layout_test`: the repository's directories, scripts and required files."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
 load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
@@ -11,9 +11,9 @@ visibility("//repo/...")
 
 _SCRIPT_KINDS = ["pep723"]
 
-def _name(value, what):
+def _name(value, what, kind = "directory"):
     if not value or "/" in value or value in (".", ".."):
-        fail("{} must be a single directory name, not {}".format(what, repr(value)))
+        fail("{} must be a single {} name, not {}".format(what, kind, repr(value)))
     return value
 
 def _relative(file, strip_prefix):
@@ -44,6 +44,15 @@ def _repo_layout_test_impl(ctx):
         if dir not in ctx.attr.scripts:
             fail("allowed_subdirs names {}, which is not a scripts directory".format(dir))
         rules.extend(["subdir\t{}\t{}".format(dir, _name(n, "an allowed_subdirs entry")) for n in names])
+
+    for dir, names in ctx.attr.required_files.items():
+        if any([part in ("", ".", "..") for part in dir.split("/")]) or "\t" in dir or "\n" in dir:
+            fail("a required_files key must be a relative directory path without empty, . or .. components: {}".format(repr(dir)))
+        for name in names:
+            _name(name, "a required_files entry", kind = "file")
+            if "\t" in name or "\n" in name:
+                fail("a required_files entry must not contain tabs or newlines: {}".format(repr(name)))
+        rules.append("\t".join(["required", dir] + names))
 
     strip_prefix = ctx.attr.strip_prefix.strip("/")
     files = ctx.files.srcs
@@ -88,10 +97,17 @@ kind, `pep723`, is an extensionless uv script: its first line is
 opening its inline metadata. A script directory holds no subdirectories but
 those `allowed_subdirs` names, whose files are not checked.
 
+`required_files` maps directory paths, relative to `strip_prefix`, to file
+names. Every immediate subdirectory must contain each named file directly;
+extra files are allowed. A directory key absent from `srcs` fails the test.
+Only directories containing a file in `srcs` are visible to this check.
+The default is empty and adds no requirements.
+
 `srcs` is usually a `repo_files` target, which lists the files Bazel sees:
 the REPO.bazel ignores apply, but not .gitignore.""",
     attrs = SHELL_ATTRS | {
         "allowed_subdirs": attr.string_list_dict(doc = "Per scripts directory, the subdirectory names it may hold."),
+        "required_files": attr.string_list_dict(doc = "Directory path to file names required in each immediate subdirectory; extra files are allowed."),
         "scripts": attr.string_dict(doc = "Top-level directory to script kind; the kind is `pep723`."),
         "srcs": attr.label_list(allow_files = True, mandatory = True, doc = "Files to check, usually a `repo_files` target."),
         "strip_prefix": attr.string(doc = "Repository-relative directory to treat as the root."),
