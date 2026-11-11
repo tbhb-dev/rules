@@ -111,7 +111,7 @@ INDEX_FAILURES = {
     for case, pattern in INDEX_FAILURES.items()
 ]
 
-alias(
+test_suite(
     name = "unit_test",
-    actual = "//tools:content_test",
+    tests = ["//tools:content_test"],
 )
