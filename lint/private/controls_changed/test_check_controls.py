@@ -3,7 +3,7 @@
 
 import json
 import os
-import subprocess
+import runpy
 import sys
 from pathlib import Path
 from typing import cast
@@ -336,20 +336,25 @@ def test_unavailable_range_never_fails(
     assert capsys.readouterr().out == expected
 
 
-def test_cli_script_from_caller_checkout(repository: Path) -> None:
+def test_cli_script_from_caller_checkout(
+    repository: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert Path.cwd() == repository
     commit(".gitleaks.toml", "[allowlist]\n")
-    result = subprocess.run(
-        [sys.executable, checker.__file__, "--json", "HEAD^", "HEAD"],
-        cwd=repository,
-        check=True,
-        text=True,
-        capture_output=True,
-    )
-    assert result.stdout == (
+    monkeypatch.setattr(sys, "argv", [checker.__file__, "--json", "HEAD^", "HEAD"])
+    # Keep mutation instrumentation in the test process while executing the
+    # script entry point from a checkout without its own Python configuration.
+    with pytest.raises(SystemExit) as exited:
+        runpy.run_path(checker.__file__, run_name="__main__")
+    assert exited.value.code == 0
+    result = capsys.readouterr()
+    assert result.out == (
         '{"categories": ["secret-scanning"], "error": null, '
         '"files": [{"categories": ["secret-scanning"], "path": ".gitleaks.toml"}]}\n'
     )
-    assert result.stderr == ""
+    assert result.err == ""
 
 
 def test_workflow_contract() -> None:

@@ -291,8 +291,8 @@ testpaths = ["lint/private/controls_changed", "lint/private/decision_records", "
 source_paths = ["lint/private/controls_changed", "lint/private/decision_records", "lint/private/mutation_oses", "lint/private/okf_docs", "runtime/private"]
 # Tests are copied and run, never mutated.
 do_not_mutate = ["lint/private/controls_changed/test_*.py", "lint/private/decision_records/test_*.py", "lint/private/mutation_oses/test_*.py", "lint/private/okf_docs/test_*.py", "runtime/private/test_*.py", "runtime/private/boot/*"]
-# The docs checker's tests read the real schemas.
-also_copy = ["docs/schemas"]
+# The checkers' tests read the real schemas and workflow.
+also_copy = ["docs/schemas", ".github/workflows/repo-checks.yml"]
 pytest_add_cli_args_test_selection = ["lint/private/controls_changed", "lint/private/decision_records", "lint/private/mutation_oses", "lint/private/okf_docs", "runtime/private"]
 
 [tool.ruff]
