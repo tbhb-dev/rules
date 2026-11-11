@@ -38,7 +38,7 @@ case {scenario} in
     commit secret
     git -C "$repo" checkout -q -
     ;;
-  range_secret|range_base_secret|range_config|range_ignore|range_empty|range_branch_merge|deletion_only|rename_only|range_added|range_binary|range_corrupt|range_rename_added)
+  range_secret|range_base_secret|range_config|range_rules|range_ignore|range_empty|range_branch_merge|deletion_only|rename_only|range_added|range_binary|range_corrupt|range_rename_added)
     echo hello >"$repo/a.txt"
     if [[ {scenario} == deletion_only ]]; then
       for file in b c d; do
@@ -46,7 +46,7 @@ case {scenario} in
       done
     fi
     commit base
-    if [[ {scenario} == range_base_secret || {scenario} == range_config || {scenario} == range_ignore ]]; then
+    if [[ {scenario} == range_base_secret || {scenario} == range_config || {scenario} == range_rules || {scenario} == range_ignore ]]; then
       printf 'aws_access_key_id = %s%s\\n' AKIA Z7Q3XK2M5TNB4VWR >"$repo/creds.txt"
       commit secret
       if [[ {scenario} == range_ignore ]]; then
@@ -93,6 +93,10 @@ case {scenario} in
       range_config)
         printf '[extend]\\nuseDefault = true\\n' >"$repo/.gitleaks.toml"
         commit config
+        ;;
+      range_rules)
+        echo changed >"$repo/.gitleaks-rules.toml"
+        commit rules
         ;;
       range_ignore)
         rm "$repo/.gitleaksignore"
@@ -175,7 +179,7 @@ gitleaks_history_scenario_test = rule(
         "expected_head": attr.string(default = "unset", values = ["head", "other", "unset"], doc = "Value of EXPECTED_HEAD passed to the subject."),
         "expected_scan": attr.string(doc = "Exact scan announcement required before accepting the result."),
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["clean", "corrupt", "deletion_only", "no_commits", "no_content", "other_branch", "range_added", "range_base_secret", "range_binary", "range_branch_merge", "range_config", "range_corrupt", "range_empty", "range_ignore", "range_linear", "range_rename_added", "range_secret", "rename_only", "secret"]),
+        "scenario": attr.string(mandatory = True, values = ["clean", "corrupt", "deletion_only", "no_commits", "no_content", "other_branch", "range_added", "range_base_secret", "range_binary", "range_branch_merge", "range_config", "range_corrupt", "range_empty", "range_ignore", "range_linear", "range_rename_added", "range_rules", "range_secret", "rename_only", "secret"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
         "subject_args": attr.string_list(doc = "Arguments passed to the subject."),
     },

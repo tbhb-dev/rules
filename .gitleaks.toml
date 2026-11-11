@@ -4,7 +4,7 @@
 # Review edits to this file as security policy. Start from gitleaks' default
 # rules and allowlist only what is justified, each with a reason.
 [extend]
-useDefault = true
+path = ".gitleaks-rules.toml"
 
 # `gitleaks dir` walks the working directory without reading .gitignore, so
 # the build output and tool caches that a local checkout holds would be
@@ -23,3 +23,15 @@ paths = [
   '''(^|/)__pycache__/''',
   '''^\.(ruff|pytest|hypothesis|rumdl)_cache/''',
 ]
+
+# The Bedrock rule contains its own public detection prefix. Allow only that
+# exact regex declaration in generated policy files, for that rule alone.
+# Tokens on any other line, and credential paths, still reach every rule.
+[[allowlists]]
+description = "Public Bedrock detection prefix in vendored rules"
+targetRules = ["aws-amazon-bedrock-api-key-short-lived"]
+condition = "AND"
+paths = ['''(^|/)\.gitleaks-rules\.toml$''', '''^lint/gitleaks/upstream\.toml$''']
+regexTarget = "line"
+# cspell:ignore Vkcm
+regexes = ["(?m)^regex = '''bedrock-api-key-(?:YmVkcm9jay5hbWF6b25hd3MuY29t)'''$"]
