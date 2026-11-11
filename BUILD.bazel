@@ -341,6 +341,7 @@ repo_layout_test(
         "ansible",
         "astro",
         "cloudflare",
+        "content",
         "diagrams",
         "docs",
         "e2e",
