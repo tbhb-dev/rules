@@ -3,11 +3,19 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//lint/private:commit_identity.bzl", "commit_identity")
 load("//lint/private:gitleaks_text.bzl", "gitleaks_text")
 load("//repo:defs.bzl", "repo_files")
 
 repo_files()
+
+# Checks the caller's CODEOWNERS through GitHub's API, outside the test graph.
+sh_binary(
+    name = "codeowners_errors",
+    srcs = ["//lint/private:codeowners_errors.sh"],
+    visibility = ["//visibility:public"],
+)
 
 # `common --//lint:gitleaks_private_config` (in a consumer's .bazelrc:
 # `common --@tbhb_rules//lint:gitleaks_private_config`) makes gitleaks_test

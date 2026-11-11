@@ -9,6 +9,7 @@ repo_files()
 
 exports_files([
     "codeowners.sh",
+    "codeowners_errors.sh",
     "commit_identity.sh.tpl",
     "gitleaks_history.sh.tpl",
     "gitleaks_text.sh.tpl",
