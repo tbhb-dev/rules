@@ -274,6 +274,8 @@ jobs:
       gazelle-dirs: go go/e2e/smoke
       govulncheck-target: //tests/self:govulncheck
       govulncheck-working-directory: go
+      go-sdk-checksum-dirs: go go/e2e/smoke
+      go-sdk-checksum-workspace: go
       module-dirs: . ansible astro cloudflare diagrams/d2 go playwright python storybook tokens typescript
       pnpm-audit-dirs: typescript cloudflare astro storybook tokens
       pnpm-audit-workspace: typescript

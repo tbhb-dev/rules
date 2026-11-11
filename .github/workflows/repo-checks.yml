@@ -71,6 +71,18 @@ on:
         description: The directory of the Bazel workspace that holds the target.
         type: string
         default: .
+      go-sdk-checksum-dirs:
+        description: >-
+          Bazel module directories whose recorded Go SDK archive checksums
+          must match go.dev. Whitespace separated, relative to the checkout.
+          The network comparison runs only for changed SDK records in
+          MODULE.bazel or MODULE.bazel.lock. Empty skips the check.
+        type: string
+        default: ""
+      go-sdk-checksum-workspace:
+        description: The workspace that can resolve tbhb_rules_go.
+        type: string
+        default: .
       gazelle-dirs:
         description: >-
           Directories of Bazel workspaces, relative to the root and split on
@@ -378,6 +390,25 @@ jobs:
           name: govulncheck-sarif
           path: ${{ runner.temp }}/govulncheck.sarif
           if-no-files-found: ignore
+
+      # This command compares SDK records with the base revision before
+      # contacting go.dev. Unrelated module edits skip the network entirely.
+      - name: Check changed Go SDK archive checksums
+        if: >-
+          inputs.go-sdk-checksum-dirs != '' &&
+          (github.event_name == 'pull_request' || github.event_name == 'push')
+        working-directory: ${{ inputs.go-sdk-checksum-workspace }}
+        env:
+          DIRS: ${{ inputs.go-sdk-checksum-dirs }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          read -ra dirs <<<"${DIRS}"
+          paths=()
+          for dir in "${dirs[@]}"; do
+            paths+=("${GITHUB_WORKSPACE}/${dir}")
+          done
+          bazelisk run @tbhb_rules_go//tools:go_sdk_checksums -- \
+            --changed-since="${BASE_SHA:?missing change base}" "${paths[@]}"
 
       # //:zizmor_test runs the offline audits; a token turns on the online
       # ones, which need the network.
