@@ -176,22 +176,22 @@ Maintained pnpm and uv projects, including the E2E consumers, apply the same
 five-day cooldown as Renovate version bumps: `minimumReleaseAge: 7200` in
 `pnpm-workspace.yaml` and `exclude-newer = "5 days"` in `[tool.uv]`.
 Refresh locks with the pinned pnpm (`bazelisk run @pnpm//:pnpm -- --dir "$PWD" install --lockfile-only`)
-or uv (`uv lock`); their pins live in `MODULE.bazel` and `mise.toml`.
+or uv (`uv lock`). Their pins live in `MODULE.bazel` and `mise.toml`.
 The Ansible consumer keeps its older exact `ansible-core` pin to test a
 different toolchain, while the cooldown still covers its maintained lock.
-Python workspace members inherit the root lock's cooldown; planted projects
+Python workspace members inherit the root lock's cooldown. Planted projects
 and mutation source-path fixtures have no independent lock to refresh and
 keep their deliberate dependency and configuration inputs.
-The historical lock in `tools/testdata/lock_cooldown` stays byte-stable and
-is excluded from Renovate so the clock regression retains its original resolution.
-E2E modules without pnpm or uv locks need neither setting.
+The historical lock in `tools/testdata/lock_cooldown` stays byte-stable.
+Renovate skips it so the clock regression retains its original resolution.
+Only E2E modules with pnpm or uv locks need these settings.
 
-uv 0.13.7 documents that [advancing time alone does not update a relative cooldown lock](https://github.com/astral-sh/uv/blob/0.13.7/docs/concepts/resolution.md#dependency-cooldowns).
+uv 0.13.7 documents that [advancing time alone doesn't update a relative cooldown lock](https://github.com/astral-sh/uv/blob/0.13.7/docs/concepts/resolution.md#dependency-cooldowns).
 Its [lock comparison ignores timestamp changes when the span is unchanged](https://github.com/astral-sh/uv/blob/0.13.7/crates/uv-configuration/src/exclude_newer.rs),
 and `uv.lock` stores the duration as `exclude-newer-span = "P5D"`.
 `//tools:lock_cooldown_test` checks a fixture locked at 2024-05-01 with
 `uv lock --check --offline` and `uv lock --offline` at that date, the next day,
 the next month and the next year, comparing the lock bytes after every run.
 It uses uv's [own test clock](https://github.com/astral-sh/uv/blob/0.13.7/crates/uv-distribution-types/src/exclude_newer.rs)
-(`UV_INTERNAL__TEST_CURRENT_TIMESTAMP`), verifies the override is honored,
+(`UV_INTERNAL__TEST_CURRENT_TIMESTAMP`), verifies that uv honors the override,
 and proves that changing the span to six days fails `--check`.
