@@ -3,7 +3,7 @@
   "private": true,
   "description": "The npm tools behind @tbhb_rules_typescript//:defs.bzl, linked into each check's tree. typescript stays below 6.1, which typescript-eslint 8 requires (peer >=4.8.4 <6.1.0).",
   "dependencies": {
-    "@biomejs/biome": "2.6.5",
+    "@biomejs/biome": "2.6.6",
     "@cloudflare/vitest-plugin": "1.6.0",
     "@stryker-mutator/core": "10.1.1",
     "@stryker-mutator/vitest-runner": "10.1.1",
