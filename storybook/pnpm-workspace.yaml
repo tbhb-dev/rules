@@ -12,7 +12,7 @@
 # could load beside the consumer's.
 
 overrides:
-  glob@<14.0.2: 14.0.3
+  glob@<14.0.2: 14.0.4
 
 allowBuilds: {}
 autoInstallPeers: false
