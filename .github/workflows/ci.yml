@@ -35,6 +35,7 @@ jobs:
       pull-requests: read  # the pull request's changed files, from the GitHub API
     outputs:
       workspaces: ${{ steps.plan.outputs.workspaces }}
+      all-workspaces: ${{ steps.plan.outputs.all-workspaces }}
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
@@ -79,6 +80,9 @@ jobs:
               {"id": "tokens-smoke", "dir": "tokens/e2e/smoke", "deps": ["root", "typescript", "playwright", "tokens"]}
             ]
         run: |
+          # The writer fetches the entire test matrix, even when a PR selects less.
+          all=$(jq -c '[.[] | {id, dir}]' <<<"${WORKSPACES}")
+          echo "all-workspaces=${all}" >>"${GITHUB_OUTPUT}"
           files="${RUNNER_TEMP}/changed"
           if [ "${EVENT}" = pull_request ]; then
             gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" \
@@ -107,10 +111,11 @@ jobs:
           ids="$(jq -r 'map(.id) | join(", ")' <<<"${selected}")"
           echo "Testing: ${ids}" >>"${GITHUB_STEP_SUMMARY}"
 
-  # One writer per platform, from the root whose module files form the key.
+  # One writer per platform, keyed by all workspaces' module files.
   # An exact immutable cache already contains the complete fetch list.
   cache-warm:
     name: "cache-warm (${{ matrix.os }})"
+    needs: [plan]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -136,7 +141,10 @@ jobs:
           OS: ${{ runner.os }}
           ARCH: ${{ runner.arch }}
           # cache_contract_test checks this against repository-cache lists.
-          HASH: ${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'pins/*.bzl') }}
+          HASH: >-
+            ${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock',
+                '**/MODULE.bazel', '**/MODULE.bazel.lock', 'pins/*.bzl',
+                '!**/testdata/**', '!**/.worktrees/**', '!**/bazel-*/**', '!**/.bazel-*/**') }}
         run: |
           case "$OS" in
             Linux) platform=linux ;;
@@ -175,7 +183,7 @@ jobs:
         uses: ./.github/actions/setup-bazel-ci
         with:
           cache-save: true
-          fetch-workspaces: go typescript
+          fetch-workspaces: ${{ join(fromJSON(needs.plan.outputs.all-workspaces).*.dir, ' ') }}
 
       - name: Report fetch time and repository cache size
         if: steps.cache.outputs.cache-hit != 'true'

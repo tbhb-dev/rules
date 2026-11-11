@@ -26,24 +26,31 @@ for file in "$action" "${workflows[@]}"; do
   # Every setup attempt must use the same explicit file list.
   count=$(grep -c 'uses: bazel-contrib/setup-bazel@' "$file")
   lists=$(awk '
-    /repository-cache: \|/ {
-      getline; a=$0; sub(/^ *- /, "", a)
-      getline; b=$0; sub(/^ *- /, "", b)
-      getline; c=$0; sub(/^ *- /, "", c)
-      print a "," b "," c
+    /repository-cache: \|/ { list=""; reading=1; next }
+    reading && /^ *- / {
+      entry=$0; sub(/^ *- /, "", entry); gsub(/\047/, "", entry)
+      list=list (list == "" ? "" : ",") entry
+      next
     }
+    reading { print list; reading=0 }
+    END { if (reading) print list }
   ' "$file")
   list_count=$(wc -l <<<"$lists" | tr -d ' ')
   [[ $list_count == "$count" ]] || fail "missing repository-cache list in $file"
   unique_lists=$(sort -u <<<"$lists")
-  [[ $unique_lists == 'MODULE.bazel,MODULE.bazel.lock,pins/*.bzl' ]] || fail "hash list differs in $file"
+  [[ $unique_lists == 'MODULE.bazel,MODULE.bazel.lock,**/MODULE.bazel,**/MODULE.bazel.lock,pins/*.bzl,!**/testdata/**,!**/.worktrees/**,!**/bazel-*/**,!**/.bazel-*/**' ]] || fail "hash list differs in $file"
   if [[ $file != "$action" ]]; then
     readers=$(grep -c 'cache-save: false' "$file")
     [[ $readers == "$count" ]] || fail "$file must only restore"
   fi
 done
 grep -qF "KEY-FORMAT setup-bazel@$reviewed" "$ci" || fail 'missing reviewed pin beside key computation'
-grep -qF "hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'pins/*.bzl')" "$ci" || fail 'lookup hash differs'
+lookup=$(awk '
+  /HASH: >-/ { reading=1; next }
+  reading && /^            / { sub(/^ */, ""); line=line (line == "" ? "" : " ") $0; next }
+  reading { print line; exit }
+' "$ci")
+grep -qF "hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '**/MODULE.bazel', '**/MODULE.bazel.lock', 'pins/*.bzl', '!**/testdata/**', '!**/.worktrees/**', '!**/bazel-*/**', '!**/.bazel-*/**')" <<<"$lookup" || fail 'lookup hash differs'
 # shellcheck disable=SC2016
 grep -qF 'key=setup-bazel-1-${platform}-${arch}-repository-${HASH}' "$ci" || fail 'lookup key format differs'
 for mapping in 'Linux) platform=linux' 'macOS) platform=darwin' 'Windows) platform=win32' 'X64) arch=x64' 'ARM64) arch=arm64'; do
@@ -61,6 +68,28 @@ grep -qF "if: failure() && inputs.cache-save == 'true'" "$action" || fail 'faile
 # The two matrices must cover the same platforms.
 matrices=$(grep 'os: \[ubuntu-' "$ci" | sort -u | wc -l | tr -d ' ')
 [[ $matrices == 1 ]] || fail 'warm and test matrices differ'
+
+# The writer consumes the plan's unfiltered matrix, never the PR selection
+# or a second hand-maintained workspace list. Root is deduplicated by fetch.sh.
+# shellcheck disable=SC2016
+grep -qF 'all-workspaces: ${{ steps.plan.outputs.all-workspaces }}' "$ci" || fail 'plan must export all workspaces'
+# shellcheck disable=SC2016
+grep -qF 'all=$(jq -c '\''[.[] | {id, dir}]'\'' <<<"${WORKSPACES}")' "$ci" || fail 'full matrix must come from the plan source'
+# shellcheck disable=SC2016
+grep -qF 'echo "all-workspaces=${all}"' "$ci" || fail 'plan must publish the full matrix'
+warm=$(sed -n '/^  cache-warm:/,/^  bazel:/p' "$ci")
+grep -qF 'needs: [plan]' <<<"$warm" || fail 'writer must depend on plan'
+# shellcheck disable=SC2016
+grep -qF 'fetch-workspaces: ${{ join(fromJSON(needs.plan.outputs.all-workspaces).*.dir, '\'' '\'') }}' <<<"$warm" || fail 'writer must fetch the full plan matrix'
+# shellcheck disable=SC2016
+grep -qF 'WORKSPACES: . ${{ inputs.fetch-workspaces }}' "$action" || fail 'action must forward every fetch workspace'
+! grep -q 'FETCH_ALL: false' "$ci" "$action" || fail 'writer must fetch the test graph'
+# shellcheck disable=SC2016
+grep -qF 'workspace: ${{ fromJSON(needs.plan.outputs.workspaces) }}' "$ci" || fail 'test matrix must use the plan selection'
+# shellcheck disable=SC2016
+grep -qF 'FETCH_SECONDS: ${{ steps.warm.outputs.fetch-seconds }}' "$ci" || fail 'summary must report fetch seconds'
+# shellcheck disable=SC2016
+grep -qF 'du -sk "$cache"' "$ci" || fail 'summary must report cache size'
 
 # Read literal build/run labels and target input values, including tools
 # selected by the caller. This detects a new run-only tool in either workflow.
@@ -89,4 +118,4 @@ for workflow in "${workflows[@]}"; do
 done
 # shellcheck disable=SC2016
 grep -qF 'DEADLINE: ${{ steps.retry_clock.outputs.deadline }}' .github/workflows/repo-checks.yml || fail 'shared fetch must use the workflow retry deadline'
-echo 'PASS: shared fetch list, hash inputs, sole saver, exact lookup, and reviewed setup-bazel pin'
+echo 'PASS: full workspace fetch, shared targets, hash inputs, sole saver, exact lookup, and reviewed setup-bazel pin'

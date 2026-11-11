@@ -93,9 +93,15 @@ runs:
         disk-cache: ${{ inputs.disk-cache }}
         # cache_contract_test checks every copy of this hash list.
         repository-cache: |
-          - MODULE.bazel
-          - MODULE.bazel.lock
-          - pins/*.bzl
+          - 'MODULE.bazel'
+          - 'MODULE.bazel.lock'
+          - '**/MODULE.bazel'
+          - '**/MODULE.bazel.lock'
+          - 'pins/*.bzl'
+          - '!**/testdata/**'
+          - '!**/.worktrees/**'
+          - '!**/bazel-*/**'
+          - '!**/.bazel-*/**'
         cache-save: ${{ inputs.cache-save }}
 
     - name: Wait before retrying the Bazel setup
@@ -116,9 +122,15 @@ runs:
         disk-cache: ${{ inputs.disk-cache }}
         # cache_contract_test checks every copy of this hash list.
         repository-cache: |
-          - MODULE.bazel
-          - MODULE.bazel.lock
-          - pins/*.bzl
+          - 'MODULE.bazel'
+          - 'MODULE.bazel.lock'
+          - '**/MODULE.bazel'
+          - '**/MODULE.bazel.lock'
+          - 'pins/*.bzl'
+          - '!**/testdata/**'
+          - '!**/.worktrees/**'
+          - '!**/bazel-*/**'
+          - '!**/.bazel-*/**'
         cache-save: ${{ inputs.cache-save }}
 
     - name: Wait before the last Bazel setup attempt
@@ -137,9 +149,15 @@ runs:
         disk-cache: ${{ inputs.disk-cache }}
         # cache_contract_test checks every copy of this hash list.
         repository-cache: |
-          - MODULE.bazel
-          - MODULE.bazel.lock
-          - pins/*.bzl
+          - 'MODULE.bazel'
+          - 'MODULE.bazel.lock'
+          - '**/MODULE.bazel'
+          - '**/MODULE.bazel.lock'
+          - 'pins/*.bzl'
+          - '!**/testdata/**'
+          - '!**/.worktrees/**'
+          - '!**/bazel-*/**'
+          - '!**/.bazel-*/**'
         cache-save: ${{ inputs.cache-save }}
 
     # setup-bazel installs the pinned bazelisk under the name `bazel`, so a

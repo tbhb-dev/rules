@@ -9,7 +9,7 @@ scratch=${TEST_TMPDIR:?}/fetch
 if command -v cygpath >/dev/null; then
   scratch=$(cygpath -u "$scratch")
 fi
-mkdir -p "$scratch/bin" "$scratch/root/go" "$scratch/root/typescript"
+mkdir -p "$scratch/bin" "$scratch/root/go" "$scratch/root/typescript" "$scratch/root/nested/smoke"
 cat >"$scratch/bin/bazelisk" <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -21,12 +21,12 @@ if [[ $1 == query ]]; then
   esac
 else
   echo "${PWD##*/} $*" >>"$LOG"
-  [[ ${FAIL_FETCH:-false} != true ]]
+  [[ ${FAIL_WORKSPACE:-} != "${PWD##*/}" ]]
 fi
 MOCK
 chmod +x "$scratch/bin/bazelisk"
 export PATH="$scratch/bin:$PATH" LOG="$scratch/log"
-export TARGETS=@default BUDGET=0 WORKSPACES='. go typescript . go'
+export TARGETS=@default BUDGET=0 WORKSPACES=$'.\ngo typescript\nnested/smoke . go'
 export GITHUB_OUTPUT="$scratch/output"
 cd "$scratch/root"
 bash "$script"
@@ -43,17 +43,17 @@ if grep '^root ' "$LOG" | grep -qF '//:pnpm_audit'; then
   exit 1
 fi
 fetch_count=$(wc -l <"$LOG" | tr -d ' ')
-[[ $fetch_count == 3 ]]
+[[ $fetch_count == 4 ]]
 # External tools must fetch in all workspaces, even when local tools differ.
-for workspace in root go typescript; do
+for workspace in root go typescript smoke; do
   for tool in '@bazel_tools//tools:tools_for_bazel_subcommands' '@tbhb_rules//lint:zizmor'; do
     grep "^$workspace " "$LOG" | grep -qF -- "$tool"
   done
 done
 grep -q '^seconds=[0-9][0-9]*$' "$GITHUB_OUTPUT"
-# A failed fetch must fail the composite, with no success output.
+# A failure in the last workspace must fail the composite, with no timing output.
 : >"$GITHUB_OUTPUT"
-if FAIL_FETCH=true bash "$script"; then
+if FAIL_WORKSPACE=smoke bash "$script"; then
   echo 'FAIL: failed fetch returned success'
   exit 1
 fi

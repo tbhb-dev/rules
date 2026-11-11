@@ -68,9 +68,15 @@ jobs:
           bazelisk-cache: true
           # cache_contract_test checks every copy of this hash list.
           repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - pins/*.bzl
+            - 'MODULE.bazel'
+            - 'MODULE.bazel.lock'
+            - '**/MODULE.bazel'
+            - '**/MODULE.bazel.lock'
+            - 'pins/*.bzl'
+            - '!**/testdata/**'
+            - '!**/.worktrees/**'
+            - '!**/bazel-*/**'
+            - '!**/.bazel-*/**'
           cache-save: false
 
       - name: Wait before retrying the Bazel setup
@@ -89,9 +95,15 @@ jobs:
           bazelisk-cache: true
           # cache_contract_test checks every copy of this hash list.
           repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - pins/*.bzl
+            - 'MODULE.bazel'
+            - 'MODULE.bazel.lock'
+            - '**/MODULE.bazel'
+            - '**/MODULE.bazel.lock'
+            - 'pins/*.bzl'
+            - '!**/testdata/**'
+            - '!**/.worktrees/**'
+            - '!**/bazel-*/**'
+            - '!**/.bazel-*/**'
           cache-save: false
 
       - name: Wait before the last Bazel setup attempt
@@ -108,9 +120,15 @@ jobs:
           bazelisk-cache: true
           # cache_contract_test checks every copy of this hash list.
           repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - pins/*.bzl
+            - 'MODULE.bazel'
+            - 'MODULE.bazel.lock'
+            - '**/MODULE.bazel'
+            - '**/MODULE.bazel.lock'
+            - 'pins/*.bzl'
+            - '!**/testdata/**'
+            - '!**/.worktrees/**'
+            - '!**/bazel-*/**'
+            - '!**/.bazel-*/**'
           cache-save: false
 
       # As in repo-checks.yml: setup-bazel installs bazelisk as `bazel`.

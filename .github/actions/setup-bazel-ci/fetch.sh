@@ -29,7 +29,8 @@ retry() {
   done
 }
 
-read -ra workspaces <<<"${WORKSPACES:-.}"
+workspaces_input=${WORKSPACES:-.}
+read -ra workspaces <<<"${workspaces_input//$'\n'/ }"
 visited=""
 for workspace in "${workspaces[@]}"; do
   workspace=$(cd "$workspace" && pwd)
