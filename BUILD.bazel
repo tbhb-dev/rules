@@ -214,6 +214,7 @@ SHELL_SCRIPTS = [
     "repo/tests/retry_budget_test.sh",
     "testing/private/expect_failure.sh.tpl",
     "testing/tests/subject.sh",
+    "tools/lock_cooldown_test.sh",
 ]
 
 tree_check_test(
