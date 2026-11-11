@@ -8,7 +8,7 @@ import argparse
 import hashlib
 import json
 import re
-import subprocess
+import subprocess  # nosec B404
 import tomllib
 import urllib.request
 from pathlib import Path
@@ -24,7 +24,8 @@ def fail(message: str) -> None:
 def tracked_configs(root: Path) -> list[Path]:
     """Include new configs too, so a newly added module cannot escape the check."""
     paths = (
-        subprocess.check_output(
+        # Fixed arguments; PATH supplies the repository's pinned git.
+        subprocess.check_output(  # nosec B603, B607
             ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
             cwd=root,
         )
@@ -85,7 +86,8 @@ def main() -> None:
     source_path = vendor / "upstream.toml"
     if not args.check:
         url = f"https://raw.githubusercontent.com/gitleaks/gitleaks/v{version}/config/gitleaks.toml"
-        with urllib.request.urlopen(url, timeout=60) as response:
+        # The URL always uses HTTPS on raw.githubusercontent.com.
+        with urllib.request.urlopen(url, timeout=60) as response:  # nosec B310
             source_path.write_bytes(response.read())
         metadata_path.write_text(
             json.dumps(
