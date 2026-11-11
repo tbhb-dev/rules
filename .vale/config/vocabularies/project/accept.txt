@@ -32,6 +32,7 @@ shellcheck
 subcommand
 subpackages?
 subtree
+tbhb
 tbhb_rules
 tombi
 toolchains
