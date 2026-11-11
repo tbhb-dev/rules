@@ -4,6 +4,7 @@
 import json
 import os
 import runpy
+import subprocess
 import sys
 from pathlib import Path
 from typing import cast
@@ -26,6 +27,33 @@ def commit(path: str, content: str) -> str:
     checker.git("git", "add", "--", path)
     checker.git("git", "commit", "-qm", "fixture")
     return checker.git("git", "rev-parse", "HEAD").strip()
+
+
+def commit_blob(path: bytes, content: bytes) -> None:
+    blob = subprocess.run(
+        ["git", "hash-object", "-w", "--stdin"],
+        input=content,
+        check=True,
+        capture_output=True,
+    ).stdout.strip()
+    # Keep raw paths off both the file system and Windows' Unicode command line.
+    # --index-info is the stdin equivalent of --cacheinfo; -z preserves newlines.
+    # Disable Windows path validation only while adding these tree-only entries.
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "core.protectNTFS=false",
+            "update-index",
+            "--add",
+            "-z",
+            "--index-info",
+        ],
+        input=b"100644 " + blob + b"\t" + path + b"\0",
+        check=True,
+        capture_output=True,
+    )
+    checker.git("git", "-c", "core.protectNTFS=false", "commit", "-qm", "fixture")
 
 
 @pytest.fixture
@@ -295,7 +323,7 @@ def test_github_summary_and_annotations(
 ) -> None:
     assert repository.is_dir()
     path = ".github/actions/<check%&>/a\nwarning.yml"
-    commit(path, "# gitleaks:allow\n# noqa\n")
+    commit_blob(path.encode("utf-8"), b"# gitleaks:allow\n# noqa\n")
     summary = tmp_path / "summary"
     summary.write_text("earlier\n", encoding="utf-8")
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
@@ -457,12 +485,14 @@ def test_source_expression_changes_and_unnamed_calls() -> None:
 
 
 def test_git_preserves_non_utf8_content(repository: Path) -> None:
-    path = repository / os.fsdecode(b"source-\xff.py")
-    path.write_bytes(b"value = '\xff'\n# noqa\n")
-    checker.git("git", "add", "--", str(path))
-    checker.git("git", "commit", "-qm", "non UTF-8 fixture")
+    assert repository.is_dir()
+    path = b"source-\xff.py"
+    commit_blob(path, b"value = '\xff'\n# noqa\n")
     assert checker.detect("git", "HEAD^", "HEAD", CATEGORIES)["files"] == [
-        {"path": path.name, "categories": ["coverage-mutation-pragmas"]}
+        {
+            "path": path.decode("utf-8", errors="surrogateescape"),
+            "categories": ["coverage-mutation-pragmas"],
+        }
     ]
 
 
