@@ -198,6 +198,7 @@ SHELL_SCRIPTS = [
     ".github/actions/setup-bazel-ci/cpu_quota.sh",
     "format/private/format.sh.tpl",
     "lint/private/codeowners.sh",
+    "lint/private/content/index.sh.tpl",
     "lint/private/commit_identity.sh.tpl",
     "lint/private/gitleaks_history.sh.tpl",
     "lint/private/gitleaks_text.sh.tpl",

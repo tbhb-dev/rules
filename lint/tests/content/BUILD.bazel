@@ -1,0 +1,117 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+# cspell:ignore checkerbot backlink
+
+load("//lint:defs.bzl", "design_test", "designs_index", "designs_index_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+PREFIX = "lint/tests/content/testdata/"
+
+design_test(
+    name = "good_test",
+    srcs = glob(["testdata/good/designs/small-design/**"]),
+    forbidden_terms = ["checkerbot"],
+    strip_prefix = PREFIX + "good",
+)
+
+designs_index(
+    name = "index",
+    srcs = glob(["testdata/good/designs/**"]),
+    out = PREFIX + "good/designs/README.md",
+)
+
+designs_index_test(
+    name = "index_test",
+    srcs = glob(["testdata/good/designs/**"]),
+    strip_prefix = PREFIX + "good",
+)
+
+FAILURES = {
+    "bad_appendix_name": "appendix name must be",
+    "bad_appendix_type": "type must be Design Appendix",
+    "bad_count": "nonnegative integer",
+    "bad_evidence": "Evidence must start",
+    "bad_parent": "appendix parent must be",
+    "bad_sections": "section order must be",
+    "bad_status": "status must be",
+    "bad_table": "status table must",
+    "bad_tags": "tags must be",
+    "bad_title": "title must be",
+    "bad_updated": "updated must be",
+    "broken_anchor": "anchor does not resolve",
+    "broken_link": "relative link does not resolve",
+    "count_mismatch": "decisions_open must equal 1",
+    "forbidden_term": "forbidden term: checkerbot",
+    "invalid_yaml": "invalid YAML",
+    "long_readme": "README exceeds 250",
+    "long_summary": "Summary exceeds 150",
+    "malformed_link": "invalid link destination",
+    "missing_backlink": "link back to README",
+    "missing_bullet": "missing Why bullet",
+    "missing_evidence": "Evidence column",
+    "missing_frontmatter": "missing frontmatter",
+    "missing_if_no": "missing If no bullet",
+    "missing_if_yes": "missing If yes bullet",
+    "missing_keys": "missing required frontmatter: owner",
+    "missing_readme": "missing README.md",
+    "missing_recommendation": "missing Recommendation bullet",
+    "missing_reversible": "missing Reversible bullet",
+    "non_mapping": "must be a mapping",
+    "unlinked_appendix": "README must link appendix",
+    "wrong_type": "type must be Design Draft",
+}
+
+[
+    design_test(
+        name = "proof_" + case,
+        srcs = glob(["testdata/" + case + "/**"]),
+        forbidden_terms = ["checkerbot"],
+        strip_prefix = PREFIX + case,
+        tags = ["manual"],
+    )
+    for case in FAILURES
+]
+
+[
+    expect_failure_test(
+        name = case + "_fails_test",
+        pattern = pattern,
+        test = ":proof_" + case,
+    )
+    for case, pattern in FAILURES.items()
+]
+
+INDEX_FAILURES = {
+    "bad_slug": "slug must be kebab case",
+    "missing_metadata": "missing required frontmatter: owner",
+    "nested": "cannot hold subdirectories",
+    "no_readme": "missing README.md",
+    "stale": "stale designs index",
+}
+
+[
+    designs_index_test(
+        name = "proof_index_" + case,
+        srcs = glob(["testdata/index_" + case + "/**"]),
+        strip_prefix = PREFIX + "index_" + case,
+        tags = ["manual"],
+    )
+    for case in INDEX_FAILURES
+]
+
+[
+    expect_failure_test(
+        name = "index_" + case + "_fails_test",
+        pattern = pattern,
+        test = ":proof_index_" + case,
+    )
+    for case, pattern in INDEX_FAILURES.items()
+]
+
+alias(
+    name = "unit_test",
+    actual = "//tools:content_test",
+)

@@ -5,7 +5,7 @@ Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned 
 | Family | Load from | Contents |
 | --- | --- | --- |
 | format | `@tbhb_rules//format:defs.bzl` | `formatter`, `format` (fix and `.check` runners), `format_test`, and ready formatters `//format:shfmt`, `:buildifier`, `:tombi`, `:rumdl` and `:ryl` |
-| lint | `@tbhb_rules//lint:defs.bzl` | `gitleaks_test`, `gitleaks_history`, `ryl_test`, `tombi_test`, `rumdl_test`, `editorconfig_checker_test`, `actionlint_test`, `zizmor_test`, `shellcheck_test`, `shfmt_test`, `bats_test`, `codeowners_test`, `vale_test`, `vale_sync`, `cspell_test`, and the generic `tree_check_test` |
+| lint | `@tbhb_rules//lint:defs.bzl` | `gitleaks_test`, `gitleaks_history`, `ryl_test`, `tombi_test`, `rumdl_test`, `editorconfig_checker_test`, `actionlint_test`, `zizmor_test`, `shellcheck_test`, `shfmt_test`, `bats_test`, `codeowners_test`, `vale_test`, `vale_sync`, `cspell_test`, `design_test`, `designs_index`, `designs_index_test`, and the generic `tree_check_test` |
 | quality | `@tbhb_rules//quality:defs.bzl` | `mutation_gate_test` and its `MutationReportInfo` |
 | repo | `@tbhb_rules//repo:defs.bzl` | `repo_files`, `repo_layout_test` |
 | runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
@@ -68,6 +68,12 @@ Notes on individual tools:
 - `zizmor_test` runs the offline audits only. The online audits need the network and a token, so they belong outside the test graph.
 - `gitleaks_test` scans the working tree. `gitleaks_history` scans the Git history of every branch, with `bazel run` (in CI, after a full-depth checkout). `bazel run //:gitleaks_history -- --log-opts=HEAD` scans the full checked-out history. A leading `--merge-range` instead scans `HEAD^1..HEAD`: the pull request's own commits plus the merge commit, provided `HEAD` matches the full commit hash in `EXPECTED_HEAD`. Unset or different `EXPECTED_HEAD`, changes to `.gitleaks.toml` or `.gitleaksignore`, or unexpected Git state fall back to the full checked-out history, so tightened rules also meet old history. `repo-checks.yml` uses range mode for pull requests with `EXPECTED_HEAD` set to `github.sha` and the full scan for every other event. The private config (`GITLEAKS_CONFIG_TOML`) changes out of band. The next full scan (push to main) applies its changes to old history, the same accepted limit as a rules version bump. It fails when gitleaks walks no commits of a range with content, which gitleaks itself reports as success. `bazel run @tbhb_rules//lint:gitleaks_text < file` scans text, such as a pull request's body, under the workspace's `.gitleaks.toml`.
 - `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD` fails on any commit in `BASE..HEAD` whose author and committer aren't one of the allowed pairs in `ALLOWED_PAIRS`, in `lint/private/commit_identity.bzl`. `repo-checks.yml` runs it on a pull request's commits.
+
+### Design content
+
+Designs have a README and optional appendices. Copy the skeleton and checklists from [`content/design/`](content/design/TEMPLATE.md), then load `design_test` from `@tbhb_rules//lint:defs.bzl` over your repository's files. Supply private terms through `forbidden_terms`.
+
+For a flat `designs/<slug>/README.md` directory, use `designs_index` to generate its table and `designs_index_test` to check freshness, layout, and each design together. See [the content types reference](docs/reference/content-types.md) for examples and the full list of checks.
 
 ### Failure proofs
 

@@ -43,6 +43,7 @@ bzl_library(
     deps = [
         "//lint/private:checks",
         "//lint/private:codeowners",
+        "//lint/private:content",
         "//lint/private:cspell",
         "//lint/private:decision_records",
         "//lint/private:gitleaks_history",
