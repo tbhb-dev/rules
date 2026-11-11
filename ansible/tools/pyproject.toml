@@ -19,6 +19,9 @@ dependencies = [
 ]
 
 [tool.uv]
+# Lock refreshes skip releases younger than 5 days, the same cooldown
+# Renovate applies to version bumps.
+exclude-newer = "5 days"
 package = false
 # The uv that @tbhb_rules//runtime/private:versions.bzl pins; Renovate moves
 # both.
