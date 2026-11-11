@@ -11,12 +11,12 @@ generated:
     effort: high
     surface: exec
     session: sha-256-64:3a67b3ba193605bd
-    at: "2026-11-11T20:25:34Z"
+    at: "2026-11-11T20:28:59Z"
 ---
 
 # gitleaks policy
 
-Every committed `.gitleaks.toml` contains only local allowlists and rules. Bazel supplies `lint/gitleaks/base.toml` from the rules module. The generated base retains all 222 default rules from gitleaks 8.30.1, including their individual allowlists, without the upstream global allowlist. All nine configs, including the independently released nested modules, use this mechanism. Their rules dependency supplies the base, so release archives need no generated copy. The local cache allowlist remains unchanged. A rule-specific exception permits only the exact public Bedrock detection prefix declaration in the generated base and upstream snapshot. It can't suppress a credential path or a token on another line.
+Every committed `.gitleaks.toml` contains only local allowlists and rules. Bazel supplies `lint/gitleaks/base.toml` from the rules module. The generated base retains all 222 default rules from gitleaks 8.30.1, including their individual allowlists, without the upstream global allowlist. All ten configs, including the independently released nested modules and the consumer test module, use this mechanism. Their rules dependency supplies the base, so release archives don't need a generated copy. The local cache allowlist remains unchanged. A rule-specific exception permits only the exact public Bedrock detection prefix declaration in the generated base and upstream snapshot. It can't suppress a credential path or a token on another line.
 
 ## Upstream global allowlist
 
@@ -97,16 +97,24 @@ Run `gitleaks dir --no-banner --redact --verbose --config CONFIG FILE` for each 
 
 A path beside an independently detected token doesn't by itself suppress that token. Suppression depends on the extracted secret and the matching allowlist entry.
 
-`//lint/tests:defaults_default_allowlist_test` runs both negative controls with the pinned binary. Tree, text, and history scenarios assert that the committed policy detects the first fixture. History scanning removes both fixtures before scanning and requires both rules, proving that it reads past commits. Private scanning adds a credential-path rule and verifies it alongside the default token rule. This exercises the full private → effective local → module base config chain. A merge-range scenario requires a full history scan when the generated base changes.
+`//lint/tests:defaults_default_allowlist_test` runs both negative controls with the pinned binary. Tree, text, and history scenarios assert that the committed policy detects the first fixture. History scanning removes both fixtures before scanning and requires both rules, proving that it reads past commits. Private scanning adds a credential-path rule and verifies it alongside the default token rule. This exercises the private config extending effective local policy, which extends the base from the module. A merge-range scenario requires a full history scan when the generated base changes.
 
-## Regeneration and migration
+## Regeneration
 
-Run `python3 lint/gitleaks/update.py` after changing the gitleaks pin in `pins/extensions.bzl`. It downloads that exact tag's config and records the source version and checksum. Generation removes only the global allowlist and compares parsed rules before and after. The command writes the single module base, `lint/gitleaks/base.toml`. It fails when platform pins disagree. `python3 lint/gitleaks/update.py --check` performs the offline checks, including checksum verification, byte-for-byte regeneration, and discovery of every tracked or newly added `.gitleaks.toml`. Each config must have no extension or adjacent base copy. `//lint/tests:gitleaks_configs_test` runs this check in the checkout, including nested modules, and proves that a pin bump fails until regeneration.
+Run `python3 lint/gitleaks/update.py` after changing the gitleaks pin in `pins/extensions.bzl`. It downloads that exact tag's config and records the source version and checksum. Generation removes only the global allowlist and compares parsed rules before and after. The command writes `lint/gitleaks/base.toml`. It fails when platform pins disagree.
 
-Consuming repositories bump their rules dependency, remove `[extend] useDefault = true` from `.gitleaks.toml`, and keep their local allowlists and rules. Repositories that previously used `[extend] path = ".gitleaks-rules.toml"` remove that table, delete the copied base, and remove it from `srcs` or `data`. Keep `config = ".gitleaks.toml"` on `gitleaks_test` and `gitleaks_history`. A config with no local policy can contain only a comment. No generated base belongs in the consuming repository.
+`python3 lint/gitleaks/update.py --check` performs the offline checks, including checksum verification, byte-for-byte regeneration, and discovery of every tracked or newly added `.gitleaks.toml`. Each config must have no extension or adjacent base copy. `//lint/tests:gitleaks_configs_test` runs this check in the checkout, including nested modules, and proves that a pin bump fails until regeneration.
 
-Point the `gitleaks` entry in the consumer's `bazel_env` tools dictionary at `@tbhb_rules//lint:gitleaks`, replacing the raw `@tbhb_rules_gitleaks//:gitleaks` binary. Rebuild the shims with `bazel run //tools:bazel_env`. Both staged and commit-message hooks keep their existing `--config .gitleaks.toml` argument. The wrapper also accepts `--config=FILE` and `-c FILE`, discovers `.gitleaks.toml` when omitted, and uses the module base alone when no config exists. An explicit custom `tool` bypasses this policy wrapper.
+## Consumer migration
 
-The shared wrapper covers the tree test, text scanner, history scanner, and hook shim. It reads the local config, rejects an existing extension, and adds an absolute extension path to the module base in a temporary effective config outside the scan tree. Sources stay untouched. With private policy enabled, the wrapper redirects the private config's extension from `.gitleaks.toml` to that effective config. The resulting private → effective local → base chain uses gitleaks' two supported extension levels. The private canary and required-config checks still apply. Temporary configs are removed after scanning.
+Consuming repositories bump their rules dependency, remove `[extend] useDefault = true` from `.gitleaks.toml`, and keep their local allowlists and rules. Repositories that used `[extend] path = ".gitleaks-rules.toml"` remove that table, delete the copied base, and remove it from `srcs` or `data`. Keep `config = ".gitleaks.toml"` on `gitleaks_test` and `gitleaks_history`. A config with no local policy can contain only a comment. No generated base belongs in the consuming repository.
 
-Run tree, text, and full history scans after migrating and review new findings before adding exceptions. The consumer module in `e2e/smoke` depends on rules through a local override. Its config has no extension or base copy; tests require tree, text, history, and staged scans to detect the token beside `/home/x/.codex/auth.json`. The raw pinned binary remains available for upstream comparisons.
+Point the `gitleaks` entry in the consumer's `bazel_env` tools dictionary at `@tbhb_rules//lint:gitleaks`, replacing the raw `@tbhb_rules_gitleaks//:gitleaks` binary. Rebuild the shims with `bazel run //tools:bazel_env`. Both staged and commit-message hooks keep their existing `--config .gitleaks.toml` argument. The wrapper also accepts `--config=FILE` and `-c FILE`. When you omit the argument, it discovers `.gitleaks.toml` or uses the module base alone if no config exists. An explicit custom `tool` bypasses this policy wrapper.
+
+## Effective policy
+
+The shared wrapper covers the tree test, text scanner, history scanner, and hook shim. It rejects an existing extension in the local config. Otherwise it creates a temporary effective config outside the scan tree with an absolute extension path to the module base. Source files remain unchanged. With private policy enabled, the wrapper redirects the private config's extension from `.gitleaks.toml` to that effective config. The resulting private → effective local → base chain uses gitleaks' two supported extension levels. Private canary and required-config checks still apply. After scanning, the wrapper removes temporary configs.
+
+Run tree, text, and full history scans after migrating and review new findings before adding exceptions. In `e2e/smoke`, a consumer module depends on rules through a local override. Its config has no extension or base copy. Tests require tree, text, history, and staged scans to detect the token beside `/home/x/.codex/auth.json`.
+
+The raw pinned binary remains available for upstream comparisons.
