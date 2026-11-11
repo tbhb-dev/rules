@@ -45,6 +45,9 @@ dev = [
 ]
 
 [tool.uv]
+# Lock refreshes skip releases younger than 5 days, the same cooldown
+# Renovate applies to version bumps.
+exclude-newer = "5 days"
 package = false
 # mise pins uv in [tools], but that pin binds only where mise resolves
 # PATH. An editor, a hook, or a contributor's own install runs whatever uv it
