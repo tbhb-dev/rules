@@ -7,10 +7,10 @@
   // The presets track tbhb-dev/renovate-config's main branch, pinned by
   // commit; Renovate bumps the pins (the "renovate-config" group).
   extends: [
-    "github>tbhb-dev/renovate-config//default.json5#dfce0dd9b70d0be6dc826a78b38938f90930f206", // main
-    "github>tbhb-dev/renovate-config//bazel.json5#dfce0dd9b70d0be6dc826a78b38938f90930f206", // main
-    "github>tbhb-dev/renovate-config//go.json5#dfce0dd9b70d0be6dc826a78b38938f90930f206", // main
-    "github>tbhb-dev/renovate-config//python.json5#dfce0dd9b70d0be6dc826a78b38938f90930f206", // main
+    "github>tbhb-dev/renovate-config//default.json5#4e318d48275fe2a3dbcd53f12439b540e1ce3a0c", // main
+    "github>tbhb-dev/renovate-config//bazel.json5#4e318d48275fe2a3dbcd53f12439b540e1ce3a0c", // main
+    "github>tbhb-dev/renovate-config//go.json5#4e318d48275fe2a3dbcd53f12439b540e1ce3a0c", // main
+    "github>tbhb-dev/renovate-config//python.json5#4e318d48275fe2a3dbcd53f12439b540e1ce3a0c", // main
   ],
 
   // The presets cover the rest of this tree: the bazel manager the literal
