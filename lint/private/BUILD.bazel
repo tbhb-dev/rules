@@ -154,3 +154,5 @@ bzl_library(
         "//runtime:defs",
     ],
 )
+
+exports_files(["private_names/check_private_names.py"])

@@ -183,14 +183,27 @@ pytest_test(
         "lint/private/decision_records",
         "lint/private/mutation_oses",
         "lint/private/okf_docs",
+        "lint/private/private_names",
         "runtime/private",
     ],
     coverage = [
         "lint/private/decision_records",
         "lint/private/mutation_oses",
         "lint/private/okf_docs",
+        "lint/private/private_names",
         "runtime/private",
     ],
+)
+
+pytest_test(
+    name = "private_names_test",
+    srcs = [
+        "//:pyproject.toml",
+        "//lint/private:repo_files",
+    ],
+    args = ["lint/private/private_names"],
+    coverage = ["lint.private.private_names.check_private_names"],
+    path_tools = ["@tbhb_rules_git//:git"],
 )
 
 # Every mutant of this repository's Python killed ([tool.mutmut]); a cached

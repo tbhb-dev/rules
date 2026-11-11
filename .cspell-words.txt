@@ -177,6 +177,7 @@ clipkg
 testifylint
 testonly
 testpaths
+textconv
 tombi
 toolu
 tricolon

@@ -6,6 +6,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("//lint/private:commit_identity.bzl", "commit_identity")
 load("//lint/private:gitleaks_text.bzl", "gitleaks_text")
 load("//repo:defs.bzl", "repo_files")
+load("//runtime:defs.bzl", "python_tool")
 
 repo_files()
 
@@ -33,6 +34,14 @@ gitleaks_text(
 # repo-checks.yml runs it on a pull request's commits.
 commit_identity(
     name = "commit_identity",
+    visibility = ["//visibility:public"],
+)
+
+# Checks the caller's commit range or stdin using the pinned interpreter.
+python_tool(
+    name = "private_names",
+    main = "//lint/private:private_names/check_private_names.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
     visibility = ["//visibility:public"],
 )
 

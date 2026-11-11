@@ -12,3 +12,4 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 * [Frontmatter reference](reference/frontmatter.md) - The frontmatter fields, their values, and how they map to commit trailers.
 * [Mutation operating systems](reference/mutation-oses.md) - Mutation OS selection and checks for platform-specific source code.
 * [pnpm workspace settings](reference/pnpm-workspaces.md) - The pnpm settings each pnpm-workspace.yaml holds, and why those files have no comments or license header.
+* [Private repository names](reference/private-names.md) - The pull request check, token grammar, configuration, and fixture exclusions.
