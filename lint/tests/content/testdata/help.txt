@@ -1,0 +1,17 @@
+usage: check_design.py [-h] [--forbidden-term FORBIDDEN_TERM]
+                       [--max-lines MAX_LINES] [--index INDEX]
+                       [--manifest MANIFEST]
+                       [root]
+
+Check design directories and render their deterministic Markdown index.
+
+positional arguments:
+  root
+
+options:
+  -h, --help            show this help message and exit
+  --forbidden-term FORBIDDEN_TERM
+  --max-lines MAX_LINES
+                        README line limit; 0 disables it
+  --index INDEX         index output, relative to root
+  --manifest MANIFEST   declared sources for the index writer

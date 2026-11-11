@@ -15,6 +15,7 @@ load(
     _zizmor_test = "zizmor_test",
 )
 load("//lint/private:codeowners.bzl", _codeowners_test = "codeowners_test")
+load("//lint/private:content.bzl", _design_test = "design_test", _designs_index = "designs_index", _designs_index_test = "designs_index_test")
 load("//lint/private:cspell.bzl", _cspell_test = "cspell_test")
 load("//lint/private:decision_records.bzl", _decision_records_test = "decision_records_test")
 load("//lint/private:gitleaks_history.bzl", _gitleaks_history = "gitleaks_history")
@@ -30,6 +31,9 @@ bats_test = _bats_test
 codeowners_test = _codeowners_test
 cspell_test = _cspell_test
 decision_records_test = _decision_records_test
+design_test = _design_test
+designs_index = _designs_index
+designs_index_test = _designs_index_test
 editorconfig_checker_test = _editorconfig_checker_test
 gitleaks_history = _gitleaks_history
 gitleaks_test = _gitleaks_test

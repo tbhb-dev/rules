@@ -154,3 +154,20 @@ bzl_library(
         "//runtime:defs",
     ],
 )
+
+exports_files([
+    "content/check_design.py",
+    "content/index.sh.tpl",
+])
+
+bzl_library(
+    name = "content",
+    srcs = ["content.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        ":tree_check",
+        "//runtime:defs",
+        "//shell:defs",
+        "@bazel_skylib//lib:shell",
+    ],
+)
