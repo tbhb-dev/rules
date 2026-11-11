@@ -10,7 +10,7 @@ name = "tbhb-rules-python-tools"
 version = "0"
 description = "Pinned tools of tbhb_rules_python"
 requires-python = ">=3.15"
-dependencies = ["import-linter==2.15"]
+dependencies = ["import-linter==2.16"]
 
 [tool.uv]
 package = false

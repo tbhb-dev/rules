@@ -134,7 +134,7 @@ PROOF_REASONS = {
     "proof_deptry_undeclared": "undeclared\\.py:.* DEP001 'requests' imported but missing from the dependency definitions",
     "proof_deptry_unused": "DEP002 'packaging' defined as a dependency but not used in the codebase",
     "proof_import_linter_broken": "report must not use calc BROKEN",
-    "proof_import_linter_no_contracts": "import_linter: FAIL: no contract is defined",
+    "proof_import_linter_no_contracts": "No contracts found in the configuration",
     "proof_mutmut_survivor": "survived: lib\\.half\\.x_half__mutmut_",
     "proof_pytest_coverage": "Required test coverage of 100(\\.0)?% not reached",
 }
