@@ -157,7 +157,11 @@ def worker_deploy(
     credentials as wrangler.
 
     The target uploads the bundle as a new version with the Worker's
-    `secrets`, deploys it at 0% beside the live version, and runs each
+    `secrets`, then deploys it at 0% beside the live version. If `wrangler
+    versions deploy` fails with Cloudflare code 100146 (the new version is
+    not yet visible), it retries up to three times, after 5, 10 and 20 seconds.
+    Other errors fail immediately; restoring the previous version keeps its
+    existing retry policy. It runs each
     `pre_deploy` target against it through the `Cloudflare-Workers-Version-Overrides` header.
     Only when they pass, and the deployment is still the one it made, does it
     move the new version to 100% and run each `post_deploy` target against
