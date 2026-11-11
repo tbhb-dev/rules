@@ -377,6 +377,97 @@ test("a failed 0% step puts the previous version back, which is safe to repeat",
   ]);
 });
 
+test("100146 once retries the deploy and succeeds", () => {
+  for (const specs of [`${OLD}@100% ${NEW}@0%`, `${NEW}@100%`]) {
+    const r = deploy("deploy_stg", {
+      FAKE_DEPLOY_FAIL: specs,
+      FAKE_DEPLOY_CODE: "100146",
+      FAKE_DEPLOY_FAILURES: "1",
+    });
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(
+      r.steps.filter((step) => step === `deploy ${specs}`).length,
+      2,
+    );
+    assert.deepEqual(
+      r.stderr.match(/^worker_deploy: .*code 100146; retrying in .*$/gm),
+      [
+        "worker_deploy: wrangler versions deploy failed with code 100146; retrying in 0.25s",
+      ],
+    );
+    // The captured diagnostic still reaches the log, including its code.
+    assert.match(r.stderr, /The requested Worker version could not be found/);
+    assert.match(r.stderr, /\[code: 100146\]/);
+    assert.match(r.output, /result=success\n$/);
+  }
+});
+
+test("100146 on every attempt exhausts three retries and restores normally", () => {
+  for (const specs of [`${OLD}@100% ${NEW}@0%`, `${NEW}@100%`]) {
+    const r = deploy("deploy_stg", {
+      FAKE_DEPLOY_FAIL: specs,
+      FAKE_DEPLOY_CODE: "100146",
+    });
+    assert.equal(r.status, 1, r.stderr);
+    assert.equal(
+      r.steps.filter((step) => step === `deploy ${specs}`).length,
+      4,
+    );
+    assert.deepEqual(
+      r.stderr.match(/^worker_deploy: .*code 100146; retrying in .*$/gm),
+      [0.25, 0.5, 1].map(
+        (seconds) =>
+          `worker_deploy: wrangler versions deploy failed with code 100146; retrying in ${seconds}s`,
+      ),
+    );
+    assert.deepEqual(r.steps.slice(-2), [
+      "deployments status",
+      `deploy ${OLD}@100%`,
+    ]);
+    assert.match(r.stderr, /wrangler versions deploy .* failed/);
+    assert.match(r.output, /result=failure\n$/);
+    assert.doesNotMatch(r.output, /^version-id=/m);
+    assert.deepEqual(JSON.parse(read(files.state)), [
+      { version_id: OLD, percentage: 100 },
+    ]);
+  }
+});
+
+test("another code with the same message fails without retrying", () => {
+  // A longer numeric code and a message without a code must not match either.
+  for (const code of ["10000", "1001460", "none"]) {
+    const specs = `${OLD}@100% ${NEW}@0%`;
+    const r = deploy("deploy_stg", {
+      FAKE_DEPLOY_FAIL: specs,
+      FAKE_DEPLOY_CODE: code,
+    });
+    assert.equal(r.status, 1, r.stderr);
+    assert.deepEqual(r.steps.slice(2), [
+      `deploy ${specs}`,
+      "deployments status",
+      `deploy ${OLD}@100%`,
+    ]);
+    assert.match(r.stderr, /The requested Worker version could not be found/);
+    assert.doesNotMatch(r.stderr, /retrying in/);
+    assert.match(r.output, /result=failure\n$/);
+  }
+});
+
+test("100146 during restore keeps the existing three restore attempts", () => {
+  const r = deploy("deploy_stg", {
+    FAKE_DEPLOY_FAIL: `${OLD}@100%`,
+    FAKE_DEPLOY_CODE: "100146",
+    FAKE_FAIL: "pre",
+  });
+  assert.equal(r.status, 1, r.stderr);
+  assert.equal(
+    r.steps.filter((step) => step === `deploy ${OLD}@100%`).length,
+    3,
+  );
+  assert.doesNotMatch(r.stderr, /code 100146; retrying/);
+  assert.match(r.output, /result=restore-failed\n$/);
+});
+
 test("a failed move to 100% puts the previous version back", () => {
   const r = deploy("deploy_stg", { FAKE_DEPLOY_FAIL: `${NEW}@100%` });
   assert.equal(r.status, 1);
@@ -561,6 +652,30 @@ test(
       `deploy ${OLD}@100%`,
     ]);
     assert.equal(r.steps.filter((s) => s === "check pre").length, 1);
+    assert.match(r.stderr, /interrupted by SIGTERM/);
+  },
+);
+
+test(
+  "SIGTERM during a 100146 retry pause restores without another deploy attempt",
+  signals,
+  async () => {
+    const specs = `${OLD}@100% ${NEW}@0%`;
+    const r = await interrupt(
+      "SIGTERM",
+      {
+        FAKE_DEPLOY_FAIL: specs,
+        FAKE_DEPLOY_CODE: "100146",
+        TBHB_DEPLOY_SETTLE_SCALE: "12",
+      },
+      (stderr) => stderr.includes("code 100146; retrying in 60s"),
+    );
+    assert.notEqual(r.status, 0);
+    assert.deepEqual(r.steps.slice(2), [
+      `deploy ${specs}`,
+      "deployments status",
+      `deploy ${OLD}@100%`,
+    ]);
     assert.match(r.stderr, /interrupted by SIGTERM/);
   },
 );

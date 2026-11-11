@@ -9,7 +9,8 @@
 //    script hasn't applied: `versions upload` can't apply one, so it needs
 //    a one-off plain `wrangler deploy` first.
 // 2. Uploads the bundle as a new version, with the Worker's secrets.
-// 3. Deploys it at 0% beside the live version.
+// 3. Deploys it at 0% beside the live version, retrying error 100146
+//    after 5, 10 and 20 seconds while the new version becomes visible.
 // 4. Runs the pre-deploy tests against the new version, through the
 //    Cloudflare-Workers-Version-Overrides header.
 // 5. Checks the deployment is still the one step 3 made, moves the new
@@ -45,6 +46,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stripVTControlCharacters } from "node:util";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -191,11 +193,15 @@ const RETRY_PAUSE = 5_000 * scale;
 const GRACE = 10_000;
 
 // Runs a child to completion and resolves with its status, signal, any
-// start error, whether it timed out, and its stdout when captured. Windows
+// start error, whether it timed out, and any captured output. Windows
 // runs a .bat or .cmd file only through cmd.exe, and Node refuses to start
 // one without a shell; such a file gets no arguments, so nothing needs
 // quoting for cmd.exe.
-function spawn(file, args, { timeout, capture = false, ...options }) {
+function spawn(
+  file,
+  args,
+  { timeout, capture = false, captureStderr = false, ...options },
+) {
   let command = file;
   let argv = args;
   if (process.platform === "win32" && /\.(bat|cmd)$/i.test(file)) {
@@ -210,13 +216,22 @@ function spawn(file, args, { timeout, capture = false, ...options }) {
     const child = spawnChild(command, argv, {
       ...options,
       detached: process.platform !== "win32",
-      stdio: ["ignore", capture ? "pipe" : "inherit", "inherit"],
+      stdio: [
+        "ignore",
+        capture ? "pipe" : "inherit",
+        captureStderr ? "pipe" : "inherit",
+      ],
     });
     current = child;
     let stdout = "";
+    let stderr = "";
     let timedOut = false;
     child.stdout?.setEncoding("utf8").on("data", (data) => {
       stdout += data;
+    });
+    child.stderr?.setEncoding("utf8").on("data", (data) => {
+      stderr += data;
+      process.stderr.write(data);
     });
     let kill = null;
     const timer = setTimeout(() => {
@@ -228,7 +243,7 @@ function spawn(file, args, { timeout, capture = false, ...options }) {
       clearTimeout(timer);
       clearTimeout(kill);
       current = null;
-      done({ ...result, timedOut, stdout });
+      done({ ...result, timedOut, stdout, stderr });
     };
     child.on("error", (error) => finish({ status: null, signal: null, error }));
     child.on("close", (status, signal) =>
@@ -276,6 +291,7 @@ async function wrangler(args, { capture = false } = {}) {
       cwd: scratch,
       env: wranglerEnv({ WRANGLER_OUTPUT_FILE_PATH: output }),
       capture,
+      captureStderr: true,
       timeout: wranglerTimeout,
     },
   );
@@ -293,7 +309,15 @@ async function wrangler(args, { capture = false } = {}) {
       `worker_deploy: wrangler ${args.slice(0, 2).join(" ")} ${describe(result)}`,
     );
   }
-  return { ok, stdout: result.stdout, records };
+  // Wrangler 4.158.0 renders API errors on stderr as `[code: <number>]`,
+  // including nested error notes; its ndjson records describe successes.
+  const versionMissing =
+    !ok &&
+    !result.timedOut &&
+    !result.error &&
+    !result.signal &&
+    /\[code:\s*100146\]/.test(stripVTControlCharacters(result.stderr));
+  return { ok, stdout: result.stdout, records, versionMissing };
 }
 
 async function liveVersions() {
@@ -367,15 +391,28 @@ function same(versions, expected) {
 }
 
 async function deployVersions(specs, message) {
-  const result = await wrangler([
-    "versions",
-    "deploy",
-    ...specs,
-    "--yes",
-    `--message=${message}`,
-  ]);
-  if (!result.ok) {
-    fail(`wrangler versions deploy ${specs.join(" ")} failed`);
+  for (let attempt = 0; ; attempt += 1) {
+    const result = await wrangler([
+      "versions",
+      "deploy",
+      ...specs,
+      "--yes",
+      `--message=${message}`,
+    ]);
+    if (result.ok) {
+      return;
+    }
+    // The restore keeps its own retry policy. Only a missing version gets
+    // this backoff; all other failures follow the existing failure path.
+    if (restoring || !result.versionMissing || attempt === 3) {
+      fail(`wrangler versions deploy ${specs.join(" ")} failed`);
+    }
+    const delay = RETRY_PAUSE * 2 ** attempt;
+    console.error(
+      `worker_deploy: wrangler versions deploy failed with code 100146; retrying in ${delay / 1000}s`,
+    );
+    await pause(delay);
+    checkInterrupted();
   }
 }
 

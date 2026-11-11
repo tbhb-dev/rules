@@ -18,6 +18,8 @@ dev = [
 ]
 
 [tool.uv]
+# Lock refreshes use the same 5-day cooldown as version bumps.
+exclude-newer = "5 days"
 package = false
 
 [tool.uv.workspace]

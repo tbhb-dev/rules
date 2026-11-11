@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+[project]
+name = "lock-cooldown-fixture"
+version = "0"
+requires-python = ">=3.15"
+dependencies = ["idna>=3.6,<4"]
+
+[tool.uv]
+package = false
+exclude-newer = "5 days"

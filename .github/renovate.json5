@@ -7,10 +7,10 @@
   // The presets track tbhb-dev/renovate-config's main branch, pinned by
   // commit; Renovate bumps the pins (the "renovate-config" group).
   extends: [
-    "github>tbhb-dev/renovate-config//default.json5#4e318d48275fe2a3dbcd53f12439b540e1ce3a0c", // main
-    "github>tbhb-dev/renovate-config//bazel.json5#4e318d48275fe2a3dbcd53f12439b540e1ce3a0c", // main
-    "github>tbhb-dev/renovate-config//go.json5#4e318d48275fe2a3dbcd53f12439b540e1ce3a0c", // main
-    "github>tbhb-dev/renovate-config//python.json5#4e318d48275fe2a3dbcd53f12439b540e1ce3a0c", // main
+    "github>tbhb-dev/renovate-config//default.json5#5abdcea8af69138ab567e12bdbb291f44c41d8e7", // main
+    "github>tbhb-dev/renovate-config//bazel.json5#5abdcea8af69138ab567e12bdbb291f44c41d8e7", // main
+    "github>tbhb-dev/renovate-config//go.json5#5abdcea8af69138ab567e12bdbb291f44c41d8e7", // main
+    "github>tbhb-dev/renovate-config//python.json5#5abdcea8af69138ab567e12bdbb291f44c41d8e7", // main
   ],
 
   // The presets cover the rest of this tree: the bazel manager the literal
@@ -25,6 +25,12 @@
   // Terrazzo and Radix Colors, e2e consumers), and bazelisk
   // every .bazelversion as one group.
   packageRules: [
+    {
+      // This lock records a historical resolution for the clock regression.
+      description: "The cooldown regression keeps its historical lock",
+      matchFileNames: ["tools/testdata/lock_cooldown/**"],
+      enabled: false,
+    },
     {
       // The govulncheck smoke test needs a module with known
       // vulnerabilities to find, so its golang.org/x/text pin stays put.

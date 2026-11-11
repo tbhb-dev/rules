@@ -17,5 +17,7 @@ dependencies = [
 ]
 
 [tool.uv]
+# Lock refreshes use the same 5-day cooldown as version bumps.
+exclude-newer = "5 days"
 package = false
 required-version = "==0.13.7"

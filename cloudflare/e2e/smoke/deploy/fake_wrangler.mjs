@@ -9,7 +9,8 @@
 // FAKE_UPLOAD=fail|silent makes the upload exit 1 or succeed without its
 // output record; FAKE_DEPLOY_FAIL lists deploys that fail, each its version
 // specs joined by spaces, the lists separated by commas; FAKE_UPLOAD_SLEEP=<ms> pauses the upload after
-// writing FAKE_STARTED.
+// writing FAKE_STARTED. FAKE_DEPLOY_CODE prints an API error on stderr for
+// the failing deploys; FAKE_DEPLOY_FAILURES limits failures per version spec.
 import {
   appendFileSync,
   existsSync,
@@ -83,7 +84,28 @@ if (command === "deployments status") {
   log();
   const specs = args.slice(2, args.indexOf("--yes"));
   if (failing.includes(specs.join(" "))) {
-    process.exit(1);
+    const attempts = readFileSync(env.FAKE_LOG, "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line))
+      .filter(
+        (call) =>
+          call.command === command &&
+          call.args.slice(2, call.args.indexOf("--yes")).join(" ") ===
+            specs.join(" "),
+      ).length;
+    if (attempts <= Number(env.FAKE_DEPLOY_FAILURES ?? Infinity)) {
+      if (env.FAKE_DEPLOY_CODE) {
+        const code =
+          env.FAKE_DEPLOY_CODE === "none"
+            ? ""
+            : ` \u001b[33m[code: ${env.FAKE_DEPLOY_CODE}]\u001b[0m`;
+        console.error(
+          `A request to the Cloudflare API failed.\n  The requested Worker version could not be found.${code}`,
+        );
+      }
+      process.exit(1);
+    }
   }
   writeFileSync(
     env.FAKE_STATE,
