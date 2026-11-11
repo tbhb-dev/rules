@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//repo:defs.bzl", "repo_files")
+load("//runtime:defs.bzl", "python_tool")
+
+repo_files()
+
+exports_files(
+    ["base.toml"],
+    visibility = ["//visibility:public"],
+)
+
+python_tool(
+    name = "check",
+    main = "update.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//lint/tests:__pkg__"],
+)

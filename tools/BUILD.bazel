@@ -237,7 +237,7 @@ bazel_env(
         "cog": "@tbhb_rules_cog//:cog",
         "editorconfig-checker": "@tbhb_rules_editorconfig_checker//:editorconfig-checker",
         "git": "@tbhb_rules_git//:git",
-        "gitleaks": "@tbhb_rules_gitleaks//:gitleaks",
+        "gitleaks": "//lint:gitleaks",
         "pyrefly": ":pyrefly",
         "python": ":python",
         "ruff": ":ruff",

@@ -9,6 +9,13 @@ load("//repo:defs.bzl", "repo_files")
 
 repo_files()
 
+# The same policy wrapper used by the scanners, exposed for bazel_env shims.
+alias(
+    name = "gitleaks",
+    actual = "//lint/private:gitleaks",
+    visibility = ["//visibility:public"],
+)
+
 # `common --//lint:gitleaks_private_config` (in a consumer's .bazelrc:
 # `common --@tbhb_rules//lint:gitleaks_private_config`) makes gitleaks_test
 # and gitleaks_history require the private gitleaks config in

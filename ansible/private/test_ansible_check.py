@@ -4,6 +4,7 @@
 import os
 import re
 import signal
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -215,6 +216,22 @@ posix_only = pytest.mark.skipif(
 )
 
 
+@pytest.fixture
+def watchdog_diagnostics(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep real child groups without depending on host diagnostic commands."""
+    outputs = {
+        "ps": "PID table\n",
+        "uptime": "load average: 0\n",
+        "nproc": "1\n",
+    }
+
+    def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 0, stdout=outputs[command[0]])
+
+    monkeypatch.setattr(ansible_check.subprocess, "run", fake_run)
+
+
+@pytest.mark.usefixtures("watchdog_diagnostics")
 def test_watchdog_ends_the_group_with_sigterm_then_sigkill(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -236,6 +253,7 @@ def test_watchdog_ends_the_group_with_sigterm_then_sigkill(
 
 
 @posix_only
+@pytest.mark.usefixtures("watchdog_diagnostics")
 def test_watchdog_reports_before_killing_and_clears_the_group(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -259,6 +277,7 @@ def test_watchdog_reports_before_killing_and_clears_the_group(
 
 
 @posix_only
+@pytest.mark.usefixtures("watchdog_diagnostics")
 def test_watchdog_never_prints_the_command_line_after_the_header(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -270,6 +289,7 @@ def test_watchdog_never_prints_the_command_line_after_the_header(
 
 
 @posix_only
+@pytest.mark.usefixtures("watchdog_diagnostics")
 def test_watchdog_kills_a_child_that_ignores_sigterm(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -300,6 +320,7 @@ def test_watchdog_passes_the_exit_code_through(
 
 
 @posix_only
+@pytest.mark.usefixtures("watchdog_diagnostics")
 def test_watchdog_keeps_only_the_last_twenty_lines(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -345,7 +366,10 @@ def test_process_table_falls_back_without_forest(
     assert ansible_check.process_table() == "PID table"
     assert "--forest" in seen[0]
     assert "--forest" not in seen[1]
-    assert all("args" not in c and "command" not in c for c in seen)
+    assert all(c[:3] == ["ps", "-e", "-o"] for c in seen)
+    assert all(
+        c[3].split(",") == ["pid", "ppid", "etime", "stat", "comm"] for c in seen
+    )
 
 
 def test_process_table_reports_a_failing_or_missing_ps(

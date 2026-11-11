@@ -33,6 +33,8 @@ repos:
       - id: check-merge-conflict
       - id: check-symlinks
       - id: end-of-file-fixer
+        # Preserve the exact upstream bytes and the base generated from them.
+        exclude: '^lint/gitleaks/(base|upstream)\.toml$'
       - id: fix-byte-order-marker
       - id: mixed-line-ending
       - id: trailing-whitespace

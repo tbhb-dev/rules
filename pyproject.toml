@@ -15,6 +15,7 @@ requires-python = ">=3.15"
 dependencies = [
   "jsonschema[format]>=4.26.0",
   "pyyaml>=6.0.3",
+  "tomlkit>=0.15.2",
 ]
 
 [dependency-groups]
@@ -351,6 +352,9 @@ max-complexity = 15
 # are run by path and are not a package, so they carry no __init__.py.
 "tools/**/*.py" = ["T201", "S603", "S607", "INP001"]
 "runtime/private/**/*.py" = ["T201", "S603", "S607", "INP001"]
+# The Gitleaks maintenance command prints its verdict and invokes the pinned git.
+"lint/gitleaks/update.py" = ["T201", "S607", "INP001"]
+"lint/private/gitleaks_config.py" = ["INP001"]
 "lint/private/okf_docs/*.py" = ["T201", "INP001"]
 "lint/private/decision_records/*.py" = ["T201", "INP001"]
 
