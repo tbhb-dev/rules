@@ -86,6 +86,7 @@ SPDX-License-Identifier = "Apache-2.0"
 [[annotations]]
 path = [
   "docs/**/*.md",
+  "content/**/*.md",
   "**/AGENTS.md",
   "**/CLAUDE.md",
 ]
