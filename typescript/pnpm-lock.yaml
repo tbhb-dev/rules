@@ -5,7 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  minimatch@<11.0.1: 11.0.4
+  minimatch@<11.0.1: 11.0.5
   qs@<6.16.1: 6.17.1
 
 importers:
@@ -920,8 +920,8 @@ packages:
       '@types/node':
         optional: true
 
-  '@isaacs/nonrecursive-glob-match@1.0.3':
-    resolution: {integrity: sha512-SI7kyKHq4XXDRozw+r9GlRZkia1ZkFrpLW98r2IC2Bpr8YkFGE3fvjzmxCG0x78A++69HmDNrDvSMYBZmHGpKA==}
+  '@isaacs/nonrecursive-glob-match@1.1.0':
+    resolution: {integrity: sha512-GPm/Dbvk5RLmhRnxXIa7nTpK0xtl4E0wj0MslsuNiJ1FIROU+2+9lgUC/dgF7Ey4QCWhfEsgxilMRMCdHPfDfw==}
 
   '@istanbuljs/schema@0.1.6':
     resolution: {integrity: sha512-+Sg6GCR/wy1oSmQDFq4LQDAhm3ETKnorxN+y5nbLULOR3P0c14f2Wurzj3/xqPXtasLFfHd5iRFQ7AJt4KH2cw==}
@@ -2176,8 +2176,8 @@ packages:
   minimalistic-assert@1.0.1:
     resolution: {integrity: sha512-UtJcAD4yEaGtjPezWuO9wC4nwUnVH/8/Im3yEHQP4b67cXlD/Qr9hdITCU1xDbSEXg2XKNaP8jsReV7vQd00/A==}
 
-  minimatch@11.0.4:
-    resolution: {integrity: sha512-/UJ1dEoVQTjPNDh6SGlUo+ueLMmoHTas4q+8yaAR/5t6nLAIiBDJtoYUh20IYleix7ehiQkgczb84PE3uzHkxg==}
+  minimatch@11.0.5:
+    resolution: {integrity: sha512-snPlVppFcYWfLLFQGhDxUyBcHNtMlWmn3jtj7pEaO+DP8pqL0IvAzXhMYmn1z9ASNtgmwLBdFxSf4tMUB0OTKA==}
     engines: {node: 20 || >=22}
 
   minimist@1.2.8:
@@ -3183,7 +3183,7 @@ snapshots:
     dependencies:
       '@eslint/object-schema': 3.0.5
       debug: 4.4.3(supports-color@10.2.2)
-      minimatch: 11.0.4
+      minimatch: 11.0.5
     transitivePeerDependencies:
       - supports-color
 
@@ -3415,7 +3415,7 @@ snapshots:
 
   '@inquirer/type@4.2.1': {}
 
-  '@isaacs/nonrecursive-glob-match@1.0.3': {}
+  '@isaacs/nonrecursive-glob-match@1.1.0': {}
 
   '@istanbuljs/schema@0.1.6': {}
 
@@ -3717,7 +3717,7 @@ snapshots:
       execa: 9.6.1
       json-rpc-2.0: 1.8.1
       lodash.groupby: 4.6.0
-      minimatch: 11.0.4
+      minimatch: 11.0.5
       mutation-server-protocol: 0.4.1
       mutation-testing-elements: 3.8.4
       mutation-testing-metrics: 3.8.4
@@ -3851,7 +3851,7 @@ snapshots:
       '@typescript-eslint/types': 8.72.1
       '@typescript-eslint/visitor-keys': 8.72.1
       debug: 4.4.3(supports-color@10.2.2)
-      minimatch: 11.0.4
+      minimatch: 11.0.5
       semver: 7.8.6
       tinyglobby: 0.2.17
       ts-api-utils: 2.5.0(typescript@6.0.3)
@@ -4162,7 +4162,7 @@ snapshots:
       globals: 17.14.0
       jsx-ast-utils-x: 0.1.0
       lodash.merge: 4.6.2
-      minimatch: 11.0.4
+      minimatch: 11.0.5
       scslre: 0.3.0
       semver: 7.8.6
       ts-api-utils: 2.5.0(typescript@6.0.3)
@@ -4218,7 +4218,7 @@ snapshots:
       imurmurhash: 0.1.4
       is-glob: 4.0.3
       json-stable-stringify-without-jsonify: 1.0.1
-      minimatch: 11.0.4
+      minimatch: 11.0.5
       natural-compare: 1.4.0
       optionator: 0.9.4
     optionalDependencies:
@@ -4562,9 +4562,9 @@ snapshots:
 
   minimalistic-assert@1.0.1: {}
 
-  minimatch@11.0.4:
+  minimatch@11.0.5:
     dependencies:
-      '@isaacs/nonrecursive-glob-match': 1.0.3
+      '@isaacs/nonrecursive-glob-match': 1.1.0
       brace-expansion: 5.0.12
 
   minimist@1.2.8: {}
