@@ -184,11 +184,11 @@ jobs:
 
 ### Go SDK archive checksums
 
-A Go consumer exposes `@tbhb_rules_go//tools:go_sdk_checksums` through its pinned `tbhb_rules_go` module. Run `bazelisk run @tbhb_rules_go//tools:go_sdk_checksums` from that workspace to compare every recorded SDK archive hash with `https://go.dev/dl/?mode=json&include=all`. The command prints the count checked, or reports each unknown archive and SHA-256 mismatch with its source, version, OS and architecture. An empty set of pins fails.
+A Go consumer exposes `@tbhb_rules_go//tools:go_sdk_checksums` through its pinned `tbhb_rules_go` module. Run `bazelisk run @tbhb_rules_go//tools:go_sdk_checksums` from that workspace to compare recorded SDK archive hashes with `https://go.dev/dl/?mode=json&include=all`. For each unknown archive or mismatched hash, the command reports its source, version, OS, and architecture. On success, it prints the count checked. An empty set of pins fails.
 
-The checker reads literal `sdks = {"linux_amd64": ["go1.27.3.linux-amd64.tar.gz", "<sha256>"]}` dictionaries on the `go_sdk` extension's `download` and `from_file` tags, including extension aliases. `download` supplies `version`; `from_file` supplies a workspace-root `go_mod` label whose `toolchain` directive (falling back to `go`) supplies the version. It also reads the extension's generated `go_download_sdk_rule` repository attributes and Bazel 9's JSON-encoded `facts` in `MODULE.bazel.lock`. Every recorded platform is checked, regardless of the current host. Dynamic dictionaries and unsupported `from_file` labels fail with a diagnostic.
+The checker reads literal `sdks = {"linux_amd64": ["go1.27.3.linux-amd64.tar.gz", "<sha256>"]}` dictionaries on the `go_sdk` extension's `download` and `from_file` tags, including extension aliases. With `download`, the version comes from `version`. For `from_file`, the workspace-root `go_mod` label points to a file whose `toolchain` directive (falling back to `go`) supplies the version. Generated `go_download_sdk_rule` repository attributes and Bazel 9's JSON-encoded `facts` in `MODULE.bazel.lock` also supply archive records. The checker compares hashes for the recorded platforms, regardless of the current host. Dynamic dictionaries and unsupported `from_file` labels fail with a diagnostic.
 
-This repository records six archive pins in each of `go/MODULE.bazel` and `go/e2e/smoke/MODULE.bazel`: macOS, Linux and Windows, on amd64 and arm64. Both workspaces disable lockfiles. Keep their literal filenames and hashes aligned with their `go.mod` toolchain when bumping Go.
+This repository records six archive pins in each of `go/MODULE.bazel` and `go/e2e/smoke/MODULE.bazel`, covering macOS, Linux, and Windows on both amd64 and arm64. Both workspaces turn off lockfiles. Keep their literal filenames and hashes aligned with their `go.mod` toolchain when bumping Go.
 
 Add these inputs to the consumer's `repo-checks.yml` call:
 
@@ -198,9 +198,9 @@ with:
   go-sdk-checksum-workspace: .
 ```
 
-List multiple module directories separated by spaces, relative to the checkout; the workspace must resolve `@tbhb_rules_go`. On pull requests and pushes, the workflow passes the base SHA to `--changed-since`. The command compares SDK records in changed `MODULE.bazel` and `MODULE.bazel.lock` files, ignoring source line numbers and unrelated module edits, and contacts go.dev only if those records changed. A missing or unreadable baseline triggers validation. Existing checkout credentials are sufficient; the check requires no extra token or permission. The comparison is a network-dependent `bazel run`; the parsing, comparison and change-selection tests use a saved release-list fixture and fake HTTP responses without network access.
+Separate module directories with spaces and use paths relative to the checkout. The workspace must resolve `@tbhb_rules_go`. On pull requests and pushes, the workflow passes the base commit hash to `--changed-since`. The command compares SDK records in changed `MODULE.bazel` and `MODULE.bazel.lock` files, ignoring source line numbers and unrelated module edits, and contacts go.dev only if those records changed. A missing or unreadable baseline triggers validation. Existing checkout credentials work for this check, which doesn't need an extra token or permission. Comparing hashes with go.dev uses a network-dependent `bazel run`. Tests for parsing, comparison, and change selection use a saved release-list fixture and fake HTTP responses without network access.
 
-The checker's small `releases.json` test fixture contains only factual release metadata copied from Go's public release list on 2026-11-11, trimmed to three archives. The fixture and tests carry this repository's Apache-2.0 license; no Go source code is included.
+The checker's small `releases.json` test fixture contains only factual release metadata copied from Go's public release list on 2026-11-11, trimmed to three archives. This repository's Apache-2.0 license covers the fixture and tests. Neither contains Go source code.
 
 ### The private gitleaks config
 
