@@ -75,6 +75,14 @@ sh_test(
     }),
 )
 
+# Check the CODEOWNERS API wrapper against a fake curl in the caller's tree.
+sh_test(
+    name = "codeowners_errors_test",
+    srcs = ["codeowners_errors_test.sh"],
+    data = ["//lint:codeowners_errors"],
+    env = {"SCRIPT_RLOCATIONPATH": "$(rlocationpath //lint:codeowners_errors)"},
+)
+
 # The retries in repo-checks.yml must give up before the job's timeout.
 sh_test(
     name = "retry_budget_test",

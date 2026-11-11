@@ -395,16 +395,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          response="$(curl -fsSL \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/codeowners/errors?ref=${HEAD_SHA}")"
-          errors="$(printf '%s' "${response}" | jq '.errors')"
-          count="$(printf '%s' "${errors}" | jq 'length')"
-          if [ "${count}" -ne 0 ]; then
-            echo "::error::CODEOWNERS has ${count} owner or syntax error(s):"
-            printf '%s' "${errors}" |
-              jq -r '.[] | "  line \(.line): \(.kind): \(.message)"'
-            exit 1
-          fi
+        run: bazelisk run @tbhb_rules//lint:codeowners_errors
