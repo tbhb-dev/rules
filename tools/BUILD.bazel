@@ -193,6 +193,14 @@ pytest_test(
     ],
 )
 
+# Hook configuration contracts have no first-party Python code to measure.
+pytest_test(
+    name = "pre_commit_config_test",
+    srcs = PYTHON_SRCS,
+    args = ["repo/tests/test_pre_commit_config.py"],
+    coverage = None,
+)
+
 # Every mutant of this repository's Python killed ([tool.mutmut]); a cached
 # action, rerun only when its inputs change.
 mutmut_test(
@@ -235,6 +243,7 @@ bazel_env(
         "actionlint": "@tbhb_rules_actionlint//:actionlint",
         "buildifier": "@tbhb_rules_buildifier//:buildifier",
         "cog": "@tbhb_rules_cog//:cog",
+        "cspell": "//lint/private/cspell",
         "editorconfig-checker": "@tbhb_rules_editorconfig_checker//:editorconfig-checker",
         "git": "@tbhb_rules_git//:git",
         "gitleaks": "@tbhb_rules_gitleaks//:gitleaks",
