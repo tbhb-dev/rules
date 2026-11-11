@@ -25,6 +25,10 @@ GO_TARGETS = [
     "//private/report:report_test",
     "//private/scratch",
     "//private/scratch:scratch_test",
+    "//tools:go_sdk_checksums",
+    "//tools:tools_test",
+    "//tools/sdkchecksums",
+    "//tools/sdkchecksums:sdkchecksums_test",
 ]
 
 GO_SRCS = [
@@ -40,6 +44,10 @@ GO_SRCS = [
     "//private/report:main_test.go",
     "//private/scratch:scratch.go",
     "//private/scratch:scratch_test.go",
+    "//tools:main.go",
+    "//tools:main_test.go",
+    "//tools/sdkchecksums:checksums.go",
+    "//tools/sdkchecksums:checksums_test.go",
 ]
 
 self_lint_test(
