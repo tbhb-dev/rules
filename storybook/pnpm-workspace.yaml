@@ -1,3 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# pnpm's settings. pnpm 11 and later no longer read the "pnpm" field of
+# package.json, and rules_js reads this file too. allowBuilds is empty because
+# no lifecycle script may run.
+#
+# autoInstallPeers is off: the renderer libraries the frameworks peer on
+# (react and react-dom, lit, astro) are the consumer's, found at run time
+# from the consumer's tree, so this lock carries no copy of its own that
+# could load beside the consumer's.
+
 overrides:
   glob@<14.0.2: 14.0.4
 
