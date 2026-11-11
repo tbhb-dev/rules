@@ -40,6 +40,7 @@ git log --format='%H%x09%an <%ae> -> %cn <%ce>' "$base..$head" >"$log"
 checked=0
 failed=0
 while IFS=$'\t' read -r sha pair; do
+  pair=${pair%$'\r'}
   checked=$((checked + 1))
   commit_failed=0
   if ! grep -Fxq -- "$pair" "$allowed"; then
@@ -47,11 +48,13 @@ while IFS=$'\t' read -r sha pair; do
     echo "commit_identity: FAIL: $sha author and committer are not an allowed pair: ${pair/ -> / (author) -> } (committer)" >&2
   fi
   emails=$(git log -1 --format='%ae%n%ce' "$sha")
+  emails=${emails//$'\r'/}
   if grep -Fxq -- agent@tonyburns.net <<<"$emails"; then
     message=$(git log -1 --format=%B "$sha")
     if ! problems=$(printf '%s' "$message" | "$trailers"); then
       commit_failed=1
       while IFS= read -r problem; do
+        problem=${problem%$'\r'}
         echo "commit_identity: FAIL: $sha $problem" >&2
       done <<<"$problems"
     fi

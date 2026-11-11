@@ -5,6 +5,7 @@ load("//lint:defs.bzl", "gitleaks_history", "gitleaks_test", "shellcheck_test", 
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
+load(":commit_identity_crlf.bzl", "commit_identity_crlf_test")
 load(":commit_identity_scenario.bzl", "commit_identity_scenario_test")
 load(":cspell_tests.bzl", "cspell_test_suite")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
@@ -88,6 +89,8 @@ gitleaks_tool(name = "gitleaks_optional")
 PROOF_TAGS = ["manual"]
 
 # commit_identity against throwaway repositories.
+
+commit_identity_crlf_test(name = "commit_identity_crlf_test")
 
 [
     commit_identity_scenario_test(
