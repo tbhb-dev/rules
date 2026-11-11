@@ -71,11 +71,11 @@ Notes on individual tools:
 
 ### Shared vocabulary
 
-`cspell_test` and `vale_test` inherit the public tool names in `lint/vocabulary/words.txt`, including `workerd`, without a word list in each consuming repository. Add common public tool and product names there; keep repository-specific terms in the consuming repository's own dictionaries or Vale vocabulary.
+`cspell_test` and `vale_test` inherit the public tool names in `lint/vocabulary/words.txt`, including `workerd`, without a word list in each consuming repository. Add common public tool and product names there. Keep repository-specific terms in the consuming repository's own dictionaries or Vale vocabulary.
 
-Both targets accept a trailing straight or curly apostrophe and `s` only when the base word is accepted. cspell ignores just the suffix and still checks the base. Vale adds the shared `tbhb_rules` vocabulary alongside the configured vocabularies in its scratch copy and gives each accepted expression an optional possessive suffix. A misspelled base still fails both checks. Project configs, dictionaries, and pinned Vale packages continue to apply.
+Both targets accept a trailing straight or curly apostrophe and `s` only when they accept the base word. cspell ignores just the suffix and still checks the base. Vale adds the shared `tbhb_rules` vocabulary alongside the configured vocabularies in its scratch copy and gives each accepted expression an optional possessive suffix. A misspelled base still fails both checks. Project configs, dictionaries, and pinned Vale packages continue to apply.
 
-For cspell outside Bazel, import `lint/vocabulary/cspell.config.cjs` from a local rules checkout using [cspell's configuration imports](https://cspell.org/docs/Configuration/imports). The automatic Vale vocabulary applies to `vale_test`; `vale_sync` continues to sync style packages for editors. Vale's [vocabulary format](https://docs.vale.sh/keys/vocabularies) describes how to add local terms.
+For cspell outside Bazel, import `lint/vocabulary/cspell.config.cjs` from a local rules checkout using [cspell's configuration imports](https://cspell.org/docs/Configuration/imports). The automatic Vale vocabulary applies to `vale_test`. `vale_sync` continues to sync style packages for editors. Vale's [vocabulary format](https://docs.vale.sh/keys/vocabularies) describes how to add local terms.
 
 ### Failure proofs
 
