@@ -11,7 +11,7 @@ tool="$PWD/{subject}"
 work="$TEST_TMPDIR/work"
 mkdir -p "$work"
 cd "$work"
-printf '[extend]\\nuseDefault = true\\n' >.gitleaks.toml
+printf '# Local policy only\\n' >.gitleaks.toml
 private='[extend]
 path = ".gitleaks.toml"
 
@@ -26,6 +26,7 @@ description = "A name only the private config knows"
 regex = '"'''lighthouse-[0-9]{{4}}'''"'
 '
 config=.gitleaks.toml
+config_args=(--config "$config")
 echo hello >a.txt
 case {scenario} in
   unset) unset GITLEAKS_CONFIG_TOML ;;
@@ -48,10 +49,40 @@ path = ".gitleaks.toml"' ;;
     printf 'host = %s-%s\\n' lighthouse 1234 >names.txt
     printf 'canary = %s-%s\\n' tbhb-private-canary 0123abcd >canary.txt
     ;;
+  local_rule)
+    export GITLEAKS_CONFIG_TOML="$private"
+    printf '[[rules]]\\nid = "local-word"\\nregex = "local-secret-[0-9]+"\\n' >.gitleaks.toml
+    printf '%s-%s\\n' local-secret 1234 >creds.txt
+    ;;
+  local_allowlist)
+    export GITLEAKS_CONFIG_TOML="$private"
+    printf '[[allowlists]]\\ndescription = "Only the permitted fixture"\\npaths = ["^creds.txt$"]\\n' >.gitleaks.toml
+    printf 'aws_access_key_id = %s%s\\n' AKIA Z7Q3XK2M5TNB4VWR >creds.txt
+    ;;
+  old_extend)
+    export GITLEAKS_CONFIG_TOML="$private"
+    printf '[extend]\\nuseDefault = true\\n' >.gitleaks.toml
+    ;;
+  private_extend)
+    export GITLEAKS_CONFIG_TOML="$private"
+    export GITLEAKS_CONFIG_TOML="${{GITLEAKS_CONFIG_TOML/.gitleaks.toml/other.toml}}"
+    ;;
+  config_equals)
+    export GITLEAKS_CONFIG_TOML="$private"
+    config_args=(--config=.gitleaks.toml)
+    ;;
+  config_short)
+    export GITLEAKS_CONFIG_TOML="$private"
+    config_args=(-c .gitleaks.toml)
+    ;;
   optional) unset GITLEAKS_CONFIG_TOML ;;
 esac
 status=0
-"$tool" dir --no-banner --redact --verbose --config "$config" . >out.txt 2>&1 || status=$?
+# Preserve the other_config scenario's explicitly different path.
+if [[ {scenario} == other_config ]]; then
+  config_args=(--config "$config")
+fi
+"$tool" dir --no-banner --redact --verbose "${{config_args[@]}}" . >out.txt 2>&1 || status=$?
 cat out.txt
 check() {{
   if ! grep -Eq -- "$1" out.txt; then
@@ -97,7 +128,7 @@ gitleaks_private_scenario_test = rule(
         "patterns": attr.string_list(doc = "Extended regular expressions the output must match."),
         "scenario": attr.string(
             mandatory = True,
-            values = ["clean", "empty", "findings", "no_canary", "no_committed", "optional", "other_config", "unset"],
+            values = ["local_rule", "local_allowlist", "old_extend", "private_extend", "config_equals", "config_short", "clean", "empty", "findings", "no_canary", "no_committed", "optional", "other_config", "unset"],
         ),
         "status": attr.int(mandatory = True, doc = "The exit status the tool must return."),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),

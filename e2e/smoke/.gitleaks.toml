@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# Local exceptions remain in the consumer; Bazel supplies all default rules.
+[[allowlists]]
+description = "Build output is outside authored content"
+paths = ["^build/"]

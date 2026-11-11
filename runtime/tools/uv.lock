@@ -395,6 +395,7 @@ dependencies = [
     { name = "jsonschema", extra = ["format"] },
     { name = "pyyaml" },
     { name = "reuse", extra = ["charset-normalizer"] },
+    { name = "tomlkit" },
 ]
 
 [package.metadata]
@@ -402,6 +403,7 @@ requires-dist = [
     { name = "jsonschema", extras = ["format"], specifier = "==4.26.0" },
     { name = "pyyaml", specifier = "==6.0.3" },
     { name = "reuse", extras = ["charset-normalizer"], specifier = "==6.3.0" },
+    { name = "tomlkit", specifier = "==0.15.2" },
 ]
 
 [[package]]

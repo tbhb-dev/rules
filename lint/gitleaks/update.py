@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-"""Regenerate the self-contained Gitleaks bases, or check them offline."""
+"""Regenerate the module-provided Gitleaks base, or check it offline."""
 
 import argparse
 import hashlib
@@ -13,7 +13,7 @@ import tomllib
 import urllib.request
 from pathlib import Path
 
-BASE = ".gitleaks-rules.toml"
+BASE = "lint/gitleaks/base.toml"
 
 
 def fail(message: str) -> None:
@@ -59,7 +59,7 @@ def generate(source: str, version: str, license_text: str) -> str:
 
 
 def main() -> None:
-    """Read the pin once, regenerate all copies, and fail closed on drift."""
+    """Read the pin once, regenerate the base, and fail closed on drift."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--root", type=Path, default=Path(__file__).resolve().parents[2]
@@ -110,14 +110,19 @@ def main() -> None:
         fail("no committed Gitleaks configs found")
     for config in configs:
         policy = tomllib.loads(config.read_text())
-        if policy.get("extend") != {"path": BASE}:
-            fail(f"{config.relative_to(root)} must extend {BASE} only")
-        base = config.with_name(BASE)
-        if args.check:
-            if base.read_text() != expected:
-                fail(f"{base.relative_to(root)} is stale; regenerate it")
-        else:
-            base.write_text(expected)
+        if "extend" in policy:
+            fail(
+                f"{config.relative_to(root)} must contain only local policy, "
+                "without extend"
+            )
+        if config.with_name(".gitleaks-rules.toml").exists():
+            fail(f"{config.relative_to(root)} has an obsolete base copy")
+    base = root / BASE
+    if args.check:
+        if base.read_text() != expected:
+            fail(f"{BASE} is stale; regenerate it")
+    else:
+        base.write_text(expected)
     print(
         f"PASS: {len(configs)} configs keep all "
         f"{len(tomllib.loads(expected)['rules'])} gitleaks v{version} rules "

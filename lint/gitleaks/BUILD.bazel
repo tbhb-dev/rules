@@ -6,6 +6,11 @@ load("//runtime:defs.bzl", "python_tool")
 
 repo_files()
 
+exports_files(
+    ["base.toml"],
+    visibility = ["//visibility:public"],
+)
+
 python_tool(
     name = "check",
     main = "update.py",

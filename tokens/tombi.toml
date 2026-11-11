@@ -22,7 +22,7 @@ exclude = [
   "repo/baseline/visibility/**/*.toml",
   "repo/baseline/seed/**/*.toml",
   # Preserve the generated Gitleaks rules and their upstream source byte for byte.
-  "**/.gitleaks-rules.toml",
+  "lint/gitleaks/base.toml",
   "**/lint/gitleaks/upstream.toml",
   ".venv/**/*.toml",
   "tmp/**/*.toml",
