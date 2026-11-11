@@ -18,6 +18,8 @@ path = [
   "MODULE.bazel.lock",
   "**/uv.lock",
   "**/pnpm-lock.yaml",
+  # pnpm settings, which pnpm rewrites without comments when it updates them.
+  "**/pnpm-workspace.yaml",
   ".mise/locks/**",
   # Go module files, which go mod tidy rewrites.
   "**/go.mod",

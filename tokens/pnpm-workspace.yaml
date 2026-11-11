@@ -1,15 +1,2 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright Tony Burns
-
----
-# pnpm's settings. pnpm 11 and later no longer read the "pnpm" field of
-# package.json, and rules_js reads this file too. allowBuilds is empty because
-# no lifecycle script may run.
-#
-# autoInstallPeers is off: @terrazzo/plugin-css peers on @terrazzo/cli for
-# its config loader, which the rules don't use (they call @terrazzo/parser's
-# JavaScript API), and the CLI would bring Vite, rolldown and lightningcss's
-# native binaries into the lock.
-
 allowBuilds: {}
 autoInstallPeers: false

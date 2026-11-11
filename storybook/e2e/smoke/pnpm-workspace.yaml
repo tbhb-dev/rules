@@ -1,11 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
-# Copyright Tony Burns
-
----
-# pnpm's settings. pnpm 11 and later no longer read the "pnpm" field of
-# package.json, and rules_js reads this file too. allowBuilds is empty because
-# no lifecycle script may run.
-
 packages:
   - astro
   - proof/no_react
