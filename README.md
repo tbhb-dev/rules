@@ -160,6 +160,24 @@ The rules' executables are Bash scripts. On Windows each runs through a `.bat` l
 
 mise provides bazelisk and uv (`mise install`). Bazel pins everything else. `mise run env` (`bazel run //tools:bazel_env`) puts shims for those pins in `tools/.bazel_env/bin`, which the git hooks call and mise adds to PATH.
 
+### Markdown commit checks
+
+The pre-commit hooks run Vale, cspell, and `rumdl` on staged Markdown with the configs their Bazel gates use. They call the pinned shims directly.
+
+Build the shims with `bazelisk run //tools:bazel_env` and sync the pinned Vale styles once with `bazelisk run //tools:vale_sync`. Repeat those steps when the tool pins or style packages change. Check files without installing hooks:
+
+```sh
+prek run vale --files README.md
+prek run cspell --files README.md
+prek run rumdl --files README.md
+```
+
+This repository has no shared hook preset. Its `.pre-commit-config.yaml` and `tools/` stay out of release archives. To adopt the checks, copy the three Markdown hook entries into the consuming repository's own config and provide its `cspell`, `vale`, and `rumdl` bazel_env shims. Point the entries at the configs that repository's gates use, include its spelling dictionaries, and sync its pinned Vale styles. The cspell shim maps to `@tbhb_rules//lint/private/cspell`. `tbhbdev alpha install` installs hooks that read the current checkout's config. It doesn't copy or update a config from rules, so updating the rules dependency alone doesn't add these checks.
+
+The hooks replace each gate's tree scan with explicit filenames. Vale still checks each complete document, with `--no-wrap` and the synced styles. cspell keeps `lint --no-progress --dot --config .cspell.jsonc`, and `rumdl` keeps `check --config .rumdl.toml`. Other files, changes to configs, and Markdown outside the root gate's source set still need their whole-tree gates. The pre-push hook still checks spelling and prose across the tree. `rumdl` can resolve links against files in the checkout that a gate's source set omits.
+
+### Checks
+
 | Command | Checks |
 | --- | --- |
 | `bazelisk test //...` | buildifier, this repository's lint, shell and Python gates (in `tools/`), run on its own rules |

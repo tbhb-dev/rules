@@ -99,7 +99,23 @@ repos:
       - id: rumdl
         name: rumdl
         language: system
-        entry: tools/.bazel_env/bin/rumdl check
+        entry: tools/.bazel_env/bin/rumdl check --config .rumdl.toml
+        stages: [pre-commit]
+        pass_filenames: true
+        types: [markdown]
+      - id: cspell
+        name: cspell
+        language: system
+        entry: env BAZEL_BINDIR=. tools/.bazel_env/bin/cspell lint --no-progress --dot --config .cspell.jsonc
+        stages: [pre-commit]
+        pass_filenames: true
+        types: [markdown]
+      - id: vale
+        name: vale
+        language: system
+        entry: tools/.bazel_env/bin/vale --config=.vale.ini --no-wrap
+        stages: [pre-commit]
+        pass_filenames: true
         types: [markdown]
       - id: actionlint
         name: actionlint
@@ -133,10 +149,8 @@ repos:
         types: [markdown]
         pass_filenames: false
 
-  # Spelling and prose run before a push, not before a commit: cspell and Vale
-  # scan the whole tree, so they cost too much per commit. The hook runs the
-  # same Bazel targets as CI, which share its pins and configs, so a word error
-  # fails here instead of in CI.
+  # Keep the whole-tree spelling and prose gates before a push too: staged
+  # Markdown checks can't catch findings in other files or config changes.
   - repo: local
     hooks:
       - id: spelling-and-prose
