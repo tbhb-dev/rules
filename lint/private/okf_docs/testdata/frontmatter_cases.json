@@ -223,7 +223,9 @@
             "model": "anthropic:claude-sonnet-5-5",
             "at": "2026-11-02T09:30:00Z"
           }
-        ]
+        ],
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
       }
     },
     {
@@ -306,6 +308,1179 @@
         "status": "deprecated",
         "decided": "2026-11-09"
       }
+    },
+    {
+      "name": "Readme status draft",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Readme status stable",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Readme status deprecated",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Readme",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Agent Instructions status draft",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Agent Instructions status stable",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Agent Instructions status deprecated",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Agent Instructions",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Overview status draft",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Overview status stable",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Overview status deprecated",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Overview",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Architecture Overview status draft",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Architecture Overview status stable",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Architecture Overview status deprecated",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Architecture Overview",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Reference status draft",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Reference status stable",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Reference status deprecated",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Reference",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "How-to status draft",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "How-to status stable",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "How-to status deprecated",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on How-to",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Design Draft status draft",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Design Draft status decided",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Design Draft status superseded",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "owner and updated on Design Draft",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Design Appendix status draft",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      }
+    },
+    {
+      "name": "Design Appendix status decided",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided",
+        "parent": "../design.md"
+      }
+    },
+    {
+      "name": "Design Appendix status superseded",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded",
+        "parent": "../design.md"
+      }
+    },
+    {
+      "name": "owner and updated on Design Appendix",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Spike status not-started",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      }
+    },
+    {
+      "name": "Spike status started",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      }
+    },
+    {
+      "name": "Spike status blocked",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      }
+    },
+    {
+      "name": "Spike status partial",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      }
+    },
+    {
+      "name": "Spike status complete",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      }
+    },
+    {
+      "name": "Spike status invalid",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      }
+    },
+    {
+      "name": "owner and updated on Spike",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Research Report status draft",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Research Report status stable",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Research Report status deprecated",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Research Report",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Runbook status draft",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Runbook status stable",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Runbook status deprecated",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Runbook",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Incident Report status open",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      }
+    },
+    {
+      "name": "Incident Report status mitigated",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      }
+    },
+    {
+      "name": "Incident Report status resolved",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      }
+    },
+    {
+      "name": "owner and updated on Incident Report",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Brief status draft",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Brief status stable",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Brief status deprecated",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Brief",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Review Packet status draft",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Review Packet status stable",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Review Packet status deprecated",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Review Packet",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Writing Checklist status draft",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Writing Checklist status stable",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Writing Checklist status deprecated",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Writing Checklist",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Review Checklist status draft",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Review Checklist status stable",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Review Checklist status deprecated",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Review Checklist",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Content Template status draft",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Content Template status stable",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Content Template status deprecated",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Content Template",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Decision Record status draft",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11"
+      }
+    },
+    {
+      "name": "Decision Record status stable",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable",
+        "decided": "2026-11-11"
+      }
+    },
+    {
+      "name": "Decision Record status deprecated",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated",
+        "decided": "2026-11-11"
+      }
+    },
+    {
+      "name": "owner and updated on Decision Record",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "Policy status draft",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "Policy status stable",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      }
+    },
+    {
+      "name": "Policy status deprecated",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      }
+    },
+    {
+      "name": "owner and updated on Policy",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      }
+    },
+    {
+      "name": "decisions_open on Design Draft",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11",
+        "decisions_open": 0
+      }
+    },
+    {
+      "name": "parent on Design Appendix",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      }
+    },
+    {
+      "name": "id on Spike",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "id": "docs/S-000001"
+      }
+    },
+    {
+      "name": "id on Research Report",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      }
+    },
+    {
+      "name": "platform on Spike",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "platform": "Linux"
+      }
+    },
+    {
+      "name": "updated accepts leap day",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "updated": "2028-02-29"
+      }
+    },
+    {
+      "name": "decisions_open accepts positive count",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11",
+        "decisions_open": 3
+      }
+    },
+    {
+      "name": "parent accepts design.md",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "design.md"
+      }
+    },
+    {
+      "name": "parent accepts ./design.md",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "./design.md"
+      }
+    },
+    {
+      "name": "parent accepts ../../design/main.md",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../../design/main.md"
+      }
+    },
+    {
+      "name": "parent accepts design/main.md",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "design/main.md"
+      }
+    },
+    {
+      "name": "R id on Spike",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "id": "docs-2/R-123456"
+      }
+    },
+    {
+      "name": "R id on Research Report",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs-2/R-123456"
+      }
     }
   ],
   "invalid": [
@@ -364,7 +1539,7 @@
         ]
       },
       "errors": [
-        "$.type: 'Notes' is not one of ['Readme', 'Agent Instructions', 'Overview', 'Architecture Overview', 'Reference', 'How-to', 'Design Draft', 'Decision Record', 'Policy']"
+        "$.type: 'Notes' is not one of ['Readme', 'Agent Instructions', 'Overview', 'Architecture Overview', 'Reference', 'How-to', 'Design Draft', 'Design Appendix', 'Spike', 'Research Report', 'Runbook', 'Incident Report', 'Brief', 'Review Packet', 'Writing Checklist', 'Review Checklist', 'Content Template', 'Decision Record', 'Policy']"
       ]
     },
     {
@@ -1339,8 +2514,10 @@
         "tags": [
           "decisions"
         ],
-        "status": "deprecated",
-        "decided": "2026-11-09"
+        "status": "draft",
+        "decided": "2026-11-09",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
       },
       "errors": [
         "$: False schema does not allow '2026-11-09'"
@@ -1355,8 +2532,10 @@
         "tags": [
           "decisions"
         ],
-        "status": "deprecated",
-        "superseded_by": 2
+        "status": "draft",
+        "superseded_by": 2,
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
       },
       "errors": [
         "$: False schema does not allow 2"
@@ -1388,6 +2567,5506 @@
           "decisions"
         ],
         "status": "deprecated",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "Readme status decided",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status superseded",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status open",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status mitigated",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status resolved",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status not-started",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status started",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status blocked",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status partial",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status complete",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme status invalid",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Readme requires status",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Agent Instructions status decided",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status superseded",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status open",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status mitigated",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status resolved",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status not-started",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status started",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status blocked",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status partial",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status complete",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions status invalid",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Agent Instructions requires status",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Overview status decided",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status superseded",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status open",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status mitigated",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status resolved",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status not-started",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status started",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status blocked",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status partial",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status complete",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview status invalid",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Overview requires status",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Architecture Overview status decided",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status superseded",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status open",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status mitigated",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status resolved",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status not-started",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status started",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status blocked",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status partial",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status complete",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview status invalid",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Architecture Overview requires status",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Reference status decided",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status superseded",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status open",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status mitigated",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status resolved",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status not-started",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status started",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status blocked",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status partial",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status complete",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference status invalid",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Reference requires status",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "How-to status decided",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status superseded",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status open",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status mitigated",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status resolved",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status not-started",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status started",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status blocked",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status partial",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status complete",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to status invalid",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "How-to requires status",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Design Draft status stable",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'stable' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status deprecated",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'deprecated' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status open",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status mitigated",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status resolved",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status not-started",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status started",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status blocked",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status partial",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status complete",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft status invalid",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Draft requires status",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Design Appendix status stable",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'stable' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status deprecated",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'deprecated' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status open",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status mitigated",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status resolved",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status not-started",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status started",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status blocked",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status partial",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status complete",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix status invalid",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'decided', 'superseded']"
+      ]
+    },
+    {
+      "name": "Design Appendix requires status",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Spike status draft",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      },
+      "errors": [
+        "$.status: 'draft' is not one of ['not-started', 'started', 'blocked', 'partial', 'complete', 'invalid']"
+      ]
+    },
+    {
+      "name": "Spike status stable",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      },
+      "errors": [
+        "$.status: 'stable' is not one of ['not-started', 'started', 'blocked', 'partial', 'complete', 'invalid']"
+      ]
+    },
+    {
+      "name": "Spike status deprecated",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      },
+      "errors": [
+        "$.status: 'deprecated' is not one of ['not-started', 'started', 'blocked', 'partial', 'complete', 'invalid']"
+      ]
+    },
+    {
+      "name": "Spike status decided",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['not-started', 'started', 'blocked', 'partial', 'complete', 'invalid']"
+      ]
+    },
+    {
+      "name": "Spike status superseded",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['not-started', 'started', 'blocked', 'partial', 'complete', 'invalid']"
+      ]
+    },
+    {
+      "name": "Spike status open",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['not-started', 'started', 'blocked', 'partial', 'complete', 'invalid']"
+      ]
+    },
+    {
+      "name": "Spike status mitigated",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['not-started', 'started', 'blocked', 'partial', 'complete', 'invalid']"
+      ]
+    },
+    {
+      "name": "Spike status resolved",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['not-started', 'started', 'blocked', 'partial', 'complete', 'invalid']"
+      ]
+    },
+    {
+      "name": "Spike requires status",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Research Report status decided",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status superseded",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status open",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status mitigated",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status resolved",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status not-started",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status started",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status blocked",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status partial",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status complete",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report status invalid",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Research Report requires status",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Runbook status decided",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status superseded",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status open",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status mitigated",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status resolved",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status not-started",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status started",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status blocked",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status partial",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status complete",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook status invalid",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Runbook requires status",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Incident Report status draft",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      },
+      "errors": [
+        "$.status: 'draft' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status stable",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "stable"
+      },
+      "errors": [
+        "$.status: 'stable' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status deprecated",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "deprecated"
+      },
+      "errors": [
+        "$.status: 'deprecated' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status decided",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status superseded",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status not-started",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status started",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status blocked",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status partial",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status complete",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report status invalid",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['open', 'mitigated', 'resolved']"
+      ]
+    },
+    {
+      "name": "Incident Report requires status",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Brief status decided",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status superseded",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status open",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status mitigated",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status resolved",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status not-started",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status started",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status blocked",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status partial",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status complete",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief status invalid",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Brief requires status",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Review Packet status decided",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status superseded",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status open",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status mitigated",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status resolved",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status not-started",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status started",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status blocked",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status partial",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status complete",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet status invalid",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Packet requires status",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Writing Checklist status decided",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status superseded",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status open",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status mitigated",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status resolved",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status not-started",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status started",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status blocked",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status partial",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status complete",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist status invalid",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Writing Checklist requires status",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Review Checklist status decided",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status superseded",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status open",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status mitigated",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status resolved",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status not-started",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status started",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status blocked",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status partial",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status complete",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist status invalid",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Review Checklist requires status",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Content Template status decided",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status superseded",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status open",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status mitigated",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status resolved",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status not-started",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status started",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status blocked",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status partial",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status complete",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template status invalid",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Content Template requires status",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Decision Record status decided",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status superseded",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status open",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status mitigated",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status resolved",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status not-started",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status started",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status blocked",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status partial",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status complete",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record status invalid",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Decision Record requires status",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "Policy status decided",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "decided"
+      },
+      "errors": [
+        "$.status: 'decided' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status superseded",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "superseded"
+      },
+      "errors": [
+        "$.status: 'superseded' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status open",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open"
+      },
+      "errors": [
+        "$.status: 'open' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status mitigated",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "mitigated"
+      },
+      "errors": [
+        "$.status: 'mitigated' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status resolved",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "resolved"
+      },
+      "errors": [
+        "$.status: 'resolved' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status not-started",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started"
+      },
+      "errors": [
+        "$.status: 'not-started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status started",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "started"
+      },
+      "errors": [
+        "$.status: 'started' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status blocked",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "blocked"
+      },
+      "errors": [
+        "$.status: 'blocked' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status partial",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "partial"
+      },
+      "errors": [
+        "$.status: 'partial' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status complete",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "complete"
+      },
+      "errors": [
+        "$.status: 'complete' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy status invalid",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "invalid"
+      },
+      "errors": [
+        "$.status: 'invalid' is not one of ['draft', 'stable', 'deprecated']"
+      ]
+    },
+    {
+      "name": "Policy requires status",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ]
+      },
+      "errors": [
+        "$: 'status' is a required property"
+      ]
+    },
+    {
+      "name": "decisions_open on Readme",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Agent Instructions",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Overview",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Architecture Overview",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Reference",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on How-to",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Design Appendix",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Spike",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Research Report",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Runbook",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Incident Report",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Brief",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Review Packet",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Writing Checklist",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Review Checklist",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Content Template",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Decision Record",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "decisions_open on Policy",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decisions_open": 0
+      },
+      "errors": [
+        "$: False schema does not allow 0"
+      ]
+    },
+    {
+      "name": "parent on Readme",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Agent Instructions",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Overview",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Architecture Overview",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Reference",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on How-to",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Design Draft",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Spike",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Research Report",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Runbook",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Incident Report",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Brief",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Review Packet",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Writing Checklist",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Review Checklist",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Content Template",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Decision Record",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "parent on Policy",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md"
+      },
+      "errors": [
+        "$: False schema does not allow '../design.md'"
+      ]
+    },
+    {
+      "name": "id on Readme",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Agent Instructions",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Overview",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Architecture Overview",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Reference",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on How-to",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Design Draft",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Design Appendix",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Runbook",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Incident Report",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Brief",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Review Packet",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Writing Checklist",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Review Checklist",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Content Template",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Decision Record",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "id on Policy",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/S-000001"
+      },
+      "errors": [
+        "$: False schema does not allow 'docs/S-000001'"
+      ]
+    },
+    {
+      "name": "platform on Readme",
+      "frontmatter": {
+        "type": "Readme",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Agent Instructions",
+      "frontmatter": {
+        "type": "Agent Instructions",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Overview",
+      "frontmatter": {
+        "type": "Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Architecture Overview",
+      "frontmatter": {
+        "type": "Architecture Overview",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Reference",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on How-to",
+      "frontmatter": {
+        "type": "How-to",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Design Draft",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Design Appendix",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Research Report",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Runbook",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Incident Report",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Brief",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Review Packet",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Writing Checklist",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Review Checklist",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Content Template",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Decision Record",
+      "frontmatter": {
+        "type": "Decision Record",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "platform on Policy",
+      "frontmatter": {
+        "type": "Policy",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "platform": "Linux"
+      },
+      "errors": [
+        "$: False schema does not allow 'Linux'"
+      ]
+    },
+    {
+      "name": "Design Draft requires owner",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "updated": "2026-11-11"
+      },
+      "errors": [
+        "$: 'owner' is a required property"
+      ]
+    },
+    {
+      "name": "Design Draft requires updated",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer"
+      },
+      "errors": [
+        "$: 'updated' is a required property"
+      ]
+    },
+    {
+      "name": "Design Appendix requires parent",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      },
+      "errors": [
+        "$: 'parent' is a required property"
+      ]
+    },
+    {
+      "name": "owner rejects ''",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": ""
+      },
+      "errors": [
+        "$.owner: '' does not match '\\\\S'"
+      ]
+    },
+    {
+      "name": "owner rejects '  '",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "  "
+      },
+      "errors": [
+        "$.owner: '  ' does not match '\\\\S'"
+      ]
+    },
+    {
+      "name": "owner rejects non-string",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": 7
+      },
+      "errors": [
+        "$.owner: 7 is not of type 'string'"
+      ]
+    },
+    {
+      "name": "platform rejects ''",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "platform": ""
+      },
+      "errors": [
+        "$.platform: '' does not match '\\\\S'"
+      ]
+    },
+    {
+      "name": "platform rejects '  '",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "platform": "  "
+      },
+      "errors": [
+        "$.platform: '  ' does not match '\\\\S'"
+      ]
+    },
+    {
+      "name": "platform rejects non-string",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "platform": 7
+      },
+      "errors": [
+        "$.platform: 7 is not of type 'string'"
+      ]
+    },
+    {
+      "name": "updated rejects '2026-02-30'",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-02-30"
+      },
+      "errors": [
+        "$.updated: '2026-02-30' is not a 'date'"
+      ]
+    },
+    {
+      "name": "updated rejects '2026-1-9'",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-1-9"
+      },
+      "errors": [
+        "$.updated: '2026-1-9' is not a 'date'",
+        "$.updated: '2026-1-9' does not match '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'"
+      ]
+    },
+    {
+      "name": "updated rejects '2026-11-11T12:00:00Z'",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11T12:00:00Z"
+      },
+      "errors": [
+        "$.updated: '2026-11-11T12:00:00Z' is not a 'date'",
+        "$.updated: '2026-11-11T12:00:00Z' does not match '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'"
+      ]
+    },
+    {
+      "name": "updated rejects ''",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": ""
+      },
+      "errors": [
+        "$.updated: '' is not a 'date'",
+        "$.updated: '' does not match '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'"
+      ]
+    },
+    {
+      "name": "updated rejects non-string",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": 20261111
+      },
+      "errors": [
+        "$.updated: 20261111 is not of type 'string'"
+      ]
+    },
+    {
+      "name": "decisions_open rejects -1",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11",
+        "decisions_open": -1
+      },
+      "errors": [
+        "$.decisions_open: -1 is less than the minimum of 0"
+      ]
+    },
+    {
+      "name": "decisions_open rejects 1.5",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11",
+        "decisions_open": 1.5
+      },
+      "errors": [
+        "$.decisions_open: 1.5 is not of type 'integer'"
+      ]
+    },
+    {
+      "name": "decisions_open rejects True",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11",
+        "decisions_open": true
+      },
+      "errors": [
+        "$.decisions_open: True is not of type 'integer'"
+      ]
+    },
+    {
+      "name": "decisions_open rejects '1'",
+      "frontmatter": {
+        "type": "Design Draft",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "owner": "Documentation maintainer",
+        "updated": "2026-11-11",
+        "decisions_open": "1"
+      },
+      "errors": [
+        "$.decisions_open: '1' is not of type 'integer'"
+      ]
+    },
+    {
+      "name": "parent rejects ''",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": ""
+      },
+      "errors": [
+        "$.parent: '' does not match '^(?:[^/\\\\\\\\\\\\s:?#]+/)*[^/\\\\\\\\\\\\s:?#]+\\\\.md$'"
+      ]
+    },
+    {
+      "name": "parent rejects '/design.md'",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "/design.md"
+      },
+      "errors": [
+        "$.parent: '/design.md' does not match '^(?:[^/\\\\\\\\\\\\s:?#]+/)*[^/\\\\\\\\\\\\s:?#]+\\\\.md$'"
+      ]
+    },
+    {
+      "name": "parent rejects 'https://example.com/design.md'",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "https://example.com/design.md"
+      },
+      "errors": [
+        "$.parent: 'https://example.com/design.md' does not match '^(?:[^/\\\\\\\\\\\\s:?#]+/)*[^/\\\\\\\\\\\\s:?#]+\\\\.md$'"
+      ]
+    },
+    {
+      "name": "parent rejects 'C:/design.md'",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "C:/design.md"
+      },
+      "errors": [
+        "$.parent: 'C:/design.md' does not match '^(?:[^/\\\\\\\\\\\\s:?#]+/)*[^/\\\\\\\\\\\\s:?#]+\\\\.md$'"
+      ]
+    },
+    {
+      "name": "parent rejects 'design\\\\main.md'",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "design\\main.md"
+      },
+      "errors": [
+        "$.parent: 'design\\\\main.md' does not match '^(?:[^/\\\\\\\\\\\\s:?#]+/)*[^/\\\\\\\\\\\\s:?#]+\\\\.md$'"
+      ]
+    },
+    {
+      "name": "parent rejects 'design.txt'",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "design.txt"
+      },
+      "errors": [
+        "$.parent: 'design.txt' does not match '^(?:[^/\\\\\\\\\\\\s:?#]+/)*[^/\\\\\\\\\\\\s:?#]+\\\\.md$'"
+      ]
+    },
+    {
+      "name": "parent rejects 'design.md#heading'",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "design.md#heading"
+      },
+      "errors": [
+        "$.parent: 'design.md#heading' does not match '^(?:[^/\\\\\\\\\\\\s:?#]+/)*[^/\\\\\\\\\\\\s:?#]+\\\\.md$'"
+      ]
+    },
+    {
+      "name": "parent rejects 'design.md?view=1'",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "design.md?view=1"
+      },
+      "errors": [
+        "$.parent: 'design.md?view=1' does not match '^(?:[^/\\\\\\\\\\\\s:?#]+/)*[^/\\\\\\\\\\\\s:?#]+\\\\.md$'"
+      ]
+    },
+    {
+      "name": "parent rejects 'design/'",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "design/"
+      },
+      "errors": [
+        "$.parent: 'design/' does not match '^(?:[^/\\\\\\\\\\\\s:?#]+/)*[^/\\\\\\\\\\\\s:?#]+\\\\.md$'"
+      ]
+    },
+    {
+      "name": "parent rejects non-string",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": 7
+      },
+      "errors": [
+        "$.parent: 7 is not of type 'string'"
+      ]
+    },
+    {
+      "name": "id rejects ''",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": ""
+      },
+      "errors": [
+        "$.id: '' does not match '^[a-z0-9-]+/[SR]-[0-9]{6}$'"
+      ]
+    },
+    {
+      "name": "id rejects 'Docs/S-000001'",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "Docs/S-000001"
+      },
+      "errors": [
+        "$.id: 'Docs/S-000001' does not match '^[a-z0-9-]+/[SR]-[0-9]{6}$'"
+      ]
+    },
+    {
+      "name": "id rejects 'docs/s-000001'",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/s-000001"
+      },
+      "errors": [
+        "$.id: 'docs/s-000001' does not match '^[a-z0-9-]+/[SR]-[0-9]{6}$'"
+      ]
+    },
+    {
+      "name": "id rejects 'docs/T-000001'",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/T-000001"
+      },
+      "errors": [
+        "$.id: 'docs/T-000001' does not match '^[a-z0-9-]+/[SR]-[0-9]{6}$'"
+      ]
+    },
+    {
+      "name": "id rejects 'docs/R-12345'",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/R-12345"
+      },
+      "errors": [
+        "$.id: 'docs/R-12345' does not match '^[a-z0-9-]+/[SR]-[0-9]{6}$'"
+      ]
+    },
+    {
+      "name": "id rejects 'docs/R-1234567'",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs/R-1234567"
+      },
+      "errors": [
+        "$.id: 'docs/R-1234567' does not match '^[a-z0-9-]+/[SR]-[0-9]{6}$'"
+      ]
+    },
+    {
+      "name": "id rejects 'docs_name/R-000001'",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "docs_name/R-000001"
+      },
+      "errors": [
+        "$.id: 'docs_name/R-000001' does not match '^[a-z0-9-]+/[SR]-[0-9]{6}$'"
+      ]
+    },
+    {
+      "name": "id rejects '/R-000001'",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "id": "/R-000001"
+      },
+      "errors": [
+        "$.id: '/R-000001' does not match '^[a-z0-9-]+/[SR]-[0-9]{6}$'"
+      ]
+    },
+    {
+      "name": "id rejects non-string",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "id": 7
+      },
+      "errors": [
+        "$.id: 7 is not of type 'string'"
+      ]
+    },
+    {
+      "name": "generated rejects by-only mapping",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "generated": {
+          "by": "codex"
+        }
+      },
+      "errors": [
+        "$.generated: {'by': 'codex'} is not of type 'array'"
+      ]
+    },
+    {
+      "name": "decided on Design Appendix",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Design Appendix",
+      "frontmatter": {
+        "type": "Design Appendix",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "parent": "../design.md",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Spike",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Spike",
+      "frontmatter": {
+        "type": "Spike",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "not-started",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Research Report",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Research Report",
+      "frontmatter": {
+        "type": "Research Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Runbook",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Runbook",
+      "frontmatter": {
+        "type": "Runbook",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Incident Report",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Incident Report",
+      "frontmatter": {
+        "type": "Incident Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "open",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Brief",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Brief",
+      "frontmatter": {
+        "type": "Brief",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Review Packet",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Review Packet",
+      "frontmatter": {
+        "type": "Review Packet",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Writing Checklist",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Writing Checklist",
+      "frontmatter": {
+        "type": "Writing Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Review Checklist",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Review Checklist",
+      "frontmatter": {
+        "type": "Review Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "superseded_by": 2
+      },
+      "errors": [
+        "$: False schema does not allow 2"
+      ]
+    },
+    {
+      "name": "decided on Content Template",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "decided": "2026-11-11"
+      },
+      "errors": [
+        "$: False schema does not allow '2026-11-11'"
+      ]
+    },
+    {
+      "name": "superseded_by on Content Template",
+      "frontmatter": {
+        "type": "Content Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
         "superseded_by": 2
       },
       "errors": [
