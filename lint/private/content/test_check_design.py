@@ -394,7 +394,19 @@ def test_diagnostic_contract(case: str, expected: list[str]) -> None:
     assert [error.removeprefix(root.as_posix() + "/") for error in errors] == expected
 
 
-def test_render_contract() -> None:
+def test_render_contract(monkeypatch: pytest.MonkeyPatch) -> None:
+    read_text = Path.read_text
+
+    def read_exact_case(path: Path, *, encoding: str | None = None) -> str:
+        # Emulate case-sensitive reads on every filesystem.
+        if path.name not in {entry.name for entry in path.parent.iterdir()}:
+            raise FileNotFoundError(path)
+        return read_text(path, encoding=encoding)
+
+    monkeypatch.setattr(Path, "read_text", read_exact_case)
+    for name in ("readme.md", "README.MD"):
+        with pytest.raises(FileNotFoundError):
+            (GOOD / name).read_text()
     rendered, errors = checker.render_index(FIXTURES / "good/designs", [])
     assert not errors
     assert rendered == (FIXTURES / "good/designs/README.md").read_text()
