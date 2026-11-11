@@ -69,6 +69,14 @@ Notes on individual tools:
 - `gitleaks_test` scans the working tree. `gitleaks_history` scans the Git history of every branch, with `bazel run` (in CI, after a full-depth checkout). `bazel run //:gitleaks_history -- --log-opts=HEAD` scans the full checked-out history. A leading `--merge-range` instead scans `HEAD^1..HEAD`: the pull request's own commits plus the merge commit, provided `HEAD` matches the full commit hash in `EXPECTED_HEAD`. Unset or different `EXPECTED_HEAD`, changes to `.gitleaks.toml` or `.gitleaksignore`, or unexpected Git state fall back to the full checked-out history, so tightened rules also meet old history. `repo-checks.yml` uses range mode for pull requests with `EXPECTED_HEAD` set to `github.sha` and the full scan for every other event. The private config (`GITLEAKS_CONFIG_TOML`) changes out of band. The next full scan (push to main) applies its changes to old history, the same accepted limit as a rules version bump. It fails when gitleaks walks no commits of a range with content, which gitleaks itself reports as success. `bazel run @tbhb_rules//lint:gitleaks_text < file` scans text, such as a pull request's body, under the workspace's `.gitleaks.toml`.
 - `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD` fails on any commit in `BASE..HEAD` whose author and committer aren't one of the allowed pairs in `ALLOWED_PAIRS`, in `lint/private/commit_identity.bzl`. `repo-checks.yml` runs it on a pull request's commits.
 
+### Shared vocabulary
+
+`cspell_test` and `vale_test` inherit the public tool names in `lint/vocabulary/words.txt`, including `workerd`, without a word list in each consuming repository. Add common public tool and product names there; keep repository-specific terms in the consuming repository's own dictionaries or Vale vocabulary.
+
+Both targets accept a trailing straight or curly apostrophe and `s` only when the base word is accepted. cspell ignores just the suffix and still checks the base. Vale adds the shared `tbhb_rules` vocabulary alongside the configured vocabularies in its scratch copy and gives each accepted expression an optional possessive suffix. A misspelled base still fails both checks. Project configs, dictionaries, and pinned Vale packages continue to apply.
+
+For cspell outside Bazel, import `lint/vocabulary/cspell.config.cjs` from a local rules checkout using [cspell's configuration imports](https://cspell.org/docs/Configuration/imports). The automatic Vale vocabulary applies to `vale_test`; `vale_sync` continues to sync style packages for editors. Vale's [vocabulary format](https://docs.vale.sh/keys/vocabularies) describes how to add local terms.
+
 ### Failure proofs
 
 Only a run on bad input that ends in the expected rejection, for the right reason, proves that a check rejects bad input. `expect_failure_test` wraps a test and passes only when that test fails and its output matches `pattern`, an extended regular expression:

@@ -23,7 +23,7 @@ def _test_args_guard_and_env(name):
 def _test_args_guard_and_env_impl(env, target):
     env.expect.that_target(target).action_named("TemplateExpand").substitutions().contains_at_least({
         "@@OUTPUT_GUARD@@": "'Files checked: [1-9]'",
-        "@@TOOL_ARGS@@": "'lint' '--no-progress' '--dot' '--config' 'cfg.toml' '**'",
+        "@@TOOL_ARGS@@": "'cfg.toml'",
     })
     env.expect.that_target(target).provider(RunEnvironmentInfo).environment().contains_exactly({
         "BAZEL_BINDIR": ".",
@@ -42,7 +42,7 @@ def _test_without_config(name):
 
 def _test_without_config_impl(env, target):
     env.expect.that_target(target).action_named("TemplateExpand").substitutions().contains_at_least({
-        "@@TOOL_ARGS@@": "'lint' '--no-progress' '--dot' '**'",
+        "@@TOOL_ARGS@@": "''",
     })
 
 def _test_default_tool_is_the_pinned_cspell(name):
@@ -55,10 +55,12 @@ def _test_default_tool_is_the_pinned_cspell(name):
     analysis_test(name = name, impl = _test_default_tool_impl, target = name + "_subject")
 
 def _test_default_tool_impl(env, target):
-    # rules_js names the launcher cspell, or cspell.bat on Windows.
-    expand = [a for a in target.actions if a.mnemonic == "TemplateExpand"][0]
-    tool = expand.substitutions["@@TOOL@@"]
-    env.expect.that_bool(tool.removesuffix(".bat") == "lint/private/cspell/cspell_/cspell").equals(True)
+    # The wrapper's runfiles still contain the pinned rules_js launcher.
+    launchers = [
+        f.short_path.removesuffix(".bat")
+        for f in target[DefaultInfo].default_runfiles.files.to_list()
+    ]
+    env.expect.that_bool("lint/private/cspell/cspell_/cspell" in launchers).equals(True)
 
 def cspell_test_suite(name):
     test_suite(

@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files([
+    "cspell.config.cjs",
+    "words.txt",
+])

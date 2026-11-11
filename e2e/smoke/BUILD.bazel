@@ -11,6 +11,7 @@ load(
     "ryl_test",
     "tombi_test",
     "tree_check_test",
+    "vale_test",
     "zizmor_test",
 )
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
@@ -170,4 +171,74 @@ expect_failure_test(
     name = "proof_cspell_fails",
     pattern = "notes\\.md:3:[0-9]+ - Unknown word \\(sentance\\)",
     test = ":proof_cspell",
+)
+
+# Verify shared vocabulary through an external rules module.
+
+[
+    rule(
+        name = tool + "_vocabulary_test",
+        srcs = ["testdata/vocabulary/clean.md"] + (glob(["testdata/vocabulary/styles/**"]) + ["testdata/vocabulary/local.md"] if tool == "vale" else []),
+        config = "testdata/vocabulary/vale.ini" if tool == "vale" else None,
+    )
+    for tool, rule in [
+        ("cspell", cspell_test),
+        ("vale", vale_test),
+    ]
+]
+
+[
+    rule(
+        name = "proof_" + tool + "_possessive",
+        srcs = ["testdata/vocabulary/bad.md"] + (glob(["testdata/vocabulary/styles/**"]) if tool == "vale" else []),
+        config = "testdata/vocabulary/vale.ini" if tool == "vale" else None,
+        tags = PROOF_TAGS,
+    )
+    for tool, rule in [
+        ("cspell", cspell_test),
+        ("vale", vale_test),
+    ]
+]
+
+[
+    expect_failure_test(
+        name = tool + "_possessive_fails_test",
+        pattern = pattern,
+        test = ":proof_" + tool + "_possessive",
+    )
+    for tool, pattern in [
+        (
+            "cspell",
+            # cspell:disable-next-line
+            "bad\\.md:3:[0-9]+ - Unknown word \\(Renovatte\\)",
+        ),
+        (
+            "vale",
+            # cspell:disable-next-line
+            "Renovatte.s.*Vale\\.Spelling",
+        ),
+    ]
+]
+
+cspell_test(
+    name = "cspell_local_vocabulary_test",
+    srcs = [
+        "testdata/vocabulary/clean.md",
+        "testdata/vocabulary/local.md",
+    ],
+    config = "testdata/vocabulary/cspell.json",
+    data = ["testdata/vocabulary/words.txt"],
+)
+
+# Keep cspell's config discovery working when no config attribute is set.
+cspell_test(
+    name = "cspell_discovered_vocabulary_test",
+    srcs = [
+        "testdata/vocabulary/clean.md",
+        "testdata/vocabulary/local.md",
+    ],
+    data = [
+        "testdata/vocabulary/cspell.json",
+        "testdata/vocabulary/words.txt",
+    ],
 )

@@ -1,0 +1,4 @@
+{
+  "dictionaryDefinitions": [{ "name": "local", "path": "./words.txt", "addWords": true }],
+  "dictionaries": ["local"]
+}

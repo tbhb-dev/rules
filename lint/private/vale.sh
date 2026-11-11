@@ -91,5 +91,32 @@ if [[ -n ${packages[0]+set} ]]; then
   vale --config="$sync_config" sync >/dev/null
 fi
 
+# Add the shared vocabulary to the scratch config, preserving the project's
+# vocabularies and all paths relative to its config directory.
+vocabulary="$styles/config/vocabularies/tbhb_rules"
+mkdir -p "$vocabulary"
+cp "$XDG_CACHE_HOME/vale/words.txt" "$vocabulary/accept.txt"
+touch "$vocabulary/reject.txt"
+for accept in "$styles"/config/vocabularies/*/accept.txt; do
+  # Each expression still requires an accepted base word. Comments and empty
+  # lines stay unchanged, and a typo in the base never becomes an exception.
+  sed -E "/^#|^[[:space:]]*$/!s/^(.*)$/(\\1)(['’]s)?/" "$accept" >"$accept.tmp"
+  mv "$accept.tmp" "$accept"
+done
+shared_config="$(dirname "$config")/.tbhb-vale.ini"
+awk '
+  BEGIN { global = 1; found = 0 }
+  /^\[/ && global {
+    if (!found) print "Vocab = tbhb_rules"
+    global = 0
+  }
+  global && /^[[:space:]]*Vocab[[:space:]]*=/ {
+    $0 = $0 ", tbhb_rules"
+    found = 1
+  }
+  { print }
+  END { if (global && !found) print "Vocab = tbhb_rules" }
+' "$config" >"$shared_config"
+
 echo "vale: linting ${#files[@]} files with ${#packages[@]} packages"
-exec vale --config="$config" --no-wrap "${files[@]}"
+exec vale --config="$shared_config" --no-wrap "${files[@]}"
