@@ -4,6 +4,8 @@
 module.exports = {
   version: "0.2",
   import: process.env.TBHB_CSPELL_CONFIG ? [process.env.TBHB_CSPELL_CONFIG] : [],
+  // Per-file discovery must not inherit ignores from outside the copied tree.
+  stopSearchAt: [process.cwd()],
   dictionaryDefinitions: [
     { name: "tbhb-rules", path: "./words.txt", addWords: true },
   ],

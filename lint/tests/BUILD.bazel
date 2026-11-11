@@ -6,7 +6,7 @@ load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":commit_identity_scenario.bzl", "commit_identity_scenario_test")
-load(":cspell_tests.bzl", "cspell_test_suite")
+load(":cspell_tests.bzl", "cspell_parent_config_test", "cspell_test_suite")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
 load(":gitleaks_private_scenario.bzl", "gitleaks_private_scenario_test")
 load(":gitleaks_redact_scenario.bzl", "GITLEAKS_REDACT_FIXTURE", "gitleaks_redact_scenario_test")
@@ -405,4 +405,13 @@ cspell_test(
         "testdata/vocabulary/cspell.json",
         "testdata/vocabulary/words.txt",
     ],
+)
+
+cspell_parent_config_test(
+    name = "cspell_parent_config_test",
+    fixtures = glob(["testdata/vocabulary/*.md"]) + [
+        "testdata/vocabulary/cspell.json",
+        "testdata/vocabulary/words.txt",
+    ],
+    subject = ":cspell_vocabulary_test_tool",
 )

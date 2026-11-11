@@ -80,7 +80,9 @@ def cspell_test(name, srcs, config = None, data = [], tool = Label("//lint/priva
         config = config,
         data = data,
         tool = ":" + name + "_tool",
-        tool_args = ["{config}" if config else ""],
+        # A named argument survives the Windows batch launcher without an
+        # empty positional argument when no project config was supplied.
+        tool_args = ["--project-config={config}"] if config else [],
         # cspell's summary counts the files it read; zero means it saw nothing.
         output_guard = "Files checked: [1-9]",
         **kwargs
