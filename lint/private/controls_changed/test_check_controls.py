@@ -415,8 +415,11 @@ def test_source_constants_and_suites() -> None:
 
 def test_added_lines_preserve_repeated_context() -> None:
     assert checker.added_lines("old\nvalue", "new\nlines") == "new\nlines"
-    repeated = "repeated\n" * 300 + "end\n"
-    assert checker.added_lines("old\n" + repeated, "new\n" + repeated) == "new"
+    repeated = "repeated\n" * 300
+    assert (
+        checker.added_lines("old\n" + repeated + "end", "new\n" + repeated + "last")
+        == "new\nlast"
+    )
 
 
 def test_sections_preserve_names_and_ignore_preamble() -> None:
@@ -443,12 +446,18 @@ def test_source_expression_changes_and_unnamed_calls() -> None:
         "removed_test_calls": "^py_test$",
     }
     assert checker.matches(category, "BUILD", before, "")
+    assert checker.matches(
+        category,
+        "BUILD",
+        'py_test(name="unit", srcs=["a", "b"])',
+        'py_test(name="unit", srcs=["a"])',
+    )
     assert not checker.matches(CATEGORIES[0], "ordinary.toml", "", "[tool.ruff]")
     assert not checker.matches(CATEGORIES[1], "pyproject.toml", "", "[tool.ruff]")
 
 
 def test_git_preserves_non_utf8_content(repository: Path) -> None:
-    path = repository / "source-\udcff.py"
+    path = repository / os.fsdecode(b"source-\xff.py")
     path.write_bytes(b"value = '\xff'\n# noqa\n")
     checker.git("git", "add", "--", str(path))
     checker.git("git", "commit", "-qm", "non UTF-8 fixture")

@@ -30,7 +30,7 @@ DIFF_FLAGS = (
 )
 REVISION_FLAGS = ("rev-parse", "--verify", "--end-of-options")
 # Repeated lines must remain anchors when finding newly added pragmas.
-AUTOJUNK = False
+MATCH_OPTIONS = {"autojunk": False}
 
 
 class Category(TypedDict):
@@ -64,7 +64,7 @@ def git(executable: str, *args: str) -> str:
 
 def added_lines(before: str, after: str) -> str:
     old, new = before.splitlines(), after.splitlines()
-    matcher = difflib.SequenceMatcher(None, old, new, autojunk=AUTOJUNK)
+    matcher = difflib.SequenceMatcher(None, old, new, **MATCH_OPTIONS)
     return "\n".join(
         line
         for operation, _, _, start, end in matcher.get_opcodes()
