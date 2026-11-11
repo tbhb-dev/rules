@@ -11,6 +11,7 @@ set -euo pipefail
 runfiles=$PWD
 allowed="$runfiles/@@ALLOWED@@"
 git_dir="$runfiles/@@GIT_DIR@@"
+trailers="$runfiles/@@TRAILERS@@"
 
 export PATH="$git_dir:$PATH"
 export GIT_CONFIG_NOSYSTEM=1
@@ -40,14 +41,26 @@ checked=0
 failed=0
 while IFS=$'\t' read -r sha pair; do
   checked=$((checked + 1))
+  commit_failed=0
   if ! grep -Fxq -- "$pair" "$allowed"; then
-    failed=$((failed + 1))
+    commit_failed=1
     echo "commit_identity: FAIL: $sha author and committer are not an allowed pair: ${pair/ -> / (author) -> } (committer)" >&2
   fi
+  emails=$(git log -1 --format='%ae%n%ce' "$sha")
+  if grep -Fxq -- agent@tonyburns.net <<<"$emails"; then
+    message=$(git log -1 --format=%B "$sha")
+    if ! problems=$(printf '%s' "$message" | "$trailers"); then
+      commit_failed=1
+      while IFS= read -r problem; do
+        echo "commit_identity: FAIL: $sha $problem" >&2
+      done <<<"$problems"
+    fi
+  fi
+  failed=$((failed + commit_failed))
 done <"$log"
 
 if ((failed != 0)); then
-  echo "commit_identity: $failed of $checked commits failed. The allowed pairs are ALLOWED_PAIRS in @tbhb_rules//lint/private:commit_identity.bzl; rewrite the commits with an allowed identity." >&2
+  echo "commit_identity: $failed of $checked commits failed. The allowed pairs are ALLOWED_PAIRS in @tbhb_rules//lint/private:commit_identity.bzl; use an allowed identity pair and valid agent identity trailers." >&2
   exit 1
 fi
 echo "commit_identity: $checked commits checked"

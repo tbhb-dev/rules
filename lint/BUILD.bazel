@@ -29,7 +29,8 @@ gitleaks_text(
 )
 
 # Checks the commits in a range against the allowed (author, committer)
-# pairs: `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD`.
+# pairs and require valid identity trailers for agent emails:
+# `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD`.
 # repo-checks.yml runs it on a pull request's commits.
 commit_identity(
     name = "commit_identity",
