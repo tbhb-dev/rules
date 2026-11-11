@@ -76,14 +76,16 @@
       // generates the Worker types and deploys, from its own workerd.
       // tbhb_rules_storybook's story tests run on the same Vitest, through
       // @vitest/browser-playwright, whose playwright must drive the
-      // browsers tbhb_rules_playwright pins for one playwright-core. One
-      // group keeps them all on one Vitest, one workerd and one Playwright.
+      // browsers tbhb_rules_playwright pins for one playwright-core, as must
+      // tokens/e2e/smoke's browser test. One group keeps them all on one
+      // Vitest, one workerd and one Playwright.
       description: "Vitest, its plugins, Playwright and wrangler move together",
       matchFileNames: [
         "typescript/**/package.json",
         "cloudflare/**/package.json",
         "playwright/**/package.json",
         "storybook/**/package.json",
+        "tokens/e2e/**/package.json",
       ],
       matchPackageNames: [
         "vitest",
