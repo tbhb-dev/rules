@@ -35,6 +35,7 @@ jobs:
       pull-requests: read  # the pull request's changed files, from the GitHub API
     outputs:
       workspaces: ${{ steps.plan.outputs.workspaces }}
+      apple: ${{ steps.plan.outputs.apple }}
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43  # v2.22.3
@@ -76,7 +77,8 @@ jobs:
                 "deps": ["root", "typescript", "playwright", "storybook"]
               },
               {"id": "tokens", "dir": "tokens", "deps": ["root", "typescript"]},
-              {"id": "tokens-smoke", "dir": "tokens/e2e/smoke", "deps": ["root", "typescript", "playwright", "tokens"]}
+              {"id": "tokens-smoke", "dir": "tokens/e2e/smoke", "deps": ["root", "typescript", "playwright", "tokens"]},
+              {"id": "apple-smoke", "dir": "apple/e2e/smoke", "deps": ["root"]}
             ]
         run: |
           files="${RUNNER_TEMP}/changed"
@@ -103,7 +105,12 @@ jobs:
                     | $owners | any(. == $id or (. as $o | $deps | index($o) != null)))
                 | {id, dir}]
           ' <<<"${WORKSPACES}")"
-          echo "workspaces=${selected}" >>"${GITHUB_OUTPUT}"
+          # apple-smoke needs Xcode, so it has a job of its own on a GitHub-hosted
+          # macOS runner and stays out of the `bazel` job's matrix.
+          matrix="$(jq -c 'map(select(.id != "apple-smoke"))' <<<"${selected}")"
+          apple="$(jq -r 'any(.[]; .id == "apple-smoke")' <<<"${selected}")"
+          echo "workspaces=${matrix}" >>"${GITHUB_OUTPUT}"
+          echo "apple=${apple}" >>"${GITHUB_OUTPUT}"
           ids="$(jq -r 'map(.id) | join(", ")' <<<"${selected}")"
           echo "Testing: ${ids}" >>"${GITHUB_STEP_SUMMARY}"
 
@@ -262,6 +269,62 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
+  # The Swift and Apple smoke consumer needs Xcode, so it runs only on the
+  # GitHub-hosted xcode-27 image, never on a self-hosted runner. The image's
+  # default Xcode is 27.1, so the job selects 27.2 (build 27B52) and prints
+  # `xcodebuild -version` before the build. The job always runs, so that
+  # `conclusion` sees a success when the plan skipped the workspace; its
+  # steps run only when the plan chose it.
+  apple:
+    name: "apple (apple-smoke)"
+    needs: [plan]
+    runs-on: xcode-27
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      RUN_APPLE: ${{ needs.plan.outputs.apple }}
+    steps:
+      - name: Checkout
+        if: env.RUN_APPLE == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode 27.2
+        if: env.RUN_APPLE == 'true'
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
+          xcodebuild -version | tee "${RUNNER_TEMP}/xcodebuild-version"
+          grep -qx 'Build version 27B52' "${RUNNER_TEMP}/xcodebuild-version"
+
+      - name: Set up Bazel for CI
+        if: env.RUN_APPLE == 'true'
+        uses: ./.github/actions/setup-bazel-ci
+        with:
+          disk-cache: ${{ github.workflow }}-apple-smoke
+          cache-save: false
+          # The default list names tools of the other workspaces.
+          targets: //...
+          working-directory: apple/e2e/smoke
+
+      - name: Test
+        if: env.RUN_APPLE == 'true'
+        working-directory: apple/e2e/smoke
+        run: bazelisk test --config=ci //...
+
+      - name: Keep the test logs
+        if: failure() && env.RUN_APPLE == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: testlogs-apple-smoke
+          path: |
+            apple/e2e/smoke/.bazel-testlogs/**/test.log
+            apple/e2e/smoke/.bazel-testlogs/**/test.xml
+          include-hidden-files: true
+          if-no-files-found: ignore
+
   # Checks that need Git history or the GitHub API, which no sandboxed test
   # can see, in the shared workflow. The local path is for this repository
   # only; a consumer pins tbhb-dev/rules, see .github/actions/README.md.
@@ -317,7 +380,7 @@ jobs:
   conclusion:
     name: conclusion
     if: always()
-    needs: [plan, bazel, repo, archive]
+    needs: [plan, bazel, apple, repo, archive]
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
