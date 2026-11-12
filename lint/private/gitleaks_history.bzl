@@ -35,7 +35,7 @@ gitleaks_history = rule(
     doc = """Scans the workspace's git history with gitleaks; run it with `bazel run`.
 
 Fails on any finding, when the repository has no commits, and when gitleaks
-scans no commits although the history holds content (gitleaks exits 0 when
+scans no commits although the history holds added content (gitleaks exits 0 when
 its own git invocation fails), and, under
 `--//lint:gitleaks_private_config`, without the private config in
 `GITLEAKS_CONFIG_TOML`. A shallow clone scans only the commits it
