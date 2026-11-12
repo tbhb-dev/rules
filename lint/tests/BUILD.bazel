@@ -423,6 +423,33 @@ PROOF_REASONS = {
     ]
 ]
 
+# The shared coined-terms rule flags the coined sense and leaves ordinary
+# English alone. The fixture runs only that rule from the real rule file.
+vale_test(
+    name = "vale_coined_terms_ordinary_test",
+    srcs = [
+        "testdata/coined_terms/ok.md",
+        "//:.vale/project/CoinedTerms.yml",
+    ],
+    config = "testdata/coined_terms/vale.ini",
+)
+
+vale_test(
+    name = "proof_vale_coined_terms",
+    srcs = [
+        "testdata/coined_terms/bad.md",
+        "//:.vale/project/CoinedTerms.yml",
+    ],
+    config = "testdata/coined_terms/vale.ini",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "vale_coined_terms_flagged_test",
+    pattern = "project\\.CoinedTerms",
+    test = ":proof_vale_coined_terms",
+)
+
 cspell_test(
     name = "cspell_local_vocabulary_test",
     srcs = [

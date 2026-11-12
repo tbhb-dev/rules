@@ -52,6 +52,12 @@ exports_files(
     visibility = ["//repo/tests:__pkg__"],
 )
 
+# For //lint/tests's coined-terms fixture.
+exports_files(
+    [".vale/project/CoinedTerms.yml"],
+    visibility = ["//lint/tests:__pkg__"],
+)
+
 # For //tools's vale_test and vale_sync.
 exports_files(
     [
