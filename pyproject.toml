@@ -66,9 +66,9 @@ max-complexity-allowed = 15
 # tools is a namespace package (no __init__.py), which deptry cannot tell
 # from a third-party module.
 known_first_party = ["tools", "repo"]
-# Tests import the development groups (pytest, hypothesis), which is what
-# those groups are for, so deptry would report each as misplaced.
-extend_exclude = ["(.*/)?test_[^/]*\\.py"]
+# Tests and conftest files import the development groups (pytest, hypothesis),
+# which is what those groups are for, so deptry would report each as misplaced.
+extend_exclude = ["(.*/)?(test_[^/]*|conftest)\\.py"]
 
 [tool.pylint.main]
 # Recursive discovery lets pylint walk test directories that hold no
