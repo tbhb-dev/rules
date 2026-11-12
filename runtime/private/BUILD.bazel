@@ -4,6 +4,7 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("//repo:defs.bzl", "repo_files")
 load(":python_mismatch_tests.bzl", "python_mismatch_test_suite")
+load(":python_sync_tests.bzl", "python_sync_test_suite")
 
 repo_files()
 
@@ -36,6 +37,8 @@ bzl_library(
 )
 
 python_mismatch_test_suite(name = "python_mismatch_tests")
+
+python_sync_test_suite(name = "python_sync_tests")
 
 bzl_library(
     name = "env_info",
