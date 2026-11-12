@@ -137,6 +137,21 @@ gitleaks_history_scenario_test(
     subject = ":history_subject",
 )
 
+[
+    gitleaks_history_scenario_test(
+        name = "history_" + scenario + "_test",
+        expected_head = "head",
+        expected_scan = "gitleaks_history: scanning HEAD^1..HEAD (2 commits): the pull request's commits",
+        scenario = scenario,
+        subject = ":history_subject",
+        subject_args = ["--merge-range"],
+    )
+    for scenario in [
+        "deletion_only",
+        "rename_only",
+    ]
+]
+
 # A key on another branch fails the default scan of every ref, and passes a
 # scan limited to the checked-out branch.
 gitleaks_history_scenario_test(
@@ -158,6 +173,32 @@ gitleaks_history_scenario_test(
         "no_commits",
         "other_branch",
         "secret",
+    ]
+]
+
+# A successful tool that scans nothing must still fail on added text or
+# binary content, and when Git cannot read the selected range.
+gitleaks_history(
+    name = "history_zero_subject",
+    tags = ["manual"],
+    tool = ":fake_tool.sh",
+)
+
+[
+    gitleaks_history_scenario_test(
+        name = "proof_history_zero_" + scenario,
+        expected_head = "head",
+        expected_scan = "gitleaks_history: scanning HEAD^1..HEAD (2 commits): the pull request's commits",
+        scenario = scenario,
+        subject = ":history_zero_subject",
+        subject_args = ["--merge-range"],
+        tags = PROOF_TAGS,
+    )
+    for scenario in [
+        "range_added",
+        "range_binary",
+        "range_corrupt",
+        "range_rename_added",
     ]
 ]
 
@@ -318,6 +359,10 @@ PROOF_REASONS = {
     "proof_history_range_linear": "leaks found: [1-9]",
     "proof_history_range_secret": "leaks found: [1-9]",
     "proof_history_secret": "leaks found: [1-9]",
+    "proof_history_zero_range_added": "gitleaks_history: FAIL: gitleaks scanned 0 commits of a history with .*content, which proves nothing",
+    "proof_history_zero_range_binary": "gitleaks_history: FAIL: gitleaks scanned 0 commits of a history with .*content, which proves nothing",
+    "proof_history_zero_range_corrupt": "gitleaks_history: FAIL: git cannot read the history",
+    "proof_history_zero_range_rename_added": "gitleaks_history: FAIL: gitleaks scanned 0 commits of a history with .*content, which proves nothing",
     "proof_shellcheck_empty": "shell_select: no shell scripts found, so nothing was checked",
     "proof_shfmt_empty": "shell_select: no shell scripts found, so nothing was checked",
     "proof_text_secret": "leaks found: [1-9]",
