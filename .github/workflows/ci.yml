@@ -109,7 +109,12 @@ jobs:
           # The Swift module and its smoke consumer need Xcode, so they have a
           # job of their own on a GitHub-hosted macOS image and stay out of the
           # `bazel` job's matrix. The module is tested through the consumer.
-          matrix="$(jq -c 'map(select(.id | IN("swift", "swift-smoke") | not))' <<<"${selected}")"
+          # GitHub Actions rejects an empty matrix for a change confined to Swift.
+          # Keep the root checks running when only the Apple job was selected.
+          matrix="$(jq -c '
+            map(select(.id | IN("swift", "swift-smoke") | not))
+            | if length == 0 then [{id: "root", dir: "."}] else . end
+          ' <<<"${selected}")"
           apple="$(jq -r 'any(.[]; .id == "swift-smoke")' <<<"${selected}")"
           echo "workspaces=${matrix}" >>"${GITHUB_OUTPUT}"
           echo "apple=${apple}" >>"${GITHUB_OUTPUT}"
