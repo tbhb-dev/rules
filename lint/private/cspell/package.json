@@ -3,6 +3,6 @@
   "private": true,
   "description": "The cspell pin behind @tbhb_rules//lint:defs.bzl cspell_test. Its dictionaries, golang and python among them, come from @cspell/cspell-bundled-dicts.",
   "dependencies": {
-    "cspell": "10.4.0"
+    "cspell": "10.4.1"
   }
 }
