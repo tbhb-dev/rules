@@ -367,7 +367,7 @@ jobs:
             echo "The pull request event carries no title to scan." >&2
             exit 1
           fi
-          text="${RUNNER_TEMP}/pr-private-names.txt"
+          text="${RUNNER_TEMP}/pr-text.txt"
           printf '%s\n\n%s\n' "${PR_TITLE}" "${PR_BODY}" >"${text}"
           bazelisk run @tbhb_rules//lint:private_names -- --text <"${text}"
 
