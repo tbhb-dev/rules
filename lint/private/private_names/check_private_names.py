@@ -10,7 +10,6 @@ import os
 import re
 import subprocess  # nosec B404
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -85,15 +84,9 @@ def check_text(text: str, names: set[str], location: str) -> int:
     return count
 
 
-def committed_excludes() -> list[str]:
-    path = (
-        Path(git("rev-parse", "--show-toplevel").strip())
-        / ".github/private-names-exclude.txt"
-    )
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except FileNotFoundError:
-        return []
+def committed_excludes(base: str) -> list[str]:
+    path = ".github/private-names-exclude.txt"
+    lines = git("show", f"{base}:{path}", check=False).splitlines()
     patterns: list[str] = []
     reason = ""
     for number, raw in enumerate(lines, 1):
@@ -103,7 +96,7 @@ def committed_excludes() -> list[str]:
         elif line:
             if not reason:
                 msg = (
-                    f".github/private-names-exclude.txt:{number}: "
+                    f"{base}:{path}:{number}: "
                     "exclusion glob requires a reason comment directly above it"
                 )
                 raise ValueError(msg)
@@ -119,6 +112,7 @@ def check_range(base: str, head: str, names: set[str], excludes: list[str]) -> i
     # cannot turn a bad range into a successful scan of no commits.
     base = git("rev-parse", "--verify", "--end-of-options", base + "^{commit}").strip()
     head = git("rev-parse", "--verify", "--end-of-options", head + "^{commit}").strip()
+    excludes = [*excludes, *committed_excludes(base)]
     commits = git("rev-list", "--reverse", f"{base}..{head}").splitlines()
     count = 0
     for sha in commits:
@@ -175,7 +169,6 @@ def main(argv: list[str] | None = None) -> int:
             count = check_text(sys.stdin.read(), names, "text")
             print(f"private_names: {count} problems in text checked")
             return int(count > 0)
-        excludes.extend(committed_excludes())
         return check_range(args.revisions[0], args.revisions[1], names, excludes)
     except ValueError as error:
         print(f"private_names: FAIL: {error}", file=sys.stderr)

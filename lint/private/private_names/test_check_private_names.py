@@ -306,8 +306,6 @@ def test_excluded_path(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    Path("testdata").mkdir()
-    Path("testdata/fixture.txt").write_text(PRIVATE, encoding="utf-8")
     if source in {"file", "both"}:
         Path(".github").mkdir()
         Path(".github/private-names-exclude.txt").write_text(
@@ -316,6 +314,9 @@ def test_excluded_path(
             "# Another fixture directory.\nother/*\n",
             encoding="utf-8",
         )
+        repo = commit("exclusions")
+    Path("testdata").mkdir()
+    Path("testdata/fixture.txt").write_text(PRIVATE, encoding="utf-8")
     if source == "both":
         Path("fixtures").mkdir()
         Path("fixtures/another.txt").write_text(PRIVATE, encoding="utf-8")
@@ -323,17 +324,29 @@ def test_excluded_path(
         pattern = "testdata/*" if source == "environment" else "fixtures/*"
         monkeypatch.setenv("PRIVATE_NAMES_EXCLUDE", f" unused/*, {pattern}\n ")
     commit("fixture")
-    # Find the committed file at the root even when invoked in a subdirectory.
+    if source in {"file", "both"}:
+        # Neither the head nor an uncommitted edit can change the base's entry.
+        Path(".github/private-names-exclude.txt").unlink()
+        commit("remove exclusions")
+        Path(".github/private-names-exclude.txt").write_text(
+            "invalid/*\n", encoding="utf-8"
+        )
+    count = 1 if source == "environment" else 2
+    # Read the base's file at the root even when invoked in a subdirectory.
     monkeypatch.chdir("testdata")
     run_checker(
-        [repo, "HEAD"], 0, "private_names: 1 commits checked\n", capsys, monkeypatch
+        [repo, "HEAD"],
+        0,
+        f"private_names: {count} commits checked\n",
+        capsys,
+        monkeypatch,
     )
     sha = commit(PRIVATE)
     run_checker(
         [repo, "HEAD"],
         1,
         f"private_names: FAIL: {sha} message: {problem(PRIVATE)}\n"
-        "private_names: 1 problems in 2 commits checked\n",
+        f"private_names: 1 problems in {count + 1} commits checked\n",
         capsys,
         monkeypatch,
     )
@@ -343,6 +356,33 @@ def test_excluded_path(
         1,
         f"private_names: FAIL: text: {problem(PRIVATE)}\n"
         "private_names: 1 problems in text checked\n",
+        capsys,
+        monkeypatch,
+    )
+
+
+@pytest.mark.parametrize("committed", [False, True])
+def test_head_cannot_add_committed_exclusion(
+    repo: str,
+    committed: bool,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    Path("testdata").mkdir()
+    Path("testdata/fixture.txt").write_text(PRIVATE, encoding="utf-8")
+    Path(".github").mkdir()
+    exclusion = Path(".github/private-names-exclude.txt")
+    contents = "# Reviewed checker fixture.\ntestdata/*\n"
+    if committed:
+        exclusion.write_text(contents, encoding="utf-8")
+    sha = commit("fixture")
+    if not committed:
+        exclusion.write_text(contents, encoding="utf-8")
+    run_checker(
+        [repo, "HEAD"],
+        1,
+        f"private_names: FAIL: {sha} testdata/fixture.txt:1: {problem(PRIVATE)}\n"
+        "private_names: 1 problems in 1 commits checked\n",
         capsys,
         monkeypatch,
     )
@@ -365,7 +405,12 @@ def test_committed_exclusion_requires_reason(
 ) -> None:
     Path(".github").mkdir()
     Path(".github/private-names-exclude.txt").write_text(contents, encoding="utf-8")
-    commit("exclusions")
+    repo = commit("exclusions")
+    # A valid head file cannot repair a malformed base file for this range.
+    Path(".github/private-names-exclude.txt").write_text(
+        "# Reviewed checker fixture.\ntestdata/*\n", encoding="utf-8"
+    )
+    commit("explain exclusions")
     # An environment exclusion cannot bypass validation of the committed file.
     monkeypatch.setenv("PRIVATE_NAMES_EXCLUDE", "*")
     run_checker(
@@ -374,11 +419,19 @@ def test_committed_exclusion_requires_reason(
         (
             "",
             (
-                f"private_names: FAIL: .github/private-names-exclude.txt:"
+                f"private_names: FAIL: {repo}:.github/private-names-exclude.txt:"
                 f"{len(contents.splitlines())}: "
                 "exclusion glob requires a reason comment directly above it\n"
             ),
         ),
+        capsys,
+        monkeypatch,
+    )
+    monkeypatch.setattr(sys, "stdin", io.StringIO("public"))
+    run_checker(
+        ["--text"],
+        0,
+        "private_names: 0 problems in text checked\n",
         capsys,
         monkeypatch,
     )
@@ -394,6 +447,7 @@ def test_empty_or_absent_committed_exclusions(
     if contents is not None:
         Path(".github").mkdir()
         Path(".github/private-names-exclude.txt").write_text(contents, encoding="utf-8")
+        repo = commit("exclusions")
     Path("new.txt").write_text(PRIVATE, encoding="utf-8")
     sha = commit("fixture")
     run_checker(

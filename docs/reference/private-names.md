@@ -10,8 +10,8 @@ generated:
     model: openai:gpt-6.1-sol
     effort: high
     surface: exec
-    session: sha-256-64:1bd327e1b50bc11c
-    at: "2026-11-12T00:42:43Z"
+    session: sha-256-64:e90e187a96fd228a
+    at: "2026-11-12T01:10:33Z"
 ---
 
 # Private repository names
@@ -44,7 +44,7 @@ If the running repository's `origin` name satisfies the private-name rule, the c
 
 ## Fixture exclusions
 
-Commit an optional `.github/private-names-exclude.txt` file in the checked repository. The checker reads it from the checkout's root when checking a range, using the file from the current checkout for the entire range. Put one path glob per line. The checker ignores blank lines and `#` comment lines. Every glob must have a nonempty `#` comment on the immediately preceding line explaining the reason for the exclusion. If a reason is missing, the checker fails and reports the file and line number. Without the file, only environment exclusions apply. This repository's file excludes the checker's own tests because they hold the reviewed suffix-rule placeholder.
+Commit an optional `.github/private-names-exclude.txt` file in the checked repository. The checker reads it from the range's base commit with `git show BASE:.github/private-names-exclude.txt` and applies it to the entire range. A pull request cannot exempt itself: a new entry takes effect only after it merges. Put one path glob per line. The checker ignores blank lines and `#` comment lines. Every glob must have a nonempty `#` comment on the immediately preceding line explaining the reason for the exclusion. If a reason is missing, the checker fails and reports the base commit, file and line number. Without the file in the base, only environment exclusions apply. Text mode reads no committed file. This repository's file excludes the checker's own tests because they hold the reviewed suffix-rule placeholder.
 
 A repository with fixtures under `testdata/` can commit:
 
