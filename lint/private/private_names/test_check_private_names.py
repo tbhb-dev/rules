@@ -13,9 +13,8 @@ import pytest
 
 from lint.private.private_names import check_private_names as checker
 
-# Construct example names so the tests pass the check they exercise.
-PRIVATE = "example" + "-private"
-OTHER = "another" + "-private"
+# The committed exclusion documents this reviewed suffix-rule placeholder.
+PRIVATE = "example-private"
 CONFIGURED = "internal-example"
 
 
@@ -59,7 +58,7 @@ def problem(token: str) -> str:
         ("_" + PRIVATE, set(), ["_" + PRIVATE]),
         ("[" + PRIVATE + "]", set(), [PRIVATE]),
         (" ".join([PRIVATE, PRIVATE.upper(), PRIVATE + ".git"]), set(), [PRIVATE]),
-        (f"{PRIVATE} {OTHER} {PRIVATE}", set(), [PRIVATE, OTHER]),
+        (f"{PRIVATE} {CONFIGURED} {PRIVATE}", {CONFIGURED}, [PRIVATE, CONFIGURED]),
         (PRIVATE, {PRIVATE}, [PRIVATE]),
         ("-private", {"-private"}, ["-private"]),
         ("one.two", {"one.two"}, ["one.two"]),
@@ -122,17 +121,18 @@ def commit(message: str) -> str:
 def run_checker(
     args: list[str],
     status: int,
-    output: str,
+    output: str | tuple[str, str],
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # The import exercises branch coverage; the subprocess proves the real
     # command's exit status, stdout and stderr match the same contract.
     text = sys.stdin.read() if "--text" in args else ""
+    stdout, stderr = (output, "") if isinstance(output, str) else output
     monkeypatch.setattr(sys, "stdin", io.StringIO(text))
     assert checker.main(args) == status
     captured = capsys.readouterr()
-    assert (captured.out, captured.err) == (output, "")
+    assert (captured.out, captured.err) == (stdout, stderr)
     result = subprocess.run(
         [sys.executable, str(Path(checker.__file__).resolve()), *args],
         input=text,
@@ -140,7 +140,7 @@ def run_checker(
         text=True,
         check=False,
     )
-    assert (result.returncode, result.stdout, result.stderr) == (status, output, "")
+    assert (result.returncode, result.stdout, result.stderr) == (status, stdout, stderr)
 
 
 def test_clean_and_empty_range(
@@ -299,15 +299,32 @@ def test_no_origin_and_caller_workspace(
     )
 
 
+@pytest.mark.parametrize("source", ["environment", "file", "both"])
 def test_excluded_path(
     repo: str,
+    source: str,
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     Path("testdata").mkdir()
     Path("testdata/fixture.txt").write_text(PRIVATE, encoding="utf-8")
+    if source in {"file", "both"}:
+        Path(".github").mkdir()
+        Path(".github/private-names-exclude.txt").write_text(
+            "# Fixture exclusions\n\n"
+            "  # Reviewed checker fixture.  \n  testdata/*  \n\n"
+            "# Another fixture directory.\nother/*\n",
+            encoding="utf-8",
+        )
+    if source == "both":
+        Path("fixtures").mkdir()
+        Path("fixtures/another.txt").write_text(PRIVATE, encoding="utf-8")
+    if source in {"environment", "both"}:
+        pattern = "testdata/*" if source == "environment" else "fixtures/*"
+        monkeypatch.setenv("PRIVATE_NAMES_EXCLUDE", f" unused/*, {pattern}\n ")
     commit("fixture")
-    monkeypatch.setenv("PRIVATE_NAMES_EXCLUDE", " unused/*, testdata/*\n ")
+    # Find the committed file at the root even when invoked in a subdirectory.
+    monkeypatch.chdir("testdata")
     run_checker(
         [repo, "HEAD"], 0, "private_names: 1 commits checked\n", capsys, monkeypatch
     )
@@ -317,6 +334,73 @@ def test_excluded_path(
         1,
         f"private_names: FAIL: {sha} message: {problem(PRIVATE)}\n"
         "private_names: 1 problems in 2 commits checked\n",
+        capsys,
+        monkeypatch,
+    )
+    monkeypatch.setattr(sys, "stdin", io.StringIO(PRIVATE))
+    run_checker(
+        ["--text"],
+        1,
+        f"private_names: FAIL: text: {problem(PRIVATE)}\n"
+        "private_names: 1 problems in text checked\n",
+        capsys,
+        monkeypatch,
+    )
+
+
+@pytest.mark.parametrize(
+    "contents",
+    [
+        "testdata/*\n",
+        "# Reason\n\ntestdata/*\n",
+        "#\ntestdata/*\n",
+        "# Reason\ntestdata/*\nother/*\n",
+    ],
+)
+def test_committed_exclusion_requires_reason(
+    repo: str,
+    contents: str,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    Path(".github").mkdir()
+    Path(".github/private-names-exclude.txt").write_text(contents, encoding="utf-8")
+    commit("exclusions")
+    # An environment exclusion cannot bypass validation of the committed file.
+    monkeypatch.setenv("PRIVATE_NAMES_EXCLUDE", "*")
+    run_checker(
+        [repo, "HEAD"],
+        1,
+        (
+            "",
+            (
+                f"private_names: FAIL: .github/private-names-exclude.txt:"
+                f"{len(contents.splitlines())}: "
+                "exclusion glob requires a reason comment directly above it\n"
+            ),
+        ),
+        capsys,
+        monkeypatch,
+    )
+
+
+@pytest.mark.parametrize("contents", [None, "", "# Heading\n\n # Comment\n \n"])
+def test_empty_or_absent_committed_exclusions(
+    repo: str,
+    contents: str | None,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    if contents is not None:
+        Path(".github").mkdir()
+        Path(".github/private-names-exclude.txt").write_text(contents, encoding="utf-8")
+    Path("new.txt").write_text(PRIVATE, encoding="utf-8")
+    sha = commit("fixture")
+    run_checker(
+        [repo, "HEAD"],
+        1,
+        f"private_names: FAIL: {sha} new.txt:1: {problem(PRIVATE)}\n"
+        "private_names: 1 problems in 1 commits checked\n",
         capsys,
         monkeypatch,
     )
@@ -349,17 +433,18 @@ def test_merge_resolution_and_message(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("PRIVATE_NAMES", CONFIGURED)
     git("checkout", "-qb", "topic")
     commit("topic change")
     git("checkout", "-q", "main")
     commit("main change")
     git("merge", "--no-ff", "--no-commit", "topic")
     Path("resolved.txt").write_text(PRIVATE, encoding="utf-8")
-    sha = commit("merge\n\n" + OTHER)
+    sha = commit("merge\n\n" + CONFIGURED)
     run_checker(
         [repo, "HEAD"],
         1,
-        f"private_names: FAIL: {sha} message: {problem(OTHER)}\n"
+        f"private_names: FAIL: {sha} message: {problem(CONFIGURED)}\n"
         f"private_names: FAIL: {sha} resolved.txt:1: {problem(PRIVATE)}\n"
         "private_names: 2 problems in 3 commits checked\n",
         capsys,

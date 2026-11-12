@@ -10,8 +10,8 @@ generated:
     model: openai:gpt-6.1-sol
     effort: high
     surface: exec
-    session: sha-256-64:175bf24d1c155640
-    at: "2026-11-11T20:29:31Z"
+    session: sha-256-64:1bd327e1b50bc11c
+    at: "2026-11-12T00:42:43Z"
 ---
 
 # Private repository names
@@ -44,4 +44,13 @@ If the running repository's `origin` name satisfies the private-name rule, the c
 
 ## Fixture exclusions
 
-`PRIVATE_NAMES_EXCLUDE` accepts newline- or comma-separated path globs, relative to the repository root. Python's case-sensitive `fnmatch` rules apply, and `*` can match `/`. The checker skips added lines in matching paths. It still checks commit messages and stdin. To allow fixture content under `testdata/`, set `PRIVATE_NAMES_EXCLUDE='testdata/*'` in the repository configuration variable for workflow runs or in the environment for local runs. At runtime, this repository's tests construct tokens from separate parts and pass without exclusions.
+Commit an optional `.github/private-names-exclude.txt` file in the checked repository. The checker reads it from the checkout's root when checking a range, using the file from the current checkout for the entire range. Put one path glob per line. The checker ignores blank lines and `#` comment lines. Every glob must have a nonempty `#` comment on the immediately preceding line explaining the reason for the exclusion. If a reason is missing, the checker fails and reports the file and line number. Without the file, only environment exclusions apply. This repository's file excludes the checker's own tests because they hold the reviewed suffix-rule placeholder.
+
+A repository with fixtures under `testdata/` can commit:
+
+```text
+# Fixtures contain reviewed examples for the checker.
+testdata/*
+```
+
+`PRIVATE_NAMES_EXCLUDE` also accepts newline- or comma-separated path globs through a repository configuration variable for workflow runs or the environment for local runs. Both sources add to the same exclusion list. Globs are relative to the repository root. Python's case-sensitive `fnmatch` rules apply, and `*` can match `/`. The checker skips only added lines in matching paths. It still checks every commit message and stdin passed with `--text`.

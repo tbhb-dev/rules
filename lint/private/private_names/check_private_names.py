@@ -10,6 +10,7 @@ import os
 import re
 import subprocess  # nosec B404
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -84,6 +85,35 @@ def check_text(text: str, names: set[str], location: str) -> int:
     return count
 
 
+def committed_excludes() -> list[str]:
+    path = (
+        Path(git("rev-parse", "--show-toplevel").strip())
+        / ".github/private-names-exclude.txt"
+    )
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return []
+    patterns: list[str] = []
+    reason = ""
+    for number, raw in enumerate(lines, 1):
+        line = raw.strip()
+        if line.startswith("#"):
+            reason = line[1:].strip()
+        elif line:
+            if not reason:
+                msg = (
+                    f".github/private-names-exclude.txt:{number}: "
+                    "exclusion glob requires a reason comment directly above it"
+                )
+                raise ValueError(msg)
+            patterns.append(line)
+            reason = ""
+        else:
+            reason = ""
+    return patterns
+
+
 def check_range(base: str, head: str, names: set[str], excludes: list[str]) -> int:
     # Resolve both endpoints first, so an invalid or option-like revision
     # cannot turn a bad range into a successful scan of no commits.
@@ -145,7 +175,11 @@ def main(argv: list[str] | None = None) -> int:
             count = check_text(sys.stdin.read(), names, "text")
             print(f"private_names: {count} problems in text checked")
             return int(count > 0)
+        excludes.extend(committed_excludes())
         return check_range(args.revisions[0], args.revisions[1], names, excludes)
+    except ValueError as error:
+        print(f"private_names: FAIL: {error}", file=sys.stderr)
+        return 1
     except subprocess.CalledProcessError, OSError:
         print(
             "private_names: FAIL: git cannot read the repository or range",

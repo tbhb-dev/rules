@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# Holds the reviewed suffix-rule placeholder for the checker's own tests.
+lint/private/private_names/test_check_private_names.py
