@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(gh pr create:*)",
+      "Bash(gh pr edit:*)"
+    ],
+    "allow": [
+      "mcp__demo"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "demo"
+  ]
+}

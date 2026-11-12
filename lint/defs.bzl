@@ -14,6 +14,7 @@ load(
     _tombi_test = "tombi_test",
     _zizmor_test = "zizmor_test",
 )
+load("//lint/private:claude_settings.bzl", _claude_settings_test = "claude_settings_test")
 load("//lint/private:codeowners.bzl", _codeowners_test = "codeowners_test")
 load("//lint/private:cspell.bzl", _cspell_test = "cspell_test")
 load("//lint/private:decision_records.bzl", _decision_records_test = "decision_records_test")
@@ -27,6 +28,7 @@ load("//lint/private:vale.bzl", _vale_sync = "vale_sync", _vale_test = "vale_tes
 
 actionlint_test = _actionlint_test
 bats_test = _bats_test
+claude_settings_test = _claude_settings_test
 codeowners_test = _codeowners_test
 cspell_test = _cspell_test
 decision_records_test = _decision_records_test

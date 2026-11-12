@@ -7,6 +7,7 @@ load("//format:defs.bzl", "format", "format_test", "formatter")
 load(
     "//lint:defs.bzl",
     "actionlint_test",
+    "claude_settings_test",
     "cspell_test",
     "decision_records_test",
     "editorconfig_checker_test",
@@ -58,13 +59,14 @@ exports_files(
     visibility = ["//lint/tests:__pkg__"],
 )
 
-# For //tools's vale_test and vale_sync.
+# For //tools's vale_test and vale_sync, and the settings unit test config.
 exports_files(
     [
         ".vale.ini",
         "pyproject.toml",
     ],
     visibility = [
+        "//lint/private/claude_settings:__pkg__",
         "//repo/baseline:__pkg__",
         "//tools:__pkg__",
     ],
@@ -363,6 +365,11 @@ decision_records_test(
     srcs = [":repo_files"],
 )
 
+claude_settings_test(
+    name = "claude_settings",
+    srcs = [":repo_files"],
+)
+
 reuse_test(
     name = "reuse_test",
     srcs = [":repo_files"],
@@ -387,8 +394,11 @@ exports_files(
     visibility = ["//repo/tests:__pkg__"],
 )
 
-# The root wildcard //:all also runs the baseline's integrity check.
+# The root wildcard //:all also runs the repository consistency suite.
 test_suite(
     name = "baseline_tests",
-    tests = ["//repo/baseline:manifest_test"],
+    tests = [
+        ":claude_settings",
+        "//repo/baseline:manifest_test",
+    ],
 )
