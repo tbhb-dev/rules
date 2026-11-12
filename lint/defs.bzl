@@ -20,6 +20,7 @@ load("//lint/private:decision_records.bzl", _decision_records_test = "decision_r
 load("//lint/private:gitleaks_history.bzl", _gitleaks_history = "gitleaks_history")
 load("//lint/private:mutation_oses.bzl", _mutation_oses_test = "mutation_oses_test")
 load("//lint/private:okf_docs.bzl", _okf_docs_test = "okf_docs_test")
+load("//lint/private:required_status_checks.bzl", _required_status_checks_test = "required_status_checks_test")
 load("//lint/private:reuse.bzl", _reuse_test = "reuse_test")
 load("//lint/private:shell.bzl", _shellcheck_test = "shellcheck_test", _shfmt_test = "shfmt_test")
 load("//lint/private:tree_check.bzl", _tree_check_test = "tree_check_test")
@@ -35,6 +36,7 @@ gitleaks_history = _gitleaks_history
 gitleaks_test = _gitleaks_test
 mutation_oses_test = _mutation_oses_test
 okf_docs_test = _okf_docs_test
+required_status_checks_test = _required_status_checks_test
 reuse_test = _reuse_test
 rumdl_test = _rumdl_test
 ryl_test = _ryl_test

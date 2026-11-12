@@ -1,0 +1,367 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# Main quality gate. Each gate runs as its own job so the PR status shows
+# which one fired, and a final `conclusion` job gives branch protection one
+# stable required check. Bazel pins and runs every tool.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Which workspaces a change can affect. Each changed file belongs to the
+  # deepest workspace directory that holds it, and anything outside the
+  # nested ones belongs to the root (workflows, shared rules and configs
+  # included). A workspace runs when it owns a changed file or `deps` names
+  # the owner: the ids of the local modules its MODULE.bazel overrides
+  # (root's python is a dev dependency, which only root's own tests see).
+  # Pushes to main and any other event run every workspace.
+  plan:
+    name: plan
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      pull-requests: read  # the pull request's changed files, from the GitHub API
+    outputs:
+      workspaces: ${{ steps.plan.outputs.workspaces }}
+      apple: ${{ steps.plan.outputs.apple }}
+      swift: ${{ steps.plan.outputs.swift }}
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Choose the workspaces to test
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          WORKSPACES: |
+            [
+              {"id": "root", "dir": ".", "deps": ["python"]},
+              {"id": "smoke", "dir": "e2e/smoke", "deps": ["root"]},
+              {"id": "d2", "dir": "diagrams/d2", "deps": ["root"]},
+              {"id": "d2-smoke", "dir": "diagrams/d2/e2e/smoke", "deps": ["root", "d2"]},
+              {"id": "go", "dir": "go", "deps": ["root"]},
+              {"id": "go-smoke", "dir": "go/e2e/smoke", "deps": ["root", "go"]},
+              {"id": "python", "dir": "python", "deps": ["root"]},
+              {"id": "python-single", "dir": "python/e2e/single", "deps": ["root", "python"]},
+              {"id": "python-workspace", "dir": "python/e2e/workspace", "deps": ["root", "python"]},
+              {"id": "ansible", "dir": "ansible", "deps": ["root", "python"]},
+              {"id": "ansible-e2e", "dir": "ansible/e2e", "deps": ["root", "python", "ansible"]},
+              {"id": "typescript", "dir": "typescript", "deps": ["root"]},
+              {"id": "typescript-smoke", "dir": "typescript/e2e/smoke", "deps": ["root", "typescript"]},
+              {"id": "typescript-bare", "dir": "typescript/e2e/bare", "deps": ["root", "typescript"]},
+              {"id": "cloudflare", "dir": "cloudflare", "deps": ["root", "typescript"]},
+              {"id": "cloudflare-smoke", "dir": "cloudflare/e2e/smoke", "deps": ["root", "typescript", "cloudflare"]},
+              {"id": "playwright", "dir": "playwright", "deps": ["root"]},
+              {"id": "playwright-smoke", "dir": "playwright/e2e/smoke", "deps": ["root", "playwright"]},
+              {"id": "astro", "dir": "astro", "deps": ["root", "typescript"]},
+              {"id": "astro-smoke", "dir": "astro/e2e/smoke", "deps": ["root", "typescript", "astro"]},
+              {"id": "storybook", "dir": "storybook", "deps": ["root", "typescript", "playwright"]},
+              {
+                "id": "storybook-smoke",
+                "dir": "storybook/e2e/smoke",
+                "deps": ["root", "typescript", "playwright", "storybook"]
+              },
+              {"id": "tokens", "dir": "tokens", "deps": ["root", "typescript"]},
+              {"id": "tokens-smoke", "dir": "tokens/e2e/smoke", "deps": ["root", "typescript", "playwright", "tokens"]},
+              {"id": "apple-smoke", "dir": "apple/e2e/smoke", "deps": ["root"]},
+              {"id": "swift", "dir": "swift", "deps": ["root"]},
+              {"id": "swift-smoke", "dir": "swift/e2e/smoke", "deps": ["root", "swift"]}
+            ]
+        run: |
+          files="${RUNNER_TEMP}/changed"
+          if [ "${EVENT}" = pull_request ]; then
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" \
+              --jq '.[] | .filename, (.previous_filename // empty)' >"${files}"
+          else
+            : >"${files}"
+          fi
+          # The files API lists at most 3000; past that, test everything.
+          count="$(wc -l <"${files}")"
+          if [ "${EVENT}" != pull_request ] || [ "${count}" -ge 3000 ]; then
+            printf '.github/workflows/ci.yml\n' >"${files}"
+          fi
+          selected="$(jq -c --rawfile files "${files}" '
+            . as $ws
+            | ($files | split("\n") | map(select(length > 0))) as $paths
+            | def owner($p):
+                ([$ws[] | select(.dir as $d | $d != "." and ($p | startswith($d + "/")))]
+                  | max_by(.dir | length) // {id: "root"}) | .id;
+              ($paths | map(owner(.)) | unique) as $owners
+            | [$ws[]
+                | select(.id as $id | .deps as $deps
+                    | $owners | any(. == $id or (. as $o | $deps | index($o) != null)))
+                | {id, dir}]
+          ' <<<"${WORKSPACES}")"
+          # Apple and Swift workspaces need Xcode, so their smoke consumers have
+          # jobs of their own on a GitHub-hosted macOS runner.
+          # GitHub fails an empty matrix; Apple or Swift changes keep root checks running.
+          matrix="$(jq -c '
+            map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke"))
+            | if length == 0 then [{id: "root", dir: "."}] else . end
+          ' <<<"${selected}")"
+          apple="$(jq -r 'any(.[]; .id == "apple-smoke")' <<<"${selected}")"
+          swift="$(jq -r 'any(.[]; .id == "swift-smoke")' <<<"${selected}")"
+          echo "workspaces=${matrix}" >>"${GITHUB_OUTPUT}"
+          printf 'apple=%s\nswift=%s\n' "${apple}" "${swift}" >>"${GITHUB_OUTPUT}"
+          ids="$(jq -r 'map(.id) | join(", ")' <<<"${selected}")"
+          echo "Testing: ${ids}" >>"${GITHUB_STEP_SUMMARY}"
+
+  # One writer per platform, from the root whose module files form the key.
+  # An exact immutable cache already contains the complete fetch list.
+  bazel:
+    name: "bazel (${{ matrix.os }}, ${{ matrix.workspace.id }})"
+    needs: [plan]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-26.04, ubuntu-26.04-arm, macos-26, windows-2025]
+        workspace: ${{ fromJSON(needs.plan.outputs.workspaces) }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Hardens the runner, sets up Bazel and fetches, with the platform
+      # workarounds; see .github/actions/README.md. It follows checkout,
+      # which a local action needs.
+      - name: Set up Bazel for CI
+        uses: ./.github/actions/setup-bazel-ci
+        with:
+          disk-cache: ${{ github.workflow }}-${{ matrix.os }}-${{ matrix.workspace.id }}
+          cache-save: false
+          working-directory: ${{ matrix.workspace.dir }}
+
+      - name: Test
+        working-directory: ${{ matrix.workspace.dir }}
+        run: bazelisk test --config=ci //...
+
+      # Mutation reports rerun along the dependency graph: an edit reruns
+      # its unit and the dependents, and the others stay cached. mutmut does
+      # not run on Windows.
+      - name: Prove incremental mutation
+        if: matrix.workspace.id == 'python-workspace' && runner.os != 'Windows'
+        run: python/e2e/incremental.sh
+
+      # govulncheck_test needs the network and gives a different answer as
+      # advisories are published, so it is manual and `//...` skips it. The
+      # smoke module's proofs of it name a vulnerable version of one module,
+      # which no later advisory changes, and run on every platform here. Its
+      # own module's scan is the `repo` job's.
+      - name: Prove govulncheck
+        if: matrix.workspace.id == 'go-smoke'
+        working-directory: ${{ matrix.workspace.dir }}
+        run: bazelisk test --config=ci //:govulncheck_proofs
+
+      # A failed run's test logs, so a failure that does not recur can still
+      # be read.
+      - name: Keep the test logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: testlogs-${{ matrix.os }}-${{ matrix.workspace.id }}
+          path: |
+            ${{ matrix.workspace.dir }}/.bazel-testlogs/**/test.log
+            ${{ matrix.workspace.dir }}/.bazel-testlogs/**/test.xml
+          # The convenience links are dotfiles, which the action skips by default.
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+  # The Swift and Apple smoke consumer needs Xcode, so it runs only on the
+  # GitHub-hosted xcode-27 image, never on a self-hosted runner. The image's
+  # default Xcode is 27.1, so the job selects 27.2 (build 27B52) and prints
+  # `xcodebuild -version` before the build. The job always runs, so that
+  # `conclusion` sees a success when the plan skipped the workspace; its
+  # steps run only when the plan chose it.
+  apple:
+    name: "apple (apple-smoke)"
+    needs: [plan]
+    runs-on: xcode-27
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      RUN_APPLE: ${{ needs.plan.outputs.apple }}
+    steps:
+      - name: Checkout
+        if: env.RUN_APPLE == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode 27.2
+        if: env.RUN_APPLE == 'true'
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
+          xcodebuild -version | tee "${RUNNER_TEMP}/xcodebuild-version"
+          grep -qx 'Build version 27B52' "${RUNNER_TEMP}/xcodebuild-version"
+
+      - name: Set up Bazel for CI
+        if: env.RUN_APPLE == 'true'
+        uses: ./.github/actions/setup-bazel-ci
+        with:
+          disk-cache: ${{ github.workflow }}-apple-smoke
+          cache-save: false
+          # The default list names tools of the other workspaces.
+          targets: //...
+          working-directory: apple/e2e/smoke
+
+      - name: Test
+        if: env.RUN_APPLE == 'true'
+        working-directory: apple/e2e/smoke
+        run: bazelisk test --config=ci //...
+
+      - name: Keep the test logs
+        if: failure() && env.RUN_APPLE == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: testlogs-apple-smoke
+          path: |
+            apple/e2e/smoke/.bazel-testlogs/**/test.log
+            apple/e2e/smoke/.bazel-testlogs/**/test.xml
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+  # The Swift smoke uses the same Xcode image and steps as the Apple smoke.
+  swift:
+    name: "swift (swift-smoke)"
+    needs: [plan]
+    runs-on: xcode-27
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      RUN_SWIFT: ${{ needs.plan.outputs.swift }}
+    steps:
+      - name: Checkout
+        if: env.RUN_SWIFT == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode 27.2
+        if: env.RUN_SWIFT == 'true'
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
+          xcodebuild -version | tee "${RUNNER_TEMP}/xcodebuild-version"
+          grep -qx 'Build version 27B52' "${RUNNER_TEMP}/xcodebuild-version"
+
+      - name: Set up Bazel for CI
+        if: env.RUN_SWIFT == 'true'
+        uses: ./.github/actions/setup-bazel-ci
+        with:
+          disk-cache: ${{ github.workflow }}-swift-smoke
+          cache-save: false
+          # The default list names tools of the other workspaces.
+          targets: //...
+          working-directory: swift/e2e/smoke
+
+      - name: Test
+        if: env.RUN_SWIFT == 'true'
+        working-directory: swift/e2e/smoke
+        run: bazelisk test --config=ci //...
+
+      - name: Keep the test logs
+        if: failure() && env.RUN_SWIFT == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: testlogs-swift-smoke
+          path: |
+            swift/e2e/smoke/.bazel-testlogs/**/test.log
+            swift/e2e/smoke/.bazel-testlogs/**/test.xml
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+  # Checks that need Git history or the GitHub API, which no sandboxed test
+  # can see, in the shared workflow. The local path is for this repository
+  # only; a consumer pins tbhb-dev/rules, see .github/actions/README.md.
+  repo:
+    name: repo
+    permissions:
+      contents: read
+    uses: ./.github/workflows/repo-checks.yml
+    with:
+      gazelle-dirs: go go/e2e/smoke
+      govulncheck-target: //tests/self:govulncheck
+      govulncheck-working-directory: go
+      module-dirs: . ansible astro cloudflare diagrams/d2 go playwright python storybook tokens typescript
+      pnpm-audit-dirs: typescript cloudflare astro storybook tokens
+      pnpm-audit-workspace: typescript
+
+  # Consumers run the composite actions as `tbhb-dev/rules/...@<sha>`, which
+  # GitHub fetches from the source archive, so an `export-ignore` that drops
+  # one breaks every consumer while this repository's local-path uses pass.
+  # `uses:` can't take an expression, so this checks the archive itself.
+  archive:
+    name: archive
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fail if the source archive lacks an action
+        run: |
+          archived=$(git archive --format=tar HEAD | tar -t)
+          status=0
+          for action in .github/actions/*/action.yml; do
+            if ! grep -qxF "$action" <<<"$archived"; then
+              echo "::error file=$action::the source archive leaves out $action"
+              status=1
+            fi
+          done
+          exit "$status"
+
+  # One stable required check for branch protection. The job stays here, by
+  # that name, so the ruleset's required context does not change; the action
+  # holds the logic. `if: always()` runs it even when a needed job failed. It
+  # passes only when every needed job's result is exactly "success", so a gate
+  # that was skipped, cancelled or never finished cannot pass.
+  conclusion:
+    name: conclusion
+    if: always()
+    needs: [plan, bazel, apple, swift, repo, archive]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      # Only the actions, which a local action needs checked out.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions
+
+      - name: Fail if any needed job did not succeed
+        uses: ./.github/actions/ci-conclusion
+        with:
+          needs: ${{ toJSON(needs) }}
