@@ -58,7 +58,10 @@ exports_files(
         ".vale.ini",
         "pyproject.toml",
     ],
-    visibility = ["//tools:__pkg__"],
+    visibility = [
+        "//repo/baseline:__pkg__",
+        "//tools:__pkg__",
+    ],
 )
 
 # Every file of the repository, for the whole-tree checks below. Ignored
@@ -260,6 +263,11 @@ FORMATTERS = [
 # fix, and pnpm writes its own lockfiles. The nested modules are workspaces
 # of their own, which format themselves with these same formatters.
 FORMAT_EXCLUDE = [
+    # Preserve source snapshots and writer templates byte for byte.
+    "repo/baseline/files/*",
+    "repo/baseline/kinds/*",
+    "repo/baseline/visibility/*",
+    "repo/baseline/seed/*",
     "*/testdata/*",
     "ansible/*",
     "astro/*",
@@ -364,4 +372,10 @@ exports_files(
         "BUILD.bazel",
     ],
     visibility = ["//repo/tests:__pkg__"],
+)
+
+# The root wildcard //:all also runs the baseline's integrity check.
+test_suite(
+    name = "baseline_tests",
+    tests = ["//repo/baseline:manifest_test"],
 )

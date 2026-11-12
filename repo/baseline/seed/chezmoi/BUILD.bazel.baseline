@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//lint:defs.bzl", "gitleaks_history", "gitleaks_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files(exclude = ["home/**"])
+
+gitleaks_test(
+    name = "gitleaks_test",
+    srcs = [":repo_files"],
+    config = ".gitleaks.toml",
+)
+
+gitleaks_history(
+    name = "gitleaks_history",
+    config = ".gitleaks.toml",
+)

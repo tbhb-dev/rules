@@ -13,6 +13,22 @@
     "github>tbhb-dev/renovate-config//python.json5#5abdcea8af69138ab567e12bdbb291f44c41d8e7", // main
   ],
 
+  // Preserve the ignore paths inherited from the shared default preset.
+  ignorePaths: [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
+    "**/testdata/**",
+    "**/.mise/locks/**",
+    // The baseline changes only by reviewed sync from its sources.
+    "repo/baseline/**",
+  ],
+
   // The presets cover the rest of this tree: the bazel manager the literal
   // http_archive and http_file pins (pins/extensions.bzl, go/private/tools.bzl,
   // diagrams/d2/private/tools.bzl, MODULE.bazel) and dugite's git, gomod the

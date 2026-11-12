@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+repos:
+  - repo: local
+    hooks:
+      - id: size-check
+        name: size check
+        language: system
+        entry: bash size-check.sh
+        pass_filenames: false
+        always_run: true

@@ -13,3 +13,9 @@ tokens/pnpm-lock.yaml
 tokens/e2e/*/pnpm-lock.yaml
 typescript/pnpm-lock.yaml
 typescript/e2e/*/pnpm-lock.yaml
+
+# Baseline YAML retains source formatting and contains writer placeholders.
+repo/baseline/files/
+repo/baseline/kinds/
+repo/baseline/visibility/
+repo/baseline/seed/

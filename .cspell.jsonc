@@ -1,6 +1,8 @@
 {
   "language": "en",
   "ignorePaths": [
+    // Baseline source comments and template names use their own vocabularies.
+    "repo/baseline/{files,kinds,visibility,seed}/**/*",
     ".mise/**/*",
     ".rumdl_cache/**/*",
     ".vale/**/*",

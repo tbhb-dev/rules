@@ -1,0 +1,6 @@
+Copyright Tony Burns. All rights reserved.
+
+This software and its documentation are proprietary and confidential. No
+license, express or implied, is granted to use, copy, modify, distribute, or
+create derivative works of any part of it without the prior written permission
+of the copyright holder.

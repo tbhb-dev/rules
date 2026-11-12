@@ -1,0 +1,27 @@
+{
+  "language": "en",
+  "ignorePaths": [
+    ".mise/**/*",
+    ".rumdl_cache/**/*",
+    ".vale/**/*",
+    ".venv/**/*",
+    "bazel-*/**/*",
+    ".bazel-*/**/*",
+    "coverage.xml",
+    "go.sum",
+    "LICENSE",
+    "MODULE.bazel.lock",
+    "mise.lock",
+    "**/testdata/**/*",
+    "tmp/**/*",
+    "tools/testdata/**/*"
+  ],
+  "dictionaryDefinitions": [
+    {
+      "name": "{{repo_name}}",
+      "path": "./.cspell-words.txt",
+      "addWords": true
+    }
+  ],
+  "dictionaries": ["{{repo_name}}", "golang", "python"]
+}

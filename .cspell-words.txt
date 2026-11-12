@@ -200,3 +200,4 @@ xgpt
 xhigh
 xsession
 zizmor
+chezmoi

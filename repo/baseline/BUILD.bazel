@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
+
+filegroup(
+    name = "repo_files",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
+
+pytest_test(
+    name = "manifest_test",
+    srcs = [
+        ":repo_files",
+        "//:pyproject.toml",
+    ],
+    args = ["repo/baseline/test_manifest.py"],
+    coverage = ["repo.baseline.check_manifest"],
+    visibility = ["//visibility:public"],
+)
