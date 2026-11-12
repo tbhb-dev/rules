@@ -29,7 +29,20 @@ retry() {
   local delay=${RETRY_DELAY:-30} now url downloads error
   until "$@" 2>&1 | tee "$out"; do
     if ! downloads=$(grep -E "$download_pattern" "$out"); then
-      error=$(grep -m1 '^ERROR:' "$out" || true)
+      # Repository rule failures put the cause after a Starlark traceback.
+      # Keep it with the first error, including Bazel's timestamped form.
+      error=$(awk '
+        /(^|[[:space:]])ERROR:/ && !error { print; error = 1 }
+        /^Error in fail:/ && !failure {
+          print
+          if (getline > 0) print
+          failure = 1
+        }
+      ' "$out")
+      # GitHub annotations need escaped data to retain multiple lines.
+      error=${error//%/%25}
+      error=${error//$'\r'/%0D}
+      error=${error//$'\n'/%0A}
       echo "::error::${error:-command failed without a download error}"
       return 1
     fi
