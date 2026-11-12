@@ -3,6 +3,7 @@
 @tbhb_rules//lint:zizmor
 @tbhb_rules//lint:gitleaks_text
 @tbhb_rules//lint:commit_identity
+@tbhb_rules_go//tools:go_sdk_checksums
 //:gitleaks_history
 //:gazelle
 //tools:pip_audit

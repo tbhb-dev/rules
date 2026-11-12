@@ -4,7 +4,8 @@
 
 # The list includes optional local targets from several workspaces. Query
 # the local graph first, then fetch every listed target that it declares.
-# External tools are mandatory. A query or fetch failure stops the warm job
+# Go tools also require the workspace to expose tbhb_rules_go. Other external
+# tools are mandatory. A query, mapping or fetch failure stops the warm job
 # and the composite action discards the incomplete cache.
 set -euo pipefail
 : "${TARGETS:?}"
@@ -40,10 +41,15 @@ for workspace in "${workspaces[@]}"; do
   (
     cd "$workspace"
     if [[ $TARGETS == @default ]]; then
+      retry bazelisk mod dump_repo_mapping ''
+      mapping=$(cat "$out")
       retry bazelisk query //... --output=label
       declared=$(cat "$out")
       targets=()
       while read -r label; do
+        if [[ $label == @tbhb_rules_go//* ]]; then
+          grep -q '"tbhb_rules_go":' <<<"$mapping" || continue
+        fi
         if [[ $label == //* && $label != //... ]]; then
           grep -qxF "$label" <<<"$declared" || continue
         fi

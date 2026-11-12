@@ -1,3 +1,5 @@
+github.com/bazelbuild/buildtools v0.0.0-20260904073137-eaa4d125b423 h1:scNMqf+FgmWYYwsX4TNjQcDLZu5kbWSwNsbrGkiF23I=
+github.com/bazelbuild/buildtools v0.0.0-20260904073137-eaa4d125b423/go.mod h1:jWjcMGVH6hAgMG98abRQOIvoFFLPx/p3e5eeTGIHUMc=
 github.com/gomutants/gomutants v0.7.2 h1:XjmtsqdODwKgO9sYU8c3rJsJQETVp3V9yySpa+SVLpw=
 github.com/gomutants/gomutants v0.7.2/go.mod h1:FUIPM99+aAulttDiBpgplzfoQemXsBMHJihOVLb2JcY=
 github.com/google/go-cmdtest v0.4.1-0.20220921163831-55ab3332a786 h1:rcv+Ippz6RAtvaGgKxc+8FQIpxHgsF+HBzPyYL2cyVU=

@@ -5,7 +5,7 @@ module github.com/tbhb-dev/rules/go
 
 go 1.27.0
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 tool (
 	github.com/gomutants/gomutants
@@ -13,6 +13,8 @@ tool (
 	golang.org/x/tools/cmd/deadcode
 	golang.org/x/vuln/cmd/govulncheck
 )
+
+require github.com/bazelbuild/buildtools v0.0.0-20260904073137-eaa4d125b423
 
 require (
 	github.com/gomutants/gomutants v0.7.2 // indirect
