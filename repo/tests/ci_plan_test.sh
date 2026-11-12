@@ -27,34 +27,40 @@ plan=$(awk '
 # shellcheck disable=SC2016
 plan=$'files=$1\n'"$plan"
 # shellcheck disable=SC2016
-plan+=$'\n''printf "{\"selected\":%s,\"matrix\":%s,\"apple\":%s}\n" "$selected" "$matrix" "$apple"'
+plan+=$'\n''printf "{\"selected\":%s,\"matrix\":%s,\"apple\":%s,\"swift\":%s}\n" "$selected" "$matrix" "$apple" "${swift:-false}"'
 
 failures=0
-for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md; do
+for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel; do
   printf '%s\n' "$path" >"$dir/changed"
   result=$(WORKSPACES="$workspaces" bash -euo pipefail -c "$plan" -- "$dir/changed" 2>&1) || {
     echo "FAIL: $path: $result" >&2
     exit 1
   }
-  summary=$(jq -cr '"matrix=\(.matrix) apple=\(.apple)"' <<<"$result")
+  summary=$(jq -cr '"matrix=\(.matrix) apple=\(.apple) swift=\(.swift)"' <<<"$result")
   echo "$path: $summary"
   case $path in
   apple/e2e/smoke/BUILD.bazel)
-    assertion='.matrix == [{id: "root", dir: "."}] and .apple == true'
+    assertion='.matrix == [{id: "root", dir: "."}] and .apple == true and .swift == false'
     ;;
   README.md)
-    # A root file must retain exactly the matrix from the old filter.
-    assertion='.matrix == (.selected | map(select(.id != "apple-smoke"))) and (.matrix | length > 1)'
+    # A root file must retain every workspace in the shared matrix.
+    assertion='.matrix == (.selected | map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke"))) and (.matrix | length > 1)'
     ;;
   e2e/smoke/README.md)
     assertion='.matrix == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false'
     ;;
+  swift/defs.bzl)
+    assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
+    ;;
+  swift/e2e/smoke/BUILD.bazel)
+    assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
+    ;;
   *) assertion='true' ;;
   esac
   if ! jq -e "(.matrix | length > 0) and ($assertion)" <<<"$result" >/dev/null; then
-    echo "FAIL: $path: unexpected matrix or apple selection" >&2
+    echo "FAIL: $path: unexpected matrix or smoke selection" >&2
     failures=$((failures + 1))
   fi
 done
 ((failures == 0)) || exit 1
-echo 'PASS: Apple changes keep a root matrix and select Apple; root changes keep the original matrix; all matrices are nonempty'
+echo 'PASS: Apple and Swift changes keep a root matrix and select their smoke; root changes keep the shared matrix; all matrices are nonempty'
