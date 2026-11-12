@@ -13,7 +13,7 @@
     "eslint": "10.14.0",
     "eslint-plugin-sonarjs": "4.2.2",
     "eslint-plugin-storybook": "10.6.6",
-    "knip": "6.44.1",
+    "knip": "6.44.2",
     "pnpm": "12.18.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.72.1",
