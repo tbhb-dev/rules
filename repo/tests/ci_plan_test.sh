@@ -29,6 +29,51 @@ plan=$'files=$1\n'"$plan"
 # shellcheck disable=SC2016
 plan+=$'\n''printf "{\"selected\":%s,\"matrix\":%s,\"apple\":%s,\"swift\":%s}\n" "$selected" "$matrix" "$apple" "${swift:-false}"'
 
+# Check the wiring as well as the selection, so a missing output cannot skip a job.
+job_block() {
+  awk -v job="$1" '
+    $0 == "  " job ":" { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found { print }
+  ' "$workflow"
+}
+plan_job=$(job_block plan)
+outputs=$(awk '
+  /^    outputs:$/ { found = 1; next }
+  found && /^    [^ ]/ { exit }
+  found { print }
+' <<<"$plan_job")
+output_writes=$(awk '
+  /^        id: plan$/ { found = 1; next }
+  found && /^      - / { exit }
+  found && /^          (echo|printf) .*>>[[:space:]]*"?[$][{]?GITHUB_OUTPUT[}]?"?$/ { print }
+' <<<"$plan_job")
+conclusion=$(job_block conclusion)
+for platform in apple swift; do
+  grep -qxF "      $platform: \${{ steps.plan.outputs.$platform }}" <<<"$outputs" || {
+    echo "FAIL: plan outputs must declare $platform from steps.plan.outputs.$platform" >&2
+    exit 1
+  }
+  grep -qE '(^|[^[:alnum:]_]|\\n)'"$platform=" <<<"$output_writes" || {
+    echo "FAIL: plan step must write $platform= to GITHUB_OUTPUT" >&2
+    exit 1
+  }
+  job_env=$(job_block "$platform" | awk '
+    /^    env:$/ { found = 1; next }
+    found && /^    [^ ]/ { exit }
+    found { print }
+  ')
+  run=$(tr '[:lower:]' '[:upper:]' <<<"$platform")
+  grep -qxF "      RUN_$run: \${{ needs.plan.outputs.$platform }}" <<<"$job_env" || {
+    echo "FAIL: $platform job must set RUN_$run from needs.plan.outputs.$platform" >&2
+    exit 1
+  }
+  grep -qE "^    needs: \[([^]]*, )?$platform(,|])" <<<"$conclusion" || {
+    echo "FAIL: conclusion needs must include $platform" >&2
+    exit 1
+  }
+done
+
 failures=0
 for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/e2e/smoke/tools/test_simulator_runtime.py; do
   printf '%s\n' "$path" >"$dir/changed"
