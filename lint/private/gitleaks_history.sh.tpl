@@ -38,7 +38,7 @@ if [[ ${1:-} == --merge-range ]]; then
     reason="git could not resolve HEAD"
   elif [[ $head != "$EXPECTED_HEAD" ]]; then
     reason="HEAD is not the commit the event names"
-  elif git rev-parse --verify --quiet HEAD^1 >/dev/null &&
+  elif first_parent=$(git rev-parse --verify --quiet HEAD^1) &&
     git rev-parse --verify --quiet HEAD^2 >/dev/null &&
     parents=$(git show -s --format=%P HEAD) &&
     [[ $parents =~ ^[0-9a-f]+\ [0-9a-f]+$ ]]; then
@@ -67,11 +67,14 @@ if [[ ${1:-} == --merge-range ]]; then
   fi
   if [[ $scan_range == HEAD ]]; then
     echo "gitleaks_history: scanning full history HEAD ($count commits): $reason"
+    log_range=HEAD
   else
     echo "gitleaks_history: scanning $scan_range ($count commits): $reason"
+    # Windows' command line consumes carets when gitleaks invokes git.
+    log_range="$first_parent..HEAD"
   fi
   # Put the selected range last so forwarded flags cannot override it.
-  set -- "$@" "--log-opts=$scan_range"
+  set -- "$@" "--log-opts=$log_range"
 fi
 
 args=(git --verbose --redact --no-banner)
