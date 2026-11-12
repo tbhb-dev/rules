@@ -36,6 +36,7 @@ jobs:
     outputs:
       workspaces: ${{ steps.plan.outputs.workspaces }}
       apple: ${{ steps.plan.outputs.apple }}
+      swift: ${{ steps.plan.outputs.swift }}
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
@@ -78,7 +79,9 @@ jobs:
               },
               {"id": "tokens", "dir": "tokens", "deps": ["root", "typescript"]},
               {"id": "tokens-smoke", "dir": "tokens/e2e/smoke", "deps": ["root", "typescript", "playwright", "tokens"]},
-              {"id": "apple-smoke", "dir": "apple/e2e/smoke", "deps": ["root"]}
+              {"id": "apple-smoke", "dir": "apple/e2e/smoke", "deps": ["root"]},
+              {"id": "swift", "dir": "swift", "deps": ["root"]},
+              {"id": "swift-smoke", "dir": "swift/e2e/smoke", "deps": ["root", "swift"]}
             ]
         run: |
           files="${RUNNER_TEMP}/changed"
@@ -105,16 +108,17 @@ jobs:
                     | $owners | any(. == $id or (. as $o | $deps | index($o) != null)))
                 | {id, dir}]
           ' <<<"${WORKSPACES}")"
-          # apple-smoke needs Xcode, so it has a job of its own on a GitHub-hosted
-          # macOS runner and stays out of the `bazel` job's matrix.
-          # GitHub fails an empty matrix; an Apple-only change keeps root checks running.
+          # Apple and Swift workspaces need Xcode, so their smoke consumers have
+          # jobs of their own on a GitHub-hosted macOS runner.
+          # GitHub fails an empty matrix; Apple or Swift changes keep root checks running.
           matrix="$(jq -c '
-            map(select(.id != "apple-smoke"))
+            map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke"))
             | if length == 0 then [{id: "root", dir: "."}] else . end
           ' <<<"${selected}")"
           apple="$(jq -r 'any(.[]; .id == "apple-smoke")' <<<"${selected}")"
+          swift="$(jq -r 'any(.[]; .id == "swift-smoke")' <<<"${selected}")"
           echo "workspaces=${matrix}" >>"${GITHUB_OUTPUT}"
-          echo "apple=${apple}" >>"${GITHUB_OUTPUT}"
+          printf 'apple=%s\nswift=%s\n' "${apple}" "${swift}" >>"${GITHUB_OUTPUT}"
           ids="$(jq -r 'map(.id) | join(", ")' <<<"${selected}")"
           echo "Testing: ${ids}" >>"${GITHUB_STEP_SUMMARY}"
 
@@ -329,6 +333,57 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
+  # The Swift smoke uses the same Xcode image and steps as the Apple smoke.
+  swift:
+    name: "swift (swift-smoke)"
+    needs: [plan]
+    runs-on: xcode-27
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      RUN_SWIFT: ${{ needs.plan.outputs.swift }}
+    steps:
+      - name: Checkout
+        if: env.RUN_SWIFT == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode 27.2
+        if: env.RUN_SWIFT == 'true'
+        run: |
+          sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
+          xcodebuild -version | tee "${RUNNER_TEMP}/xcodebuild-version"
+          grep -qx 'Build version 27B52' "${RUNNER_TEMP}/xcodebuild-version"
+
+      - name: Set up Bazel for CI
+        if: env.RUN_SWIFT == 'true'
+        uses: ./.github/actions/setup-bazel-ci
+        with:
+          disk-cache: ${{ github.workflow }}-swift-smoke
+          cache-save: false
+          # The default list names tools of the other workspaces.
+          targets: //...
+          working-directory: swift/e2e/smoke
+
+      - name: Test
+        if: env.RUN_SWIFT == 'true'
+        working-directory: swift/e2e/smoke
+        run: bazelisk test --config=ci //...
+
+      - name: Keep the test logs
+        if: failure() && env.RUN_SWIFT == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: testlogs-swift-smoke
+          path: |
+            swift/e2e/smoke/.bazel-testlogs/**/test.log
+            swift/e2e/smoke/.bazel-testlogs/**/test.xml
+          include-hidden-files: true
+          if-no-files-found: ignore
+
   # Checks that need Git history or the GitHub API, which no sandboxed test
   # can see, in the shared workflow. The local path is for this repository
   # only; a consumer pins tbhb-dev/rules, see .github/actions/README.md.
@@ -384,7 +439,7 @@ jobs:
   conclusion:
     name: conclusion
     if: always()
-    needs: [plan, bazel, apple, repo, archive]
+    needs: [plan, bazel, apple, swift, repo, archive]
     runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:

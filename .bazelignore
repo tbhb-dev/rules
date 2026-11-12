@@ -8,5 +8,6 @@ go/
 playwright/
 python/
 storybook/
+swift/
 tokens/
 typescript/

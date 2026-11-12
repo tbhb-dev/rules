@@ -27,34 +27,85 @@ plan=$(awk '
 # shellcheck disable=SC2016
 plan=$'files=$1\n'"$plan"
 # shellcheck disable=SC2016
-plan+=$'\n''printf "{\"selected\":%s,\"matrix\":%s,\"apple\":%s}\n" "$selected" "$matrix" "$apple"'
+plan+=$'\n''printf "{\"selected\":%s,\"matrix\":%s,\"apple\":%s,\"swift\":%s}\n" "$selected" "$matrix" "$apple" "${swift:-false}"'
+
+# Check the wiring as well as the selection, so a missing output cannot skip a job.
+job_block() {
+  awk -v job="$1" '
+    $0 == "  " job ":" { found = 1; next }
+    found && /^  [^ ]/ { exit }
+    found { print }
+  ' "$workflow"
+}
+plan_job=$(job_block plan)
+outputs=$(awk '
+  /^    outputs:$/ { found = 1; next }
+  found && /^    [^ ]/ { exit }
+  found { print }
+' <<<"$plan_job")
+output_writes=$(awk '
+  /^        id: plan$/ { found = 1; next }
+  found && /^      - / { exit }
+  found && /^          (echo|printf) .*>>[[:space:]]*"?[$][{]?GITHUB_OUTPUT[}]?"?$/ { print }
+' <<<"$plan_job")
+conclusion=$(job_block conclusion)
+for platform in apple swift; do
+  grep -qxF "      $platform: \${{ steps.plan.outputs.$platform }}" <<<"$outputs" || {
+    echo "FAIL: plan outputs must declare $platform from steps.plan.outputs.$platform" >&2
+    exit 1
+  }
+  grep -qE '(^|[^[:alnum:]_]|\\n)'"$platform=" <<<"$output_writes" || {
+    echo "FAIL: plan step must write $platform= to GITHUB_OUTPUT" >&2
+    exit 1
+  }
+  job_env=$(job_block "$platform" | awk '
+    /^    env:$/ { found = 1; next }
+    found && /^    [^ ]/ { exit }
+    found { print }
+  ')
+  run=$(tr '[:lower:]' '[:upper:]' <<<"$platform")
+  grep -qxF "      RUN_$run: \${{ needs.plan.outputs.$platform }}" <<<"$job_env" || {
+    echo "FAIL: $platform job must set RUN_$run from needs.plan.outputs.$platform" >&2
+    exit 1
+  }
+  grep -qE "^    needs: \[([^]]*, )?$platform(,|])" <<<"$conclusion" || {
+    echo "FAIL: conclusion needs must include $platform" >&2
+    exit 1
+  }
+done
 
 failures=0
-for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md; do
+for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/e2e/smoke/tools/test_simulator_runtime.py; do
   printf '%s\n' "$path" >"$dir/changed"
   result=$(WORKSPACES="$workspaces" bash -euo pipefail -c "$plan" -- "$dir/changed" 2>&1) || {
     echo "FAIL: $path: $result" >&2
     exit 1
   }
-  summary=$(jq -cr '"matrix=\(.matrix) apple=\(.apple)"' <<<"$result")
+  summary=$(jq -cr '"matrix=\(.matrix) apple=\(.apple) swift=\(.swift)"' <<<"$result")
   echo "$path: $summary"
   case $path in
   apple/e2e/smoke/BUILD.bazel)
-    assertion='.matrix == [{id: "root", dir: "."}] and .apple == true'
+    assertion='.matrix == [{id: "root", dir: "."}] and .apple == true and .swift == false'
     ;;
   README.md)
-    # A root file must retain exactly the matrix from the old filter.
-    assertion='.matrix == (.selected | map(select(.id != "apple-smoke"))) and (.matrix | length > 1)'
+    # A root file must retain every workspace in the shared matrix.
+    assertion='.matrix == (.selected | map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke"))) and (.matrix | length > 1)'
     ;;
   e2e/smoke/README.md)
     assertion='.matrix == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false'
     ;;
+  swift/defs.bzl)
+    assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
+    ;;
+  swift/e2e/smoke/BUILD.bazel | swift/e2e/smoke/tools/test_simulator_runtime.py)
+    assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
+    ;;
   *) assertion='true' ;;
   esac
   if ! jq -e "(.matrix | length > 0) and ($assertion)" <<<"$result" >/dev/null; then
-    echo "FAIL: $path: unexpected matrix or apple selection" >&2
+    echo "FAIL: $path: unexpected matrix or smoke selection" >&2
     failures=$((failures + 1))
   fi
 done
 ((failures == 0)) || exit 1
-echo 'PASS: Apple changes keep a root matrix and select Apple; root changes keep the original matrix; all matrices are nonempty'
+echo 'PASS: Apple and Swift changes keep a root matrix and select their smoke; root changes keep the shared matrix; all matrices are nonempty'
