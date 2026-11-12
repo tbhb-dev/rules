@@ -2,9 +2,9 @@
 # Copyright Tony Burns
 
 # Use stdlib unittest so the smoke needs no third-party test packages.
-# ruff: noqa: PT009, PT027
 
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -18,43 +18,67 @@ class SimulatorRuntimeTest(unittest.TestCase):
         )
 
     def test_device_specific_runtime_precedes_general_runtime(self) -> None:
-        self.assertEqual(
-            select_runtime(self.runtimes, "iPhone 17", "27.2"),
-            "com.apple.CoreSimulator.SimRuntime.iOS-27-2",
+        assert (
+            select_runtime(self.runtimes, "iPhone 17", "27.2")
+            == "com.apple.CoreSimulator.SimRuntime.iOS-27-2"
         )
 
     def test_no_runtime_supports_device(self) -> None:
-        with self.assertRaisesRegex(
-            RuntimeError,
-            "No available iOS 27.2 runtime supports device type 'iPhone 16'",
-        ):
+        try:
             select_runtime(self.runtimes, "iPhone 16", "27.2")
+        except RuntimeError as error:
+            error_message = str(error)
+        else:
+            message = "expected RuntimeError"
+            raise AssertionError(message)
+        assert re.search(
+            "No available iOS 27.2 runtime supports device type 'iPhone 16'",
+            error_message,
+        )
 
     def test_unavailable_runtime_is_rejected(self) -> None:
         self.runtimes["runtimes"][1]["isAvailable"] = False
-        with self.assertRaisesRegex(RuntimeError, "iPhone 17"):
+        try:
             select_runtime(self.runtimes, "iPhone 17", "27.2")
+        except RuntimeError as error:
+            error_message = str(error)
+        else:
+            message = "expected RuntimeError"
+            raise AssertionError(message)
+        assert re.search("iPhone 17", error_message)
 
     def test_wrong_platform_is_rejected(self) -> None:
         self.runtimes["runtimes"][1]["platform"] = "tvOS"
-        with self.assertRaisesRegex(RuntimeError, "iPhone 17"):
+        try:
             select_runtime(self.runtimes, "iPhone 17", "27.2")
+        except RuntimeError as error:
+            error_message = str(error)
+        else:
+            message = "expected RuntimeError"
+            raise AssertionError(message)
+        assert re.search("iPhone 17", error_message)
 
     def test_wrong_version_is_rejected(self) -> None:
-        with self.assertRaisesRegex(RuntimeError, "iOS 27.1"):
+        try:
             select_runtime(self.runtimes, "iPhone 17", "27.1")
+        except RuntimeError as error:
+            error_message = str(error)
+        else:
+            message = "expected RuntimeError"
+            raise AssertionError(message)
+        assert re.search("iOS 27.1", error_message)
 
     def test_general_runtime_precedes_device_specific_runtime(self) -> None:
         self.runtimes["runtimes"].reverse()
-        self.assertEqual(
-            select_runtime(self.runtimes, "iPhone 17", "27.2"),
-            "com.apple.CoreSimulator.SimRuntime.iOS-27-2",
+        assert (
+            select_runtime(self.runtimes, "iPhone 17", "27.2")
+            == "com.apple.CoreSimulator.SimRuntime.iOS-27-2"
         )
 
     def test_device_specific_runtime_can_support_requested_device(self) -> None:
-        self.assertEqual(
-            select_runtime(self.runtimes, "iPhone Duo", "27.2"),
-            "com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4",
+        assert (
+            select_runtime(self.runtimes, "iPhone Duo", "27.2")
+            == "com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4"
         )
 
 

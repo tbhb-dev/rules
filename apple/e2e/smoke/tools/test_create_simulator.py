@@ -2,7 +2,6 @@
 # Copyright Tony Burns
 
 # Use stdlib unittest so the smoke needs no third-party test packages.
-# ruff: noqa: PT009
 
 import contextlib
 import io
@@ -49,8 +48,8 @@ class CreateSimulatorTest(unittest.TestCase):
                     "com.apple.CoreSimulator.SimRuntime.iOS-27-2",
                     reuse_simulator=expected,
                 )
-                self.assertEqual(stdout.getvalue(), "UDID\n")
-                self.assertIn("Selected simulator runtime", stderr.getvalue())
+                assert stdout.getvalue() == "UDID\n"
+                assert "Selected simulator runtime" in stderr.getvalue()
 
     def test_sdk_fallback_and_cli_overrides(self) -> None:
         runtimes = Path(__file__).with_name("testdata").joinpath("runtimes.json")
