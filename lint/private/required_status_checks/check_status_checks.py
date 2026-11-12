@@ -45,40 +45,54 @@ class Workflow(TypedDict, total=False):
     jobs: dict[str, Job]
 
 
+def check_context(context: str, jobs: dict[str, Job], ruleset_path: Path) -> list[str]:
+    """Require one context to match only the conclusion job."""
+    matches = [
+        job_id for job_id, job in jobs.items() if job.get("name", job_id) == context
+    ]
+    if not matches:
+        return [
+            (
+                f"{ruleset_path.as_posix()}: required context {context!r} "
+                "has no matching CI job"
+            )
+        ]
+    return [
+        f"{ruleset_path.as_posix()}: required context {context!r} "
+        f"matches job {job_id!r}, expected 'conclusion'"
+        for job_id in matches
+        if job_id != "conclusion"
+    ]
+
+
+def check_rule_contexts(
+    rule: Rule, jobs: dict[str, Job], ruleset_path: Path
+) -> list[str]:
+    """Require a nonempty status list and check its contexts in order."""
+    parameters = rule.get("parameters", {})
+    required_status_checks = parameters.get("required_status_checks", [])
+    if not required_status_checks:
+        return [f"{ruleset_path.as_posix()}: required_status_checks is empty"]
+    errors: list[str] = []
+    for status in required_status_checks:
+        errors.extend(check_context(status.get("context", ""), jobs, ruleset_path))
+    return errors
+
+
 def check_contexts(
     ruleset: Ruleset, jobs: dict[str, Job], ruleset_path: Path
 ) -> list[str]:
     """Require every status context to match only the conclusion job."""
-    errors: list[str] = []
     rules = [
         rule
         for rule in ruleset.get("rules", [])
         if rule["type"] == "required_status_checks"
     ]
     if not rules:
-        errors.append(f"{ruleset_path.as_posix()}: no required_status_checks rule")
+        return [f"{ruleset_path.as_posix()}: no required_status_checks rule"]
+    errors: list[str] = []
     for rule in rules:
-        contexts = rule.get("parameters", {}).get("required_status_checks", [])
-        if not contexts:
-            errors.append(f"{ruleset_path.as_posix()}: required_status_checks is empty")
-        for status in contexts:
-            context = status.get("context", "")
-            matches = [
-                job_id
-                for job_id, job in jobs.items()
-                if job.get("name", job_id) == context
-            ]
-            if not matches:
-                errors.append(
-                    f"{ruleset_path.as_posix()}: required context {context!r} "
-                    "has no matching CI job"
-                )
-            errors.extend(
-                f"{ruleset_path.as_posix()}: required context {context!r} "
-                f"matches job {job_id!r}, expected 'conclusion'"
-                for job_id in matches
-                if job_id != "conclusion"
-            )
+        errors.extend(check_rule_contexts(rule, jobs, ruleset_path))
     return errors
 
 
@@ -96,7 +110,7 @@ def check_needs(jobs: dict[str, Job], workflow_path: Path) -> list[str]:
         errors.append(
             f"{workflow_path.as_posix()}: conclusion needs must be a list of job ids"
         )
-        needs = []
+        needs = list[str]()
     errors.extend(
         f"{workflow_path.as_posix()}: conclusion needs is missing job {job_id!r}"
         for job_id in sorted(
@@ -113,7 +127,7 @@ def check(ruleset_path: Path, workflow_path: Path) -> list[str]:
     except (OSError, ValueError) as error:
         return [f"{ruleset_path.as_posix()}: {' '.join(str(error).split())}"]
     try:
-        workflow = cast(
+        workflow: Workflow = cast(
             "Workflow", yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
         )
     except (OSError, ValueError, yaml.YAMLError) as error:
