@@ -23,3 +23,6 @@ local_path_override(
     module_name = "tbhb_rules_swift",
     path = "../..",
 )
+
+bazel_dep(name = "rules_apple", version = "5.4.0")
+bazel_dep(name = "rules_python", version = "1.7.0")

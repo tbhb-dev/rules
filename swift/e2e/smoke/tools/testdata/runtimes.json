@@ -1,0 +1,20 @@
+{
+  "runtimes": [
+    {
+      "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-2-iPhone19-4",
+      "isAvailable": true,
+      "name": "iOS 27.2",
+      "platform": "iOS",
+      "version": "27.2",
+      "supportedDeviceTypes": [{"name": "iPhone Duo"}]
+    },
+    {
+      "identifier": "com.apple.CoreSimulator.SimRuntime.iOS-27-2",
+      "isAvailable": true,
+      "name": "iOS 27.2",
+      "platform": "iOS",
+      "version": "27.2",
+      "supportedDeviceTypes": [{"name": "iPhone 17"}, {"name": "iPhone Duo"}]
+    }
+  ]
+}

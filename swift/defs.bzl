@@ -174,11 +174,12 @@ def tbhb_ios_unit_test(
         minimum_os_version = IOS_MINIMUM_OS,
         flag_set = "strict",
         copts = [],
+        runner = None,
         **kwargs):
     """An ios_unit_test that runs on a simulator, hosted by an app.
 
     Bazel's sandbox needs no extra setting for the simulator. The test's
-    library is `<name>_lib` and its runner `<name>_runner`.
+    library is `<name>_lib`. Unless supplied, its runner is `<name>_runner`.
 
     Args:
         name: Target name.
@@ -191,6 +192,7 @@ def tbhb_ios_unit_test(
         minimum_os_version: The minimum iOS.
         flag_set: A key of SWIFT_FLAG_SETS.
         copts: Extra compiler flags, after the set's.
+        runner: Optional simulator runner; defaults to a generated runner.
         **kwargs: Passed to ios_unit_test.
     """
     tbhb_swift_library(
@@ -202,15 +204,17 @@ def tbhb_ios_unit_test(
         flag_set = flag_set,
         copts = copts,
     )
-    ios_xctestrun_runner(
-        name = name + "_runner",
-        device_type = device_type,
-        os_version = os_version,
-    )
+    if runner == None:
+        ios_xctestrun_runner(
+            name = name + "_runner",
+            device_type = device_type,
+            os_version = os_version,
+        )
+        runner = ":" + name + "_runner"
     ios_unit_test(
         name = name,
         minimum_os_version = minimum_os_version,
-        runner = ":" + name + "_runner",
+        runner = runner,
         test_host = test_host,
         deps = [":" + name + "_lib"],
         **kwargs
