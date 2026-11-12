@@ -10,6 +10,9 @@ public struct Greeting: Sendable {
     }
 
     public var message: String {
-        "Hello, \(name)!"
+        if name.isEmpty {
+            return "Hello, world!"
+        }
+        return "Hello, \(name)!"
     }
 }

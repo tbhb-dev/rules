@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Consumes tbhb_rules_swift the way a Swift or Apple repository would.
+
+A Swift library, an iOS app (simulator) and a macOS app, each with a unit
+test, under SwiftLint and the strict compiler flag set, with proofs that the
+gates fail on planted defects. It uses no signing, provisioning or
+certificates. Xcode comes from the host, through apple_support's Xcode
+config; the module pins everything else.
+"""
+
+module(name = "tbhb_rules_swift_smoke")
+
+bazel_dep(name = "tbhb_rules")
+local_path_override(
+    module_name = "tbhb_rules",
+    path = "../../..",
+)
+
+bazel_dep(name = "tbhb_rules_swift")
+local_path_override(
+    module_name = "tbhb_rules_swift",
+    path = "../..",
+)

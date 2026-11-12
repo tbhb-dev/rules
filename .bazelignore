@@ -1,5 +1,4 @@
 ansible/
-apple/
 astro/
 cloudflare/
 diagrams/d2/
@@ -8,5 +7,6 @@ go/
 playwright/
 python/
 storybook/
+swift/
 tokens/
 typescript/

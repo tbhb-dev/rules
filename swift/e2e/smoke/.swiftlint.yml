@@ -2,9 +2,5 @@
 # Copyright Tony Burns
 
 ---
-
-included:
-  - Sources
-  - Tests
-  - iOS
-  - macOS
+excluded:
+  - .bazel-*

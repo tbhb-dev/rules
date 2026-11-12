@@ -1,0 +1,169 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load(
+    "@tbhb_rules_swift//:defs.bzl",
+    "tbhb_ios_application",
+    "tbhb_ios_unit_test",
+    "tbhb_macos_application",
+    "tbhb_macos_unit_test",
+    "tbhb_swift_format_test",
+    "tbhb_swift_library",
+    "tbhb_swift_sanitizer_test",
+    "tbhb_swift_strict_test",
+    "tbhb_swift_test",
+    "tbhb_swiftlint_test",
+)
+
+tbhb_swift_library(
+    name = "Greeting",
+    srcs = ["Sources/Greeting/Greeting.swift"],
+)
+
+tbhb_swift_test(
+    name = "Greeting_test",
+    srcs = ["Tests/Greeting/GreetingTests.swift"],
+    deps = [":Greeting"],
+)
+
+# iOS: the simulator only; no signing, provisioning or certificates.
+tbhb_ios_application(
+    name = "ios_app",
+    srcs = ["iOS/SmokeApp.swift"],
+    bundle_id = "dev.tbhb.smoke.ios",
+    infoplists = ["iOS/Info.plist"],
+    module_name = "SmokeIOSApp",
+    deps = [":Greeting"],
+)
+
+tbhb_ios_unit_test(
+    name = "ios_app_test",
+    srcs = ["iOS/Tests/SmokeAppTests.swift"],
+    module_name = "SmokeIOSAppTests",
+    test_host = ":ios_app",
+    deps = [":Greeting"],
+)
+
+tbhb_macos_application(
+    name = "macos_app",
+    srcs = ["macOS/SmokeApp.swift"],
+    bundle_id = "dev.tbhb.smoke.macos",
+    infoplists = ["macOS/Info.plist"],
+    module_name = "SmokeMacApp",
+    deps = [":Greeting"],
+)
+
+tbhb_macos_unit_test(
+    name = "macos_app_test",
+    srcs = ["macOS/Tests/SmokeAppTests.swift"],
+    module_name = "SmokeMacAppTests",
+    test_host = ":macos_app",
+    deps = [":Greeting"],
+)
+
+# The module's Swift, not the planted defects under planted/.
+SWIFT_SOURCES = glob([
+    "Sources/**/*.swift",
+    "Tests/**/*.swift",
+    "iOS/**/*.swift",
+    "macOS/**/*.swift",
+])
+
+tbhb_swiftlint_test(
+    name = "swiftlint_test",
+    srcs = SWIFT_SOURCES,
+)
+
+# swift-format has no hermetic source, so this runs the one in Xcode and is
+# manual: `//...` skips it; run it by name.
+tbhb_swift_format_test(
+    name = "swift_format_test",
+    srcs = SWIFT_SOURCES,
+)
+
+# The strict flag set, type-checked at run time over the library's source.
+tbhb_swift_strict_test(
+    name = "strict_test",
+    srcs = ["Sources/Greeting/Greeting.swift"],
+    module_name = "Greeting",
+)
+
+# Proofs. Each wrapped test is manual and must fail for the stated reason.
+
+PROOF_TAGS = ["manual"]
+
+tbhb_swiftlint_test(
+    name = "proof_swiftlint",
+    srcs = ["planted/ForceCast.swift"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_swiftlint_fails",
+    pattern = "Force Cast Violation: Force casts should be avoided \\(force_cast\\)",
+    test = ":proof_swiftlint",
+)
+
+tbhb_swift_strict_test(
+    name = "proof_strict",
+    srcs = ["planted/GlobalState.swift"],
+    module_name = "GlobalState",
+    tags = PROOF_TAGS,
+)
+
+# The control: the planted source type-checks under the default set, so the
+# failure above comes from the strict set and from nothing else.
+tbhb_swift_strict_test(
+    name = "planted_default_test",
+    srcs = ["planted/GlobalState.swift"],
+    flag_set = "default",
+    module_name = "GlobalState",
+)
+
+expect_failure_test(
+    name = "proof_strict_fails",
+    pattern = "var 'counter' is not concurrency-safe because it is nonisolated global shared mutable state",
+    test = ":proof_strict",
+)
+
+# Sanitizers: the library's test, clean, under each; and a planted defect each
+# one catches.
+[
+    tbhb_swift_sanitizer_test(
+        name = "Greeting_{}_test".format(sanitizer),
+        srcs = ["Tests/Greeting/GreetingTests.swift"],
+        sanitizer = sanitizer,
+        deps = [":Greeting"],
+    )
+    for sanitizer in [
+        "asan",
+        "tsan",
+    ]
+]
+
+tbhb_swift_sanitizer_test(
+    name = "proof_asan",
+    srcs = ["planted/UseAfterFree.swift"],
+    sanitizer = "asan",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_asan_fails",
+    pattern = "AddressSanitizer: heap-use-after-free",
+    test = ":proof_asan",
+)
+
+tbhb_swift_sanitizer_test(
+    name = "proof_tsan",
+    srcs = ["planted/DataRace.swift"],
+    sanitizer = "tsan",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_tsan_fails",
+    pattern = "ThreadSanitizer: data race",
+    test = ":proof_tsan",
+)

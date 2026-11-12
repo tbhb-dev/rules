@@ -8,4 +8,8 @@ final class GreetingTests: XCTestCase {
     func testMessageNamesTheGreeted() {
         XCTAssertEqual(Greeting(name: "Bazel").message, "Hello, Bazel!")
     }
+
+    func testMessageGreetsTheWorldWithoutAName() {
+        XCTAssertEqual(Greeting(name: "").message, "Hello, world!")
+    }
 }
