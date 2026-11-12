@@ -11,7 +11,7 @@ generated:
     effort: high
     surface: exec
     session: sha-256-64:3f81960f9911b13e
-    at: "2026-11-12T03:52:21Z"
+    at: "2026-11-12T03:59:06Z"
 ---
 
 # Swift module reference
@@ -20,7 +20,7 @@ Consumers load `@tbhb_rules_swift//:defs.bzl` for Bazel macros that build Swift 
 
 Builds need a Mac with Xcode. Bazel gets Xcode from the host through `apple_support`, so a consumer's `.bazelrc` names its version with `build --xcode_version=27.2`. A host without that version fails. Apps run unsigned, without a provisioning profile, certificate, or team ID.
 
-The [smoke consumer](../../swift/e2e/smoke/BUILD.bazel) loads the module through `local_path_override`. This standalone Bazel 9 workspace builds and tests a library, an iOS simulator app, and a macOS app under the module's checks. The consumer tests the module's macros rather than building the module's own targets separately. On a Mac with Xcode 27.2, run `bazelisk test //...` from `swift/e2e/smoke`.
+The `swift/e2e/smoke` consumer loads the module through `local_path_override`. This standalone Bazel 9 workspace builds and tests a library, an iOS simulator app, and a macOS app under the module's checks. The consumer tests the module's macros rather than building the module's own targets separately. On a Mac with Xcode 27.2, run `bazelisk test //...` from `swift/e2e/smoke`.
 
 ## Pins
 
