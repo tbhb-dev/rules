@@ -89,6 +89,12 @@ sh_test(
     srcs = ["ci_plan_test.sh"],
     data = ["//:.github/workflows/ci.yml"],
     env = {"WORKFLOW_RLOCATIONPATH": "$(rlocationpath //:.github/workflows/ci.yml)"},
+    # This test runs the Linux-only plan step's jq, which is absent from
+    # the Windows test PATH ("jq: command not found").
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )
 
 # setup-bazel-ci's CPU quota script, against fake cgroup files. The cases
