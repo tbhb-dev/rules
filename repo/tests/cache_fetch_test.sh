@@ -21,11 +21,48 @@ if [[ $1 == query ]]; then
   esac
 else
   echo "${PWD##*/} $*" >>"$LOG"
-  [[ ${FAIL_FETCH:-false} != true ]]
+  case ${FETCH_FAILURE:-} in
+    target)
+      echo "ERROR: no such target '//:gazelle': target 'gazelle' not declared in package ''"
+      echo 'INFO: see https://example.com/help'
+      exit 1
+      ;;
+    uv-timeout)
+      cat <<'OUTPUT'
+(03:03:23) INFO: repository @@tbhb_rules_python++python+tbhb_python' used the following cache hits instead of downloading the corresponding file.
+ * Hash 'c5221ff41b7892bfc223543883600125f6a47fe845093e0f5bdff4f359196d83' for https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-unknown-linux-gnu.tar.gz
+(03:03:23) ERROR: runtime/private/repo.bzl:104:13: An error occurred during the fetch of repository 'tbhb_rules_python++python+tbhb_python':
+Error in fail: tbhb_rules_python++python+tbhb_python: uv sync failed (256):
+Timed out
+(03:03:23) ERROR: no such package '@@tbhb_rules_python++python+tbhb_python//': tbhb_rules_python++python+tbhb_python: uv sync failed (256):
+Timed out
+OUTPUT
+      exit 1
+      ;;
+    download-once)
+      if [[ $(wc -l <"$LOG" | tr -d ' ') != 1 ]]; then
+        exit 0
+      fi
+      ;;
+    download-always) ;;
+    *)
+      [[ ${FAIL_FETCH:-false} != true ]]
+      exit
+      ;;
+  esac
+  echo "${DOWNLOAD_ERROR:-ERROR: Error downloading [https://example.com/archive.tar.gz]: GET returned 503 Service Unavailable}"
+  echo 'INFO: see https://example.com/help'
+  exit 1
 fi
 MOCK
+cat >"$scratch/bin/sleep" <<'MOCK'
+#!/usr/bin/env bash
+set -euo pipefail
+echo "$*" >>"$SLEEP_LOG"
+MOCK
 chmod +x "$scratch/bin/bazelisk"
-export PATH="$scratch/bin:$PATH" LOG="$scratch/log"
+chmod +x "$scratch/bin/sleep"
+export PATH="$scratch/bin:$PATH" LOG="$scratch/log" SLEEP_LOG="$scratch/sleep-log"
 export TARGETS=@default BUDGET=0 WORKSPACES='. go typescript . go'
 export GITHUB_OUTPUT="$scratch/output"
 cd "$scratch/root"
@@ -61,4 +98,77 @@ fi
 # Explicit targets preserve the existing input behavior.
 TARGETS='//:custom //:other' WORKSPACES=. bash "$script"
 grep -qF 'fetch --config=ci //:custom //:other' "$LOG"
-echo 'PASS: workspace selection, mandatory tools, custom targets, timing, and fetch failure'
+# A target error must stop immediately, even with time left to retry.
+# Fake sleep keeps the old script's 30-second retry observable without waiting.
+export TARGETS=//:gazelle WORKSPACES=. RETRY_DELAY=1
+: >"$LOG"
+: >"$SLEEP_LOG"
+: >"$GITHUB_OUTPUT"
+now=$(date +%s)
+if FETCH_FAILURE=target BUDGET=1 DEADLINE=$((now + 31)) bash "$script" >"$scratch/failure" 2>&1; then
+  echo 'FAIL: target error returned success'
+  exit 1
+fi
+cat "$scratch/failure"
+fetch_count=$(wc -l <"$LOG" | tr -d ' ')
+if [[ $fetch_count != 1 ]]; then
+  echo "FAIL: target error made $fetch_count fetch calls; expected 1"
+  exit 1
+fi
+[[ ! -s $SLEEP_LOG && ! -s $GITHUB_OUTPUT ]]
+grep -qF "::error::ERROR: no such target '//:gazelle': target 'gazelle' not declared in package ''" "$scratch/failure"
+if grep -qF 'kept failing' "$scratch/failure"; then
+  echo 'FAIL: target error reported as a download failure'
+  exit 1
+fi
+# A uv sync timeout is not a failed download of the cached uv release.
+: >"$LOG"
+: >"$SLEEP_LOG"
+: >"$GITHUB_OUTPUT"
+now=$(date +%s)
+if FETCH_FAILURE=uv-timeout BUDGET=1 DEADLINE=$((now + 60)) bash "$script" >"$scratch/failure" 2>&1; then
+  echo 'FAIL: uv sync timeout returned success'
+  exit 1
+fi
+cat "$scratch/failure"
+fetch_count=$(wc -l <"$LOG" | tr -d ' ')
+[[ $fetch_count == 1 && ! -s $SLEEP_LOG && ! -s $GITHUB_OUTPUT ]]
+annotation=$(grep '^::error::' "$scratch/failure")
+if [[ $annotation != *"ERROR: runtime/private/repo.bzl:104:13:"* ||
+  $annotation != *"repository 'tbhb_rules_python++python+tbhb_python'"* ||
+  $annotation != *"%0AError in fail: tbhb_rules_python++python+tbhb_python: uv sync failed (256):%0ATimed out"* ]]; then
+  echo "FAIL: uv sync annotation omitted the repository failure: $annotation"
+  exit 1
+fi
+if [[ $annotation == *github.com/astral-sh/uv* || $annotation == *'kept failing'* ]]; then
+  echo "FAIL: uv sync annotation blamed the cached release: $annotation"
+  exit 1
+fi
+# A transient download failure still retries, with an injectable initial delay.
+: >"$LOG"
+: >"$SLEEP_LOG"
+now=$(date +%s)
+FETCH_FAILURE=download-once BUDGET=1 DEADLINE=$((now + 60)) bash "$script"
+fetch_count=$(wc -l <"$LOG" | tr -d ' ')
+[[ $fetch_count == 2 ]]
+sleep_delays=$(cat "$SLEEP_LOG")
+[[ $sleep_delays == 1 ]]
+# Exhausted download retries name only a URL on a matching failure line.
+: >"$LOG"
+: >"$SLEEP_LOG"
+: >"$GITHUB_OUTPUT"
+if FETCH_FAILURE=download-always DEADLINE=0 bash "$script" >"$scratch/failure" 2>&1; then
+  echo 'FAIL: persistent download error returned success'
+  exit 1
+fi
+fetch_count=$(wc -l <"$LOG" | tr -d ' ')
+[[ $fetch_count == 1 ]]
+[[ ! -s $SLEEP_LOG && ! -s $GITHUB_OUTPUT ]]
+grep -qxF '::error::gave up after 0 min: https://example.com/archive.tar.gz kept failing' "$scratch/failure"
+# A network failure without a URL must not borrow one from unrelated output.
+if FETCH_FAILURE=download-always DOWNLOAD_ERROR='ERROR: Unknown host: example.com' DEADLINE=0 bash "$script" >"$scratch/failure" 2>&1; then
+  echo 'FAIL: unknown host returned success'
+  exit 1
+fi
+grep -qxF '::error::gave up after 0 min: no URL in the download failure kept failing' "$scratch/failure"
+echo 'PASS: workspace selection, mandatory tools, custom targets, timing, fetch failure, and download retries'
