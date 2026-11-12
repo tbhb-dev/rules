@@ -13,7 +13,10 @@ private final class Counter: @unchecked Sendable {
 final class DataRaceTests: XCTestCase {
     func testIncrementsFromManyThreads() {
         let counter = Counter()
-        DispatchQueue.concurrentPerform(iterations: 1000) { _ in
+        let ready = [DispatchSemaphore(value: 0), DispatchSemaphore(value: 0)]
+        DispatchQueue.concurrentPerform(iterations: 2) { index in
+            ready[index].signal()
+            ready[1 - index].wait()
             counter.value += 1
         }
         XCTAssertGreaterThan(counter.value, 0)
