@@ -3,3 +3,6 @@ packages:
   - proof/no_react
 
 allowBuilds: {}
+
+# Lock refreshes use the same 5-day cooldown as version bumps.
+minimumReleaseAge: 7200

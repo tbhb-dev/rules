@@ -26,6 +26,12 @@
   // every .bazelversion as one group.
   packageRules: [
     {
+      // This lock records a historical resolution for the clock regression.
+      description: "The cooldown regression keeps its historical lock",
+      matchFileNames: ["tools/testdata/lock_cooldown/**"],
+      enabled: false,
+    },
+    {
       // The govulncheck smoke test needs a module with known
       // vulnerabilities to find, so its golang.org/x/text pin stays put.
       description: "The govulncheck smoke fixture keeps its vulnerable pin",

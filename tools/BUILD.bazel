@@ -6,6 +6,7 @@
 # release archives.
 
 load("@bazel_env.bzl", "bazel_env")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load(
     "@tbhb_rules_python//:defs.bzl",
     "bandit_test",
@@ -25,6 +26,25 @@ load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 
 repo_files()
+
+sh_test(
+    name = "lock_cooldown_test",
+    srcs = ["lock_cooldown_test.sh"],
+    data = [
+        "testdata/lock_cooldown/pyproject.toml",
+        "testdata/lock_cooldown/uv.lock",
+        ":uv",
+    ],
+    env = {
+        "FIXTURE_RLOCATIONPATH": "$(rlocationpath testdata/lock_cooldown/pyproject.toml)",
+        "UV_RLOCATIONPATH": "$(rlocationpath :uv)",
+    },
+    tags = ["block-network"],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
 
 # For targets that run only on the macOS and Linux agent hosts.
 NOT_WINDOWS = select({
