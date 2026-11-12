@@ -75,7 +75,7 @@ for platform in apple swift; do
 done
 
 failures=0
-for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/e2e/smoke/tools/test_simulator_runtime.py; do
+for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/private/simulator/test_simulator_runtime.py; do
   printf '%s\n' "$path" >"$dir/changed"
   result=$(WORKSPACES="$workspaces" bash -euo pipefail -c "$plan" -- "$dir/changed" 2>&1) || {
     echo "FAIL: $path: $result" >&2
@@ -97,7 +97,7 @@ for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs
   swift/defs.bzl)
     assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
     ;;
-  swift/e2e/smoke/BUILD.bazel | swift/e2e/smoke/tools/test_simulator_runtime.py)
+  swift/e2e/smoke/BUILD.bazel | swift/private/simulator/test_simulator_runtime.py)
     assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
     ;;
   *) assertion='true' ;;

@@ -1,10 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-load("@rules_apple//apple/testing/default_runner:ios_xctestrun_runner.bzl", "ios_xctestrun_runner")
-load("@rules_python//python:py_binary.bzl", "py_binary")
-load("@rules_python//python:py_library.bzl", "py_library")
-load("@rules_python//python:py_test.bzl", "py_test")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
 load(
     "@tbhb_rules_swift//:defs.bzl",
@@ -41,52 +37,10 @@ tbhb_ios_application(
     deps = [":Greeting"],
 )
 
-ios_xctestrun_runner(
-    name = "ios_simulator",
-    create_simulator_action = ":create_simulator",
-    device_type = "iPhone 17",
-    os_version = "27.2",
-)
-
-py_library(
-    name = "simulator_runtime",
-    srcs = [
-        "tools/__init__.py",
-        "tools/simulator_runtime.py",
-    ],
-)
-
-py_binary(
-    name = "create_simulator",
-    srcs = ["tools/create_simulator.py"],
-    main = "tools/create_simulator.py",
-    deps = [
-        ":simulator_runtime",
-        "@rules_apple//apple/testing/default_runner:simulator_creator",
-    ],
-)
-
-py_test(
-    name = "simulator_runtime_test",
-    srcs = ["tools/test_simulator_runtime.py"],
-    data = ["tools/testdata/runtimes.json"],
-    main = "tools/test_simulator_runtime.py",
-    deps = [":simulator_runtime"],
-)
-
-py_test(
-    name = "create_simulator_test",
-    srcs = ["tools/test_create_simulator.py"],
-    data = ["tools/testdata/runtimes.json"],
-    main = "tools/test_create_simulator.py",
-    deps = [":create_simulator"],
-)
-
 tbhb_ios_unit_test(
     name = "ios_app_test",
     srcs = ["iOS/Tests/SmokeAppTests.swift"],
     module_name = "SmokeIOSAppTests",
-    runner = ":ios_simulator",
     test_host = ":ios_app",
     deps = [":Greeting"],
 )

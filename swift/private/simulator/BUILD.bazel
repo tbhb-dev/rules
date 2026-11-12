@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_python//python:py_binary.bzl", "py_binary")
+load("@rules_python//python:py_library.bzl", "py_library")
+load("@rules_python//python:py_test.bzl", "py_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+py_library(
+    name = "simulator_runtime",
+    srcs = [
+        "__init__.py",
+        "simulator_runtime.py",
+    ],
+)
+
+py_binary(
+    name = "create_simulator",
+    srcs = ["create_simulator.py"],
+    main = "create_simulator.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":simulator_runtime",
+        "@rules_apple//apple/testing/default_runner:simulator_creator",
+    ],
+)
+
+py_test(
+    name = "simulator_runtime_test",
+    srcs = ["test_simulator_runtime.py"],
+    data = ["testdata/runtimes.json"],
+    main = "test_simulator_runtime.py",
+    deps = [":simulator_runtime"],
+)
+
+py_test(
+    name = "create_simulator_test",
+    srcs = ["test_create_simulator.py"],
+    data = ["testdata/runtimes.json"],
+    main = "test_create_simulator.py",
+    deps = [":create_simulator"],
+)
