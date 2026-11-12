@@ -291,8 +291,8 @@ testpaths = ["lint/private/commit_identity", "lint/private/decision_records", "l
 source_paths = ["lint/private/commit_identity", "lint/private/decision_records", "lint/private/mutation_oses", "lint/private/okf_docs", "runtime/private"]
 # Tests are copied and run, never mutated.
 do_not_mutate = ["lint/private/commit_identity/test_*.py", "lint/private/decision_records/test_*.py", "lint/private/mutation_oses/test_*.py", "lint/private/okf_docs/test_*.py", "runtime/private/test_*.py", "runtime/private/boot/*"]
-# The docs checker's tests read repository schemas and compare the fixture tree.
-also_copy = ["docs/schemas", ".github/schemas", "lint/tests/okf_docs/testdata/tree"]
+# Keep the shared test settings, the repository schemas the docs checker reads, and its fixture tree.
+also_copy = ["conftest.py", "docs/schemas", ".github/schemas", "lint/tests/okf_docs/testdata/tree"]
 pytest_add_cli_args_test_selection = ["lint/private/commit_identity", "lint/private/decision_records", "lint/private/mutation_oses", "lint/private/okf_docs", "runtime/private"]
 
 [tool.ruff]
