@@ -25,7 +25,8 @@ from apple.testing.default_runner.simulator_creator import (
 from apple.testing.default_runner.simulator_creator import (
     _simctl as simctl,
 )
-from private.simulator.simulator_runtime import select_runtime
+
+from tbhb_rules_swift_simulator.simulator_runtime import select_runtime
 
 
 def main() -> None:

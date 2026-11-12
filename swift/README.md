@@ -7,7 +7,7 @@ Copyright Tony Burns
 
 See the [Swift module reference](../docs/reference/swift.md) for build macros, pins, checks, and the smoke consumer.
 
-The default `tbhb_ios_unit_test` runner selects an available iOS runtime that supports `device_type` and `os_version`. The module supplies the simulator tools in `private/simulator` and configures the default runner.
+The default `tbhb_ios_unit_test` runner selects an available iOS runtime that supports `device_type` and `os_version`. The module supplies the simulator tools in `private/simulator/tbhb_rules_swift_simulator` and configures the default runner.
 
 ## Consuming the module
 

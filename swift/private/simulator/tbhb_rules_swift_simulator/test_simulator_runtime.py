@@ -8,7 +8,7 @@ import re
 import unittest
 from pathlib import Path
 
-from private.simulator.simulator_runtime import RuntimeList, select_runtime
+from tbhb_rules_swift_simulator.simulator_runtime import RuntimeList, select_runtime
 
 
 class SimulatorRuntimeTest(unittest.TestCase):
