@@ -26,6 +26,7 @@ bzl_library(
     visibility = ["//runtime:__subpackages__"],
     deps = [
         ":python_mismatch",
+        ":python_sync",
         ":versions",
     ],
 )
@@ -39,6 +40,12 @@ bzl_library(
 python_mismatch_test_suite(name = "python_mismatch_tests")
 
 python_sync_test_suite(name = "python_sync_tests")
+
+bzl_library(
+    name = "python_sync",
+    srcs = ["python_sync.bzl"],
+    visibility = ["//runtime:__subpackages__"],
+)
 
 bzl_library(
     name = "env_info",
