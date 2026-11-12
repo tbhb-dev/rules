@@ -83,6 +83,14 @@ sh_test(
     env = {"WORKFLOW_RLOCATIONPATH": "$(rlocationpath //:.github/workflows/repo-checks.yml)"},
 )
 
+# The CI plan must keep a nonempty matrix when only Apple is selected.
+sh_test(
+    name = "ci_plan_test",
+    srcs = ["ci_plan_test.sh"],
+    data = ["//:.github/workflows/ci.yml"],
+    env = {"WORKFLOW_RLOCATIONPATH": "$(rlocationpath //:.github/workflows/ci.yml)"},
+)
+
 # setup-bazel-ci's CPU quota script, against fake cgroup files. The cases
 # that expect a count need a host with more than 2 CPUs.
 sh_test(
