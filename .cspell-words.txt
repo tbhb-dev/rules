@@ -119,6 +119,7 @@ nosandbox
 nosource
 nosystem
 NTFS
+numstat
 oklch
 owenlamont
 oxipng

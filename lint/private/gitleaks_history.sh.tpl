@@ -87,14 +87,17 @@ if ((status != 0)); then
 fi
 
 # gitleaks exits 0 when its git invocation fails, after scanning nothing.
+# Only additions need a scan. Numstat avoids patch headers and deletions;
+# rename detection keeps unchanged renames at zero additions. Binary rows
+# have unknown added counts (-), so conservatively require a scan.
 if ! grep -Eq '[1-9][0-9]* commits scanned' "$log"; then
-  if ! git log -p --format= "${scan_range:-HEAD}" >"$history"; then
+  if ! git log --format= --numstat --find-renames "${scan_range:-HEAD}" >"$history"; then
     echo "gitleaks_history: FAIL: git cannot read the history that gitleaks scanned 0 commits of" >&2
     exit 1
   fi
-  if grep -Eq '^[+-]' "$history"; then
-    echo "gitleaks_history: FAIL: gitleaks scanned 0 commits of a history with content, which proves nothing" >&2
+  if awk '$1 == "-" || $1 + 0 > 0 { found = 1 } END { exit !found }' "$history"; then
+    echo "gitleaks_history: FAIL: gitleaks scanned 0 commits of a history with added content, which proves nothing" >&2
     exit 1
   fi
-  echo "gitleaks_history: the history holds no content to scan"
+  echo "gitleaks_history: the history holds no added content to scan"
 fi
