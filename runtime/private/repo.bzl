@@ -11,6 +11,7 @@ the hashes in uv.lock and in its own interpreter metadata.
 """
 
 load(":python_mismatch.bzl", "python_mismatch_hint")
+load(":python_sync.bzl", "python_sync_retry")
 load(":versions.bzl", "UV_ASSETS", "UV_PLATFORMS")
 
 # Internal: load //runtime:defs.bzl.
@@ -95,14 +96,43 @@ environment marker in pyproject.toml, or lock a version that publishes a
 wheel for it.
 """
 
-def _run(rctx, args, env, what, working_directory = "", mismatch = None):
-    result = rctx.execute(args, environment = env, working_directory = working_directory, quiet = True)
+# A progressing wheel body can evade uv's idle-read timeout. Three 150 s
+# attempts allow ~120 s for a 17 MB wheel at 145 KB/s, yet cap sync at 450 s:
+# below the shared repo-checks 8-minute retry budget, with 150 s left in a
+# 10-minute CI job for setup and other work (the workflow defaults to 15).
+_SYNC_TIMEOUT = 150
+_SYNC_ATTEMPTS = 3
+
+def _check_result(rctx, result, what, mismatch = None, timeout_hint = ""):
     if result.return_code != 0:
         hint = _SDIST_HINT if _SDIST_BUILD_FAILED in result.stderr else ""
         if mismatch:
             hint += python_mismatch_hint(result.stderr, mismatch[0], mismatch[1])
+        hint += timeout_hint
         fail("{}: {} failed ({}):\n{}{}{}".format(rctx.name, what, result.return_code, result.stdout, result.stderr, hint))
     return result.stdout
+
+def _run(rctx, args, env, what, working_directory = ""):
+    result = rctx.execute(args, environment = env, working_directory = working_directory, quiet = True)
+    return _check_result(rctx, result, what)
+
+def _run_sync(rctx, args, env, working_directory, mismatch):
+    for attempt in range(1, _SYNC_ATTEMPTS + 1):
+        result = rctx.execute(
+            args,
+            environment = env,
+            working_directory = working_directory,
+            quiet = True,
+            timeout = _SYNC_TIMEOUT,
+        )
+        decision = python_sync_retry(result.return_code, result.stderr, attempt, _SYNC_ATTEMPTS, _SYNC_TIMEOUT)
+        if not decision.retry:
+            return _check_result(rctx, result, "uv sync", mismatch, decision.hint)
+
+        # Keep uv-cache: completed, validated wheels survive a killed attempt;
+        # the next sync downloads the unfinished wheels again.
+        rctx.report_progress("uv sync timed out after {} s; retrying ({}/{})".format(_SYNC_TIMEOUT, attempt + 1, _SYNC_ATTEMPTS))
+    fail("uv sync exceeded its retry limit")
 
 def _python_env_repo_impl(rctx):
     if not rctx.attr.lock:
@@ -170,7 +200,7 @@ def _python_env_repo_impl(rctx):
         else:
             source_roots.append(path or ".")
 
-    _run(
+    _run_sync(
         rctx,
         [
             uv,
@@ -184,8 +214,15 @@ def _python_env_repo_impl(rctx):
             "--python",
             interpreter,
         ],
-        dict(env, UV_PROJECT_ENVIRONMENT = str(rctx.path("venv"))),
-        "uv sync",
+        # Explicit HTTP limits handle idle reads and connection failures.
+        # They cannot stop a slowly progressing wheel; _run_sync bounds it.
+        dict(
+            env,
+            UV_HTTP_CONNECT_TIMEOUT = "10",
+            UV_HTTP_RETRIES = "3",
+            UV_HTTP_TIMEOUT = "30",
+            UV_PROJECT_ENVIRONMENT = str(rctx.path("venv")),
+        ),
         working_directory = str(project),
         mismatch = (version, rctx.read(pyproject)),
     )
