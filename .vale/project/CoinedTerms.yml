@@ -1,7 +1,7 @@
-# Add a term as a swap line here, then sync: every repo carries this file byte for byte.
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+# Add a term as a swap line here, then sync: every repo carries this file byte for byte.
 ---
 extends: substitution
 message: "Use '%s' instead of the coined term '%s'."
@@ -11,5 +11,9 @@ action:
   name: replace
 swap:
   green heads?: head whose checks passed
+  green lines?: CI passed at <sha>
   keepers?: scheduler
   go-lines?: merge message
+  the floor: org-wide rules
+  floor rules: org-wide rules
+  baseline floor: org-wide rules
