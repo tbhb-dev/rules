@@ -8,7 +8,7 @@ import re
 import unittest
 from pathlib import Path
 
-from tools.simulator_runtime import RuntimeList, select_runtime
+from private.simulator.simulator_runtime import RuntimeList, select_runtime
 
 
 class SimulatorRuntimeTest(unittest.TestCase):

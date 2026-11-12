@@ -10,8 +10,8 @@ generated:
     model: openai:gpt-6.1-sol
     effort: high
     surface: exec
-    session: sha-256-64:2ee7c2cc719b47fb
-    at: "2026-11-12T12:34:58Z"
+    session: sha-256-64:fed3160030b8f393
+    at: "2026-11-12T15:40:17Z"
 ---
 
 # Swift module reference
@@ -30,6 +30,7 @@ The `swift/e2e/smoke` consumer loads the module through `local_path_override`. T
 | `rules_swift` | 4.2.2 | `>=8.0.0` |
 | `rules_apple` | 5.4.0 | `>=8.0.0` |
 | `rules_shell` | 0.6.1 | |
+| `rules_python` | 1.7.0 | |
 | `bazel_skylib` | 1.9.2 | |
 | SwiftLint | 0.65.1 | An `http_archive` of `portable_swiftlint.zip`, outside the module registry. Its Secure Hash Algorithm 256 digest is `c1e429b0599cf1b516f369a2d9ec04eaf0e436f3c12b637df8851fa52ff694d0`. |
 
@@ -42,13 +43,15 @@ The smoke consumer passed with these pins on Bazel 9.3.2, Xcode 27.2 (build 27B5
 | `tbhb_swift_library(name, srcs, module_name, flag_set, copts)` | `swift_library` | `module_name` is `name`, `flag_set` is `"strict"` |
 | `tbhb_swift_test(name, srcs, flag_set, copts)` | `swift_test` | `flag_set` is `"strict"` |
 | `tbhb_ios_application(name, srcs, bundle_id, infoplists, deps, module_name, families, minimum_os_version, flag_set, copts)` | `ios_application` over a `<name>_lib` library | `families` is `["iphone"]`, `minimum_os_version` is `"17.0"` |
-| `tbhb_ios_unit_test(name, srcs, test_host, deps, module_name, device_type, os_version, minimum_os_version, flag_set, copts)` | `ios_unit_test` over a `<name>_lib` library and a `<name>_runner` simulator runner | `device_type` is `"iPhone 17"`, `os_version` is `"27.2"` |
+| `tbhb_ios_unit_test(name, srcs, test_host, deps, module_name, device_type, os_version, minimum_os_version, flag_set, copts, runner)` | `ios_unit_test` over a `<name>_lib` library and a `<name>_runner` simulator runner | `device_type` is `"iPhone 17"`, `os_version` is `"27.2"` |
 | `tbhb_macos_application(name, srcs, bundle_id, infoplists, deps, module_name, minimum_os_version, flag_set, copts)` | `macos_application` over a `<name>_lib` library | `minimum_os_version` is `"14.0"` |
 | `tbhb_macos_unit_test(name, srcs, test_host, deps, module_name, minimum_os_version, flag_set, copts)` | `macos_unit_test` over a `<name>_lib` library | `minimum_os_version` is `"14.0"` |
 | `tbhb_swiftlint_test(name, srcs, config)` | SwiftLint, `--strict` | `config` is `".swiftlint.yml"` |
 | `tbhb_swift_format_test(name, srcs, config)` | `swift-format lint --strict` from Xcode | `config` is `".swift-format"`, always tagged `manual` |
 | `tbhb_swift_strict_test(name, srcs, module_name, flag_set)` | `swiftc -typecheck` under the flag set | `flag_set` is `"strict"` |
 | `tbhb_swift_sanitizer_test(name, srcs, sanitizer)` | `swift_test` with the sanitizer feature | `sanitizer` is `"asan"` or `"tsan"` |
+
+`tbhb_ios_unit_test` generates a runner with the module's `//private/simulator:create_simulator` action. The action selects an available iOS runtime that supports both `device_type` and `os_version`, including device-specific runtimes. Pass `runner` to use a custom runner. The Python tests for the simulator tools live in `swift/private/simulator`.
 
 App and test macros accept the remaining attributes of the wrapped rule as keyword arguments. Install the simulator's iOS version on the host. An app's `Info.plist` needs `CFBundleVersion` and `CFBundleShortVersionString`.
 
@@ -128,7 +131,7 @@ Only the first set belongs to `"strict"`. The other flags have no proof that exp
 These observations come from a macOS 27.2 arm64 host with Xcode 27.2 (build 27B52), Apple Swift 6.4.2, and Bazel 9.3.2:
 
 - `rules_apple` 5.4.0 and `rules_swift` 4.2.2 build and test the library and both apps together.
-- Bazel's sandbox runs the iOS simulator test with no extra setting. The log says `Created new simulator 'BAZEL_TEST_iPhone 17_27.2'`. The test fails unless `targetEnvironment(simulator)` holds.
+- The default runner selects a compatible runtime, and Bazel's sandbox runs the iOS simulator test with no extra setting. The log says `Created new simulator 'BAZEL_TEST_iPhone 17_27.2'`. The test fails unless `targetEnvironment(simulator)` holds.
 - SwiftLint runs from the pinned archive.
 - `swift-format` depends on Xcode. It has no release binary, and the registry has no `swift-format`, `swift-markdown`, or `swift-cmark` module.
 

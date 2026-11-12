@@ -25,8 +25,7 @@ from apple.testing.default_runner.simulator_creator import (
 from apple.testing.default_runner.simulator_creator import (
     _simctl as simctl,
 )
-
-from tools.simulator_runtime import select_runtime
+from private.simulator.simulator_runtime import select_runtime
 
 
 def main() -> None:

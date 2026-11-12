@@ -11,7 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from tools import create_simulator
+from private.simulator import create_simulator
 
 
 class CreateSimulatorTest(unittest.TestCase):

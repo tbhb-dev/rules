@@ -178,7 +178,8 @@ def tbhb_ios_unit_test(
         **kwargs):
     """An ios_unit_test that runs on a simulator, hosted by an app.
 
-    Bazel's sandbox needs no extra setting for the simulator. The test's
+    The default runner selects an available runtime that supports the device
+    and iOS version; Bazel's sandbox needs no extra setting. The test's
     library is `<name>_lib`. Unless supplied, its runner is `<name>_runner`.
 
     Args:
@@ -192,7 +193,8 @@ def tbhb_ios_unit_test(
         minimum_os_version: The minimum iOS.
         flag_set: A key of SWIFT_FLAG_SETS.
         copts: Extra compiler flags, after the set's.
-        runner: Optional simulator runner; defaults to a generated runner.
+        runner: Optional simulator runner; defaults to a generated runner with
+            device-specific runtime selection.
         **kwargs: Passed to ios_unit_test.
     """
     tbhb_swift_library(
@@ -207,6 +209,7 @@ def tbhb_ios_unit_test(
     if runner == None:
         ios_xctestrun_runner(
             name = name + "_runner",
+            create_simulator_action = Label("@tbhb_rules_swift//private/simulator:create_simulator"),
             device_type = device_type,
             os_version = os_version,
         )

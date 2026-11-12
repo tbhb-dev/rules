@@ -20,8 +20,7 @@ bzl_library(
     deps = [
         "@rules_apple//apple:ios",
         "@rules_apple//apple:macos",
-        "@rules_apple//apple/testing/default_runner:ios_xctestrun_runner",
-        "@rules_shell//shell:sh_test.bzl",
+        "@rules_shell//shell:rules_bzl",
         "@rules_swift//swift",
     ],
 )
