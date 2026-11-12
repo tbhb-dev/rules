@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import cast
+from unittest.mock import patch
 
 import pytest
 import yaml
@@ -342,6 +343,29 @@ def test_github_summary_and_annotations(
         + "\n</pre>\n"
     )
     assert checker.escape_annotation("%\r\n") == "%25%0D%0A"
+
+
+@pytest.mark.parametrize(
+    ("git_args", "executable"),
+    [([], "git"), (["--git", "custom-git"], "custom-git")],
+)
+def test_main_reads_bundled_categories_and_selects_git(
+    capsys: pytest.CaptureFixture[str], git_args: list[str], executable: str
+) -> None:
+    report: checker.Report = {"files": [], "categories": [], "error": None}
+
+    # Assert resource and executable spelling before the filesystem can fold case.
+    def read_categories(path: Path) -> str:
+        assert str(path) == str(RULES)
+        return json.dumps(CATEGORIES)
+
+    with (
+        patch.object(Path, "read_text", read_categories),
+        patch.object(checker, "detect", return_value=report) as detect,
+    ):
+        assert checker.main([*git_args, "base", "head"]) == 0
+        detect.assert_called_once_with(executable, "base", "head", CATEGORIES)
+    assert capsys.readouterr().out == "controls_changed: 0 paths, 0 categories\n"
 
 
 @pytest.mark.parametrize("mode", [[], ["--json"], ["--github"]])
