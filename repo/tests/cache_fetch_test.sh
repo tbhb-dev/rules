@@ -14,7 +14,9 @@ cat >"$scratch/bin/bazelisk" <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ $1 == mod ]]; then
-  [[ ${FAIL_MAPPING:-false} != true ]]
+  if [[ ${FAIL_MAPPING:-false} == true ]]; then
+    exit 1
+  fi
   case "$PWD" in
     */go) echo '{"tbhb_rules_go":""}' ;;
     *) echo '{}' ;;
@@ -49,7 +51,10 @@ if grep '^root ' "$LOG" | grep -qF '//:pnpm_audit'; then
   exit 1
 fi
 fetch_count=$(wc -l <"$LOG" | tr -d ' ')
-[[ $fetch_count == 3 ]]
+if [[ $fetch_count != 3 ]]; then
+  echo "FAIL: expected 3 fetches, got $fetch_count"
+  exit 1
+fi
 # Shared external tools must fetch in every workspace.
 for workspace in root go typescript; do
   for tool in '@bazel_tools//tools:tools_for_bazel_subcommands' '@tbhb_rules//lint:zizmor'; do
@@ -69,14 +74,20 @@ if FAIL_MAPPING=true bash "$script"; then
   echo 'FAIL: failed mapping returned success'
   exit 1
 fi
-[[ ! -s $GITHUB_OUTPUT ]]
+if [[ -s $GITHUB_OUTPUT ]]; then
+  echo 'FAIL: failed command wrote success output'
+  exit 1
+fi
 # A failed fetch must fail the composite, with no success output.
 : >"$GITHUB_OUTPUT"
 if FAIL_FETCH=true bash "$script"; then
   echo 'FAIL: failed fetch returned success'
   exit 1
 fi
-[[ ! -s $GITHUB_OUTPUT ]]
+if [[ -s $GITHUB_OUTPUT ]]; then
+  echo 'FAIL: failed command wrote success output'
+  exit 1
+fi
 # Explicit targets preserve the existing input behavior.
 TARGETS='//:custom //:other' WORKSPACES=. bash "$script"
 grep -qF 'fetch --config=ci //:custom //:other' "$LOG"
