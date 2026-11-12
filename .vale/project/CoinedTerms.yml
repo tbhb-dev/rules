@@ -1,0 +1,15 @@
+# Add a term as a swap line here, then sync: every repo carries this file byte for byte.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+extends: substitution
+message: "Use '%s' instead of the coined term '%s'."
+level: error
+ignorecase: true
+action:
+  name: replace
+swap:
+  green heads?: head whose checks passed
+  keepers?: scheduler
+  go-lines?: merge message
