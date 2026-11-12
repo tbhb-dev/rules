@@ -6,12 +6,12 @@ title: Swift module reference
 type: Reference
 generated:
   - role: generated
-    harness: codex:0.166.0
+    harness: codex:0.164.0
     model: openai:gpt-6.1-sol
     effort: high
     surface: exec
-    session: sha-256-64:fed3160030b8f393
-    at: "2026-11-12T15:40:17Z"
+    session: sha-256-64:ae84290196d3b7cd
+    at: "2026-11-12T16:22:21Z"
 ---
 
 # Swift module reference
@@ -51,7 +51,7 @@ The smoke consumer passed with these pins on Bazel 9.3.2, Xcode 27.2 (build 27B5
 | `tbhb_swift_strict_test(name, srcs, module_name, flag_set)` | `swiftc -typecheck` under the flag set | `flag_set` is `"strict"` |
 | `tbhb_swift_sanitizer_test(name, srcs, sanitizer)` | `swift_test` with the sanitizer feature | `sanitizer` is `"asan"` or `"tsan"` |
 
-`tbhb_ios_unit_test` generates a runner with the module's `//private/simulator:create_simulator` action. The action selects an available iOS runtime that supports both `device_type` and `os_version`, including device-specific runtimes. Pass `runner` to use a custom runner. The Python tests for the simulator tools live in `swift/private/simulator`.
+`tbhb_ios_unit_test` generates a runner with the module's `//private/simulator:create_simulator` action. The action selects an available iOS runtime that supports both `device_type` and `os_version`, including device-specific runtimes. Pass `runner` to use a custom runner. The Python tests for the simulator tools live in `swift/private/simulator/tbhb_rules_swift_simulator`.
 
 App and test macros accept the remaining attributes of the wrapped rule as keyword arguments. Install the simulator's iOS version on the host. An app's `Info.plist` needs `CFBundleVersion` and `CFBundleShortVersionString`.
 

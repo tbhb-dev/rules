@@ -11,15 +11,17 @@ repo_files()
 py_library(
     name = "simulator_runtime",
     srcs = [
-        "__init__.py",
-        "simulator_runtime.py",
+        "tbhb_rules_swift_simulator/__init__.py",
+        "tbhb_rules_swift_simulator/simulator_runtime.py",
     ],
+    imports = ["."],
 )
 
 py_binary(
     name = "create_simulator",
-    srcs = ["create_simulator.py"],
-    main = "create_simulator.py",
+    srcs = ["tbhb_rules_swift_simulator/create_simulator.py"],
+    imports = ["."],
+    main = "tbhb_rules_swift_simulator/create_simulator.py",
     visibility = ["//visibility:public"],
     deps = [
         ":simulator_runtime",
@@ -29,16 +31,18 @@ py_binary(
 
 py_test(
     name = "simulator_runtime_test",
-    srcs = ["test_simulator_runtime.py"],
-    data = ["testdata/runtimes.json"],
-    main = "test_simulator_runtime.py",
+    srcs = ["tbhb_rules_swift_simulator/test_simulator_runtime.py"],
+    data = ["tbhb_rules_swift_simulator/testdata/runtimes.json"],
+    imports = ["."],
+    main = "tbhb_rules_swift_simulator/test_simulator_runtime.py",
     deps = [":simulator_runtime"],
 )
 
 py_test(
     name = "create_simulator_test",
-    srcs = ["test_create_simulator.py"],
-    data = ["testdata/runtimes.json"],
-    main = "test_create_simulator.py",
+    srcs = ["tbhb_rules_swift_simulator/test_create_simulator.py"],
+    data = ["tbhb_rules_swift_simulator/testdata/runtimes.json"],
+    imports = ["."],
+    main = "tbhb_rules_swift_simulator/test_create_simulator.py",
     deps = [":create_simulator"],
 )
