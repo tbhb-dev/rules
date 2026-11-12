@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-# Ported from devtools' tombi config (tombi 1.9.6). `bazelisk test //:tombi_test` runs the gates:
+# Tombi config (tombi 1.9.6). `bazelisk test //:tombi_test` runs the gates:
 #   tombi format --check --diff             (non-mutating format gate)
 #   tombi lint --offline --error-on-warnings
 # Re-verify the tombi pin whenever the version literals move.
@@ -16,6 +16,11 @@ toml-version = "v1.0.0"
 # repo that forgets to gitignore one of them. Every entry is intentional (an
 # undocumented ignore is a review defect).
 exclude = [
+  # Baseline snapshots keep source formatting; seeds contain placeholders.
+  "repo/baseline/files/**/*.toml",
+  "repo/baseline/kinds/**/*.toml",
+  "repo/baseline/visibility/**/*.toml",
+  "repo/baseline/seed/**/*.toml",
   ".venv/**/*.toml",
   "tmp/**/*.toml",
   ".bazel-*/**/*.toml",
