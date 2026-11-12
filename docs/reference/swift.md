@@ -6,12 +6,12 @@ title: Swift module reference
 type: Reference
 generated:
   - role: generated
-    harness: codex:0.164.0
+    harness: codex:0.166.0
     model: openai:gpt-6.1-sol
     effort: high
     surface: exec
-    session: sha-256-64:29873db3b19afbf4
-    at: "2026-11-12T11:52:44Z"
+    session: sha-256-64:2ee7c2cc719b47fb
+    at: "2026-11-12T12:34:58Z"
 ---
 
 # Swift module reference
@@ -74,7 +74,7 @@ A check counts as active when CI runs it and a proof expects it to fail on a bro
 | SwiftLint `--strict` | Active | `//:proof_swiftlint_fails` expects `Force Cast Violation` from `planted/ForceCast.swift` |
 | Strict flag set | Active | `//:proof_strict_fails` expects `var 'counter' is not concurrency-safe` from `planted/GlobalState.swift`. The control, `//:planted_default_test`, passes with the same file under `"default"`. |
 | AddressSanitizer | Active | `//:proof_asan_fails` expects `AddressSanitizer: heap-use-after-free` from `planted/UseAfterFree.swift` |
-| ThreadSanitizer | Active | `//:proof_tsan_fails` expects `ThreadSanitizer: data race` from `planted/DataRace.swift` |
+| ThreadSanitizer | Active | `//:proof_tsan_fails` expects `ThreadSanitizer: (data race\|Swift access race)` from `planted/DataRace.swift` |
 | `swift-format` | Pending | The target passes on the smoke sources on a Mac, but CI doesn't run it because it uses the copy from Xcode |
 | Coverage threshold | Pending | `bazelisk coverage` writes a report with no line or branch records for `swift_test`. See the measurement below. |
 | Mutation | Pending | No tool chosen |

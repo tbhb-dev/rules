@@ -164,6 +164,6 @@ tbhb_swift_sanitizer_test(
 
 expect_failure_test(
     name = "proof_tsan_fails",
-    pattern = "ThreadSanitizer: data race",
+    pattern = "ThreadSanitizer: (data race|Swift access race)",
     test = ":proof_tsan",
 )
