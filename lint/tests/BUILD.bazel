@@ -450,6 +450,25 @@ expect_failure_test(
     test = ":proof_vale_coined_terms",
 )
 
+# Ordinary uses of surviving terms that the rule still flags. The test passes
+# while Vale flags every line, so a narrowing that clears one fails it and
+# says to move that line to ok.md.
+vale_test(
+    name = "proof_vale_coined_terms_known_hits",
+    srcs = [
+        "testdata/coined_terms/known_hits.md",
+        "//:.vale/project/CoinedTerms.yml",
+    ],
+    config = "testdata/coined_terms/vale.ini",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "vale_coined_terms_known_hits_test",
+    pattern = "5 errors",
+    test = ":proof_vale_coined_terms_known_hits",
+)
+
 cspell_test(
     name = "cspell_local_vocabulary_test",
     srcs = [
