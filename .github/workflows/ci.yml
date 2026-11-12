@@ -107,7 +107,11 @@ jobs:
           ' <<<"${WORKSPACES}")"
           # apple-smoke needs Xcode, so it has a job of its own on a GitHub-hosted
           # macOS runner and stays out of the `bazel` job's matrix.
-          matrix="$(jq -c 'map(select(.id != "apple-smoke"))' <<<"${selected}")"
+          # GitHub fails an empty matrix; an Apple-only change keeps root checks running.
+          matrix="$(jq -c '
+            map(select(.id != "apple-smoke"))
+            | if length == 0 then [{id: "root", dir: "."}] else . end
+          ' <<<"${selected}")"
           apple="$(jq -r 'any(.[]; .id == "apple-smoke")' <<<"${selected}")"
           echo "workspaces=${matrix}" >>"${GITHUB_OUTPUT}"
           echo "apple=${apple}" >>"${GITHUB_OUTPUT}"

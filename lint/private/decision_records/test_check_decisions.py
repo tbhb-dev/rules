@@ -8,7 +8,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from lint.private.decision_records import check_decisions
@@ -135,6 +135,8 @@ def test_every_collision_names_the_first_path(tmp_path: Path) -> None:
     ]
 
 
+# Windows filesystem latency can exceed Hypothesis's default deadline.
+@settings(deadline=None)
 @given(
     st.dictionaries(
         st.integers(min_value=0, max_value=9999),
