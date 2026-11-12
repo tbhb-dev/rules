@@ -14,6 +14,7 @@ load(
     "gitleaks_test",
     "mutation_oses_test",
     "okf_docs_test",
+    "required_status_checks_test",
     "reuse_test",
     "rumdl_test",
     "ryl_test",
@@ -361,6 +362,19 @@ okf_docs_test(
 decision_records_test(
     name = "decision_records_test",
     srcs = [":repo_files"],
+)
+
+required_status_checks_test(
+    name = "required_status_checks_test",
+    srcs = [":repo_files"],
+)
+
+test_suite(
+    name = "required_status_checks_tests",
+    tests = [
+        "//lint/private/required_status_checks:pytest_test",
+        "//lint/tests/required_status_checks:all_tests",
+    ],
 )
 
 reuse_test(

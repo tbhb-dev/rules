@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(["check_status_checks.py"])
+
+pytest_test(
+    name = "pytest_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/private/required_status_checks"],
+    coverage = ["lint/private/required_status_checks"],
+    visibility = ["//:__pkg__"],
+)

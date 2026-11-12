@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//lint:defs.bzl", "required_status_checks_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+PROOF_TAGS = ["manual"]
+
+PREFIX = "lint/tests/required_status_checks/testdata/"
+
+# Each fixture is a copy of a real input with one problem planted in it.
+# The other argument always names the unchanged real input.
+PROOFS = {
+    "empty_contexts": (
+        PREFIX + "empty_contexts.json",
+        ".github/workflows/ci.yml",
+        "^" + PREFIX + "empty_contexts\\.json: required_status_checks is empty$",
+    ),
+    "missing_exempt_job": (
+        ".github/rulesets/main.json",
+        PREFIX + "missing_exempt_job.yml",
+        "^" + PREFIX + "missing_exempt_job\\.yml: exempt job 'cache-warm' does not exist$",
+    ),
+    "missing_need": (
+        ".github/rulesets/main.json",
+        PREFIX + "missing_need.yml",
+        "^" + PREFIX + "missing_need\\.yml: conclusion needs is missing job 'apple'$",
+    ),
+    "no_rule": (
+        PREFIX + "no_rule.json",
+        ".github/workflows/ci.yml",
+        "^" + PREFIX + "no_rule\\.json: no required_status_checks rule$",
+    ),
+    "unknown_context": (
+        PREFIX + "unknown_context.json",
+        ".github/workflows/ci.yml",
+        "^" + PREFIX + "unknown_context\\.json: required context 'missing-job' has no matching CI job$",
+    ),
+    "wrong_job": (
+        PREFIX + "wrong_job.json",
+        ".github/workflows/ci.yml",
+        "^" + PREFIX + "wrong_job\\.json: required context 'apple \\(apple-smoke\\)' matches job 'apple', expected 'conclusion'$",
+    ),
+}
+
+[
+    required_status_checks_test(
+        name = "proof_" + proof,
+        srcs = ["//:repo_files"],
+        ruleset = ruleset,
+        tags = PROOF_TAGS,
+        workflow = workflow,
+    )
+    for proof, (ruleset, workflow, _) in PROOFS.items()
+]
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":proof_" + proof,
+    )
+    for proof, (_, _, pattern) in PROOFS.items()
+]
+
+test_suite(
+    name = "all_tests",
+    tests = [":" + proof + "_fails" for proof in PROOFS],
+    visibility = ["//:__pkg__"],
+)
