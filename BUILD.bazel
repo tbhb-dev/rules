@@ -199,6 +199,7 @@ zizmor_test(
 # it lands, the scripts are listed here.
 SHELL_SCRIPTS = [
     ".github/actions/setup-bazel-ci/cpu_quota.sh",
+    ".github/actions/setup-bazel-ci/fetch.sh",
     "format/private/format.sh.tpl",
     "lint/private/codeowners.sh",
     "lint/private/cspell.sh.tpl",
@@ -214,6 +215,7 @@ SHELL_SCRIPTS = [
     "pins/tests/git_exec_path_test.sh",
     "pins/tests/git_network_test.sh",
     "quality/private/mutation_gate.sh.tpl",
+    "repo/tests/cache_fetch_test.sh",
     "repo/tests/ci_plan_test.sh",
     "repo/tests/cpu_quota_test.sh",
     "repo/tests/retry_budget_test.sh",
