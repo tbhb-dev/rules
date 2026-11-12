@@ -87,11 +87,15 @@ repos:
         entry: tools/.bazel_env/bin/buildifier -mode=fix -lint=warn -warnings=all
         types: [bazel]
       - id: tombi-format
+        # Preserve baseline source bytes and writer templates.
+        exclude: ^repo/baseline/(files|kinds|visibility|seed)/
         name: tombi format
         language: system
         entry: tools/.bazel_env/bin/tombi format --offline
         types: [toml]
       - id: ryl
+        # Preserve baseline source bytes and writer templates.
+        exclude: ^repo/baseline/(files|kinds|visibility|seed)/
         name: ryl
         language: system
         entry: tools/.bazel_env/bin/ryl check --strict -c .ryl.toml

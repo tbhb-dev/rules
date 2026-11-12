@@ -1,0 +1,9 @@
+version = 1
+
+# {{repo_name}} is proprietary: every file is LicenseRef-Proprietary unless
+# its own header says otherwise. Tool configs with Apache-2.0 headers keep
+# that license, so LICENSES/ holds its text too.
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "Tony Burns"
+SPDX-License-Identifier = "LicenseRef-Proprietary"

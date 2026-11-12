@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Bootstrap workspace for {{repo_name}}."""
+
+module(name = "{{repo_name}}")
+
+bazel_dep(name = "tbhb_rules", version = "0.0.0", dev_dependency = True)
+git_override(
+    module_name = "tbhb_rules",
+    commit = "{{rules_sha}}",
+    remote = "https://github.com/tbhb-dev/rules.git",
+)

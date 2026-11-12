@@ -91,3 +91,11 @@ path = [
 ]
 SPDX-FileCopyrightText = "Tony Burns"
 SPDX-License-Identifier = "Apache-2.0"
+
+# Baseline copies are reference content, including a proprietary license
+# specimen; these copies ship under this repository's Apache-2.0 license.
+[[annotations]]
+path = ["repo/baseline/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "Tony Burns"
+SPDX-License-Identifier = "Apache-2.0"

@@ -31,3 +31,6 @@ style = "backtick"
 "**/index.md" = ["MD004"]
 # A PR body has no H1: GitHub shows the PR title above it.
 ".github/PULL_REQUEST_TEMPLATE.md" = ["MD041"]
+
+# Baseline PR forms have no H1 because GitHub supplies the title.
+"repo/baseline/files/.github/PULL_REQUEST_TEMPLATE.md" = ["MD041"]

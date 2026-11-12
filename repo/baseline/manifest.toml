@@ -1,0 +1,648 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+schema_version = 1
+kinds = ["go", "python", "docs", "chezmoi"]
+
+# Values come from the writer.
+placeholders = ["repo_name", "rules_sha", "renovate_config_sha", "kind", "private", "mcp_server", "mcp_module", "mcp_endpoint", "mcp_token_file", "mcp_endpoint_env", "mcp_token_file_env"]
+
+# Repository-owned files; writers must also honor glob patterns here.
+never_write = [".gitleaksignore", "AGENTS.md", "CLAUDE.md", "README.md", "CHANGELOG.md", "MODULE.bazel.lock", "mise.lock", ".cspell-words.txt", ".vale/config/vocabularies/**", "go.mod", "go.sum", "pyproject.toml", "uv.lock", ".go-arch-lint.yml", ".bazelrc.user", "mise.local.toml", ".claude/settings.local.json", "preset.bazelrc", "vale_packages.bzl"]
+
+[[file]]
+path = ".bazelversion"
+source = "files/bazelversion"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
+path = ".github/actionlint.yaml"
+source = "files/.github/actionlint.yaml"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
+path = ".github/rulesets/main.json"
+source = "files/.github/rulesets/main.json"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
+path = ".editorconfig"
+source = "files/editorconfig"
+mode = "lines"
+visibility = "all"
+
+[[file]]
+path = ".gitattributes"
+source = "files/gitattributes"
+mode = "lines"
+visibility = "all"
+
+[[file]]
+path = ".gitignore"
+source = "files/gitignore"
+mode = "lines"
+visibility = "all"
+
+[[file]]
+path = ".rylignore"
+source = "files/rylignore"
+mode = "lines"
+visibility = "all"
+kinds = ["go", "python", "docs"]
+
+[[file]]
+path = ".bazelignore"
+source = "files/bazelignore"
+mode = "lines"
+visibility = "all"
+
+[[file]]
+path = ".github/zizmor.yml"
+source = "files/.github/zizmor.yml"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
+path = ".github/PULL_REQUEST_TEMPLATE.md"
+source = "files/.github/PULL_REQUEST_TEMPLATE.md"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
+path = ".github/pull-request-sections.toml"
+source = "files/.github/pull-request-sections.toml"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
+path = ".github/CODEOWNERS"
+source = "files/.github/CODEOWNERS"
+mode = "lines"
+visibility = "all"
+
+[[file]]
+path = "mise.toml"
+source = "files/mise.toml.baseline"
+mode = "keys"
+visibility = "all"
+keys = ["tools.prek", "settings.locked", "settings.lockfile_platforms"]
+
+[[file]]
+path = ".claude/settings.json"
+source = "files/.claude/settings.json"
+mode = "keys"
+visibility = "all"
+keys = ["permissions.deny", "permissions.allow", "enabledMcpjsonServers"]
+template = true
+
+[[file]]
+path = ".mcp.json"
+source = "files/.mcp.json"
+mode = "bytes"
+visibility = "all"
+template = true
+
+[[file]]
+path = ".gitleaks.toml"
+source = "files/.gitleaks.toml"
+mode = "keys"
+visibility = "all"
+keys = ["extend.useDefault"]
+
+[[file]]
+path = ".rumdl.toml"
+source = "files/rumdl.toml.baseline"
+mode = "keys"
+visibility = "all"
+kinds = ["go", "python", "docs"]
+keys = ["global.disable", "MD003.style", "MD004.style", "MD025.front_matter_title", "MD048.style"]
+
+[[file]]
+path = ".ryl.toml"
+source = "files/ryl.toml.baseline"
+mode = "keys"
+visibility = "all"
+keys = ["files.yaml", "lint", "format"]
+
+[[file]]
+path = "tombi.toml"
+source = "files/tombi.toml.baseline"
+mode = "keys"
+visibility = "all"
+kinds = ["go", "python", "docs"]
+keys = ["toml-version", "schema", "schemas"]
+
+[[file]]
+path = ".editorconfig-checker.json"
+source = "seed/go/.editorconfig-checker.json"
+mode = "seed"
+visibility = "all"
+kinds = ["go", "python", "docs"]
+
+[[file]]
+path = ".github/workflows/renovate.yaml"
+source = "files/.github/workflows/renovate.yaml"
+mode = "bytes"
+visibility = "all"
+template = true
+
+[[file]]
+path = ".github/workflows/renovate-config-validator.yaml"
+source = "files/.github/workflows/renovate-config-validator.yaml"
+mode = "bytes"
+visibility = "all"
+template = true
+
+[[file]]
+path = ".pre-commit-config.yaml"
+source = "seed/go/pre-commit-config.yaml"
+mode = "seed"
+visibility = "all"
+kinds = ["go"]
+
+[[file]]
+path = ".cspell.jsonc"
+source = "seed/go/cspell.jsonc.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["go"]
+template = true
+
+[[file]]
+path = ".vale.ini"
+source = "kinds/go/vale.ini"
+mode = "lines"
+visibility = "all"
+kinds = ["go"]
+
+[[file]]
+path = ".github/renovate.json5"
+source = "seed/go/.github/renovate.json5"
+mode = "seed"
+visibility = "all"
+kinds = ["go"]
+template = true
+
+[[file]]
+path = ".pre-commit-config.yaml"
+source = "seed/python/pre-commit-config.yaml"
+mode = "seed"
+visibility = "all"
+kinds = ["python"]
+
+[[file]]
+path = ".cspell.jsonc"
+source = "seed/python/cspell.jsonc.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["python"]
+template = true
+
+[[file]]
+path = ".vale.ini"
+source = "kinds/python/vale.ini"
+mode = "lines"
+visibility = "all"
+kinds = ["python"]
+
+[[file]]
+path = "size-check.sh"
+source = "kinds/python/size-check.sh"
+mode = "bytes"
+visibility = "all"
+kinds = ["python"]
+
+[[file]]
+path = ".python-version"
+source = "kinds/python/python-version"
+mode = "bytes"
+visibility = "all"
+kinds = ["python"]
+
+[[file]]
+path = ".github/renovate.json5"
+source = "seed/python/.github/renovate.json5"
+mode = "seed"
+visibility = "all"
+kinds = ["python"]
+template = true
+
+[[file]]
+path = ".pre-commit-config.yaml"
+source = "seed/docs/pre-commit-config.yaml"
+mode = "seed"
+visibility = "all"
+kinds = ["docs"]
+
+[[file]]
+path = ".cspell.jsonc"
+source = "seed/docs/cspell.jsonc.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["docs"]
+template = true
+
+[[file]]
+path = ".vale.ini"
+source = "kinds/docs/vale.ini"
+mode = "lines"
+visibility = "all"
+kinds = ["docs"]
+
+[[file]]
+path = "size-check.sh"
+source = "kinds/docs/size-check.sh"
+mode = "bytes"
+visibility = "all"
+kinds = ["docs"]
+
+[[file]]
+path = ".python-version"
+source = "kinds/docs/python-version"
+mode = "bytes"
+visibility = "all"
+kinds = ["docs"]
+
+[[file]]
+path = ".github/renovate.json5"
+source = "seed/docs/.github/renovate.json5"
+mode = "seed"
+visibility = "all"
+kinds = ["docs"]
+template = true
+
+[[file]]
+path = ".pre-commit-config.yaml"
+source = "seed/chezmoi/pre-commit-config.yaml"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+
+[[file]]
+path = ".cspell.jsonc"
+source = "seed/chezmoi/cspell.jsonc.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+template = true
+
+[[file]]
+path = ".vale.ini"
+source = "kinds/chezmoi/vale.ini"
+mode = "lines"
+visibility = "all"
+kinds = ["chezmoi"]
+
+[[file]]
+path = "size-check.sh"
+source = "kinds/chezmoi/size-check.sh"
+mode = "bytes"
+visibility = "all"
+kinds = ["chezmoi"]
+
+[[file]]
+path = ".python-version"
+source = "kinds/chezmoi/python-version"
+mode = "bytes"
+visibility = "all"
+kinds = ["chezmoi"]
+
+[[file]]
+path = ".github/renovate.json5"
+source = "seed/chezmoi/.github/renovate.json5"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+template = true
+
+[[file]]
+path = ".rumdl.toml"
+source = "kinds/chezmoi/rumdl.toml.baseline"
+mode = "keys"
+visibility = "all"
+kinds = ["chezmoi"]
+keys = ["global.exclude", "global.disable", "MD003.style", "MD004.style", "MD025.front_matter_title", "MD048.style"]
+
+[[file]]
+path = "tombi.toml"
+source = "kinds/chezmoi/tombi.toml.baseline"
+mode = "keys"
+visibility = "all"
+kinds = ["chezmoi"]
+keys = ["toml-version", "schema", "schemas", "files.exclude"]
+
+[[file]]
+path = ".rylignore"
+source = "kinds/chezmoi/rylignore"
+mode = "lines"
+visibility = "all"
+kinds = ["chezmoi"]
+
+[[file]]
+path = ".editorconfig-checker.json"
+source = "seed/chezmoi/.editorconfig-checker.json"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+
+[[file]]
+path = ".golangci.yml"
+source = "kinds/go/.golangci.yml"
+template = true
+mode = "keys"
+visibility = "all"
+kinds = ["go"]
+keys = ["version", "formatters.enable", "linters.default", "linters.disable"]
+
+[[file]]
+path = "LICENSE"
+source = "visibility/public/LICENSE"
+mode = "bytes"
+visibility = "public"
+
+[[file]]
+path = "REUSE.toml"
+source = "visibility/public/REUSE.toml"
+mode = "seed"
+visibility = "public"
+
+[[file]]
+path = "LICENSES/Apache-2.0.txt"
+source = "visibility/public/LICENSES/Apache-2.0.txt"
+mode = "bytes"
+visibility = "public"
+
+[[file]]
+path = "LICENSES/LicenseRef-Proprietary.txt"
+source = "visibility/private/LICENSES/LicenseRef-Proprietary.txt"
+mode = "bytes"
+visibility = "private"
+
+[[file]]
+path = "REUSE.toml"
+source = "visibility/private/REUSE.toml"
+mode = "seed"
+visibility = "private"
+template = true
+
+[[file]]
+path = "size-check.sh"
+source = "visibility/private/size-check.sh"
+mode = "bytes"
+visibility = "private"
+kinds = ["go"]
+
+[[file]]
+path = ".github/workflows/ci.yml"
+source = "seed/go/.github/workflows/ci.yml"
+mode = "seed"
+visibility = "all"
+kinds = ["go"]
+template = true
+
+[[file]]
+path = "MODULE.bazel"
+source = "seed/go/MODULE.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["go"]
+template = true
+
+[[file]]
+path = "BUILD.bazel"
+source = "seed/go/BUILD.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["go"]
+
+[[file]]
+path = "REPO.bazel"
+source = "seed/go/REPO.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["go"]
+
+[[file]]
+path = ".bazelrc"
+source = "seed/go/bazelrc"
+mode = "seed"
+visibility = "all"
+kinds = ["go"]
+
+[[file]]
+path = ".tbhb-repo.toml"
+source = "seed/go/.tbhb-repo.toml"
+mode = "seed"
+visibility = "all"
+kinds = ["go"]
+template = true
+
+[[file]]
+path = ".github/workflows/ci.yml"
+source = "seed/python/.github/workflows/ci.yml"
+mode = "seed"
+visibility = "all"
+kinds = ["python"]
+template = true
+
+[[file]]
+path = "MODULE.bazel"
+source = "seed/python/MODULE.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["python"]
+template = true
+
+[[file]]
+path = "BUILD.bazel"
+source = "seed/python/BUILD.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["python"]
+
+[[file]]
+path = "REPO.bazel"
+source = "seed/python/REPO.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["python"]
+
+[[file]]
+path = ".bazelrc"
+source = "seed/python/bazelrc"
+mode = "seed"
+visibility = "all"
+kinds = ["python"]
+
+[[file]]
+path = ".tbhb-repo.toml"
+source = "seed/python/.tbhb-repo.toml"
+mode = "seed"
+visibility = "all"
+kinds = ["python"]
+template = true
+
+[[file]]
+path = ".github/workflows/ci.yml"
+source = "seed/docs/.github/workflows/ci.yml"
+mode = "seed"
+visibility = "all"
+kinds = ["docs"]
+template = true
+
+[[file]]
+path = "MODULE.bazel"
+source = "seed/docs/MODULE.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["docs"]
+template = true
+
+[[file]]
+path = "BUILD.bazel"
+source = "seed/docs/BUILD.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["docs"]
+
+[[file]]
+path = "REPO.bazel"
+source = "seed/docs/REPO.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["docs"]
+
+[[file]]
+path = ".bazelrc"
+source = "seed/docs/bazelrc"
+mode = "seed"
+visibility = "all"
+kinds = ["docs"]
+
+[[file]]
+path = ".tbhb-repo.toml"
+source = "seed/docs/.tbhb-repo.toml"
+mode = "seed"
+visibility = "all"
+kinds = ["docs"]
+template = true
+
+[[file]]
+path = ".github/workflows/ci.yml"
+source = "seed/chezmoi/.github/workflows/ci.yml"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+template = true
+
+[[file]]
+path = "MODULE.bazel"
+source = "seed/chezmoi/MODULE.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+template = true
+
+[[file]]
+path = "BUILD.bazel"
+source = "seed/chezmoi/BUILD.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+
+[[file]]
+path = "REPO.bazel"
+source = "seed/chezmoi/REPO.bazel.baseline"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+
+[[file]]
+path = ".bazelrc"
+source = "seed/chezmoi/bazelrc"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+
+[[file]]
+path = ".tbhb-repo.toml"
+source = "seed/chezmoi/.tbhb-repo.toml"
+mode = "seed"
+visibility = "all"
+kinds = ["chezmoi"]
+template = true
+
+[[file]]
+path = ".vale/project/Acronyms.yml"
+source = "files/.vale/project/Acronyms.yml"
+mode = "keys"
+visibility = "all"
+keys = ["extends", "message", "link", "level", "ignorecase", "first", "second"]
+
+[[file]]
+path = ".vale/project/Colons.yml"
+source = "files/.vale/project/Colons.yml"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
+path = ".vale/project/HeadingTitleCase.yml"
+source = "files/.vale/project/HeadingTitleCase.yml"
+template = true
+mode = "keys"
+visibility = "all"
+keys = ["extends", "message", "level", "scope", "match", "style"]
+
+[[file]]
+path = ".vale/project/WordList.yml"
+source = "files/.vale/project/WordList.yml"
+mode = "keys"
+visibility = "all"
+keys = ["extends", "message", "link", "level", "ignorecase", "action"]
+
+[kind.go]
+required = [".bazelignore", ".bazelrc", ".bazelversion", ".claude/settings.json", ".cspell.jsonc", ".editorconfig", ".editorconfig-checker.json", ".gitattributes", ".github/CODEOWNERS", ".github/PULL_REQUEST_TEMPLATE.md", ".github/actionlint.yaml", ".github/pull-request-sections.toml", ".github/renovate.json5", ".github/rulesets/main.json", ".github/workflows/ci.yml", ".github/workflows/renovate-config-validator.yaml", ".github/workflows/renovate.yaml", ".github/zizmor.yml", ".gitignore", ".gitleaks.toml", ".golangci.yml", ".mcp.json", ".pre-commit-config.yaml", ".rumdl.toml", ".ryl.toml", ".rylignore", ".tbhb-repo.toml", ".vale.ini", ".vale/project/Acronyms.yml", ".vale/project/Colons.yml", ".vale/project/HeadingTitleCase.yml", ".vale/project/WordList.yml", "BUILD.bazel", "MODULE.bazel", "REPO.bazel", "mise.toml", "tombi.toml", "README.md", "AGENTS.md", "CLAUDE.md", ".cspell-words.txt", ".vale/config/vocabularies/project/accept.txt", ".vale/config/vocabularies/project/reject.txt", "go.mod", "go.sum", ".go-arch-lint.yml"]
+
+[kind.go.hooks]
+pre-commit = ["check-case-conflict", "check-executables-have-shebangs", "check-merge-conflict", "check-symlinks", "end-of-file-fixer", "fix-byte-order-marker", "mixed-line-ending", "trailing-whitespace", "gitleaks", "shfmt", "shellcheck", "buildifier", "tombi-format", "ryl", "rumdl", "actionlint", "editorconfig-checker", "agent-identity-stamp-docs"]
+commit-msg = ["gitleaks-commit-msg", "conventional-commits"]
+pre-push = ["spelling-and-prose"]
+
+[kind.python]
+required = [".bazelignore", ".bazelrc", ".bazelversion", ".claude/settings.json", ".cspell.jsonc", ".editorconfig", ".editorconfig-checker.json", ".gitattributes", ".github/CODEOWNERS", ".github/PULL_REQUEST_TEMPLATE.md", ".github/actionlint.yaml", ".github/pull-request-sections.toml", ".github/renovate.json5", ".github/rulesets/main.json", ".github/workflows/ci.yml", ".github/workflows/renovate-config-validator.yaml", ".github/workflows/renovate.yaml", ".github/zizmor.yml", ".gitignore", ".gitleaks.toml", ".mcp.json", ".pre-commit-config.yaml", ".python-version", ".rumdl.toml", ".ryl.toml", ".rylignore", ".tbhb-repo.toml", ".vale.ini", ".vale/project/Acronyms.yml", ".vale/project/Colons.yml", ".vale/project/HeadingTitleCase.yml", ".vale/project/WordList.yml", "BUILD.bazel", "MODULE.bazel", "REPO.bazel", "mise.toml", "size-check.sh", "tombi.toml", "README.md", "AGENTS.md", "CLAUDE.md", ".cspell-words.txt", ".vale/config/vocabularies/project/accept.txt", ".vale/config/vocabularies/project/reject.txt", "pyproject.toml", "uv.lock"]
+
+[kind.python.hooks]
+pre-commit = ["check-case-conflict", "check-executables-have-shebangs", "check-merge-conflict", "check-symlinks", "end-of-file-fixer", "fix-byte-order-marker", "mixed-line-ending", "trailing-whitespace", "gitleaks", "ruff-format", "ruff-check", "shfmt", "shellcheck", "buildifier", "tombi-format", "ryl", "rumdl", "actionlint", "editorconfig-checker", "size-check"]
+commit-msg = ["gitleaks-commit-msg", "conventional-commits"]
+pre-push = ["spelling-and-prose"]
+
+[kind.docs]
+required = [".bazelignore", ".bazelrc", ".bazelversion", ".claude/settings.json", ".cspell.jsonc", ".editorconfig", ".editorconfig-checker.json", ".gitattributes", ".github/CODEOWNERS", ".github/PULL_REQUEST_TEMPLATE.md", ".github/actionlint.yaml", ".github/pull-request-sections.toml", ".github/renovate.json5", ".github/rulesets/main.json", ".github/workflows/ci.yml", ".github/workflows/renovate-config-validator.yaml", ".github/workflows/renovate.yaml", ".github/zizmor.yml", ".gitignore", ".gitleaks.toml", ".mcp.json", ".pre-commit-config.yaml", ".python-version", ".rumdl.toml", ".ryl.toml", ".rylignore", ".tbhb-repo.toml", ".vale.ini", ".vale/project/Acronyms.yml", ".vale/project/Colons.yml", ".vale/project/HeadingTitleCase.yml", ".vale/project/WordList.yml", "BUILD.bazel", "MODULE.bazel", "REPO.bazel", "mise.toml", "size-check.sh", "tombi.toml", "README.md", "AGENTS.md", "CLAUDE.md", ".cspell-words.txt", ".vale/config/vocabularies/project/accept.txt", ".vale/config/vocabularies/project/reject.txt"]
+
+[kind.docs.hooks]
+pre-commit = ["check-case-conflict", "check-executables-have-shebangs", "check-merge-conflict", "check-symlinks", "end-of-file-fixer", "fix-byte-order-marker", "mixed-line-ending", "trailing-whitespace", "gitleaks", "shfmt", "shellcheck", "buildifier", "tombi-format", "ryl", "rumdl", "actionlint", "editorconfig-checker", "size-check"]
+commit-msg = ["gitleaks-commit-msg", "conventional-commits"]
+pre-push = []
+
+[kind.chezmoi]
+required = [".bazelignore", ".bazelrc", ".bazelversion", ".claude/settings.json", ".cspell.jsonc", ".editorconfig", ".editorconfig-checker.json", ".gitattributes", ".github/CODEOWNERS", ".github/PULL_REQUEST_TEMPLATE.md", ".github/actionlint.yaml", ".github/pull-request-sections.toml", ".github/renovate.json5", ".github/rulesets/main.json", ".github/workflows/ci.yml", ".github/workflows/renovate-config-validator.yaml", ".github/workflows/renovate.yaml", ".github/zizmor.yml", ".gitignore", ".gitleaks.toml", ".mcp.json", ".pre-commit-config.yaml", ".python-version", ".rumdl.toml", ".ryl.toml", ".rylignore", ".tbhb-repo.toml", ".vale.ini", ".vale/project/Acronyms.yml", ".vale/project/Colons.yml", ".vale/project/HeadingTitleCase.yml", ".vale/project/WordList.yml", "BUILD.bazel", "MODULE.bazel", "REPO.bazel", "mise.toml", "size-check.sh", "tombi.toml", "README.md", "AGENTS.md", "CLAUDE.md", ".cspell-words.txt", ".vale/config/vocabularies/project/accept.txt", ".vale/config/vocabularies/project/reject.txt", "home/"]
+
+[kind.chezmoi.hooks]
+pre-commit = ["check-case-conflict", "check-executables-have-shebangs", "check-merge-conflict", "check-symlinks", "end-of-file-fixer", "fix-byte-order-marker", "mixed-line-ending", "trailing-whitespace", "gitleaks", "shfmt", "shellcheck", "buildifier", "tombi-format", "ryl", "rumdl", "actionlint", "editorconfig-checker", "size-check"]
+commit-msg = ["gitleaks-commit-msg", "conventional-commits"]
+pre-push = []
+
+# Visibility requirements extend each kind.
+[visibility.public]
+required = ["LICENSE", "LICENSES/Apache-2.0.txt", "REUSE.toml"]
+
+[visibility.private]
+required = ["LICENSES/LicenseRef-Proprietary.txt", "REUSE.toml", "size-check.sh"]
+
+[visibility.private.hooks]
+pre-commit = ["size-check"]
+commit-msg = []
+pre-push = []

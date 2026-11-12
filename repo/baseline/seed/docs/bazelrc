@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The first build creates the repository-owned module lock.
+common --lockfile_mode=update
+common --symlink_prefix=.bazel-
+build:ci --color=yes
+test:ci --test_output=errors
+try-import %workspace%/.bazelrc.user

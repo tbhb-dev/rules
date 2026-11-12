@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "{{mcp_server}}": {
+      "command": "go",
+      "args": ["run", "{{mcp_module}}", "mcp"],
+      "env": {
+        "{{mcp_endpoint_env}}": "{{mcp_endpoint}}",
+        "{{mcp_token_file_env}}": "{{mcp_token_file}}"
+      }
+    }
+  }
+}
