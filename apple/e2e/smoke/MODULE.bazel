@@ -14,6 +14,7 @@ module(name = "tbhb_rules_apple_smoke")
 bazel_dep(name = "apple_support", version = "2.12.0")
 bazel_dep(name = "rules_swift", version = "4.2.2")
 bazel_dep(name = "rules_apple", version = "5.4.0")
+bazel_dep(name = "rules_python", version = "1.7.0")
 bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
 
