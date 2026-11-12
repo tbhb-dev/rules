@@ -18,10 +18,9 @@ bzl_library(
     srcs = ["defs.bzl"],
     visibility = ["//visibility:public"],
     deps = [
-        "//private/simulator:create_simulator",
         "@rules_apple//apple:ios",
         "@rules_apple//apple:macos",
-        "@rules_shell//shell:sh_test.bzl",
+        "@rules_shell//shell:rules_bzl",
         "@rules_swift//swift",
     ],
 )
