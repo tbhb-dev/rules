@@ -13,6 +13,7 @@ bazelisk
 bazelrc
 bazelversion
 BINDIR
+BRDA
 buildcop
 buildifier
 buildmeta
@@ -23,11 +24,13 @@ cainfo
 cand
 capsys
 cicd
+cmark
 cmdlines
 cocogitto
 colorjs
 compgen
 complexipy
+covmap
 cpus
 cuda
 cyclop
@@ -79,6 +82,7 @@ hprof
 importlinter
 importpath
 inconshreveable
+infoplists
 junitxml
 keepends
 ldconfig
@@ -108,10 +112,12 @@ nobuild
 nocache
 nocmd
 noexperimental
+Nonisolated
 nogo
 nohup
 nolint
 nolintlint
+Nonsending
 nonstrings
 norc
 noremote
@@ -170,6 +176,8 @@ subdirs
 subpackages
 subtests
 surrogateescape
+swiftc
+swiftlint
 takewhile
 tbhb
 tbhbdev
@@ -180,6 +188,7 @@ testpaths
 tombi
 toolu
 tricolon
+tsan
 ufffd
 uncomparables
 unconfigured
@@ -194,6 +203,7 @@ vitest
 WCAG
 workerd
 worktrees
+xcrun
 xdist
 xgenerated
 xgpt
