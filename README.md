@@ -11,7 +11,7 @@ Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned 
 | runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
 | testing | `@tbhb_rules//testing:defs.bzl` | `expect_failure_test` |
 
-Language and diagram rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/`, `tbhb_rules_python` in `python/`, `tbhb_rules_typescript` in `typescript/`, `tbhb_rules_cloudflare` in `cloudflare/`, which builds on the TypeScript module, `tbhb_rules_astro` in `astro/`, `tbhb_rules_playwright` in `playwright/`, which pins Playwright's browsers, `tbhb_rules_storybook` in `storybook/`, which builds, tests and serves Storybooks on those browsers, `tbhb_rules_ansible` in `ansible/`, which checks Ansible playbooks, roles and inventories, `tbhb_rules_tokens` in `tokens/`, which checks W3C design tokens and builds them into CSS with Terrazzo, and `tbhb_rules_d2` in `diagrams/d2/`.
+Language and diagram rules live in nested modules. A repository takes on only the toolchains it uses: `tbhb_rules_go` in `go/`, `tbhb_rules_python` in `python/`, `tbhb_rules_typescript` in `typescript/`, `tbhb_rules_cloudflare` in `cloudflare/`, which builds on the TypeScript module, `tbhb_rules_astro` in `astro/`, `tbhb_rules_playwright` in `playwright/`, which pins Playwright's browsers, `tbhb_rules_storybook` in `storybook/`, which builds, tests and serves Storybooks on those browsers, `tbhb_rules_ansible` in `ansible/`, which checks Ansible playbooks, roles and inventories, `tbhb_rules_tokens` in `tokens/`, which checks W3C design tokens and builds them into CSS with Terrazzo, `tbhb_rules_d2` in `diagrams/d2/`, and `tbhb_rules_swift` in `swift/`, which builds and tests Swift libraries, iOS simulator apps and macOS apps and needs a Mac with Xcode.
 
 The modules require Bazel 9 or newer (`bazel_compatibility = [">=9.0.0"]`), the only release line tbhb-dev repositories use.
 
@@ -175,7 +175,8 @@ mise provides bazelisk and uv (`mise install`). Bazel pins everything else. `mis
 | `bazelisk run //:format` | rewrites files with the formatters, and `//:format.check` only checks |
 | `(cd go && bazelisk test //...)`, `(cd python && bazelisk test //...)`, `(cd ansible && bazelisk test //...)`, `(cd diagrams/d2 && bazelisk test //...)` | the nested modules, each with its own consumers under `e2e/` |
 | `(cd apple/e2e/smoke && bazelisk test //...)` | Swift and Apple builds under `rules_swift` and `rules_apple`. It needs macOS and Xcode, so CI runs it on a GitHub-hosted macOS runner. Its README has the findings |
-| `mise run test` | every command in this table except the format runs and the Apple smoke |
+| `(cd swift/e2e/smoke && bazelisk test //...)` | `tbhb_rules_swift` as a consumer sees it, with one library, one iOS simulator app, one macOS app, and the lint, flag, sanitizer and failure-proof gates. It needs macOS and Xcode, so CI runs it on a GitHub-hosted macOS image. `swift/README.md` has the module and its gates |
+| `mise run test` | every command in this table except the format runs and the Apple and Swift smokes |
 
 `.github/workflows/ci.yml` lists the complete gate set.
 

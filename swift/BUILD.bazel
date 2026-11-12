@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+# e2e/ is its own module.
+repo_files(
+    exclude = [
+        ".DS_Store",
+        "**/.DS_Store",
+        ".bazelrc.user",
+    ],
+)
+
+bzl_library(
+    name = "defs",
+    srcs = ["defs.bzl"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@rules_apple//apple:ios",
+        "@rules_apple//apple:macos",
+        "@rules_apple//apple/testing/default_runner:ios_xctestrun_runner",
+        "@rules_shell//shell:sh_test.bzl",
+        "@rules_swift//swift",
+    ],
+)

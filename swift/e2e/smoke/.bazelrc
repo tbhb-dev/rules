@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The parent module's generated preset; it follows the same .bazelversion.
+# It comes first so the flags below can override it.
+import %workspace%/../../../preset.bazelrc
+
+common --repo_env=DO_NOT_TRACK=1
+
+# Dot-prefix the convenience symlinks, so tools that skip dotfiles leave them
+# alone instead of following them into the output base.
+common --symlink_prefix=.bazel-
+
+# The smoke module consumes tbhb_rules_swift and tbhb_rules from parent
+# directories, so its lockfile would churn with every change there; it is
+# not committed.
+common --lockfile_mode=off
+# --config=ci (from the preset) would turn it back to error.
+common:ci --lockfile_mode=off
+
+common --enable_platform_specific_config
+
+# Xcode comes from the host, through apple_support's Xcode config. Naming the
+# version makes a host without it fail, instead of building with whichever
+# Xcode is the default.
+build --xcode_version=27.2

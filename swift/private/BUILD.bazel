@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(
+    [
+        "swift_format_test.sh",
+        "swiftc_typecheck_test.sh",
+        "swiftlint_test.sh",
+    ],
+    visibility = ["//visibility:public"],
+)
