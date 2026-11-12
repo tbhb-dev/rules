@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-load("//lint:defs.bzl", "gitleaks_history", "gitleaks_test", "shellcheck_test", "shfmt_test")
+load("//lint:defs.bzl", "cspell_test", "gitleaks_history", "gitleaks_test", "shellcheck_test", "shfmt_test", "vale_test")
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":commit_identity_crlf.bzl", "commit_identity_crlf_test")
 load(":commit_identity_scenario.bzl", "commit_identity_scenario_test")
-load(":cspell_tests.bzl", "cspell_test_suite")
+load(":cspell_tests.bzl", "cspell_parent_config_test", "cspell_test_suite")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
 load(":gitleaks_private_scenario.bzl", "gitleaks_private_scenario_test")
 load(":gitleaks_redact_scenario.bzl", "GITLEAKS_REDACT_FIXTURE", "gitleaks_redact_scenario_test")
@@ -331,3 +331,91 @@ PROOF_REASONS = {
     )
     for proof, pattern in PROOF_REASONS.items()
 ]
+
+# Vocabulary inherited by both macros without project word lists.
+[
+    rule(
+        name = tool + "_vocabulary_test",
+        srcs = ["testdata/vocabulary/clean.md"] + (glob(["testdata/vocabulary/styles/**"]) + ["testdata/vocabulary/local.md"] if tool == "vale" else []),
+        config = "testdata/vocabulary/vale.ini" if tool == "vale" else None,
+    )
+    for tool, rule in [
+        ("cspell", cspell_test),
+        ("vale", vale_test),
+    ]
+]
+
+[
+    rule(
+        name = "proof_" + tool + "_possessive",
+        srcs = ["testdata/vocabulary/bad.md"] + (glob(["testdata/vocabulary/styles/**"]) if tool == "vale" else []),
+        config = "testdata/vocabulary/vale.ini" if tool == "vale" else None,
+        tags = PROOF_TAGS,
+    )
+    for tool, rule in [
+        ("cspell", cspell_test),
+        ("vale", vale_test),
+    ]
+]
+
+[
+    expect_failure_test(
+        name = tool + "_possessive_fails_test",
+        pattern = pattern,
+        test = ":proof_" + tool + "_possessive",
+    )
+    for tool, pattern in [
+        (
+            "cspell",
+            # cspell:disable-next-line
+            "bad\\.md:3:[0-9]+ - Unknown word \\(Renovatte\\)",
+        ),
+        (
+            "vale",
+            # cspell:disable-next-line
+            "Renovatte.s.*Vale\\.Spelling",
+        ),
+    ]
+]
+
+cspell_test(
+    name = "cspell_local_vocabulary_test",
+    srcs = [
+        "testdata/vocabulary/clean.md",
+        "testdata/vocabulary/local.md",
+    ],
+    config = "testdata/vocabulary/cspell.json",
+    data = ["testdata/vocabulary/words.txt"],
+)
+
+vale_test(
+    name = "vale_package_vocabulary_test",
+    srcs = [
+        "testdata/vocabulary/clean.md",
+        "testdata/vocabulary/local.md",
+    ] + glob(["testdata/vocabulary/styles/**"]),
+    config = "testdata/vocabulary/vale-google.ini",
+    packages = {"Google": "@vale_google//file"},
+)
+
+# Keep cspell's config discovery working when no config attribute is set.
+cspell_test(
+    name = "cspell_discovered_vocabulary_test",
+    srcs = [
+        "testdata/vocabulary/clean.md",
+        "testdata/vocabulary/local.md",
+    ],
+    data = [
+        "testdata/vocabulary/cspell.json",
+        "testdata/vocabulary/words.txt",
+    ],
+)
+
+cspell_parent_config_test(
+    name = "cspell_parent_config_test",
+    fixtures = glob(["testdata/vocabulary/*.md"]) + [
+        "testdata/vocabulary/cspell.json",
+        "testdata/vocabulary/words.txt",
+    ],
+    subject = ":cspell_vocabulary_test_tool",
+)

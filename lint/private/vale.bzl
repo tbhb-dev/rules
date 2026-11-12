@@ -38,6 +38,9 @@ def vale_test(
     them with vale's own `vale sync`. The files to lint are picked before the sync, so the synced styles
     are never linted themselves. Keep the synced directories out of `srcs`.
 
+    The shared public vocabulary is added alongside the project vocabularies
+    in the scratch tree. Accepted entries also accept a possessive suffix.
+
     Args:
         name: Target name.
         srcs: Files to search, usually a `repo_files` target. It must include
@@ -51,6 +54,8 @@ def vale_test(
         tool: The vale binary. Its basename must be `vale`.
         **kwargs: Passed to `tree_check_test`.
     """
+    cache_files = dict(kwargs.pop("cache_files", {}))
+    cache_files[Label("//lint/vocabulary:words.txt")] = "vale/words.txt"
     include_args = []
     for pattern in include:
         include_args += ["--include", pattern]
@@ -61,7 +66,7 @@ def vale_test(
         tool = Label(":vale.sh"),
         tool_args = ["{config}"] + include_args,
         path_tools = [tool],
-        cache_files = _cache_files(packages),
+        cache_files = cache_files | _cache_files(packages),
         **kwargs
     )
 
