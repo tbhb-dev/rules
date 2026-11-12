@@ -27,6 +27,18 @@ else
       echo 'INFO: see https://example.com/help'
       exit 1
       ;;
+    uv-timeout)
+      cat <<'OUTPUT'
+(03:03:23) INFO: repository @@tbhb_rules_python++python+tbhb_python' used the following cache hits instead of downloading the corresponding file.
+ * Hash 'c5221ff41b7892bfc223543883600125f6a47fe845093e0f5bdff4f359196d83' for https://github.com/astral-sh/uv/releases/download/0.13.7/uv-x86_64-unknown-linux-gnu.tar.gz
+(03:03:23) ERROR: runtime/private/repo.bzl:104:13: An error occurred during the fetch of repository 'tbhb_rules_python++python+tbhb_python':
+Error in fail: tbhb_rules_python++python+tbhb_python: uv sync failed (256):
+Timed out
+(03:03:23) ERROR: no such package '@@tbhb_rules_python++python+tbhb_python//': tbhb_rules_python++python+tbhb_python: uv sync failed (256):
+Timed out
+OUTPUT
+      exit 1
+      ;;
     download-once)
       if [[ $(wc -l <"$LOG" | tr -d ' ') != 1 ]]; then
         exit 0
@@ -107,6 +119,29 @@ fi
 grep -qF "::error::ERROR: no such target '//:gazelle': target 'gazelle' not declared in package ''" "$scratch/failure"
 if grep -qF 'kept failing' "$scratch/failure"; then
   echo 'FAIL: target error reported as a download failure'
+  exit 1
+fi
+# A uv sync timeout is not a failed download of the cached uv release.
+: >"$LOG"
+: >"$SLEEP_LOG"
+: >"$GITHUB_OUTPUT"
+now=$(date +%s)
+if FETCH_FAILURE=uv-timeout BUDGET=1 DEADLINE=$((now + 60)) bash "$script" >"$scratch/failure" 2>&1; then
+  echo 'FAIL: uv sync timeout returned success'
+  exit 1
+fi
+cat "$scratch/failure"
+fetch_count=$(wc -l <"$LOG" | tr -d ' ')
+[[ $fetch_count == 1 && ! -s $SLEEP_LOG && ! -s $GITHUB_OUTPUT ]]
+annotation=$(grep '^::error::' "$scratch/failure")
+if [[ $annotation != *"ERROR: runtime/private/repo.bzl:104:13:"* ||
+  $annotation != *"repository 'tbhb_rules_python++python+tbhb_python'"* ||
+  $annotation != *"%0AError in fail: tbhb_rules_python++python+tbhb_python: uv sync failed (256):%0ATimed out"* ]]; then
+  echo "FAIL: uv sync annotation omitted the repository failure: $annotation"
+  exit 1
+fi
+if [[ $annotation == *github.com/astral-sh/uv* || $annotation == *'kept failing'* ]]; then
+  echo "FAIL: uv sync annotation blamed the cached release: $annotation"
   exit 1
 fi
 # A transient download failure still retries, with an injectable initial delay.
