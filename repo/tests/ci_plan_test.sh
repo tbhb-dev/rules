@@ -46,6 +46,9 @@ for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md; do
     # A root file must retain exactly the matrix from the old filter.
     assertion='.matrix == (.selected | map(select(.id != "apple-smoke"))) and (.matrix | length > 1)'
     ;;
+  e2e/smoke/README.md)
+    assertion='.matrix == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false'
+    ;;
   *) assertion='true' ;;
   esac
   if ! jq -e "(.matrix | length > 0) and ($assertion)" <<<"$result" >/dev/null; then
