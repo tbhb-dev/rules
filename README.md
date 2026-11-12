@@ -175,7 +175,7 @@ mise provides bazelisk and uv (`mise install`). Bazel pins everything else. `mis
 | `bazelisk run //:format` | rewrites files with the formatters, and `//:format.check` only checks |
 | `(cd go && bazelisk test //...)`, `(cd python && bazelisk test //...)`, `(cd ansible && bazelisk test //...)`, `(cd diagrams/d2 && bazelisk test //...)` | the nested modules, each with its own consumers under `e2e/` |
 | `(cd apple/e2e/smoke && bazelisk test //...)` | Swift and Apple builds under `rules_swift` and `rules_apple`. It needs macOS and Xcode, so CI runs it on a GitHub-hosted macOS runner. Its README has the findings |
-| `(cd swift/e2e/smoke && bazelisk test //...)` | `tbhb_rules_swift` consumer: a library, an iOS simulator app, a macOS app, and lint, flag, sanitizer and failure-proof gates. Requires macOS with Xcode. See `swift/README.md` for the module and its gates |
+| `(cd swift/e2e/smoke && bazelisk test //...)` | Tests `tbhb_rules_swift` libraries and apps, with lint, flag, sanitizer and failure-proof gates. Requires macOS with Xcode. See `swift/README.md` for the module and its gates |
 | `mise run test` | every command in this table except the format runs and the Apple and Swift smokes |
 
 `.github/workflows/ci.yml` lists the complete gate set.
