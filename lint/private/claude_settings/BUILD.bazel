@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(["check_claude_settings.py"])
+
+pytest_test(
+    name = "pytest_test",
+    srcs = [
+        ":repo_files",
+        "//:pyproject.toml",
+    ],
+    args = ["lint/private/claude_settings"],
+    coverage = ["lint.private.claude_settings.check_claude_settings"],
+)
