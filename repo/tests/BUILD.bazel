@@ -245,6 +245,73 @@ sh_test(
     }.items()
 ]
 
+# Every consumer repository must have the files its kind requires. The
+# fixtures carry a small manifest of their own; the real baseline is not run
+# against this repository, which fits no kind.
+python_tool(
+    name = "check_required_files",
+    testonly = True,
+    main = "check_required_files.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    tags = ["manual"],
+)
+
+REQUIRED_FILES_DATA = [
+    "//repo/baseline:repo_files",
+] + glob(["testdata/required_files/**"])
+
+REQUIRED_FILES_ROOT = "repo/tests/testdata/required_files/"
+
+REQUIRED_FILES_ARGS = [
+    REQUIRED_FILES_ROOT + "manifest.toml",
+    "repo/baseline/repo.schema.json",
+]
+
+[
+    sh_test(
+        name = "required_files_{}_test".format(case),
+        srcs = [":check_required_files"],
+        args = REQUIRED_FILES_ARGS + [REQUIRED_FILES_ROOT + "clean/" + case],
+        data = REQUIRED_FILES_DATA,
+        target_compatible_with = MISE_KEYS_NOT_WINDOWS,
+    )
+    for case in [
+        "go",
+        "docs",
+    ]
+]
+
+# Each bad fixture breaks one rule; each proof names the line it must report.
+REQUIRED_FILES_PROOFS = {
+    "bad_exception": "exception for go.mod but it is not missing",
+    "missing_dir": "required directory cmd/ is missing",
+    "missing_file": "required file go.mod is missing",
+    "private_license": "required file LICENSES/LicenseRef-Proprietary.txt is missing",
+    "unknown_kind": "\\$.kind: 'rust' is not one of",
+}
+
+[
+    sh_test(
+        name = "proof_required_files_" + case,
+        srcs = [":check_required_files"],
+        args = REQUIRED_FILES_ARGS + [REQUIRED_FILES_ROOT + "bad/" + case],
+        data = REQUIRED_FILES_DATA,
+        tags = ["manual"],
+        target_compatible_with = MISE_KEYS_NOT_WINDOWS,
+    )
+    for case in REQUIRED_FILES_PROOFS
+]
+
+[
+    expect_failure_test(
+        name = "proof_required_files_{}_fails".format(case),
+        args = REQUIRED_FILES_ARGS + [REQUIRED_FILES_ROOT + "bad/" + case],
+        pattern = pattern,
+        test = ":proof_required_files_" + case,
+    )
+    for case, pattern in REQUIRED_FILES_PROOFS.items()
+]
+
 pytest_test(
     name = "pytest_test",
     srcs = ["//:repo_files"],

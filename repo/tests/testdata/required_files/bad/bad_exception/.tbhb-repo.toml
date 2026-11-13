@@ -1,0 +1,8 @@
+schema_version = 1
+kind = "go"
+private = false
+
+[[exception]]
+check = "C4"
+path = "go.mod"
+reason = "Nothing differs."
