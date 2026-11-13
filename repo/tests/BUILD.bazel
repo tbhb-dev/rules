@@ -183,6 +183,14 @@ python_tool(
     tags = ["manual"],
 )
 
+# On Windows `python_tool` is a .bat, and `sh_test` fails analysis unless the
+# test name carries the source's extension. `pytest_test` covers the check's
+# logic there.
+MISE_KEYS_NOT_WINDOWS = select({
+    "@platforms//os:windows": ["@platforms//:incompatible"],
+    "//conditions:default": [],
+})
+
 MISE_KEYS_CLEAN = [
     "repo/tests/testdata/mise_keys/clean/baseline.toml",
     "repo/tests/testdata/mise_keys/clean/mise.toml",
@@ -204,6 +212,7 @@ sh_test(
         "//:mise.toml",
         "//repo/baseline:repo_files",
     ],
+    target_compatible_with = MISE_KEYS_NOT_WINDOWS,
 )
 
 sh_test(
@@ -211,6 +220,7 @@ sh_test(
     srcs = [":check_mise_keys"],
     args = MISE_KEYS_CLEAN,
     data = glob(["testdata/mise_keys/clean/*"]),
+    target_compatible_with = MISE_KEYS_NOT_WINDOWS,
 )
 
 sh_test(
@@ -219,6 +229,7 @@ sh_test(
     args = MISE_KEYS_BAD,
     data = glob(["testdata/mise_keys/bad/*"]),
     tags = ["manual"],
+    target_compatible_with = MISE_KEYS_NOT_WINDOWS,
 )
 
 [
