@@ -167,8 +167,12 @@ def test_main_exit_codes(
     )
     assert not capsys.readouterr().out
     (repo / "go.mod").unlink()
+    (repo / "LICENSE").unlink()
     assert (
         checker.main([str(manifest), str(manifest.with_name("schema.json")), str(repo)])
         == 1
     )
-    assert capsys.readouterr().out == f"{repo}: required file go.mod is missing\n"
+    assert capsys.readouterr().out == (
+        f"{repo}: required file go.mod is missing\n"
+        f"{repo}: required file LICENSE is missing\n"
+    )
