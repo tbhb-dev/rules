@@ -17,8 +17,8 @@ exports_files([
     "shell_select.sh",
     "tree_check.sh.tpl",
     "vale.sh",
-    "workflow_lint.sh",
     "vale_sync.sh.tpl",
+    "workflow_lint.sh",
 ])
 
 bzl_library(
