@@ -28,6 +28,7 @@ cocogitto
 colorjs
 compgen
 complexipy
+conftest
 cpus
 cuda
 cyclop
