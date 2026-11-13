@@ -145,6 +145,15 @@ def test_exception_hides_one_missing_path(manifest: Path, repo: Path) -> None:
     assert run(manifest, repo) == []
 
 
+def test_exception_hides_only_its_own_path(manifest: Path, repo: Path) -> None:
+    declare(
+        repo,
+        "[[exception]]\ncheck = 'C4'\npath = 'LICENSE'\nreason = 'Not yet.'\n",
+    )
+    (repo / "cmd").mkdir()
+    assert run(manifest, repo) == [f"{repo}: required file go.mod is missing"]
+
+
 def test_exception_for_present_path_fails(manifest: Path, repo: Path) -> None:
     declare(
         repo,

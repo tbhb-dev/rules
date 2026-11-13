@@ -10,6 +10,8 @@ set -uo pipefail
 
 wrapped="$PWD/@@TEST@@"
 pattern=@@PATTERN@@
+want_status=@@STATUS@@
+first_line_only=@@FIRST_LINE@@
 
 work="$TEST_TMPDIR/expect_failure"
 log="$work/output.log"
@@ -40,8 +42,20 @@ if ((status == 0)); then
   exit 1
 fi
 
+if ((want_status != 0 && status != want_status)); then
+  echo "expect_failure_test: FAIL: the wrapped test exited with status $status," \
+    "but it must exit with status $want_status" >&2
+  show_output
+  exit 1
+fi
+
 match=0
-grep -Eq -- "$pattern" "$log" || match=$?
+if ((first_line_only)); then
+  first=$(head -n 1 "$log")
+  printf '%s\n' "$first" | grep -Eq -- "$pattern" || match=$?
+else
+  grep -Eq -- "$pattern" "$log" || match=$?
+fi
 case $match in
 0)
   echo "expect_failure_test: ok: the wrapped test failed (exit status $status)" \

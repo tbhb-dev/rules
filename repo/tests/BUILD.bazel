@@ -348,13 +348,14 @@ REQUIRED_FILES_ARGS = [
     ]
 ]
 
-# Each bad fixture breaks one rule; each proof names the line it must report.
+# Each bad fixture breaks one rule; each proof pins exit status 1 and the exact
+# first line the check prints, so a later crash cannot satisfy it.
 REQUIRED_FILES_PROOFS = {
-    "bad_exception": "exception for go.mod but it is not missing",
-    "missing_dir": "required directory cmd/ is missing",
-    "missing_file": "required file go.mod is missing",
-    "private_license": "required file LICENSES/LicenseRef-Proprietary.txt is missing",
-    "unknown_kind": "\\$.kind: 'rust' is not one of",
+    "bad_exception": "^[^ ]+/\\.tbhb-repo\\.toml: exception for go\\.mod but it is not missing$",
+    "missing_dir": "^[^ ]+: required directory cmd/ is missing$",
+    "missing_file": "^[^ ]+: required file go\\.mod is missing$",
+    "private_license": "^[^ ]+: required file LICENSES/LicenseRef-Proprietary\\.txt is missing$",
+    "unknown_kind": "^[^ ]+/\\.tbhb-repo\\.toml: \\$\\.kind: 'rust' is not one of \\['go', 'python', 'docs', 'chezmoi'\\]$",
 }
 
 [
@@ -373,6 +374,8 @@ REQUIRED_FILES_PROOFS = {
     expect_failure_test(
         name = "proof_required_files_{}_fails".format(case),
         args = REQUIRED_FILES_ARGS + [REQUIRED_FILES_ROOT + "bad/" + case],
+        exit_status = 1,
+        first_line = True,
         pattern = pattern,
         test = ":proof_required_files_" + case,
     )
