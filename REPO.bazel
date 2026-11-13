@@ -14,6 +14,8 @@ ignore_directories([
     "bazel-*",
     "**/.bazel_env",
     ".claude/worktrees",
+    # Nested git worktrees; .bazelignore alone does not stop subpackages() from listing their BUILD files.
+    ".worktrees",
     ".mise",
     # Obsidian vault settings, from opening the repository as a vault.
     ".obsidian",
