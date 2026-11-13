@@ -30,6 +30,18 @@ def test_strip_code_keeps_line_numbers() -> None:
     assert out.split("\n")[3].startswith("text ")
 
 
+def test_strip_blocks_exact() -> None:
+    assert checker.strip_blocks("---\nk\n---\nx\n```\ny\n```\nz") == (
+        "\n\n\nx\n\n\n\nz"
+    )
+    assert checker.strip_blocks("---\n---\n[a](b)") == "\n\n[a](b)"
+    assert checker.strip_blocks("~~~ info\n[a](b)\n~~~\n[c](d)") == "\n\n\n[c](d)"
+
+
+def test_strip_code_blanks_spans_to_spaces() -> None:
+    assert checker.strip_code("a `bc` d\n``e\nf`` g") == "a      d\n   \n    g"
+
+
 def test_strip_code_fence_needs_matching_close() -> None:
     out = checker.strip_code("```\n~~~\n[a](b)\n```\n[c](d)\n````\n```\n[e](f)\n````\n")
     assert "[a](b)" not in out
@@ -64,12 +76,13 @@ def test_destinations() -> None:
         (4, "w.md"),
         (5, ""),
     ]
+    assert checker.destinations("[a](X.md) [b](<Y.md>)") == [(1, "X.md"), (1, "Y.md")]
 
 
 def test_anchors_follow_github() -> None:
     text = (
         "---\n# not: a heading\n---\n# Hello, `World`!\n\n## Q&A [link](u) *x*\n"
-        "Setext\n===\n\nSub\n---\n## Hello, World!\n## Hello, World!\n"
+        "Underlined\n===\n\nSub\n---\n## Hello, World!\n## Hello, World!\n"
         "# Closed ##\n#\n####### seven\n```\n# code\n```\n    \n---\n"
         "Para\ntext\n---\n"
     )
@@ -78,7 +91,7 @@ def test_anchors_follow_github() -> None:
         "hello-world-1",
         "hello-world-2",
         "qa-link-x",
-        "setext",
+        "underlined",
         "sub",
         "closed",
         "",
@@ -86,18 +99,23 @@ def test_anchors_follow_github() -> None:
     }
 
 
+def test_anchors_underline_on_the_last_line() -> None:
+    assert checker.anchors("Title\n===") == {"title"}
+    assert checker.anchors("one\ntwo") == set()
+
+
 def test_anchors_keep_underscore_and_hyphen() -> None:
     assert checker.anchors("# a_b-c d\n") == {"a_b-c-d"}
 
 
-def test_anchors_atx_is_not_setext() -> None:
+def test_anchors_atx_heading_before_a_rule() -> None:
     assert checker.anchors("# A\n---\n") == {"a"}
 
 
 def problem(
     dest: str, source: str = "d/a.md", page: set[str] | None = None
 ) -> str | None:
-    tracked = {"d", "d/a.md", "d/b.md", "x.md", "d/s p.md"}
+    tracked = {"d", "d/a.md", "d/b.md", "x.md", "d/s p.md", "X.md"}
     return checker.link_problem(source, dest, tracked, page or {"top"})
 
 
@@ -109,6 +127,7 @@ def test_link_problem_resolves() -> None:
     assert problem("s%20p.md") is None
     assert problem("./b.md") is None
     assert problem("#top") is None
+    assert problem("/X.md") is None
     assert problem("#TOP") is None
     assert problem("#") is None
     assert problem("") is None
@@ -142,6 +161,11 @@ def test_exclusions_none_without_config(tmp_path: Path) -> None:
     assert checker.load_exclusions(tmp_path) == []
 
 
+def test_exclusions_empty_config(tmp_path: Path) -> None:
+    (tmp_path / ".markdown-links.toml").write_text("# nothing\n")
+    assert checker.load_exclusions(tmp_path) == []
+
+
 def test_exclusions_lines(tmp_path: Path) -> None:
     (tmp_path / ".markdown-links.toml").write_text(
         "# c\n[[exclude]]\nglob = 'a/*'\nreason = 'r'\n\n [[exclude]] \n"
@@ -154,6 +178,13 @@ def test_exclusions_lines(tmp_path: Path) -> None:
     ("body", "message"),
     [
         ("[[exclude]\n", ".markdown-links.toml: "),
+        ("[[exclude]]\n[[exclude]]\n", ".markdown-links.toml:1: an exclusion has only"),
+        ("exclude = 1\n", ".markdown-links.toml: hold only [[exclude]] tables"),
+        ("other = 1\n", ".markdown-links.toml: hold only [[exclude]] tables"),
+        (
+            "exclude = [{glob = 'a', reason = 'r'}]\n",
+            ".markdown-links.toml: hold only [[exclude]] tables",
+        ),
         ("[[exclude]]\nglob = 'a'\n", ".markdown-links.toml:1: an exclusion has only"),
         (
             "[[exclude]]\nglob = 'a'\nreason = 'r'\nregex = 'x'\n",
@@ -166,11 +197,11 @@ def test_exclusions_lines(tmp_path: Path) -> None:
         ("[[exclude]]\nglob = 1\nreason = 'r'\n", ".markdown-links.toml:1: glob must"),
         (
             "[[exclude]]\nglob = 'a'\nreason = ' '\n",
-            ".markdown-links.toml:1: a needs a nonblank reason",
+            ".markdown-links.toml:1: a needs a non-blank reason",
         ),
         (
             "[[exclude]]\nglob = 'a'\nreason = 2\n",
-            ".markdown-links.toml:1: a needs a nonblank reason",
+            ".markdown-links.toml:1: a needs a non-blank reason",
         ),
     ],
 )
@@ -295,6 +326,9 @@ def test_main_exit_two(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> No
     assert captured.out == ""
     assert captured.err.startswith("check_markdown_links: .markdown-links.toml: ")
     assert checker.main([str(tmp_path / "missing")]) == 2
+    assert capsys.readouterr().err == (
+        f"check_markdown_links: {tmp_path / 'missing'} is not a directory\n"
+    )
     assert checker.main([str(tmp_path), "--git", "false"]) == 2
 
 
@@ -314,10 +348,21 @@ def test_main_root_file_stands_for_its_directory(
 def test_main_resolves_git_in_test_srcdir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    root = tree(tmp_path / "root", {"a.md": "# A\n"})
+    root = tree(tmp_path / "root", {"a.md": "# A\n", "b.md": "[x](gone.md)\n"})
     tool = tree(tmp_path / "srcdir", {"bin/git": "#!/bin/sh\nprintf 'a.md\\0'\n"})
     (tool / "bin" / "git").chmod(0o755)
     monkeypatch.setenv("TEST_SRCDIR", str(tool))
     assert checker.main([str(root), "--git", "bin/git"]) == 0
     monkeypatch.delenv("TEST_SRCDIR")
     assert checker.main([str(root), "--git", "bin/git"]) == 2
+
+
+def test_main_prints_each_problem_on_its_own_line(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root = tree(tmp_path, {"a.md": "[x](gone.md)\n[y](#nope)\n"})
+    assert checker.main([str(root)]) == 1
+    assert capsys.readouterr().out == (
+        "a.md:1: gone.md is not a tracked file or directory\n"
+        "a.md:2: #nope matches no heading in this file\n"
+    )

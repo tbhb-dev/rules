@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
 # Path globs of Markdown files whose failing links stay. Each needs a reason,
 # and an exclusion that matches no failing link fails the check.
 

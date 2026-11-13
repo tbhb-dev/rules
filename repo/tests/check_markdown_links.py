@@ -32,10 +32,13 @@ LINK = re.compile(
     re.MULTILINE,
 )
 SCHEME = re.compile(r"^(?:[A-Za-z][A-Za-z0-9+.-]*:|//)")
-ATX = re.compile(r"^ {0,3}#{1,6}(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$")
-SETEXT = re.compile(r"^ {0,3}(?:=+|-+)[ \t]*$")
+HEADING = re.compile(
+    r"^ {0,3}#{1,6}(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$"
+    r"|^ {0,3}(\S[^\n]*)\n {0,3}(?:=+|-+)[ \t]*$",
+    re.MULTILINE,
+)
 MARKUP = re.compile(r"!?\[([^\]]*)\]\([^)]*\)|[`*~]")
-UNSLUG = re.compile(r"[^\w\- ]")
+NOT_SLUG = re.compile(r"[^\w\- ]")
 
 
 class CheckError(Exception):
@@ -53,14 +56,14 @@ def strip_blocks(text: str) -> str:
     if lines[0] == "---" and "---" in lines[1:]:
         end = lines.index("---", 1)
         lines[: end + 1] = [""] * (end + 1)
-    fence = ""
+    fence: str | None = None
     for index, line in enumerate(lines):
-        match = FENCE.match(line)
-        if fence:
-            closes = match and match[1][0] == fence[0] and len(match[1]) >= len(fence)
-            fence = "" if closes else fence
+        if fence is not None:
+            bare = line.strip()
+            closes = set(bare) == set(fence) and len(bare) >= len(fence)
+            fence = None if closes else fence
             lines[index] = ""
-        elif match:
+        elif match := FENCE.match(line):
             fence = match[1]
             lines[index] = ""
     return "\n".join(lines)
@@ -73,25 +76,15 @@ def strip_code(text: str) -> str:
 
 def slug(heading: str) -> str:
     plain = MARKUP.sub(lambda m: m[1] or "", heading).strip().lower()
-    return UNSLUG.sub("", plain).replace(" ", "-")
+    return NOT_SLUG.sub("", plain).replace(" ", "-")
 
 
 def anchors(text: str) -> set[str]:
     """The GitHub heading anchors of a file, numbering repeats."""
     found: set[str] = set()
     seen: dict[str, int] = {}
-    lines = strip_blocks(text).split("\n")
-    for index, line in enumerate(lines):
-        atx = ATX.match(line)
-        setext = (
-            line.strip()
-            and index + 1 < len(lines)
-            and SETEXT.match(lines[index + 1])
-            and not ATX.match(line)
-        )
-        if not atx and not setext:
-            continue
-        base = slug(atx[1] or "" if atx else line)
+    for match in HEADING.finditer(strip_blocks(text)):
+        base = slug(match[1] or match[2] or "")
         count = seen.get(base, 0)
         seen[base] = count + 1
         found.add(base if count == 0 else f"{base}-{count}")
@@ -103,7 +96,7 @@ def destinations(text: str) -> list[tuple[int, str]]:
     stripped = strip_code(text)
     return [
         (
-            stripped.count("\n", 0, match.start()) + 1,
+            stripped[: match.start()].count("\n") + 1,
             (match[1] or match[2] or "").strip("<>"),
         )
         for match in LINK.finditer(stripped)
@@ -149,7 +142,7 @@ def load_exclusions(root: Path) -> list[tuple[str, int]]:
         return []
     text = path.read_text()
     try:
-        entries = tomllib.loads(text).get("exclude", [])
+        data = tomllib.loads(text)
     except tomllib.TOMLDecodeError as error:
         message = f"{CONFIG}: {error}"
         raise CheckError(message) from error
@@ -158,17 +151,26 @@ def load_exclusions(root: Path) -> list[tuple[str, int]]:
         for number, line in enumerate(text.split("\n"), 1)
         if line.strip() == "[[exclude]]"
     ]
+    entries = data.get("exclude", [])
+    if (
+        set(data) - {"exclude"}
+        or not isinstance(entries, list)
+        or len(entries) != len(headers)
+    ):
+        message = f"{CONFIG}: hold only [[exclude]] tables, one per exclusion"
+        raise CheckError(message)
     out = []
-    for entry, line in zip(entries, headers, strict=True):
+    for index, entry in enumerate(entries):
+        line = headers[index]
         glob, reason = entry.get("glob"), entry.get("reason")
         if set(entry) != {"glob", "reason"}:
             message = f"{CONFIG}:{line}: an exclusion has only glob and reason"
             raise CheckError(message)
         if not isinstance(glob, str) or not glob.strip():
-            message = f"{CONFIG}:{line}: glob must be a nonblank string"
+            message = f"{CONFIG}:{line}: glob must be a non-blank string"
             raise CheckError(message)
         if not isinstance(reason, str) or not reason.strip():
-            message = f"{CONFIG}:{line}: {glob} needs a nonblank reason"
+            message = f"{CONFIG}:{line}: {glob} needs a non-blank reason"
             raise CheckError(message)
         out.append((glob, line))
     return out
