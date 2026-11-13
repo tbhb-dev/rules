@@ -19,7 +19,9 @@ def _expect_failure_impl(ctx):
         template = ctx.file._runner,
         output = script,
         substitutions = {
+            "@@FIRST_LINE@@": "1" if ctx.attr.first_line else "0",
             "@@PATTERN@@": shell.quote(ctx.attr.pattern),
+            "@@STATUS@@": str(ctx.attr.exit_status),
             "@@TEST@@": wrapped.short_path,
         },
         is_executable = True,
@@ -58,6 +60,14 @@ are not forwarded: set them on this target instead. Tag the wrapped test
 `manual`, so `bazel test //...` does not run it on its own and report the
 expected failure as a failure.""",
     attrs = SHELL_ATTRS | {
+        "exit_status": attr.int(
+            default = 0,
+            doc = "Exit status the wrapped test must have. 0 accepts any non-zero status.",
+        ),
+        "first_line": attr.bool(
+            default = False,
+            doc = "Match `pattern` against the first line of output only, so a later crash cannot satisfy it.",
+        ),
         "pattern": attr.string(
             mandatory = True,
             doc = "Extended regular expression the wrapped test's output must match.",
