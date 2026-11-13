@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-load("//lint:defs.bzl", "cspell_test", "gitleaks_history", "gitleaks_test", "shellcheck_test", "shfmt_test", "vale_test")
+load("//lint:defs.bzl", "cspell_test", "gitleaks_history", "gitleaks_test", "shellcheck_test", "shfmt_test", "vale_test", "workflow_lint_test")
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
@@ -510,3 +510,48 @@ cspell_parent_config_test(
     ],
     subject = ":cspell_vocabulary_test_tool",
 )
+
+# workflow_lint_test against fixture trees. Each proof plants one violation.
+WORKFLOW_LINT_ROOT = "lint/tests/testdata/workflow_lint/"
+
+[
+    workflow_lint_test(
+        name = "workflow_lint_{}_test".format(case),
+        srcs = glob(["testdata/workflow_lint/{}/**".format(case)]),
+        paths = ["workflows"],
+        private = private,
+        strip_prefix = WORKFLOW_LINT_ROOT + case,
+    )
+    for case, private in [
+        ("clean", False),
+        ("self_hosted", True),
+    ]
+]
+
+[
+    workflow_lint_test(
+        name = "proof_workflow_lint_" + case,
+        srcs = glob(["testdata/workflow_lint/{}/**".format(case)]),
+        paths = ["workflows"],
+        strip_prefix = WORKFLOW_LINT_ROOT + case,
+        tags = ["manual"],
+    )
+    for case in [
+        "tag",
+        "latest",
+        "self_hosted",
+    ]
+]
+
+[
+    expect_failure_test(
+        name = "workflow_lint_{}_fails_test".format(case),
+        pattern = pattern,
+        test = ":proof_workflow_lint_" + case,
+    )
+    for case, pattern in {
+        "latest": "workflows/ci.yml:5: runner label 'ubuntu-latest' floats",
+        "self_hosted": "workflows/ci.yml:5: the self-hosted label is allowed only in a private repository",
+        "tag": "workflows/ci.yml:7: uses 'actions/checkout@v4' is not pinned to a full commit SHA",
+    }.items()
+]
