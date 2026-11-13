@@ -23,6 +23,11 @@ locked = true
 [env]
 # The Bazel-pinned tools (`bazel run //:bazel_env` builds the shims), so a
 # shell or task under mise runs the same versions the gates do.
+# `bazel run //:bazel_env` exits 1 when mise isn't activated in that shell,
+# which is expected in non-interactive agent shells, and prints a direnv
+# warning that doesn't matter here. The shims are built when `test -x
+# .bazel_env/bin/gitleaks` succeeds. Run commands through `mise exec` or
+# `mise run` to get the directory on PATH.
 _.path = [".bazel_env/bin"]
 
 [tools]
