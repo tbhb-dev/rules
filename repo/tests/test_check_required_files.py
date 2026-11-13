@@ -3,14 +3,32 @@
 
 """Tests for the required files check."""
 
-from pathlib import Path
+import json
+lazy from pathlib import Path
 
 import pytest
 
 from repo.tests import check_required_files as checker
 
-BASELINE = Path(__file__).parents[1] / "baseline"
-SCHEMA = BASELINE / "repo.schema.json"
+# The mutation run copies no baseline files, so the tests use a reduced schema.
+# The shell tests run the real repo.schema.json.
+SCHEMA_TEXT = json.dumps(
+    {
+        "type": "object",
+        "required": ["schema_version", "kind", "private"],
+        "properties": {
+            "kind": {"enum": ["go", "docs"]},
+            "private": {"type": "boolean"},
+            "exception": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"reason": {"type": "string", "pattern": "\\S"}},
+                },
+            },
+        },
+    }
+)
 MANIFEST_TEXT = (
     "[kind.go]\nrequired = ['go.mod', 'cmd/']\n"
     "[visibility.public]\nrequired = ['LICENSE', 'go.mod']\n"
@@ -22,6 +40,7 @@ MANIFEST_TEXT = (
 def manifest(tmp_path: Path) -> Path:
     path = tmp_path / "manifest.toml"
     path.write_text(MANIFEST_TEXT)
+    (tmp_path / "schema.json").write_text(SCHEMA_TEXT)
     return path
 
 
@@ -45,7 +64,7 @@ def populate(repo: Path) -> None:
 
 
 def run(manifest: Path, repo: Path) -> list[str]:
-    return checker.check(manifest, SCHEMA, repo)
+    return checker.check(manifest, manifest.with_name("schema.json"), repo)
 
 
 def test_clean(manifest: Path, repo: Path) -> None:
@@ -142,8 +161,14 @@ def test_main_exit_codes(
 ) -> None:
     declare(repo, "")
     populate(repo)
-    assert checker.main([str(manifest), str(SCHEMA), str(repo)]) == 0
+    assert (
+        checker.main([str(manifest), str(manifest.with_name("schema.json")), str(repo)])
+        == 0
+    )
     assert not capsys.readouterr().out
     (repo / "go.mod").unlink()
-    assert checker.main([str(manifest), str(SCHEMA), str(repo)]) == 1
+    assert (
+        checker.main([str(manifest), str(manifest.with_name("schema.json")), str(repo)])
+        == 1
+    )
     assert capsys.readouterr().out == f"{repo}: required file go.mod is missing\n"
