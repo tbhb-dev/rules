@@ -96,6 +96,16 @@ bazel_dep(name = "bazelrc-preset.bzl", version = "1.10.0")
 # which git hooks and editors call without starting Bazel.
 bazel_dep(name = "bazel_env.bzl", version = "0.10.0", dev_dependency = True)
 
+# The status script calls /bin/ps only to choose a rehash hint. A sandbox that
+# denies ps prints "Operation not permitted" for each call, so the patch
+# discards ps stderr. Drop it when a bazel_env.bzl release does the same.
+single_version_override(
+    module_name = "bazel_env.bzl",
+    patch_strip = 1,
+    patches = ["//tools/patches:bazel_env_quiet_ps.patch"],
+    version = "0.10.0",
+)
+
 # Only test packages load rules_testing.
 bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
 

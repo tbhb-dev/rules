@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(["bazel_env_quiet_ps.patch"])
