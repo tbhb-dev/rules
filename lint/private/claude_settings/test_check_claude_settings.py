@@ -203,10 +203,9 @@ def test_invalid_json_and_encoding(
 ) -> None:
     paths = write_configs(tmp_path, valid_settings(), {"mcpServers": {"demo": {}}})
     paths[index].write_bytes(content)
-    try:
+    with pytest.raises(ValueError, match=r"\S") as raised:
         json.loads(content)
-    except ValueError as error:
-        expected = f"{paths[index]}: cannot read JSON: {str(error)!r}"
+    expected = f"{paths[index]}: cannot read JSON: {str(raised.value)!r}"
     errors = checker.check(*paths)
     assert errors[0] == expected
     assert all("\n" not in error for error in errors)
