@@ -11,7 +11,7 @@ generated:
     effort: medium
     surface: sdk-cli
     session: sha-256-64:281c803b8007ae0e
-    at: "2026-11-14T06:12:37Z"
+    at: "2026-11-14T06:12:39Z"
 ---
 
 # The required files
@@ -20,4 +20,4 @@ generated:
 
 The check also fails for a missing or invalid `.tbhb-repo.toml`, an unknown kind, and a non-boolean `private` value. An `[[exception]]` with `check = "C4"` hides one named path and needs a reason with text. An exception for a path that isn't missing fails.
 
-This repository fits no kind and has no `.tbhb-repo.toml`, so nothing runs the check against it. The fixtures in `repo/tests/testdata/required_files` have a small manifest and run in `//:baseline_tests`. They hold a clean `go` repository and a clean `docs` repository. The five bad repositories show a missing file, a missing directory, an unknown kind, a bad exception, and a private repository without its license file.
+This repository fits no kind and has no `.tbhb-repo.toml`, so nothing runs the check against it. The fixtures in `repo/tests/testdata/required_files` have a small manifest and run in `//:baseline_tests`. They hold a clean `go` repository and a clean `docs` repository. The bad repositories show a missing file, a missing directory, an unknown kind, a bad exception, and a private repository without its license file.
