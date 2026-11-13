@@ -51,9 +51,10 @@ def test_check_skips_exceptions(tmp_path: Path) -> None:
 def test_main_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     base = write(tmp_path / "base.toml", "[tools]\nnode = '1'\n")
     good = write(tmp_path / "good.toml", "[tools]\nnode = '1'\n")
-    bad = write(tmp_path / "bad.toml", "[tools]\n")
+    bad = write(tmp_path / "bad.toml", "[tools]\nextra = '1'\n")
     assert checker.main([str(base), str(good)]) == 0
     assert checker.main([str(base), str(bad)]) == 1
     assert capsys.readouterr().out == (
+        f"{bad}: tools.extra is not in the baseline {base}\n"
         f"{bad}: tools.node is in the baseline {base} but missing here\n"
     )

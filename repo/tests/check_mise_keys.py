@@ -62,9 +62,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("mise", type=Path)
     args = parser.parse_args(argv)
     errors = check(args.baseline, args.mise)
-    for error in errors:
-        sys.stdout.write(error + "\n")
-    return int(bool(errors))
+    sys.stdout.write("".join(f"{error}\n" for error in errors))
+    return 1 if errors else 0
 
 
 if __name__ == "__main__":
