@@ -227,6 +227,7 @@ SHELL_SCRIPTS = [
     "quality/private/mutation_gate.sh.tpl",
     "repo/tests/cache_fetch_test.sh",
     "repo/tests/ci_plan_test.sh",
+    "repo/tests/mktemp_test.sh",
     "repo/tests/cpu_quota_test.sh",
     "repo/tests/retry_budget_test.sh",
     "testing/private/expect_failure.sh.tpl",
@@ -415,4 +416,12 @@ test_suite(
         ":claude_settings",
         "//repo/baseline:manifest_test",
     ],
+)
+
+test_suite(
+    name = "mktemp_tests",
+    tests = [
+        "//repo/tests:mktemp_clean_test",
+        "//repo/tests:mktemp_test",
+    ] + ["//repo/tests:mktemp_line_{}_fails_test".format(line) for line in range(4, 8)],
 )

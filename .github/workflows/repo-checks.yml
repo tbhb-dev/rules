@@ -196,7 +196,7 @@ jobs:
           retry() {
             local dir=$1 delay=30 out url
             shift
-            out="$(mktemp)"
+            out="$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/repo-checks.XXXXXX")"
             until (cd "${dir}" && "$@") 2>&1 | tee "${out}"; do
               now=$(date +%s)
               if ((now + delay > DEADLINE)); then

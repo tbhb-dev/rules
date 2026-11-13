@@ -18,7 +18,7 @@ set -euo pipefail
 
 manifest=$1
 
-tested=$(mktemp)
+tested=$(mktemp "${TMPDIR:-/tmp}/golangci-lint-merge.XXXXXX")
 trap 'rm -f "$tested"' EXIT
 
 # variant REPORT: the first line of the report's covers file.

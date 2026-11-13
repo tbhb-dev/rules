@@ -151,7 +151,7 @@ jobs:
         run: |
           now=$(date +%s)
           deadline=$((now + BUDGET * 60))
-          out="$(mktemp)"
+          out="$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/pr-text.XXXXXX")"
           delay=30
           set -o pipefail
           until bazelisk build @tbhb_rules//lint:gitleaks_text 2>&1 | tee "${out}"; do

@@ -7,7 +7,7 @@
 # Run with bash repo/tests/ci_plan_test.sh [workflow], with jq on PATH.
 set -euo pipefail
 workflow=${1:-${TEST_SRCDIR:-.}/${WORKFLOW_RLOCATIONPATH:-.github/workflows/ci.yml}}
-dir=$(mktemp -d)
+dir=$(mktemp -d "${TMPDIR:-/tmp}/ci-plan-test.XXXXXX")
 trap 'rm -rf "$dir"' EXIT
 
 workspaces=$(awk '

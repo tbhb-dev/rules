@@ -21,7 +21,7 @@
 set -euo pipefail
 
 root=$(pwd -P)
-tmp=$(mktemp -d)
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/render.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 
 # Nothing from the user's home, caches or temporary files: d2 and resvg get

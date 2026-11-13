@@ -15,7 +15,7 @@ set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
 rules=$(cd "$here/../.." && pwd)
-work=$(mktemp -d)
+work=$(mktemp -d "${TMPDIR:-/tmp}/incremental.XXXXXX")
 ws="$work/ws"
 bazel() { bazelisk --output_base="$work/out" "$@"; }
 cleanup() {

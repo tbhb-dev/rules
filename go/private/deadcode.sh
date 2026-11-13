@@ -28,7 +28,7 @@ report_out=$5
 shift 5
 
 root=$(pwd -P)
-tmp=$(mktemp -d)
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/deadcode.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 mkdir "$tmp/home"
 
