@@ -16,7 +16,7 @@
 set -euo pipefail
 
 codeowners=$1
-work=$(mktemp -d)
+work=$(mktemp -d "${TMPDIR:-/tmp}/codeowners.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 git init -q --bare "$work/git"
 

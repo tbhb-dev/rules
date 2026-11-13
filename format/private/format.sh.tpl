@@ -62,7 +62,7 @@ else
   # The pinned git lists the files, not whichever one is on PATH.
   export PATH="$runfiles/@@GIT_DIR@@:$PATH"
   cd "$root"
-  listing=$(mktemp)
+  listing=$(mktemp "${TMPDIR:-/tmp}/format.XXXXXX")
   trap 'rm -f "$listing"' EXIT
   # To a file first, so a failing git (outside a checkout) fails the run
   # rather than formatting nothing.

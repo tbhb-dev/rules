@@ -69,7 +69,7 @@ if [[ -n $windows ]]; then
   PATH="$(dirname "$posix/@@INTERPRETER@@"):$(dirname "$posix/@@UV@@"):$posix/@@BIN@@:$PATH"
   export PATH
 else
-  shims=$(mktemp -d)
+  shims=$(mktemp -d "${TMPDIR:-/tmp}/launch.XXXXXX")
   trap 'rm -rf "$shims"' EXIT
   ln -s "$interpreter" "$shims/python"
   ln -s "$interpreter" "$shims/python3"

@@ -27,7 +27,7 @@ out=$7
 proxy=${8:-}
 
 root=$(pwd -P)
-tmp=$(mktemp -d)
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/oracle.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 tmp=$(cd "$tmp" && pwd -P)
 mod="$tmp/mod"

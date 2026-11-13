@@ -13,7 +13,7 @@ set -euo pipefail
 start=$(date +%s)
 deadline=${DEADLINE:-$((start + BUDGET * 60))}
 script_dir=$(cd "$(dirname "$0")" && pwd)
-out=$(mktemp)
+out=$(mktemp "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/fetch.XXXXXX")
 trap 'rm -f "$out"' EXIT
 
 # Bazel's HttpDownloader and HttpConnector report these download failures.

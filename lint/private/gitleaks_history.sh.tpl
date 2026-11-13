@@ -75,8 +75,8 @@ if [[ -n $config ]]; then
   args+=(--config "$config")
 fi
 
-log=$(mktemp)
-history=$(mktemp)
+log=$(mktemp "${TMPDIR:-/tmp}/gitleaks-history.XXXXXX")
+history=$(mktemp "${TMPDIR:-/tmp}/gitleaks-history.XXXXXX")
 trap 'rm -f "$log" "$history"' EXIT
 # To a file, not a pipe, so gitleaks' own exit status survives.
 status=0

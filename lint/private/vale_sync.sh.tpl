@@ -36,7 +36,7 @@ mkdir -p "$styles"
 
 # vale names a package by its archive's file name, so each archive is
 # staged under its package name first.
-work=$(mktemp -d)
+work=$(mktemp -d "${TMPDIR:-/tmp}/vale-sync.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 archives=()
 for i in "${!packages[@]}"; do

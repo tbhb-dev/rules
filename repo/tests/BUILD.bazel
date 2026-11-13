@@ -134,3 +134,39 @@ sh_test(
     ],
     env = {"SCRIPT_RLOCATIONPATH": "$(rlocationpath //:.github/actions/setup-bazel-ci/fetch.sh)"},
 )
+
+# Git supplies the complete source list, including the nested Bazel modules.
+sh_test(
+    name = "mktemp_test",
+    srcs = ["mktemp_test.sh"],
+    data = ["@tbhb_rules_git//:git"],
+    env = {"GIT_RLOCATIONPATH": "$(rlocationpath @tbhb_rules_git//:git)"},
+    tags = [
+        "local",
+        "no-cache",
+    ],
+)
+
+sh_test(
+    name = "mktemp_clean_test",
+    srcs = ["mktemp_test.sh"],
+    data = ["testdata/mktemp/clean.sh"],
+    env = {"FIXTURE_RLOCATIONPATH": "$(rlocationpath testdata/mktemp/clean.sh)"},
+)
+
+sh_test(
+    name = "proof_mktemp",
+    srcs = ["mktemp_test.sh"],
+    data = ["testdata/mktemp/bad.sh"],
+    env = {"FIXTURE_RLOCATIONPATH": "$(rlocationpath testdata/mktemp/bad.sh)"},
+    tags = ["manual"],
+)
+
+[
+    expect_failure_test(
+        name = "mktemp_line_{}_fails_test".format(line),
+        pattern = "bad\\.sh:{}: bare mktemp: use mktemp".format(line),
+        test = ":proof_mktemp",
+    )
+    for line in range(4, 8)
+]

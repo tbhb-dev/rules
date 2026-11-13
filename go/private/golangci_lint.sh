@@ -27,7 +27,7 @@ report_out=$9
 shift 9
 
 root=$(pwd -P)
-tmp=$(mktemp -d)
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/golangci-lint.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 # golangci-lint resolves symlinks in its working directory and config path
 # but not in source paths, and computes the relative paths that exclusion

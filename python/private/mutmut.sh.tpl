@@ -19,7 +19,7 @@ changes=@@CHANGES@@
 log="$execroot/@@LOG@@"
 manifest="$execroot/@@MANIFEST@@"
 
-tree=$(mktemp -d)
+tree=$(mktemp -d "${TMPDIR:-/tmp}/mutmut.XXXXXX")
 trap 'rm -rf "$tree"' EXIT
 # Each manifest line is "<exec path>\t<tree path>". Copies, not links:
 # mutmut writes beside the sources and must not reach the real tree.

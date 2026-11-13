@@ -33,7 +33,7 @@ for rev in "$base" "$head"; do
   fi
 done
 
-log=$(mktemp)
+log=$(mktemp "${TMPDIR:-/tmp}/commit-identity.XXXXXX")
 trap 'rm -f "$log"' EXIT
 git log --format='%H%x09%an <%ae> -> %cn <%ce>' "$base..$head" >"$log"
 
