@@ -15,6 +15,7 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 * [The mise.toml keys](reference/mise-keys.md) - How the check compares the key names of mise.toml with the baseline.
 * [Mutation operating systems](reference/mutation-oses.md) - Mutation OS selection and checks for platform-specific source code.
 * [pnpm workspace settings](reference/pnpm-workspaces.md) - The pnpm settings each pnpm-workspace.yaml holds, and why those files have no comments or license header.
+* [Required files](reference/required-files.md) - How the check finds files that a consumer repository lacks.
 * [Swift module reference](reference/swift.md) - Swift and Apple build macros, pinned tools, quality checks, and the smoke consumer.
 * [Temporary files](reference/temporary-files.md) - Temporary file paths and the shell source check.
 * [Workflow lint](reference/workflow-lint.md) - What the workflow lint check rejects in workflow and action YAML, and what it skips.
