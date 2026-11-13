@@ -27,6 +27,11 @@
     "**/.mise/locks/**",
     // The baseline changes only by reviewed sync from its sources.
     "repo/baseline/**",
+    // The govulncheck smoke fixture keeps its vulnerable pin. A path rule
+    // with enabled: false did not stop tbhb-dev/rules#222 for it, and a
+    // dry run (Renovate 44.206.2, local platform) skipped the fixture's
+    // go.mod once this entry listed it.
+    "go/e2e/smoke/govulncheck/**",
   ],
 
   // The presets cover the rest of this tree: the bazel manager the literal
@@ -52,14 +57,6 @@
       // vulnerabilities to find, so its golang.org/x/text pin stays put.
       description: "The govulncheck smoke fixture keeps its vulnerable pin",
       matchFileNames: ["go/e2e/smoke/govulncheck/go.mod"],
-      enabled: false,
-    },
-    {
-      // Vulnerability updates ignore the rule above, so this one targets them.
-      // Remove it to undo.
-      description: "The govulncheck smoke fixture keeps its vulnerable pin against alerts",
-      isVulnerabilityAlert: true,
-      matchFileNames: ["go/e2e/smoke/govulncheck/**"],
       enabled: false,
     },
     {
