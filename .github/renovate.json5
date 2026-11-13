@@ -55,6 +55,14 @@
       enabled: false,
     },
     {
+      // Vulnerability updates ignore the rule above, so this one targets them.
+      // Remove it to undo.
+      description: "The govulncheck smoke fixture keeps its vulnerable pin against alerts",
+      isVulnerabilityAlert: true,
+      matchFileNames: ["go/e2e/smoke/govulncheck/**"],
+      enabled: false,
+    },
+    {
       // The e2e toolchain case runs the checks on an ansible-core other
       // than the module default, on Python 3.14, so its exact pin is the
       // point of the test.
