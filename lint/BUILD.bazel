@@ -54,6 +54,7 @@ bzl_library(
         "//lint/private:shell",
         "//lint/private:tree_check",
         "//lint/private:vale",
+        "//lint/private:workflow_lint",
     ],
 )
 

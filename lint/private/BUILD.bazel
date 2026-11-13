@@ -17,6 +17,7 @@ exports_files([
     "shell_select.sh",
     "tree_check.sh.tpl",
     "vale.sh",
+    "workflow_lint.sh",
     "vale_sync.sh.tpl",
 ])
 
@@ -160,6 +161,13 @@ bzl_library(
         ":tree_check",
         "//runtime:defs",
     ],
+)
+
+bzl_library(
+    name = "workflow_lint",
+    srcs = ["workflow_lint.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [":tree_check"],
 )
 
 exports_files(["commit_identity/check_trailers.py"])

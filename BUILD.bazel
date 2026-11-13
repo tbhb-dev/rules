@@ -21,6 +21,7 @@ load(
     "ryl_test",
     "tombi_test",
     "tree_check_test",
+    "workflow_lint_test",
     "zizmor_test",
 )
 load("//repo:defs.bzl", "repo_files", "repo_layout_test")
@@ -205,6 +206,13 @@ zizmor_test(
     config = ".github/zizmor.yml",
 )
 
+# Pinned `uses:` refs, fixed runner labels, and no self-hosted label in this
+# public repository.
+workflow_lint_test(
+    name = "workflow_lint_test",
+    srcs = [":repo_files"],
+)
+
 # Shell scripts. A shebang-based selection rule is planned for lint/; until
 # it lands, the scripts are listed here.
 SHELL_SCRIPTS = [
@@ -220,6 +228,7 @@ SHELL_SCRIPTS = [
     "lint/private/tree_check.sh.tpl",
     "lint/private/vale.sh",
     "lint/private/vale_sync.sh.tpl",
+    "lint/private/workflow_lint.sh",
     "lint/tests/fake_tool.sh",
     "pins/git_wrapper.sh",
     "pins/tests/git_exec_path_test.sh",
