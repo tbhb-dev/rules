@@ -1,0 +1,21 @@
+SPDX-License-Identifier: Apache-2.0
+Copyright Tony Burns
+
+Silence the `ps` calls in the status script. A sandbox that denies
+/bin/ps prints "Operation not permitted" even though the script only uses
+the result to pick a rehash hint. This repo keeps the patch local.
+--- a/status.sh.tpl
++++ b/status.sh.tpl
+@@ -148,9 +148,9 @@
+ set +e
+ # $$ is bash's PID, $PPID is whatever called bazel
+ # this might be bazelisk or the user's interactive shell
+-parent_name=$(ps -p $PPID -o comm= | tr -d ' ')
++parent_name=$(ps -p $PPID -o comm= 2>/dev/null | tr -d ' ')
+ if [[ "$parent_name" == *bazel* ]]; then
+-  great_parent_pid=$(ps -o ppid= -p $PPID | tr -d ' ')
+-  parent_name=$(ps -p "$great_parent_pid" -o comm= | tr -d ' ')
++  great_parent_pid=$(ps -o ppid= -p $PPID 2>/dev/null | tr -d ' ')
++  parent_name=$(ps -p "$great_parent_pid" -o comm= 2>/dev/null | tr -d ' ')
+ fi
+ set -e
