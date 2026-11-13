@@ -151,7 +151,7 @@ def load_exclusions(root: Path) -> list[tuple[str, int]]:
         for number, line in enumerate(text.split("\n"), 1)
         if line.strip() == "[[exclude]]"
     ]
-    entries = data.get("exclude", [])
+    entries: list[dict[str, object]] = data.get("exclude", [])
     if (
         set(data) - {"exclude"}
         or not isinstance(entries, list)
