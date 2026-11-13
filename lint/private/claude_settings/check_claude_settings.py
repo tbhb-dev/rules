@@ -26,7 +26,7 @@ def object_value(
 
 def read_object(path: Path, errors: list[str]) -> dict[str, object]:
     try:
-        value: object = json.loads(path.read_text(encoding="utf-8"))
+        value: object = json.loads(path.read_bytes())
     except (OSError, ValueError) as error:
         errors.append(f"{path}: cannot read JSON: {str(error)!r}")
         return {}
@@ -105,7 +105,7 @@ def check(settings: Path, mcp: Path) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser()
     parser.add_argument("settings", type=Path)
     parser.add_argument("mcp", type=Path)
     args = parser.parse_args(argv)

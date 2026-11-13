@@ -200,6 +200,7 @@ pytest_test(
     name = "pytest_test",
     srcs = PYTHON_SRCS,
     args = [
+        "lint/private/claude_settings",
         "lint/private/commit_identity",
         "lint/private/decision_records",
         "lint/private/mutation_oses",
@@ -207,6 +208,7 @@ pytest_test(
         "runtime/private",
     ],
     coverage = [
+        "lint/private/claude_settings",
         "lint/private/commit_identity",
         "lint/private/decision_records",
         "lint/private/mutation_oses",

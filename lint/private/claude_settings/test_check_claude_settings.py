@@ -4,6 +4,7 @@
 """Exercise JSON validation, permissions, server references and the CLI."""
 
 import json
+import re
 import sys
 from typing import TYPE_CHECKING
 
@@ -93,6 +94,19 @@ def test_allowed_server_not_enabled_must_exist(tmp_path: pathlib.Path) -> None:
     paths = write_configs(tmp_path, settings, {"mcpServers": {}})
     assert checker.check(*paths) == [
         f"{paths[0]}: permissions.allow server 'demo' undefined in mcpServers"
+    ]
+
+
+def test_allow_entries_after_other_tools_are_still_checked(
+    tmp_path: pathlib.Path,
+) -> None:
+    settings = valid_settings()
+    settings["permissions"] = {"deny": DENIED, "allow": ["Bash(ls:*)", "mcp__ghost"]}
+    empty: list[str] = []
+    settings["enabledMcpjsonServers"] = empty
+    paths = write_configs(tmp_path, settings, {"mcpServers": {}})
+    assert checker.check(*paths) == [
+        f"{paths[0]}: permissions.allow server 'ghost' undefined in mcpServers"
     ]
 
 
@@ -189,18 +203,28 @@ def test_invalid_json_and_encoding(
 ) -> None:
     paths = write_configs(tmp_path, valid_settings(), {"mcpServers": {"demo": {}}})
     paths[index].write_bytes(content)
+    try:
+        json.loads(content)
+    except ValueError as error:
+        expected = f"{paths[index]}: cannot read JSON: {str(error)!r}"
     errors = checker.check(*paths)
-    assert errors[0].startswith(f"{paths[index]}: cannot read JSON:")
+    assert errors[0] == expected
     assert all("\n" not in error for error in errors)
+
+
+def read_failure(path: pathlib.Path) -> str:
+    with pytest.raises(OSError, match=re.escape(str(path))) as caught:
+        path.read_bytes()
+    return f"{path}: cannot read JSON: {str(caught.value)!r}"
 
 
 @pytest.mark.parametrize("index", [0, 1])
 def test_missing_files_and_directories(tmp_path: pathlib.Path, index: int) -> None:
     paths = write_configs(tmp_path, valid_settings(), {"mcpServers": {"demo": {}}})
     paths[index].unlink()
-    assert checker.check(*paths)[0].startswith(f"{paths[index]}: cannot read JSON:")
+    assert checker.check(*paths)[0] == read_failure(paths[index])
     paths[index].mkdir()
-    assert checker.check(*paths)[0].startswith(f"{paths[index]}: cannot read JSON:")
+    assert checker.check(*paths)[0] == read_failure(paths[index])
 
 
 def test_main_success_and_argv(
