@@ -27,4 +27,6 @@ common --enable_platform_specific_config
 # symlinks (Developer Mode or admin) Bazel fills the tree with copies, which
 # can go stale. The startup flag is a no-op elsewhere.
 startup --windows_enable_symlinks
+# An idle server exits after 15 minutes instead of 3 hours, so orphaned servers don't pile up.
+startup --max_idle_secs=900
 common:windows --enable_runfiles
