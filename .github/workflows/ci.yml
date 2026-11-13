@@ -242,9 +242,33 @@ jobs:
           cache-save: false
           working-directory: ${{ matrix.workspace.dir }}
 
+      # Prints disk and temp space, so a `tar: Write error` in a test action names its cause.
+      - name: Report macOS disk and temp space
+        if: runner.os == 'macOS'
+        run: |
+          echo "TMPDIR=${TMPDIR:-unset}" || true
+          df -h / /System/Volumes/Data "${TMPDIR:-/tmp}" "$HOME" 2>&1 || true
+          du -sh "${TMPDIR:-/tmp}" 2>&1 || true
+          du -sh "$HOME/.bazel" "$HOME/.cache" 2>&1 || true
+          # cspell:ignore maxfiles maxfilesperproc
+          sysctl kern.maxfiles kern.maxfilesperproc 2>&1 || true
+          ulimit -a || true
+
       - name: Test
         working-directory: ${{ matrix.workspace.dir }}
         run: bazelisk test --config=ci //...
+
+      # Prints disk and temp space after the tests, including when they fail.
+      - name: Report macOS disk and temp space after the tests
+        if: always() && runner.os == 'macOS'
+        run: |
+          echo "TMPDIR=${TMPDIR:-unset}" || true
+          df -h / /System/Volumes/Data "${TMPDIR:-/tmp}" "$HOME" 2>&1 || true
+          du -sh "${TMPDIR:-/tmp}" 2>&1 || true
+          du -sh "$HOME/.bazel" "$HOME/.cache" 2>&1 || true
+          # cspell:ignore maxfiles maxfilesperproc
+          sysctl kern.maxfiles kern.maxfilesperproc 2>&1 || true
+          ulimit -a || true
 
       # Mutation reports rerun along the dependency graph: an edit reruns
       # its unit and the dependents, and the others stay cached. mutmut does
