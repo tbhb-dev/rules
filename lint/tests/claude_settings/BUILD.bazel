@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//lint:defs.bzl", "claude_settings_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+PREFIX = "lint/tests/claude_settings/testdata"
+
+PROOF_TAGS = ["manual"]
+
+claude_settings_test(
+    name = "clean_test",
+    srcs = [
+        "testdata/valid_mcp.json",
+        "testdata/valid_settings.json",
+    ],
+    mcp = "valid_mcp.json",
+    settings = "valid_settings.json",
+    strip_prefix = PREFIX,
+)
+
+# Settings path, MCP path, and the specific diagnostic expected for each fault.
+CASES = {
+    "allow_missing": ("allow_missing.json", "valid_mcp.json", "^allow_missing.json: permissions.allow missing 'mcp__demo' for enabled server"),
+    "allowed_undefined": ("allowed_undefined.json", "valid_mcp.json", "^allowed_undefined.json: permissions.allow server 'missing' undefined in mcpServers"),
+    "deny_missing": ("deny_missing.json", "valid_mcp.json", "^deny_missing.json: permissions.deny missing .*gh pr merge"),
+    "empty_mcp": ("valid_settings.json", "empty_mcp.json", "^valid_settings.json: enabledMcpjsonServers server 'demo' undefined in mcpServers"),
+    "enabled_undefined": ("enabled_undefined.json", "valid_mcp.json", "^enabled_undefined.json: enabledMcpjsonServers server 'missing' undefined in mcpServers"),
+    "file_missing": ("missing.json", "valid_mcp.json", "^missing.json: cannot read JSON: .*No such file or directory"),
+    "invalid_json": ("invalid.json", "valid_mcp.json", "^invalid.json: cannot read JSON: .*Expecting property name"),
+    "invalid_mcp": ("valid_settings.json", "invalid.json", "^invalid.json: cannot read JSON: .*Expecting property name"),
+    "mcp_missing": ("valid_settings.json", "missing.json", "^missing.json: cannot read JSON: .*No such file or directory"),
+    "tool_suffix": ("tool_suffix.json", "valid_mcp.json", "^tool_suffix.json: permissions.allow entry 'mcp__demo__tool' must be mcp__<server> with no tool suffix"),
+    "wrong_type": ("wrong_type.json", "valid_mcp.json", "^wrong_type.json: permissions.allow must be a list of strings"),
+}
+
+[
+    claude_settings_test(
+        name = "proof_" + proof,
+        srcs = ["testdata/" + path for path in [
+            settings,
+            mcp,
+        ] if path != "missing.json"],
+        mcp = mcp,
+        settings = settings,
+        strip_prefix = PREFIX,
+        tags = PROOF_TAGS,
+    )
+    for proof, (settings, mcp, _pattern) in CASES.items()
+]
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":proof_" + proof,
+    )
+    for proof, (_settings, _mcp, pattern) in CASES.items()
+]
