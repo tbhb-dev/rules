@@ -15,3 +15,4 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 * [pnpm workspace settings](reference/pnpm-workspaces.md) - The pnpm settings each pnpm-workspace.yaml holds, and why those files have no comments or license header.
 * [Swift module reference](reference/swift.md) - Swift and Apple build macros, pinned tools, quality checks, and the smoke consumer.
 * [Temporary files](reference/temporary-files.md) - Temporary file paths and the shell source check.
+* [Workflow lint](reference/workflow-lint.md) - What the workflow lint check rejects in workflow and action YAML, and what it skips.
