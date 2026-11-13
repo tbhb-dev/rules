@@ -414,6 +414,7 @@ exports_files(
         ".github/workflows/ci.yml",
         ".github/workflows/pr-text.yml",
         "BUILD.bazel",
+        "mise.toml",
     ],
     visibility = ["//repo/tests:__pkg__"],
 )
@@ -424,6 +425,11 @@ test_suite(
     tests = [
         ":claude_settings",
         "//repo/baseline:manifest_test",
+        "//repo/tests:mise_keys_clean_test",
+        "//repo/tests:mise_keys_test",
+        "//repo/tests:proof_mise_keys_absent_fails",
+        "//repo/tests:proof_mise_keys_extra_fails",
+        "//repo/tests:pytest_test",
     ],
 )
 

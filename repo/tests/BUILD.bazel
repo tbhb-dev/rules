@@ -2,7 +2,9 @@
 # Copyright Tony Burns
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
 load("//repo:defs.bzl", "repo_files")
+load("//runtime:defs.bzl", "python_tool")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":repo_layout_tests.bzl", "repo_layout_test_suite", "scripts_layout_test")
 
@@ -170,3 +172,72 @@ sh_test(
     )
     for line in range(4, 8)
 ]
+
+# The key names of mise.toml must equal the baseline's. The script runs as a
+# test through the locked Python environment.
+python_tool(
+    name = "check_mise_keys",
+    testonly = True,
+    main = "check_mise_keys.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    tags = ["manual"],
+)
+
+MISE_KEYS_CLEAN = [
+    "repo/tests/testdata/mise_keys/clean/baseline.toml",
+    "repo/tests/testdata/mise_keys/clean/mise.toml",
+]
+
+MISE_KEYS_BAD = [
+    "repo/tests/testdata/mise_keys/bad/baseline.toml",
+    "repo/tests/testdata/mise_keys/bad/mise.toml",
+]
+
+sh_test(
+    name = "mise_keys_test",
+    srcs = [":check_mise_keys"],
+    args = [
+        "repo/baseline/files/mise.toml.baseline",
+        "mise.toml",
+    ],
+    data = [
+        "//:mise.toml",
+        "//repo/baseline:repo_files",
+    ],
+)
+
+sh_test(
+    name = "mise_keys_clean_test",
+    srcs = [":check_mise_keys"],
+    args = MISE_KEYS_CLEAN,
+    data = glob(["testdata/mise_keys/clean/*"]),
+)
+
+sh_test(
+    name = "proof_mise_keys",
+    srcs = [":check_mise_keys"],
+    args = MISE_KEYS_BAD,
+    data = glob(["testdata/mise_keys/bad/*"]),
+    tags = ["manual"],
+)
+
+[
+    expect_failure_test(
+        name = "proof_mise_keys_" + name + "_fails",
+        args = MISE_KEYS_BAD,
+        pattern = pattern,
+        test = ":proof_mise_keys",
+    )
+    for name, pattern in {
+        "absent": "tools.bazelisk is in the baseline .* but missing here",
+        "extra": "settings.extra_setting is not in the baseline",
+    }.items()
+]
+
+pytest_test(
+    name = "pytest_test",
+    srcs = ["//:repo_files"],
+    args = ["repo/tests"],
+    coverage = ["repo/tests"],
+    visibility = ["//:__pkg__"],
+)
