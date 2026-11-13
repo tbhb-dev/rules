@@ -212,7 +212,7 @@ def test_invalid_json_and_encoding(
 
 
 def read_failure(path: pathlib.Path) -> str:
-    with pytest.raises(OSError, match=re.escape(str(path))) as caught:
+    with pytest.raises(OSError, match=re.escape(path.name)) as caught:
         path.read_bytes()
     return f"{path}: cannot read JSON: {str(caught.value)!r}"
 
