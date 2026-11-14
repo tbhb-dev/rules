@@ -80,6 +80,7 @@ full_reports=0 full_total=0
 diff_reports=0 diff_total=0 changed_units=0
 
 # grep's no-match status is valid; operational errors cannot supply a verdict.
+# Use plain x=$(verdict_grep ...): set -e propagates exit 1; local, if, or || swallow it.
 verdict_grep() {
   local report=$1 step=$2 status
   shift 2

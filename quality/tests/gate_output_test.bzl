@@ -155,6 +155,8 @@ export GATE_REAL_TOOL="$real" GATE_FAULT_PATTERN={pattern} GATE_FAULT_OPTION={op
 export GATE_FAULT_MARKER="$work/injected" GATE_FAULT_STATUS={error_status}
 printf '%s\\n' {shim_lines} >"$work/bin/{tool}"
 chmod +x "$work/bin/{tool}"
+printf 'PATH="%s/bin:$PATH"\\n' "$work" >"$work/env.sh"
+export BASH_ENV="$work/env.sh"
 status=0
 PATH="$work/bin:$PATH" "$gate" >"$work/out.log" 2>"$work/err.log" || status=$?
 if [[ ! -f $GATE_FAULT_MARKER ]]; then
