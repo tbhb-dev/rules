@@ -24,7 +24,8 @@
 #
 # A timed-out mutant counts as killed and stays listed (its mutant.timeout or
 # mutant.timed_out lines print). The count line goes to stdout, and to
-# $GITHUB_STEP_SUMMARY when that is set.
+# $GITHUB_STEP_SUMMARY when that is set; a failed write there only warns on
+# stderr.
 #
 # Fails on: any lived, not_covered or errored mutant; timeouts above
 # MAX_TIMEOUT_PERCENT of total, in the sum and in any one report; an
@@ -199,7 +200,9 @@ if ((timeout > 0 && total > 0)); then
   # mutmut says timeout, gomutants timed_out; the lines print as reported.
   printf '%s\n' "$mutants" | grep -E '^mutant\.(timeout|timed_out)=' || true
   if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
-    echo "$timeout_line" >>"$GITHUB_STEP_SUMMARY"
+    # An unwritable summary must not end the run before the verdict.
+    echo "$timeout_line" >>"$GITHUB_STEP_SUMMARY" ||
+      echo "mutation_gate: could not write to GITHUB_STEP_SUMMARY" >&2
   fi
 fi
 

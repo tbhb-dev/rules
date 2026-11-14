@@ -73,3 +73,59 @@ each of `summary_lines`, then once more with it unset.""",
         "summary_lines": attr.string_list(doc = "Whole lines the summary file must hold."),
     },
 )
+
+_UNWRITABLE_SCRIPT = """#!/usr/bin/env bash
+set -uo pipefail
+gate="$PWD/{gate}"
+work="$TEST_TMPDIR/gate_unwritable"
+mkdir -p "$work"
+status=0
+GITHUB_STEP_SUMMARY="$work/missing/summary.md" "$gate" >"$work/out.log" 2>"$work/err.log" || status=$?
+if ((status != {status})); then
+  echo "gate_unwritable_summary_test: FAIL: the gate exited $status, not {status}" >&2
+  cat "$work/out.log" "$work/err.log" >&2
+  exit 1
+fi
+for line in {lines}; do
+  if ! grep -qxF -- "$line" "$work/out.log"; then
+    echo "gate_unwritable_summary_test: FAIL: stdout lacks '$line'" >&2
+    cat "$work/out.log" >&2
+    exit 1
+  fi
+done
+if ! grep -qxF -- "mutation_gate: could not write to GITHUB_STEP_SUMMARY" "$work/err.log"; then
+  echo "gate_unwritable_summary_test: FAIL: stderr lacks the could-not-write note" >&2
+  cat "$work/err.log" >&2
+  exit 1
+fi
+"""
+
+def _unwritable_impl(ctx):
+    gate = ctx.attr.gate[DefaultInfo].files_to_run.executable
+    script = ctx.actions.declare_file(ctx.label.name + ".sh")
+    ctx.actions.write(
+        output = script,
+        content = _UNWRITABLE_SCRIPT.format(
+            gate = gate.short_path,
+            status = ctx.attr.status,
+            lines = " ".join([shell.quote(line) for line in ctx.attr.lines]),
+        ),
+        is_executable = True,
+    )
+    runfiles = ctx.runfiles(files = [gate]).merge(ctx.attr.gate[DefaultInfo].default_runfiles)
+    executable, runfiles = shell_executable(ctx, script, runfiles)
+    return [DefaultInfo(executable = executable, runfiles = runfiles)]
+
+gate_unwritable_summary_test = rule(
+    implementation = _unwritable_impl,
+    test = True,
+    toolchains = SHELL_TOOLCHAINS,
+    doc = """Passes when `gate`, run with `GITHUB_STEP_SUMMARY` in a missing directory,
+still exits with `status`, prints each of `lines` to stdout and notes the
+failed write on stderr.""",
+    attrs = SHELL_ATTRS | {
+        "gate": attr.label(mandatory = True, executable = True, cfg = "target"),
+        "lines": attr.string_list(mandatory = True, doc = "Whole lines the gate's stdout must hold."),
+        "status": attr.int(mandatory = True, values = [0, 1], doc = "The exit status the gate must keep."),
+    },
+)
