@@ -51,6 +51,7 @@ MAX_COUNT=1000000000
 
 reports=(@@REPORTS@@)
 require_scope=@@REQUIRE_SCOPE@@
+advisory=@@ADVISORY@@
 counts=(total killed lived not_covered timeout errored skipped interrupted)
 must_be_zero=(lived not_covered errored)
 # Each count with the status names the runners list its mutants under
@@ -228,6 +229,10 @@ if ((timeout > 0 && total > 0)); then
 fi
 
 for key in "${must_be_zero[@]}"; do
+  # Advisory permits survivors only; errored mutants still fail.
+  if [[ $advisory == true && $key =~ ^(lived|not_covered)$ ]]; then
+    continue
+  fi
   if ((${!key} > 0)); then
     problems+=("${!key} ${key}")
   fi
@@ -260,6 +265,19 @@ if ((${#problems[@]} > 0)); then
     printf '%s\n' "$mutants" | sed -n 's/^mutant\.\([a-z_]*\)=\(.*\)$/  \1: \2/p' >&2
   fi
   exit 1
+fi
+if [[ $advisory == true ]]; then
+  survivors=$((lived + not_covered))
+  printf '%s\n' "$mutants" | verdict_grep "${reports[*]}" 'list survivors' -E '^mutant\.(survived|lived|no_tests|not_covered)='
+  advisory_line="mutation_gate: advisory, $survivors survivors (not failing)"
+  echo "$advisory_line"
+  if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
+    echo "$advisory_line" >>"$GITHUB_STEP_SUMMARY" ||
+      echo "mutation_gate: could not write to GITHUB_STEP_SUMMARY" >&2 || true
+  fi
+  if ((survivors > 0)); then
+    exit 0
+  fi
 fi
 # Only claim kills when some mutant was killed or timed out. A diff that
 # selected none checked nothing; an all-skipped report checked nothing too,

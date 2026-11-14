@@ -1,0 +1,11 @@
+total=10
+killed=8
+lived=1
+not_covered=1
+timeout=0
+errored=0
+skipped=0
+interrupted=0
+mutant.survived=pkg.x_f__mutmut_3
+mutant.no_tests=pkg.x_g__mutmut_1
+mutant.unmapped=pkg.lost

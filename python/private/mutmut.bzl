@@ -103,7 +103,7 @@ over MUTATION_MAX_TIMEOUT_PERCENT of the mutants.""",
     },
 )
 
-def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, changes = None, source_paths = [], mutation_oses = None, **kwargs):
+def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, changes = None, source_paths = [], mutation_oses = None, advisory = False, **kwargs):
     """Mutation-tests the tree with mutmut and fails unless every mutant was killed or timed out (within a cap).
 
     Creates `<name>.report` (the cached mutmut run) and `<name>`, a
@@ -167,6 +167,8 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
             only on a listed OS that also meets target_compatible_with.
             Windows remains incompatible because mutmut requires fork.
             An empty list skips all OSes; unknown names fail at load time.
+        advisory: Report survivors without failing on them; every other
+            failure still fails. Blocking nightly runs must leave it False.
         **kwargs: Passed to the gate test.
     """
     not_windows = select({
@@ -199,6 +201,7 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
     )
     mutation_gate_test(
         name = name,
+        advisory = advisory,
         reports = [":{}.report".format(name)],
         target_compatible_with = compatible,
         **kwargs

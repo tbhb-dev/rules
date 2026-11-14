@@ -43,6 +43,7 @@ def _mutation_gate_impl(ctx):
         template = ctx.file._runner,
         output = script,
         substitutions = {
+            "@@ADVISORY@@": "true" if ctx.attr.advisory else "false",
             "@@MAX_TIMEOUT_PERCENT@@": str(MUTATION_MAX_TIMEOUT_PERCENT),
             "@@REPORTS@@": " ".join([shell.quote(r.short_path) for r in reports]),
             "@@REQUIRE_SCOPE@@": shell.quote(ctx.attr.require_scope),
@@ -80,8 +81,21 @@ line with a status no verdict names. The counts are summed over all reports.
 A diff-scoped report (`scope=diff`) counts only the mutants of changed
 code, and passes with none. Any `mutant.unmapped` line (the runner's
 selection and the tool disagree) fails, and a diff report never satisfies
-`require_scope = "full"`.""",
+`require_scope = "full"`.
+
+With `advisory = True`, survivors (mutants that lived or were not covered)
+are listed without failing the gate. The gate prints
+`mutation_gate: advisory, N survivors (not failing)` and appends it to
+`$GITHUB_STEP_SUMMARY` when set. Every other failure still fails: errored
+mutants, interrupted runs, incomplete or inconsistent accounting, malformed
+reports, timeouts above the cap, `mutant.unmapped`, an empty full-scope run,
+and a diff report under `require_scope = "full"`. Blocking nightly runs
+must leave it False.""",
     attrs = SHELL_ATTRS | {
+        "advisory": attr.bool(
+            default = False,
+            doc = "Report survivors without failing on them; every other failure still fails.",
+        ),
         "reports": attr.label_list(
             allow_files = True,
             mandatory = True,
