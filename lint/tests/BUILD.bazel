@@ -596,3 +596,46 @@ expect_failure_test(
     pattern = "b/bad\\.md:1:2: \\[MD018\\]",
     test = ":proof_rumdl_exclude_one",
 )
+
+# A macro `exclude` replaces the config's `exclude` list: the pinned rumdl
+# treats `--exclude` as an override, not an addition. The config skips a, b
+# and c; the macro names a and b, so c/bad.md is linted and must fail.
+# Without the macro's `exclude`, the config alone skips all three.
+genrule(
+    name = "rumdl_replace_tree",
+    outs = [
+        "rumdl_replace/a/bad.md",
+        "rumdl_replace/b/bad.md",
+        "rumdl_replace/c/bad.md",
+        "rumdl_replace/ok.md",
+        "rumdl_replace/rumdl.toml",
+    ],
+    cmd = "for f in $(OUTS); do case $$f in *bad.md) printf '#bad\\n' > $$f;; esac; done && " +
+          "printf '# Fine\\n' > $(execpath rumdl_replace/ok.md) && " +
+          "printf '[global]\\nexclude = [\"a\", \"b\", \"c\"]\\n' > $(execpath rumdl_replace/rumdl.toml)",
+)
+
+rumdl_test(
+    name = "rumdl_config_exclude_test",
+    srcs = [":rumdl_replace_tree"],
+    config = "rumdl_replace/rumdl.toml",
+    strip_prefix = "lint/tests/rumdl_replace",
+)
+
+rumdl_test(
+    name = "proof_rumdl_exclude_replaces_config",
+    srcs = [":rumdl_replace_tree"],
+    config = "rumdl_replace/rumdl.toml",
+    exclude = [
+        "a",
+        "b",
+    ],
+    strip_prefix = "lint/tests/rumdl_replace",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_rumdl_exclude_replaces_config_fails",
+    pattern = "c/bad\\.md:1:2: \\[MD018\\]",
+    test = ":proof_rumdl_exclude_replaces_config",
+)

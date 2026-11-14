@@ -10,8 +10,8 @@ generated:
     model: anthropic:claude-sonnet-5-5
     effort: medium
     surface: sdk-cli
-    session: sha-256-64:2a69b3577a6353b0
-    at: "2026-11-14T02:20:23Z"
+    session: sha-256-64:44773b524b075dd6
+    at: "2026-11-14T03:10:13Z"
 ---
 
 # Markdown links
@@ -49,3 +49,4 @@ The file `.markdown-links.toml` sits at the repository root and lists exclusions
 - The repository's root `rumdl` exclusion silences all Markdown lint under `repo/tests/testdata/markdown_links`.
 - The Windows unit tests don't enforce links in the real repository, because `markdown_links_test` in `repo/tests/BUILD.bazel` (lines 268 to 283) is incompatible with Windows.
 - Exclusion globs have no cap. A broad glob hides every failing link under it. Review each glob when you add it.
+- The code-span suppression is wider than CommonMark. Two opening backticks and one closing backtick hide an intervening link, and unmatched backticks across paragraphs hide links.
