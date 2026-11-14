@@ -443,6 +443,23 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
     )
 
 
+def test_main_lists_every_unstable_verdict_in_the_message(
+    fake_mutmut: list[list[str]],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(
+        json.dumps(ALL_KILLED | {"segfault": 1, "check_was_interrupted_by_user": True})
+    )
+    Path("pyproject.toml").write_text("")
+    assert mr.main(["report", "log", "0"]) == 1
+    assert len(fake_mutmut) == 3
+    assert "mutmut_report: not cacheable: errored, interrupted\n" in (
+        capsys.readouterr().err
+    )
+
+
 @pytest.mark.parametrize(
     ("text", "paths", "expected"),
     [
