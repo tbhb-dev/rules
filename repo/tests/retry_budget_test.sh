@@ -6,7 +6,7 @@
 # passed. A budget that leaves no room for the other steps lets the job's
 # `timeout-minutes` cancel it before the retries give up. The test reads both
 # defaults from the workflow and requires the budget plus the reserve to fit
-# in the timeout.
+# in the timeout. It also requires the diagnostics step to be bounded.
 #
 # WORKFLOW_RLOCATIONPATH is the workflow's runfiles path.
 
@@ -41,3 +41,29 @@ if ((budget + reserve > timeout)); then
   exit 1
 fi
 echo "retry-budget-minutes $budget + $reserve <= timeout-minutes $timeout"
+
+# The diagnostics step runs between the two checkout attempts, so a stall in
+# it would hold attempt 2 back until the job's timeout. The step must have its
+# own limit, must not fail the job, and must bound its DNS lookup.
+step=$(awk '
+  $0 == "      - name: Show diagnostics for the failed checkout" { found = 1; print; next }
+  found && /^      - name:/ { exit }
+  found { print }
+' "$workflow")
+[[ -n $step ]] || {
+  echo "FAIL: no diagnostics step in the workflow" >&2
+  exit 1
+}
+grep -Eq '^        timeout-minutes: [0-9]+$' <<<"$step" || {
+  echo "FAIL: the diagnostics step has no timeout-minutes" >&2
+  exit 1
+}
+grep -Eq '^        continue-on-error: true$' <<<"$step" || {
+  echo "FAIL: the diagnostics step lacks continue-on-error: true" >&2
+  exit 1
+}
+grep -Eq '^ *timeout [0-9]+ getent hosts ' <<<"$step" || {
+  echo "FAIL: the diagnostics step runs getent without timeout" >&2
+  exit 1
+}
+echo "diagnostics step has timeout-minutes, continue-on-error and a bounded lookup"

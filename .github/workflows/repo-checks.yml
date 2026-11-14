@@ -133,6 +133,11 @@ jobs:
 
       - name: Show diagnostics for the failed checkout
         if: steps.checkout_1.outcome == 'failure'
+        # The diagnostics must never hold up or stop attempt 2: a stalled
+        # command ends with the step at one minute, and a failed or timed-out
+        # step still lets the job go on.
+        timeout-minutes: 1
+        continue-on-error: true
         shell: bash
         env:
           RUNNER_OS_NAME: ${{ runner.os }}
@@ -143,7 +148,7 @@ jobs:
             ip addr || true
             ip route || true
             cat /etc/resolv.conf || true
-            getent hosts github.com || true
+            timeout 5 getent hosts github.com || true
           fi
           curl -sS -o /dev/null -w '%{http_code} %{time_total}\n' --max-time 10 https://github.com || true
 
