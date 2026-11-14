@@ -11,10 +11,9 @@ visibility("//quality/...")
 
 # Most timed-out mutants, in percent of total, that still count as killed. A
 # starved CPU makes tests time out, so past this share timeouts say the run
-# was starved, not that the tests caught the mutants. One real run on 2 CPUs
-# timed out 212 of 849 mutants, about 25%. The gate and both runners read this
-# one value: the gate through its template, the runners through the
-# environment variable below, which each requires.
+# was starved, not that the tests caught the mutants. The gate and both
+# runners read this one value: the gate through its template, the runners
+# through the environment variable below, which each requires.
 MUTATION_MAX_TIMEOUT_PERCENT = 10
 MUTATION_RUNNER_ENV = {"MUTATION_MAX_TIMEOUT_PERCENT": str(MUTATION_MAX_TIMEOUT_PERCENT)}
 
@@ -51,7 +50,12 @@ def _mutation_gate_impl(ctx):
         is_executable = True,
     )
     executable, runfiles = shell_executable(ctx, script, ctx.runfiles(files = reports))
-    return [DefaultInfo(executable = executable, runfiles = runfiles)]
+    return [
+        DefaultInfo(executable = executable, runfiles = runfiles),
+        # Bazel's test sandbox passes only listed variables; the gate appends
+        # its timeout line to the job summary.
+        RunEnvironmentInfo(inherited_environment = ["GITHUB_STEP_SUMMARY"]),
+    ]
 
 mutation_gate_test = rule(
     implementation = _mutation_gate_impl,
