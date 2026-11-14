@@ -54,6 +54,7 @@ frontmatter
 fsfe
 funlen
 genrule
+getent
 gobco
 gochecknoglobals
 gochecksumtype
@@ -141,6 +142,7 @@ PYTHONSTARTUP
 rawfile
 rctx
 recvcheck
+resolv
 resvg
 rlocation
 rlocationpath

@@ -18,6 +18,13 @@
 # minus the time of the other steps: //repo/tests:retry_budget_test checks
 # the defaults.
 #
+# A checkout that stalls idles until the job times out and leaves no trace,
+# so each attempt gets one minute, where the median is one second. The first
+# attempt may fail; a diagnostics step then prints the git version, the runner
+# and the network state, and one more attempt follows. A second stall fails
+# the job after about two minutes. Both attempts trace git, with the
+# Authorization header redacted.
+#
 # This workflow sets up Bazel itself instead of using the setup-bazel-ci
 # action. A local `./` path in a called workflow resolves in the *caller's*
 # checkout, which does not hold that action, and a pinned remote reference
@@ -109,11 +116,56 @@ jobs:
           egress-policy: audit
 
       - name: Checkout
+        id: checkout_1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        timeout-minutes: 1
+        continue-on-error: true
         with:
           # gitleaks scans the whole history, so it needs every commit.
           fetch-depth: 0
           persist-credentials: false
+        env:
+          GIT_TRACE: 1
+          GIT_TRACE2_PERF: 1
+          # git redacts the Authorization header in this trace unless
+          # GIT_TRACE_REDACT is set to false, which nothing here does.
+          GIT_CURL_VERBOSE: 1
+
+      - name: Show diagnostics for the failed checkout
+        if: steps.checkout_1.outcome == 'failure'
+        # The diagnostics must never hold up or stop attempt 2: a stalled
+        # command ends with the step at one minute, and a failed or timed-out
+        # step still lets the job go on.
+        timeout-minutes: 1
+        continue-on-error: true
+        shell: bash
+        env:
+          RUNNER_OS_NAME: ${{ runner.os }}
+        run: |
+          git --version || true
+          echo "runner: ${RUNNER_OS_NAME} ${RUNNER_ARCH}, image ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          if [[ ${RUNNER_OS_NAME} == Linux ]]; then
+            ip addr || true
+            ip route || true
+            cat /etc/resolv.conf || true
+            timeout 5 getent hosts github.com || true
+          fi
+          curl -sS -o /dev/null -w '%{http_code} %{time_total}\n' --max-time 10 https://github.com || true
+
+      - name: Checkout (attempt 2)
+        if: steps.checkout_1.outcome == 'failure'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        timeout-minutes: 1
+        with:
+          # gitleaks scans the whole history, so it needs every commit.
+          fetch-depth: 0
+          persist-credentials: false
+        env:
+          GIT_TRACE: 1
+          GIT_TRACE2_PERF: 1
+          # git redacts the Authorization header in this trace unless
+          # GIT_TRACE_REDACT is set to false, which nothing here does.
+          GIT_CURL_VERBOSE: 1
 
       # GitHub release downloads return 504 for minutes at times, and
       # setup-bazel has no retry of its own, so a failed attempt is retried
