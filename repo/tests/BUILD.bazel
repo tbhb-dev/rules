@@ -324,6 +324,7 @@ python_tool(
 )
 
 REQUIRED_FILES_DATA = [
+    ":check_required_files",
     "//repo/baseline:repo_files",
 ] + glob(["testdata/required_files/**"])
 
@@ -337,7 +338,7 @@ REQUIRED_FILES_ARGS = [
 [
     sh_test(
         name = "required_files_{}_test".format(case),
-        srcs = [":check_required_files"],
+        srcs = ["required_files_case.sh"],
         args = REQUIRED_FILES_ARGS + [REQUIRED_FILES_ROOT + "clean/" + case],
         data = REQUIRED_FILES_DATA,
         target_compatible_with = MISE_KEYS_NOT_WINDOWS,
@@ -361,7 +362,7 @@ REQUIRED_FILES_PROOFS = {
 [
     sh_test(
         name = "proof_required_files_" + case,
-        srcs = [":check_required_files"],
+        srcs = ["required_files_case.sh"],
         args = REQUIRED_FILES_ARGS + [REQUIRED_FILES_ROOT + "bad/" + case],
         data = REQUIRED_FILES_DATA,
         tags = ["manual"],
