@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+[kind.go]
+required = ["go.mod", "cmd/"]
+
+[kind.docs]
+required = ["docs/"]
+
+[visibility.public]
+required = ["LICENSE"]
+
+[visibility.private]
+required = ["LICENSES/LicenseRef-Proprietary.txt", "go.mod"]

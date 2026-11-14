@@ -1,0 +1,238 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+"""Tests for the required files check."""
+
+import json
+lazy from pathlib import Path
+
+import pytest
+
+from repo.tests import check_required_files as checker
+
+# The mutation run copies no baseline files, so the tests use a reduced schema.
+# The shell tests run the real repo.schema.json.
+SCHEMA_TEXT = json.dumps(
+    {
+        "type": "object",
+        "required": ["schema_version", "kind", "private"],
+        "properties": {
+            "kind": {"enum": ["go", "docs"]},
+            "private": {"type": "boolean"},
+            "exception": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"reason": {"type": "string", "pattern": "\\S"}},
+                },
+            },
+        },
+    }
+)
+MANIFEST_TEXT = (
+    "[kind.go]\nrequired = ['go.mod', 'cmd/']\n"
+    "[visibility.public]\nrequired = ['LICENSE', 'go.mod']\n"
+    "[visibility.private]\nrequired = ['PRIVATE']\n"
+)
+
+
+@pytest.fixture
+def manifest(tmp_path: Path) -> Path:
+    path = tmp_path / "manifest.toml"
+    path.write_text(MANIFEST_TEXT)
+    (tmp_path / "schema.json").write_text(SCHEMA_TEXT)
+    return path
+
+
+@pytest.fixture
+def repo(tmp_path: Path) -> Path:
+    root = tmp_path / "repo"
+    root.mkdir()
+    return root
+
+
+def declare(repo: Path, text: str) -> None:
+    (repo / ".tbhb-repo.toml").write_text(
+        f"schema_version = 1\nkind = 'go'\nprivate = false\n{text}"
+    )
+
+
+def populate(repo: Path) -> None:
+    for name in ("go.mod", "LICENSE"):
+        (repo / name).write_text("")
+    (repo / "cmd").mkdir()
+
+
+def run(manifest: Path, repo: Path) -> list[str]:
+    return checker.check(manifest, manifest.with_name("schema.json"), repo)
+
+
+def test_clean(manifest: Path, repo: Path) -> None:
+    declare(repo, "")
+    populate(repo)
+    assert run(manifest, repo) == []
+
+
+def test_missing_declaration(manifest: Path, repo: Path) -> None:
+    assert run(manifest, repo) == [f"{repo / '.tbhb-repo.toml'}: missing"]
+
+
+def test_invalid_toml(manifest: Path, repo: Path) -> None:
+    (repo / ".tbhb-repo.toml").write_text("kind =")
+    (error,) = run(manifest, repo)
+    assert "invalid TOML" in error
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("schema_version = 1\nkind = 'rust'\nprivate = false\n", "$.kind"),
+        ("schema_version = 1\nkind = 'go'\nprivate = 'no'\n", "$.private"),
+        ("schema_version = 1\nkind = 'go'\n", "'private' is a required"),
+        (
+            (
+                "schema_version = 1\nkind = 'go'\nprivate = false\n"
+                "[[exception]]\ncheck = 'C4'\npath = 'go.mod'\nreason = ' '\n"
+            ),
+            "$.exception[0].reason",
+        ),
+    ],
+)
+def test_invalid_declaration(
+    manifest: Path, repo: Path, text: str, expected: str
+) -> None:
+    (repo / ".tbhb-repo.toml").write_text(text)
+    errors = run(manifest, repo)
+    assert len(errors) == 1
+    assert expected in errors[0]
+
+
+def test_reports_each_missing_path(manifest: Path, repo: Path) -> None:
+    declare(repo, "")
+    (repo / "cmd").write_text("a file, not a directory")
+    assert run(manifest, repo) == [
+        f"{repo}: required file go.mod is missing",
+        f"{repo}: required directory cmd/ is missing",
+        f"{repo}: required file LICENSE is missing",
+    ]
+
+
+def test_directory_is_not_a_file(manifest: Path, repo: Path) -> None:
+    declare(repo, "")
+    populate(repo)
+    (repo / "LICENSE").unlink()
+    (repo / "LICENSE").mkdir()
+    assert run(manifest, repo) == [f"{repo}: required file LICENSE is missing"]
+
+
+def test_private_uses_private_list(manifest: Path, repo: Path) -> None:
+    (repo / ".tbhb-repo.toml").write_text(
+        "schema_version = 1\nkind = 'go'\nprivate = true\n"
+    )
+    (repo / "go.mod").write_text("")
+    (repo / "cmd").mkdir()
+    assert run(manifest, repo) == [f"{repo}: required file PRIVATE is missing"]
+
+
+def test_exception_hides_one_missing_path(manifest: Path, repo: Path) -> None:
+    declare(
+        repo,
+        "[[exception]]\ncheck = 'C4'\npath = 'LICENSE'\nreason = 'Not yet.'\n"
+        "[[exception]]\ncheck = 'C8'\npath = 'go.mod'\nreason = 'Other check.'\n",
+    )
+    (repo / "go.mod").write_text("")
+    (repo / "cmd").mkdir()
+    assert run(manifest, repo) == []
+
+
+def test_exception_hides_only_its_own_path(manifest: Path, repo: Path) -> None:
+    declare(
+        repo,
+        "[[exception]]\ncheck = 'C4'\npath = 'LICENSE'\nreason = 'Not yet.'\n",
+    )
+    (repo / "cmd").mkdir()
+    assert run(manifest, repo) == [f"{repo}: required file go.mod is missing"]
+
+
+def test_exception_for_present_path_fails(manifest: Path, repo: Path) -> None:
+    declare(
+        repo,
+        "[[exception]]\ncheck = 'C4'\npath = 'go.mod'\nreason = 'Nothing differs.'\n",
+    )
+    populate(repo)
+    assert run(manifest, repo) == [
+        f"{repo / '.tbhb-repo.toml'}: exception for go.mod but it is not missing"
+    ]
+
+
+def test_main_exit_codes(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    populate(repo)
+    assert (
+        checker.main([str(manifest), str(manifest.with_name("schema.json")), str(repo)])
+        == 0
+    )
+    assert not capsys.readouterr().out
+    (repo / "go.mod").unlink()
+    (repo / "LICENSE").unlink()
+    assert (
+        checker.main([str(manifest), str(manifest.with_name("schema.json")), str(repo)])
+        == 1
+    )
+    assert capsys.readouterr().out == (
+        f"{repo}: required file go.mod is missing\n"
+        f"{repo}: required file LICENSE is missing\n"
+    )
+
+
+def symlink_or_skip(link: Path, target: Path) -> None:
+    try:
+        link.symlink_to(target, target_is_directory=target.is_dir())
+    except OSError, NotImplementedError:
+        pytest.skip("this host cannot create symlinks")
+
+
+def test_symlink_to_outside_file_is_missing(
+    manifest: Path, repo: Path, tmp_path: Path
+) -> None:
+    declare(repo, "")
+    populate(repo)
+    outside = tmp_path / "outside.mod"
+    outside.write_text("")
+    (repo / "go.mod").unlink()
+    symlink_or_skip(repo / "go.mod", outside)
+    assert run(manifest, repo) == [f"{repo}: required file go.mod is missing"]
+
+
+def test_symlink_to_outside_directory_is_missing(
+    manifest: Path, repo: Path, tmp_path: Path
+) -> None:
+    declare(repo, "")
+    populate(repo)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (repo / "cmd").rmdir()
+    symlink_or_skip(repo / "cmd", outside)
+    assert run(manifest, repo) == [f"{repo}: required directory cmd/ is missing"]
+
+
+def test_symlink_inside_repo_is_present(manifest: Path, repo: Path) -> None:
+    declare(repo, "")
+    populate(repo)
+    (repo / "real.mod").write_text("")
+    (repo / "go.mod").unlink()
+    symlink_or_skip(repo / "go.mod", repo / "real.mod")
+    assert run(manifest, repo) == []
+
+
+def test_symlink_helper_skips_when_unsupported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refuse(*_args: object, **_kwargs: object) -> None:
+        raise OSError
+
+    monkeypatch.setattr(Path, "symlink_to", refuse)
+    with pytest.raises(pytest.skip.Exception):
+        symlink_or_skip(tmp_path / "link", tmp_path)

@@ -54,6 +54,32 @@ expect_failure_test(
     test = ":proof_right_reason",
 )
 
+script_test(
+    name = "proof_silent",
+    env = {"SUBJECT_STATUS": "1"},
+    script = "silent.sh",
+    tags = PROOF_TAGS,
+)
+
+# A real blank first line, with output after it, matches '^$'.
+script_test(
+    name = "proof_blank_first_line",
+    env = {
+        "SUBJECT_MESSAGE": "",
+        "SUBJECT_STATUS": "1",
+    },
+    script = "subject.sh",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_blank_first_line_fails",
+    exit_status = 1,
+    first_line = True,
+    pattern = "^$",
+    test = ":proof_blank_first_line",
+)
+
 # Proofs of the proof: each inner expect_failure_test must fail, and the
 # outer one checks it fails for the stated reason.
 
@@ -94,6 +120,143 @@ expect_failure_test(
     name = "proof_invalid_pattern_fails",
     pattern = "is not a valid extended regular expression",
     test = ":proof_invalid_pattern",
+)
+
+# exit_status and first_line pin the failure further: the right status, and
+# the pattern on the first line only.
+expect_failure_test(
+    name = "proof_status_and_first_line_fails",
+    exit_status = 3,
+    first_line = True,
+    pattern = "^the right reason$",
+    test = ":proof_right_reason",
+)
+
+expect_failure_test(
+    name = "proof_wrapped_wrong_status",
+    exit_status = 1,
+    pattern = "the right reason",
+    tags = PROOF_TAGS,
+    test = ":proof_right_reason",
+)
+
+expect_failure_test(
+    name = "proof_wrapped_wrong_status_fails",
+    pattern = "FAIL: the wrapped test exited with status 3, but it must exit with status 1",
+    test = ":proof_wrapped_wrong_status",
+)
+
+expect_failure_test(
+    name = "proof_wrapped_later_line",
+    first_line = True,
+    pattern = "^TEST_TMPDIR=",
+    tags = PROOF_TAGS,
+    test = ":proof_right_reason",
+)
+
+expect_failure_test(
+    name = "proof_wrapped_later_line_fails",
+    pattern = "FAIL: the wrapped test failed \\(exit status 3\\), but its output does not match",
+    test = ":proof_wrapped_later_line",
+)
+
+# A wrapped test that fails with no output has no blank line to match.
+expect_failure_test(
+    name = "proof_empty_first_line",
+    exit_status = 1,
+    first_line = True,
+    pattern = "^$",
+    tags = PROOF_TAGS,
+    test = ":proof_silent",
+)
+
+expect_failure_test(
+    name = "proof_empty_first_line_fails",
+    pattern = "FAIL: the wrapped test failed \\(exit status 1\\), but its output does not match",
+    test = ":proof_empty_first_line",
+)
+
+expect_failure_test(
+    name = "proof_empty_grep",
+    exit_status = 1,
+    pattern = "^$",
+    tags = PROOF_TAGS,
+    test = ":proof_silent",
+)
+
+expect_failure_test(
+    name = "proof_empty_grep_fails",
+    pattern = "FAIL: the wrapped test failed \\(exit status 1\\), but its output does not match",
+    test = ":proof_empty_grep",
+)
+
+# The marker text in a pattern is not a placeholder: '^@@STATUS@@$' must match
+# the output '@@STATUS@@', not the exit status 1 that the marker stands for.
+script_test(
+    name = "proof_marker_text",
+    env = {
+        "SUBJECT_MESSAGE": "@@STATUS@@",
+        "SUBJECT_STATUS": "1",
+    },
+    script = "subject.sh",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_marker_text_fails",
+    exit_status = 1,
+    first_line = True,
+    pattern = "^@@STATUS@@$",
+    test = ":proof_marker_text",
+)
+
+script_test(
+    name = "proof_status_text",
+    env = {
+        "SUBJECT_MESSAGE": "1",
+        "SUBJECT_STATUS": "1",
+    },
+    script = "subject.sh",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_marker_not_status",
+    exit_status = 1,
+    first_line = True,
+    pattern = "^@@STATUS@@$",
+    tags = PROOF_TAGS,
+    test = ":proof_status_text",
+)
+
+expect_failure_test(
+    name = "proof_marker_not_status_fails",
+    pattern = "FAIL: the wrapped test failed \\(exit status 1\\), but its output does not match",
+    test = ":proof_marker_not_status",
+)
+
+# A NUL byte inside the first line is not skipped: "ri", NUL, "ght" is not
+# "right".
+script_test(
+    name = "proof_nul",
+    env = {"SUBJECT_STATUS": "1"},
+    script = "nul.sh",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_nul_first_line",
+    exit_status = 1,
+    first_line = True,
+    pattern = "^right$",
+    tags = PROOF_TAGS,
+    test = ":proof_nul",
+)
+
+expect_failure_test(
+    name = "proof_nul_first_line_fails",
+    pattern = "FAIL: the wrapped test failed \\(exit status 1\\), but its output does not match",
+    test = ":proof_nul_first_line",
 )
 
 expect_failure_test_suite(name = "expect_failure_tests")
