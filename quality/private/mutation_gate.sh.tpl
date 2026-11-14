@@ -27,8 +27,8 @@
 # MAX_TIMEOUT_PERCENT of total; an interrupted run; mutants left unchecked
 # (total above the sum of the outcomes); no mutants in the full-scope
 # reports; any mutant.unmapped; in diff scope, selected other than total; and
-# with require_scope=full, any diff-scope report. A diff report with no mutants passes: its change set
-# touched no code with mutants.
+# with require_scope=full, any diff-scope report. A diff report with no
+# mutants passes: its change set touched no code with mutants.
 
 set -euo pipefail
 
@@ -111,9 +111,9 @@ if ((diff_reports > 0)); then
   echo "mutation_gate: $diff_reports diff-scoped: $diff_total mutants of $changed_units changed unit(s)"
 fi
 
-if ((timeout > 0)); then
-  # Tenths of a percent, rounded down. total is above 0 here: timeouts are
-  # part of it, and a total below the sum of outcomes fails as unchecked.
+if ((timeout > 0 && total > 0)); then
+  # Tenths of a percent, rounded down. A report with timeouts but a zero
+  # total is malformed: the unchecked and cap checks below fail it.
   tenths=$((timeout * 1000 / total))
   timeout_line="mutation_gate: $timeout timed out of $total ($((tenths / 10)).$((tenths % 10))%), counted as killed"
   echo "$timeout_line"

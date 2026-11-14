@@ -59,6 +59,7 @@ PROOF_REASONS = {
     "proof_three_unchecked": "FAIL: 3 not checked$",
     "proof_timeout_above_cap": "FAIL: 11 timeout\\(s\\) of 100, above 10%",
     "proof_timeout_with_survivor": "FAIL: 1 lived$",
+    "proof_timeout_zero_total": "FAIL: .*1 timeout\\(s\\) of 0",
     "proof_unchecked": "FAIL: 3280 not checked",
 }
 
