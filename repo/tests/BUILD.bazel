@@ -349,7 +349,7 @@ REQUIRED_FILES_ARGS = [
 ]
 
 # Each bad fixture breaks one rule; each proof pins exit status 1 and the exact
-# first line the check prints, so a later crash cannot satisfy it.
+# first line the check prints. Output after the first line is not checked.
 REQUIRED_FILES_PROOFS = {
     "bad_exception": "^[^ ]+/\\.tbhb-repo\\.toml: exception for go\\.mod but it is not missing$",
     "missing_dir": "^[^ ]+: required directory cmd/ is missing$",
