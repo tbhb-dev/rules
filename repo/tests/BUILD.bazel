@@ -127,6 +127,18 @@ sh_test(
     env = {"ROOT_RLOCATIONPATH": "$(rlocationpath //:BUILD.bazel)"},
 )
 
+# The root rumdl_test caller's exclude replaces .rumdl.toml's, so it must
+# repeat every entry there.
+sh_test(
+    name = "rumdl_exclude_test",
+    srcs = ["rumdl_exclude_test.sh"],
+    data = [
+        "//:.rumdl.toml",
+        "//:BUILD.bazel",
+    ],
+    env = {"ROOT_RLOCATIONPATH": "$(rlocationpath //:BUILD.bazel)"},
+)
+
 sh_test(
     name = "cache_fetch_test",
     srcs = ["cache_fetch_test.sh"],

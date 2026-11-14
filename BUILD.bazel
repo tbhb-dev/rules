@@ -187,9 +187,18 @@ rumdl_test(
     srcs = [":repo_files"],
     config = ".rumdl.toml",
     # The link check's fixtures plant broken links and unused references
-    # on purpose, so rumdl's own link rules would fail them. The config
-    # stays equal to the parent copy that nested modules carry.
-    exclude = ["repo/tests/testdata/markdown_links"],
+    # on purpose, so rumdl's own link rules would fail them. This list
+    # replaces the config's `exclude`, so it repeats the config's four
+    # entries on purpose (repo/tests:rumdl_exclude_test keeps them equal)
+    # and adds the fixtures. The config stays equal to the parent copy
+    # that nested modules carry.
+    exclude = [
+        ".git",
+        ".vale",
+        "tmp",
+        "LICENSE",
+        "repo/tests/testdata/markdown_links",
+    ],
 )
 
 editorconfig_checker_test(
