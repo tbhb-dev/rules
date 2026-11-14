@@ -30,7 +30,9 @@ status=0
 
 # gitleaks writes the report as indented JSON, one field per line, with
 # string values escaped onto a single line. Matching the finding fields by
-# their indent therefore cannot pick up text from inside a value.
+# their indent therefore cannot pick up text from inside a value. The ids are
+# diagnostics only: a failing awk or an unreadable report must never replace
+# the scanner's status, so every step here tolerates failure.
 if [[ -s $report ]]; then
   awk '
     /^  "RuleID": "/ { rule = $2; gsub(/[",]/, "", rule) }
@@ -39,6 +41,6 @@ if [[ -s $report ]]; then
       if (rule != "" && line != "") print "gitleaks_text: rule=" rule " line=" line
       rule = ""; line = ""
     }
-  ' "$report" >&2
+  ' "$report" >&2 || true
 fi
 exit "$status"
