@@ -435,8 +435,34 @@ def test_check_exclusion_for_clean_file_is_stale(tmp_path: Path) -> None:
 
 
 def test_check_ignores_non_markdown_and_untracked(tmp_path: Path) -> None:
-    root = tree(tmp_path, {"a.txt": "[x](gone.md)\n", "a.mdx": "[x](gone.md)\n"})
+    root = tree(
+        tmp_path,
+        {"a.md": "# A\n", "a.txt": "[x](gone.md)\n", "a.mdx": "[x](gone.md)\n"},
+    )
     assert checker.check(root) == []
+
+
+def test_check_fails_when_nothing_is_scanned(tmp_path: Path) -> None:
+    message = f"{tmp_path}: no tracked Markdown files to check"
+    # No files at all, then files with no Markdown among them.
+    assert checker.check(tmp_path) == [message]
+    root = tree(tmp_path, {"a.txt": "[x](gone.md)\n", "a.mdx": "[x](gone.md)\n"})
+    assert checker.check(root) == [message]
+
+
+def test_check_fails_on_empty_git_listing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[bytes]:
+        return subprocess.CompletedProcess(command, 0, stdout=b"", stderr=b"")
+
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+    message = f"{tmp_path}: no tracked Markdown files to check"
+    assert checker.check(tmp_path, "git") == [message]
+    assert checker.main([str(tmp_path), "--git=git"]) == 1
+    assert capsys.readouterr().out == f"{message}\n"
 
 
 @pytest.mark.parametrize(

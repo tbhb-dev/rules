@@ -267,7 +267,12 @@ def check(root: Path, git: str | None = None) -> list[str]:
     tracked = files | parents(files)
     used: set[str] = set()
     errors: list[str] = []
-    for source in sorted(name for name in files if name.endswith(".md")):
+    sources = sorted(name for name in files if name.endswith(".md"))
+    if not sources:
+        # A scan of nothing proves nothing: this covers an empty tree, an
+        # empty `git ls-files` and a tree with no Markdown.
+        return [f"{root}: no tracked Markdown files to check"]
+    for source in sources:
         errors += file_errors(root, source, tracked, exclusions, used)
     errors += [
         f"{CONFIG}:{line}: exclusion {glob} matches no failing link"
