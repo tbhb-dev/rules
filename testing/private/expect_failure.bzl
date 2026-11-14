@@ -22,7 +22,7 @@ def _expect_failure_impl(ctx):
     }
 
     # Last: the substitutions apply in order, so a pattern that contains
-    # another marker, such as "@@STATUS@@", must not be rescanned by it.
+    # another marker, such as "@@STATUS@@", must not be scanned again by it.
     substitutions["@@PATTERN@@"] = shell.quote(ctx.attr.pattern)
     ctx.actions.expand_template(
         template = ctx.file._runner,
