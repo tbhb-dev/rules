@@ -9,6 +9,15 @@ load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "shell_executable")
 # Internal: consumers load //quality:defs.bzl.
 visibility("//quality/...")
 
+# Most timed-out mutants, in percent of total, that still count as killed. A
+# starved CPU makes tests time out, so past this share timeouts say the run
+# was starved, not that the tests caught the mutants. One real run on 2 CPUs
+# timed out 212 of 849 mutants, about 25%. The gate and both runners read this
+# one value: the gate through its template, the runners through the
+# environment variable below, which each requires.
+MUTATION_MAX_TIMEOUT_PERCENT = 10
+MUTATION_RUNNER_ENV = {"MUTATION_MAX_TIMEOUT_PERCENT": str(MUTATION_MAX_TIMEOUT_PERCENT)}
+
 MutationReportInfo = provider(
     doc = """Mutation reports from a runner, in the format mutation_gate_test reads:
 one `key=value` per line with the required integer keys total, killed,
@@ -35,6 +44,7 @@ def _mutation_gate_impl(ctx):
         template = ctx.file._runner,
         output = script,
         substitutions = {
+            "@@MAX_TIMEOUT_PERCENT@@": str(MUTATION_MAX_TIMEOUT_PERCENT),
             "@@REPORTS@@": " ".join([shell.quote(r.short_path) for r in reports]),
             "@@REQUIRE_SCOPE@@": shell.quote(ctx.attr.require_scope),
         },
@@ -51,13 +61,16 @@ mutation_gate_test = rule(
 
 A timed-out mutant counts as killed and stays listed; the gate prints how
 many timed out, and appends that line to `$GITHUB_STEP_SUMMARY` when set.
-It fails when timeouts exceed 10% of the mutants, because a starved CPU
-makes tests time out and that must not pass as kills.
+It fails when timeouts exceed MUTATION_MAX_TIMEOUT_PERCENT of the mutants,
+in the sum and in any one report, because a starved CPU makes tests time
+out and that must not pass as kills.
 
 Fails when any mutant lived, was not covered or errored, when a
 run was interrupted, when the full-scope reports mutated nothing, and when
-the counts don't add up to the total (mutants a failed run never checked).
-The counts are summed over all reports.
+a report's counts don't add up exactly to its total (mutants a failed run
+never checked, or mutants counted twice). A count above 1000000000, or a
+listed mutant its verdict count denies, makes a report malformed. The
+counts are summed over all reports.
 
 A diff-scoped report (`scope=diff`) counts only the mutants of changed
 code, and passes with none. Any `mutant.unmapped` line (the runner's

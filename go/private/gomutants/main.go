@@ -16,8 +16,11 @@
 // through a fake git (this binary under the name git). Every mutant
 // reported must be one the selection holds and vice versa; a mismatch is
 // reported as mutant.unmapped. It writes the report mutation_gate_test
-// reads and exits 1 after writing one with an errored or
-// interrupted count, so Bazel never caches it.
+// reads, then exits 1 for an errored or interrupted count, or for timeouts
+// above MUTATION_MAX_TIMEOUT_PERCENT of the mutants (set by the action from
+// quality's constant, which the gate reads too). So Bazel never caches a
+// run that machine load may have spoiled: a starved run is rerun, not
+// replayed. Timeouts within the cap exit 0; the gate counts them as killed.
 //
 // Invoked as git, it answers the two commands gomutants' --changed-since
 // runs from GOMUTANTS_FAKE_GIT_ROOT and GOMUTANTS_FAKE_GIT_DIFF.
@@ -50,6 +53,10 @@ import (
 )
 
 var mainExit = os.Exit
+
+// maxTimeoutEnv holds the most timed-out mutants, in percent of the total,
+// that still count as killed. The action sets it, so it has no default.
+const maxTimeoutEnv = "MUTATION_MAX_TIMEOUT_PERCENT"
 
 func main() {
 	if strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe") == "git" {
@@ -217,6 +224,11 @@ func runMain(args []string) int {
 		fmt.Fprintln(os.Stderr, "gomutants: -gomutants, -go, -manifest, -pkg, -report and -log are required")
 		return 2
 	}
+	maxTimeout, err := strconv.Atoi(os.Getenv(maxTimeoutEnv))
+	if err != nil || maxTimeout < 0 || maxTimeout > 100 {
+		fmt.Fprintf(os.Stderr, "gomutants: %s must be an integer from 0 to 100\n", maxTimeoutEnv)
+		return 2
+	}
 	r, log, err := run(c)
 	if err == nil {
 		err = runnerWriteFile(c.log, log, 0o644)
@@ -228,7 +240,7 @@ func runMain(args []string) int {
 		fmt.Fprintf(os.Stderr, "gomutants: %v\n", err)
 		return 1
 	}
-	if found := r.unstable(); len(found) > 0 {
+	if found := r.unstable(maxTimeout); len(found) > 0 {
 		fmt.Fprintf(os.Stderr, "gomutants: not cacheable: %s\n%s", strings.Join(found, ", "), log)
 		if len(r.mutants) > 0 {
 			sort.Strings(r.mutants)
@@ -263,13 +275,19 @@ func (r result) format() string {
 	return b.String()
 }
 
-func (r result) unstable() []string {
+// unstable names the verdicts machine load may have caused, which the action
+// must not cache: errored or interrupted mutants, and timeouts above
+// maxTimeout percent of the total.
+func (r result) unstable(maxTimeout int) []string {
 	var found []string
 	if r.errored > 0 {
 		found = append(found, "errored")
 	}
 	if r.interrupted > 0 {
 		found = append(found, "interrupted")
+	}
+	if r.timeout*100 > r.total*maxTimeout {
+		found = append(found, fmt.Sprintf("%d timeouts of %d, above %d%%", r.timeout, r.total, maxTimeout))
 	}
 	return found
 }

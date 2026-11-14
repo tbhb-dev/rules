@@ -156,6 +156,12 @@ def test_under() -> None:
     assert not mr.under(PurePosixPath("calc.py"), [])
 
 
+@pytest.fixture(autouse=True)
+def timeout_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Set the cap the action sets from quality's constant."""
+    monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, "10")
+
+
 @pytest.fixture
 def unit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.chdir(tmp_path)

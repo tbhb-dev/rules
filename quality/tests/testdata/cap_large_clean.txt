@@ -1,0 +1,8 @@
+total=1000
+killed=1000
+lived=0
+not_covered=0
+timeout=0
+errored=0
+skipped=0
+interrupted=0

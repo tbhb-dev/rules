@@ -1,0 +1,12 @@
+total=3
+killed=0
+lived=1
+not_covered=1
+timeout=0
+errored=1
+skipped=0
+interrupted=0
+scope=full
+mutant.infra_error=mod/p/p.go:13:9 Y (p/p.go:Double:Y#1)
+mutant.lived=mod/p/p.go:7:15 CONDITIONALS_BOUNDARY (p/p.go:Pass:CONDITIONALS_BOUNDARY#1)
+mutant.not_covered=mod/p/p.go:13:9 RETURN_ZERO (p/p.go:Double:RETURN_ZERO#1)

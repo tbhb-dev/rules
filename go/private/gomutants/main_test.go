@@ -42,6 +42,8 @@ func TestMain(m *testing.M) {
 		_ = os.Setenv("GOCOVERDIR", os.Getenv("FAKE_GOCOVERDIR"))
 		os.Exit(fakeGomutants(rc))
 	}
+	// The action sets the timeout cap; the runner has no default.
+	_ = os.Setenv(maxTimeoutEnv, "10")
 	os.Exit(m.Run())
 }
 
@@ -291,7 +293,7 @@ mutant.timed_out=mod/p/p.go:13:9 X (p/p.go:Double:X#1)
 	if got := r.format(); got != want {
 		t.Errorf("report:\n%s\nwant:\n%s", got, want)
 	}
-	if got := strings.Join(r.unstable(), ","); got != "errored" {
+	if got := strings.Join(r.unstable(100), ","); got != "errored" {
 		t.Errorf("unstable = %s", got)
 	}
 	if err := (&result{}).read([]byte(`{"files":[{"mutations":[{"status":"ODD"}]}]}`), ""); err == nil {
@@ -490,12 +492,92 @@ func TestRunUnstable(t *testing.T) {
 	}
 }
 
-func TestRunTimeoutIsCacheable(t *testing.T) {
+// manyMutants is a report of n mutants, the first timedOut of them TIMED OUT
+// and the rest KILLED.
+func manyMutants(n, timedOut int) string {
+	var mutations []string
+	for i := 1; i <= n; i++ {
+		status := "KILLED"
+		if i <= timedOut {
+			status = "TIMED OUT"
+		}
+		mutations = append(mutations, fmt.Sprintf(`{"id":"p/p.go:Pass:CONDITIONALS_BOUNDARY#%d","type":"CONDITIONALS_BOUNDARY","status":%q,"line":7,"column":15}`, i, status))
+	}
+	return `{"files":[{"mutations":[` + strings.Join(mutations, ",") + `]}]}`
+}
+
+// A timeout counts as killed only up to the cap: the action exits 0 within it,
+// and above it exits 1 after writing the report, so Bazel never caches a
+// starved run (a rerun replays a cached report, not a fresh one).
+func TestRunTimeoutCap(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		cap             string
+		total, timedOut int
+		code            int
+	}{
+		{"below the cap", "10", 20, 1, 0},
+		{"at the cap", "10", 10, 1, 0},
+		{"above the cap", "10", 10, 2, 1},
+		{"every mutant at a cap of 100", "100", 1, 1, 0},
+		{"one timeout at a cap of 0", "0", 1, 1, 1},
+		{"none at a cap of 0", "0", 1, 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(maxTimeoutEnv, tc.cap)
+			js := manyMutants(tc.total, tc.timedOut)
+			code, report := runFake(t, "", "0", &js)
+			want := fmt.Sprintf("total=%d\nkilled=%d\nlived=0\nnot_covered=0\ntimeout=%d\n", tc.total, tc.total-tc.timedOut, tc.timedOut)
+			if code != tc.code || !strings.HasPrefix(report, want) {
+				t.Errorf("exit %d, want %d, report:\n%s", code, tc.code, report)
+			}
+		})
+	}
+}
+
+func TestRunTimeoutListsTheMutants(t *testing.T) {
+	t.Setenv(maxTimeoutEnv, "0")
 	js := strings.Replace(oneLived, "LIVED", "TIMED OUT", 1)
-	code, report := runFake(t, "", "0", &js)
-	want := "mutant.timed_out=p/p.go:7:15 CONDITIONALS_BOUNDARY (p/p.go:Pass:CONDITIONALS_BOUNDARY#1)\n"
-	if code != 0 || !strings.Contains(report, "timeout=1\n") || !strings.HasSuffix(report, want) {
-		t.Errorf("exit %d, report:\n%s", code, report)
+	code, report := captureStderr(t, func() int { c, _ := runFake(t, "", "0", &js); return c })
+	want := "gomutants: not cacheable: 1 timeouts of 1, above 0%\n"
+	if code != 1 || !strings.HasPrefix(report, want) || !strings.Contains(report, "mutant.timed_out=p/p.go:7:15 CONDITIONALS_BOUNDARY (p/p.go:Pass:CONDITIONALS_BOUNDARY#1)\n") {
+		t.Errorf("exit %d, stderr:\n%s", code, report)
+	}
+}
+
+func TestUnstableTimeoutCap(t *testing.T) {
+	for _, tc := range []struct {
+		total, timeout, cap int
+		want                string
+	}{
+		{100, 5, 10, ""},
+		{100, 10, 10, ""},
+		{100, 11, 10, "11 timeouts of 100, above 10%"},
+		{1000, 100, 10, ""},
+		{1000, 101, 10, "101 timeouts of 1000, above 10%"},
+		{0, 0, 10, ""},
+		{0, 1, 10, "1 timeouts of 0, above 10%"},
+		{100, 0, 0, ""},
+		{100, 1, 0, "1 timeouts of 100, above 0%"},
+		{4, 4, 100, ""},
+	} {
+		got := strings.Join(result{total: tc.total, timeout: tc.timeout}.unstable(tc.cap), ",")
+		if got != tc.want {
+			t.Errorf("%d of %d at %d%%: %q, want %q", tc.timeout, tc.total, tc.cap, got, tc.want)
+		}
+	}
+}
+
+func TestRunMainNeedsTheTimeoutCap(t *testing.T) {
+	for _, value := range []string{"", "ten", "-1", "101", "1.5"} {
+		t.Run(value, func(t *testing.T) {
+			t.Setenv(maxTimeoutEnv, value)
+			code, diagnostic := captureStderr(t, func() int { return runMain(runnerArgs(runnerConfig(t))) })
+			want := "gomutants: MUTATION_MAX_TIMEOUT_PERCENT must be an integer from 0 to 100\n"
+			if code != 2 || diagnostic != want {
+				t.Fatalf("exit %d, stderr %q", code, diagnostic)
+			}
+		})
 	}
 }
 

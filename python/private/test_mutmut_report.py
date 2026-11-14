@@ -52,6 +52,12 @@ def test_mutmut_runs_the_module_and_appends_to_the_log(
 
 
 @pytest.fixture(autouse=True)
+def timeout_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Set the cap the action sets from quality's constant."""
+    monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, "10")
+
+
+@pytest.fixture(autouse=True)
 def no_quota(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Keep every test off the host's cgroup files and on a 16-CPU host."""
     monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "no" / "cpu.max")
@@ -401,27 +407,119 @@ def test_scratch_config_without_a_pyproject(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("counts", "expected"),
+    ("counts", "cap", "expected"),
     [
-        ({}, []),
-        ({"timeout": "2"}, []),
-        ({"errored": "1", "timeout": "1"}, ["errored"]),
-        ({"interrupted": "1", "lived": "3"}, ["interrupted"]),
+        ({}, 10, []),
+        ({"total": "100", "timeout": "5"}, 10, []),
+        ({"total": "100", "timeout": "10"}, 10, []),
+        ({"total": "100", "timeout": "11"}, 10, ["11 timeouts of 100, above 10%"]),
+        ({"timeout": "2"}, 10, ["2 timeouts of 0, above 10%"]),
+        ({"total": "100", "timeout": "1"}, 0, ["1 timeouts of 100, above 0%"]),
+        ({"total": "100"}, 0, []),
+        ({"total": "4", "timeout": "4"}, 100, []),
+        ({"errored": "1", "total": "100", "timeout": "1"}, 10, ["errored"]),
+        ({"interrupted": "1", "lived": "3"}, 10, ["interrupted"]),
+        (
+            {"errored": "1", "total": "10", "timeout": "5"},
+            10,
+            ["errored", "5 timeouts of 10, above 10%"],
+        ),
     ],
 )
-def test_unstable(counts: dict[str, str], expected: list[str]) -> None:
+def test_unstable(counts: dict[str, str], cap: int, expected: list[str]) -> None:
     keys = ["total", *mr.OUTCOMES, "interrupted"]
     base = dict.fromkeys(keys, "0") | counts
     text = "".join(f"{key}={value}\n" for key, value in base.items())
-    assert mr.unstable(text + "mutant.survived=a=b\n") == expected
+    assert mr.unstable(text + "mutant.survived=a=b\n", cap) == expected
 
 
 def test_unstable_flags_a_mutant_never_checked() -> None:
     keys = ["total", *mr.OUTCOMES, "interrupted"]
     text = "".join(f"{key}=0\n" for key in keys)
-    assert mr.unstable(text + "mutant.not_checked=a.x_f__mutmut_1\n") == [
+    assert mr.unstable(text + "mutant.not_checked=a.x_f__mutmut_1\n", 10) == [
         "not_checked",
     ]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, None),
+        ("", None),
+        ("ten", None),
+        ("-1", None),
+        ("1.5", None),
+        ("101", None),
+        ("0", 0),
+        ("10", 10),
+        ("100", 100),
+    ],
+)
+def test_timeout_cap(
+    monkeypatch: pytest.MonkeyPatch, value: str | None, expected: int | None
+) -> None:
+    if value is None:
+        monkeypatch.delenv(mr.MAX_TIMEOUT_ENV)
+    else:
+        monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, value)
+    assert mr.timeout_cap() == expected
+
+
+@pytest.mark.parametrize("value", [None, "", "lots", "101"])
+def test_main_needs_the_timeout_cap(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    value: str | None,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    if value is None:
+        monkeypatch.delenv(mr.MAX_TIMEOUT_ENV)
+    else:
+        monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, value)
+    assert mr.main(["report", "log", "0"]) == 2
+    assert capsys.readouterr().err == (
+        "mutmut_report: MUTATION_MAX_TIMEOUT_PERCENT must be 0 to 100\n"
+    )
+    assert not Path("report").exists()
+    assert not Path("log").exists()
+
+
+@pytest.mark.parametrize(
+    "case",  # timeouts, total, cap in percent, exit status
+    [
+        (5, 100, "10", 0),
+        (10, 100, "10", 0),
+        (11, 100, "10", 1),
+        (1, 100, "0", 1),
+        (100, 100, "100", 0),
+    ],
+)
+def test_main_fails_timeouts_above_the_cap_after_writing_the_report(
+    fake_mutmut: list[list[str]],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    case: tuple[int, int, str, int],
+) -> None:
+    timeout, total, cap, code = case
+    monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, cap)
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(
+        json.dumps(
+            ALL_KILLED
+            | {"total": total, "killed": total - timeout, "skipped": 0}
+            | {"timeout": timeout}
+        )
+    )
+    Path("pyproject.toml").write_text("")
+    assert mr.main(["report", "log", "0"]) == code
+    assert len(fake_mutmut) == 3
+    lines = Path("report").read_text().splitlines()
+    assert lines[:2] == [f"total={total}", f"killed={total - timeout}"]
+    assert f"timeout={timeout}" in lines
+    message = f"mutmut_report: not cacheable: {timeout} timeouts of {total}, above"
+    assert (message in capsys.readouterr().err) is bool(code)
 
 
 def test_main_fails_an_unstable_run_and_shows_the_log(
@@ -430,7 +528,10 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
 ) -> None:
     stats = Path("mutants/mutmut-cicd-stats.json")
     stats.parent.mkdir()
-    stats.write_text(json.dumps(ALL_KILLED | {"timeout": 1, "segfault": 2}))
+    # One timeout of 100 is within the cap: only the errored mutants are named.
+    stats.write_text(
+        json.dumps(ALL_KILLED | {"total": 100, "timeout": 1, "segfault": 2})
+    )
     Path("pyproject.toml").write_text("")
     assert mr.main(["report", "log", "0"]) == 1
     assert len(fake_mutmut) == 3

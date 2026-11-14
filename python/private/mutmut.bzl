@@ -7,6 +7,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load(
     "@tbhb_rules//quality:defs.bzl",
     "MUTATION_CHANGES_ATTRS",
+    "MUTATION_RUNNER_ENV",
     "MutationReportInfo",
     "mutation_changes_slice",
     "mutation_gate_test",
@@ -61,6 +62,9 @@ def _mutmut_report_impl(ctx):
         inputs = depset([manifest] + ([changes] if changes else []), transitive = [depset(files)]),
         outputs = [report, log],
         tools = [launcher],
+        # The runner exits non-zero over the timeout cap, so Bazel does not
+        # cache a starved run; the gate reads the same cap.
+        env = MUTATION_RUNNER_ENV,
         mnemonic = "Mutmut",
         progress_message = "Mutation-testing %{label} with mutmut",
         # mutmut forks a worker per CPU and times each mutant against the
@@ -80,7 +84,9 @@ The copy keeps the repository layout, and mutmut runs from the launcher's
 `chdir`, so the `[tool.mutmut]` table of that directory's pyproject.toml
 applies and tests that find data by walking up still do. The report lands
 in `<name>.report` (MutationReportInfo) and mutmut's output in
-`<name>.log`. The action reruns only when an input changes.""",
+`<name>.log`. The action reruns only when an input changes. It fails (and
+Bazel does not cache it) on an errored or interrupted run and on timeouts
+over MUTATION_MAX_TIMEOUT_PERCENT of the mutants.""",
     attrs = MUTATION_CHANGES_ATTRS | {
         "chdir": attr.string(doc = "The runner's run directory, relative to the tree root, for mapping the change set."),
         "cpus": attr.int(doc = "CPUs to reserve for the action (`cpu:N`), 0 for Bazel's default."),
@@ -102,7 +108,8 @@ def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, chan
 
     Creates `<name>.report` (the cached mutmut run) and `<name>`, a
     `mutation_gate_test` over it: any survivor, suspicious or
-    untested mutant, too many timeouts (over 10%), crash, interruption or unchecked mutant fails, and so
+    untested mutant, too many timeouts (over MUTATION_MAX_TIMEOUT_PERCENT),
+    crash, interruption or unchecked mutant fails, and so
     does a run that mutated nothing. Mark an equivalent mutant with
     `# pragma: no mutate` and a reason.
 

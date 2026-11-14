@@ -25,6 +25,14 @@ report counts only them (`selected` equals total) with `changed_units`, the
 changed functions that have mutants. A mutant that mutmut ran outside the
 selection, or left unrun inside it, is `mutant.unmapped=<name>`, which the
 gate fails.
+
+The environment variable MUTATION_MAX_TIMEOUT_PERCENT, set by the action
+from quality's MUTATION_MAX_TIMEOUT_PERCENT (which the gate reads too), is
+required: the most timed-out mutants, in percent of total, that still count
+as killed. The exit status is 1, after the report and log are written, for
+an errored or interrupted run, a mutant never checked, or timeouts above
+that share; Bazel does not cache a failed action, so a starved run is rerun.
+Timeouts within the cap exit 0.
 """
 
 import ast
@@ -59,6 +67,7 @@ STATS_KEYS = {
     "errored": ("suspicious", "segfault"),
     "skipped": ("skipped", "caught_by_type_check"),
 }
+MAX_PERCENT = 100
 NOT_RUN = "not checked"
 STATS = Path("mutants/mutmut-cicd-stats.json")
 # Module-level, where mutmut leaves names alone: a mutated case still
@@ -71,8 +80,12 @@ NO_GIT = "use_git_change_detection = false"
 CPU_MAX = Path("/sys/fs/cgroup/cpu.max")
 V1_QUOTA = Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
 V1_PERIOD = Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
+# The environment variable holding the most timed-out mutants, in percent of
+# total, that still count as killed. The action sets it, so it has no default.
+MAX_TIMEOUT_ENV = "MUTATION_MAX_TIMEOUT_PERCENT"
 # Verdicts that depend on the machine (load, signals) rather than the code:
-# the action fails on them, so Bazel never caches one.
+# the action fails on them, so Bazel never caches one. Timeouts are such a
+# verdict only above the cap, and `unstable` checks that apart.
 UNSTABLE = ("errored", "interrupted")
 # A mutant mutmut never checked means the run stopped early (killed, out of
 # memory, a crash), so it isn't cached either: a cached aborted run fails
@@ -475,10 +488,29 @@ def rewrite_source_paths(path: Path, source_paths: list[str]) -> None:
     path.write_text(text)
 
 
-def unstable(text: str) -> list[str]:
-    """Return the machine-dependent verdicts a report records."""
+def timeout_cap() -> int | None:
+    """Return the timeout cap in percent from the environment, or None."""
+    value = os.environ.get(MAX_TIMEOUT_ENV)
+    if value is not None and value.isdecimal() and int(value) <= MAX_PERCENT:
+        return int(value)
+    return None
+
+
+def count(text: str, key: str) -> int:
+    """Return the value of the report line `key=<integer>`."""
+    return int(re.findall(rf"^{key}=(\d+)$", text, re.MULTILINE)[0])
+
+
+def unstable(text: str, max_timeout_percent: int) -> list[str]:
+    """Return the machine-dependent verdicts a report records.
+
+    Timeouts count only above `max_timeout_percent` of the total.
+    """
     lines = text.splitlines()
     found = [key for key in UNSTABLE if f"{key}=0" not in lines]
+    timeouts, total = count(text, "timeout"), count(text, "total")
+    if timeouts * 100 > total * max_timeout_percent:
+        found.append(f"{timeouts} timeouts of {total}, above {max_timeout_percent}%")
     if any(line.startswith(NOT_CHECKED) for line in lines):
         found.append("not_checked")
     return found
@@ -562,8 +594,9 @@ def run_diff(log: Path, selection: Selection, children: int) -> str:
 def main(argv: list[str]) -> int:
     """Run mutmut and write the report.
 
-    Returns 2 on bad usage and 1 when the run timed out, errored or was
-    interrupted, so that verdict is not cached.
+    Returns 2 on bad usage and 1 when the run errored, was interrupted,
+    left a mutant unchecked or timed out above the cap, so that verdict is not
+    cached. Timeouts within the cap return 0.
     """
     if len(argv) != 3 and len(argv) < 5:  # noqa: PLR2004 - positional arguments.
         print(
@@ -576,6 +609,10 @@ def main(argv: list[str]) -> int:
         children = int(argv[2])
     except ValueError:
         print("mutmut_report: MAX_CHILDREN must be an integer", file=sys.stderr)
+        return 2
+    cap = timeout_cap()
+    if cap is None:
+        print(f"mutmut_report: {MAX_TIMEOUT_ENV} must be 0 to 100", file=sys.stderr)
         return 2
     out, log = Path(argv[0]), Path(argv[1])
     log.write_text("")
@@ -599,7 +636,7 @@ def main(argv: list[str]) -> int:
         else run_diff(log, selection, children)
     )
     out.write_text(text)
-    found = unstable(text)
+    found = unstable(text, cap)
     if found:
         print(f"mutmut_report: not cacheable: {', '.join(found)}", file=sys.stderr)
         sys.stderr.write(log.read_text())
