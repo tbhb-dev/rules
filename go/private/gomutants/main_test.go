@@ -445,6 +445,12 @@ func TestRunUnstable(t *testing.T) {
 			"mutant.infra_error=p/p.go:13:9 A (p/p.go:Double:A#1)\n" +
 				"mutant.infra_error=p/p.go:7:15 Z (p/p.go:Pass:Z#1)\n",
 		},
+		{
+			"one errored", "0", `{"files":[{"file_name":"p.go","mutations":[
+				{"id":"p/p.go:Pass:Z#1","type":"Z","status":"INFRA ERROR","line":7,"column":15}
+			]}]}`, "errored",
+			"mutant.infra_error=p/p.go:7:15 Z (p/p.go:Pass:Z#1)\n",
+		},
 		{"no report", "0", "", "interrupted", ""},
 		{"run failed", "1", "", "interrupted", ""},
 	} {
