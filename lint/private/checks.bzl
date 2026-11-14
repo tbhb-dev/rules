@@ -79,7 +79,7 @@ def ryl_test(name, srcs, config = None, tool = Label("@tbhb_rules_ryl//:ryl"), *
         **kwargs
     )
 
-def rumdl_test(name, srcs, config = None, tool = Label("@tbhb_rules_rumdl//:rumdl"), **kwargs):
+def rumdl_test(name, srcs, config = None, exclude = [], tool = Label("@tbhb_rules_rumdl//:rumdl"), **kwargs):
     """Lints Markdown with `rumdl check`.
 
     rumdl takes the nearest directory holding `.git` as the project root, for
@@ -91,6 +91,12 @@ def rumdl_test(name, srcs, config = None, tool = Label("@tbhb_rules_rumdl//:rumd
         name: Target name.
         srcs: Files to check.
         config: A rumdl config such as `.rumdl.toml`.
+        exclude: Paths or globs to skip, for files that break a rule on
+            purpose. They REPLACE the `exclude` list of `config`: the pinned
+            rumdl treats a command-line `--exclude` as an override, so repeat
+            any entry the config's list needs. rumdl takes one `--exclude`
+            with the entries comma-separated and rejects a repeated option,
+            so the macro joins them.
         tool: The rumdl binary.
         **kwargs: Passed to `tree_check_test`.
     """
@@ -99,7 +105,7 @@ def rumdl_test(name, srcs, config = None, tool = Label("@tbhb_rules_rumdl//:rumd
         srcs = srcs,
         config = config,
         tool = tool,
-        tool_args = ["check"] + _config_args(config, "--config") + ["."],
+        tool_args = ["check"] + _config_args(config, "--config") + (["--exclude", ",".join(exclude)] if exclude else []) + ["."],
         git_root = True,
         **kwargs
     )

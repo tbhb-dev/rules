@@ -1,0 +1,3 @@
+[[exclude]]
+glob = "README.md"
+reason = "Nothing fails, so this exclusion is stale."

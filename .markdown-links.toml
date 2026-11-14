@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# Path globs of Markdown files whose failing links stay. Each needs a reason,
+# and an exclusion that matches no failing link fails the check.
+
+[[exclude]]
+glob = "repo/tests/testdata/markdown_links/bad/**"
+reason = "The fixtures plant one broken link each, for the check's own tests."
+
+[[exclude]]
+glob = "repo/tests/testdata/markdown_links/clean/docs/skipped.md"
+reason = "The clean fixture needs a failing link that an exclusion covers."

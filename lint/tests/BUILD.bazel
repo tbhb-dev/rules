@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-load("//lint:defs.bzl", "cspell_test", "gitleaks_history", "gitleaks_test", "shellcheck_test", "shfmt_test", "vale_test", "workflow_lint_test")
+load("//lint:defs.bzl", "cspell_test", "gitleaks_history", "gitleaks_test", "rumdl_test", "shellcheck_test", "shfmt_test", "vale_test", "workflow_lint_test")
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
@@ -573,3 +573,87 @@ WORKFLOW_LINT_ROOT = "lint/tests/testdata/workflow_lint/"
         "tag": "workflows/ci.yml:7: uses 'actions/checkout@v4' is not pinned to a full commit SHA",
     }.items()
 ]
+
+# rumdl_test with two exclude entries. Two files break a rule (MD018) and a
+# third is clean. The pinned rumdl accepts one `--exclude` with the entries
+# comma-separated, so both entries must skip their file; with only one
+# entry the other file's failure shows. The broken files are generated, so
+# this repository's own Markdown lint doesn't see them.
+genrule(
+    name = "rumdl_exclude_tree",
+    outs = [
+        "rumdl_exclude/a/bad.md",
+        "rumdl_exclude/b/bad.md",
+        "rumdl_exclude/ok.md",
+    ],
+    cmd = "printf '#bad\\n' > $(execpath rumdl_exclude/a/bad.md) && " +
+          "printf '#bad\\n' > $(execpath rumdl_exclude/b/bad.md) && " +
+          "printf '# Fine\\n' > $(execpath rumdl_exclude/ok.md)",
+)
+
+rumdl_test(
+    name = "rumdl_exclude_two_test",
+    srcs = [":rumdl_exclude_tree"],
+    exclude = [
+        "a",
+        "b",
+    ],
+    strip_prefix = "lint/tests/rumdl_exclude",
+)
+
+rumdl_test(
+    name = "proof_rumdl_exclude_one",
+    srcs = [":rumdl_exclude_tree"],
+    exclude = ["a"],
+    strip_prefix = "lint/tests/rumdl_exclude",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_rumdl_exclude_one_fails",
+    pattern = "b/bad\\.md:1:2: \\[MD018\\]",
+    test = ":proof_rumdl_exclude_one",
+)
+
+# A macro `exclude` replaces the config's `exclude` list: the pinned rumdl
+# treats `--exclude` as an override, not an addition. The config skips a, b
+# and c; the macro names a and b, so c/bad.md is linted and must fail.
+# Without the macro's `exclude`, the config alone skips all three.
+genrule(
+    name = "rumdl_replace_tree",
+    outs = [
+        "rumdl_replace/a/bad.md",
+        "rumdl_replace/b/bad.md",
+        "rumdl_replace/c/bad.md",
+        "rumdl_replace/ok.md",
+        "rumdl_replace/rumdl.toml",
+    ],
+    cmd = "for f in $(OUTS); do case $$f in *bad.md) printf '#bad\\n' > $$f;; esac; done && " +
+          "printf '# Fine\\n' > $(execpath rumdl_replace/ok.md) && " +
+          "printf '[global]\\nexclude = [\"a\", \"b\", \"c\"]\\n' > $(execpath rumdl_replace/rumdl.toml)",
+)
+
+rumdl_test(
+    name = "rumdl_config_exclude_test",
+    srcs = [":rumdl_replace_tree"],
+    config = "rumdl_replace/rumdl.toml",
+    strip_prefix = "lint/tests/rumdl_replace",
+)
+
+rumdl_test(
+    name = "proof_rumdl_exclude_replaces_config",
+    srcs = [":rumdl_replace_tree"],
+    config = "rumdl_replace/rumdl.toml",
+    exclude = [
+        "a",
+        "b",
+    ],
+    strip_prefix = "lint/tests/rumdl_replace",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_rumdl_exclude_replaces_config_fails",
+    pattern = "c/bad\\.md:1:2: \\[MD018\\]",
+    test = ":proof_rumdl_exclude_replaces_config",
+)

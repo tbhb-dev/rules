@@ -245,6 +245,73 @@ sh_test(
     }.items()
 ]
 
+MARKDOWN_LINKS_BAD = {
+    "bad_anchor": "README.md:3: #no-such-heading matches no heading",
+    "fragment": "README.md:3: guide.md#intro has a fragment on a link to another file",
+    "missing_dir": "README.md:3: nowhere/ is not a tracked file or directory",
+    "missing_file": "README.md:3: guide.md is not a tracked file or directory",
+    "scheme_like": "README.md:3: C:foo is not a tracked file or directory",
+    "stale": "\\.markdown-links\\.toml:1: exclusion README.md matches no failing link",
+}
+
+# Relative and in-page links in tracked Markdown files must resolve. The real
+# run asks Git for the tracked files, so it runs locally, uncached.
+python_tool(
+    name = "check_markdown_links",
+    testonly = True,
+    main = "check_markdown_links.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    tags = ["manual"],
+)
+
+sh_test(
+    name = "markdown_links_test",
+    srcs = [":check_markdown_links"],
+    args = [
+        "mise.toml",
+        "--git=$(rlocationpath @tbhb_rules_git//:git)",
+    ],
+    data = [
+        "//:mise.toml",
+        "@tbhb_rules_git//:git",
+    ],
+    tags = [
+        "local",
+        "no-cache",
+    ],
+    target_compatible_with = MISE_KEYS_NOT_WINDOWS,
+)
+
+sh_test(
+    name = "markdown_links_clean_test",
+    srcs = [":check_markdown_links"],
+    args = ["repo/tests/testdata/markdown_links/clean"],
+    data = glob(["testdata/markdown_links/clean/**"]),
+    target_compatible_with = MISE_KEYS_NOT_WINDOWS,
+)
+
+[
+    sh_test(
+        name = "proof_markdown_links_" + case,
+        srcs = [":check_markdown_links"],
+        args = ["repo/tests/testdata/markdown_links/bad/" + case],
+        data = glob(["testdata/markdown_links/bad/%s/**" % case]),
+        tags = ["manual"],
+        target_compatible_with = MISE_KEYS_NOT_WINDOWS,
+    )
+    for case in MARKDOWN_LINKS_BAD
+]
+
+[
+    expect_failure_test(
+        name = "proof_markdown_links_" + case + "_fails",
+        args = ["repo/tests/testdata/markdown_links/bad/" + case],
+        pattern = pattern,
+        test = ":proof_markdown_links_" + case,
+    )
+    for case, pattern in MARKDOWN_LINKS_BAD.items()
+]
+
 pytest_test(
     name = "pytest_test",
     srcs = ["//:repo_files"],
