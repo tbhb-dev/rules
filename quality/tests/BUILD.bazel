@@ -89,6 +89,22 @@ PROOF_REASONS = {
     for proof, pattern in PROOF_REASONS.items()
 ]
 
+# A diff-scoped report with no selected mutants checked nothing, so the gate
+# passes without saying every mutant was killed.
+mutation_gate_test(
+    name = "diff_empty_gate",
+    reports = ["testdata/diff_empty.txt"],
+    tags = PROOF_TAGS,
+)
+
+gate_output_test(
+    name = "diff_empty_output_test",
+    gate = ":diff_empty_gate",
+    lines = [
+        "mutation_gate: ok: no mutant failed (none were checked)",
+    ],
+)
+
 # Timeouts count as killed up to 10% of the mutants (10 of 100 passes, 5
 # passes, 11 fails), stay listed, and are counted on stdout and in the job
 # summary. Gate failures list them too.
@@ -139,12 +155,26 @@ gate_summary_error_test(
 
 gate_summary_error_test(
     name = "summary_error_fails_test",
+    err_lines = ["mutation_gate: FAIL: 1 lived"],
     gate = ":proof_timeout_with_survivor",
     lines = [
         "mutation_gate: 5 timed out of 100 (5.0%), counted as killed",
         "mutant.timeout=pkg.x_f__mutmut_5",
     ],
     status = 1,
+)
+
+# With stderr closed too, the warning's own write fails and still must not end
+# the run before the verdict.
+gate_summary_error_test(
+    name = "summary_error_closed_stderr_test",
+    close_stderr = True,
+    gate = ":timeout_below_cap_gate",
+    lines = [
+        "mutation_gate: 5 timed out of 100 (5.0%), counted as killed",
+        "mutation_gate: ok: every mutant was killed",
+    ],
+    status = 0,
 )
 
 # Timed-out mutants are listed in the gate's output, passing or failing.

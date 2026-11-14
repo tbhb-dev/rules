@@ -80,7 +80,13 @@ gate="$PWD/{gate}"
 work="$TEST_TMPDIR/gate_summary_error"
 mkdir -p "$work"
 status=0
-GITHUB_STEP_SUMMARY="$work/missing/summary.md" "$gate" >"$work/out.log" 2>"$work/err.log" || status=$?
+: >"$work/err.log"
+if (({close_stderr})); then
+  # Nothing can be written to stderr, the warning included.
+  GITHUB_STEP_SUMMARY="$work/missing/summary.md" "$gate" >"$work/out.log" 2>&- || status=$?
+else
+  GITHUB_STEP_SUMMARY="$work/missing/summary.md" "$gate" >"$work/out.log" 2>"$work/err.log" || status=$?
+fi
 if ((status != {status})); then
   echo "gate_summary_error_test: FAIL: the gate exited $status, not {status}" >&2
   cat "$work/out.log" "$work/err.log" >&2
@@ -93,10 +99,14 @@ for line in {lines}; do
     exit 1
   fi
 done
-if ! grep -qxF -- "mutation_gate: could not write to GITHUB_STEP_SUMMARY" "$work/err.log"; then
-  echo "gate_summary_error_test: FAIL: stderr lacks the could-not-write note" >&2
-  cat "$work/err.log" >&2
-  exit 1
+if ! (({close_stderr})); then
+  for line in "mutation_gate: could not write to GITHUB_STEP_SUMMARY" {err_lines}; do
+    if ! grep -qxF -- "$line" "$work/err.log"; then
+      echo "gate_summary_error_test: FAIL: stderr lacks '$line'" >&2
+      cat "$work/err.log" >&2
+      exit 1
+    fi
+  done
 fi
 """
 
@@ -108,6 +118,8 @@ def _summary_error_impl(ctx):
         content = _SUMMARY_ERROR_SCRIPT.format(
             gate = gate.short_path,
             status = ctx.attr.status,
+            close_stderr = 1 if ctx.attr.close_stderr else 0,
+            err_lines = " ".join([shell.quote(line) for line in ctx.attr.err_lines]),
             lines = " ".join([shell.quote(line) for line in ctx.attr.lines]),
         ),
         is_executable = True,
@@ -122,8 +134,11 @@ gate_summary_error_test = rule(
     toolchains = SHELL_TOOLCHAINS,
     doc = """Passes when `gate`, run with `GITHUB_STEP_SUMMARY` in a missing directory,
 still exits with `status`, prints each of `lines` to stdout and notes the
-failed write on stderr.""",
+failed write on stderr, with each of `err_lines`. With `close_stderr` the gate
+runs with stderr closed and nothing is read from it.""",
     attrs = SHELL_ATTRS | {
+        "close_stderr": attr.bool(default = False, doc = "Run the gate with stderr closed."),
+        "err_lines": attr.string_list(doc = "More whole lines the gate's stderr must hold."),
         "gate": attr.label(mandatory = True, executable = True, cfg = "target"),
         "lines": attr.string_list(mandatory = True, doc = "Whole lines the gate's stdout must hold."),
         "status": attr.int(mandatory = True, values = [0, 1], doc = "The exit status the gate must keep."),

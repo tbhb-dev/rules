@@ -24,8 +24,9 @@
 #
 # A timed-out mutant counts as killed and stays listed (its mutant.timeout or
 # mutant.timed_out lines print). The count line goes to stdout, and to
-# $GITHUB_STEP_SUMMARY when that is set; a failed write there only warns on
-# stderr.
+# $GITHUB_STEP_SUMMARY when that variable is set and writable; a failed write
+# there only warns on stderr, and delivery isn't guaranteed under a sandbox or
+# with a cached test result.
 #
 # Fails on: any lived, not_covered or errored mutant; timeouts above
 # MAX_TIMEOUT_PERCENT of total, in the sum and in any one report; an
@@ -200,9 +201,10 @@ if ((timeout > 0 && total > 0)); then
   # mutmut says timeout, gomutants timed_out; the lines print as reported.
   printf '%s\n' "$mutants" | grep -E '^mutant\.(timeout|timed_out)=' || true
   if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
-    # A summary that cannot be written must not end the run before the verdict.
+    # A summary that cannot be written must not end the run before the verdict,
+    # even with stderr closed, so the warning's own failure is ignored too.
     echo "$timeout_line" >>"$GITHUB_STEP_SUMMARY" ||
-      echo "mutation_gate: could not write to GITHUB_STEP_SUMMARY" >&2
+      echo "mutation_gate: could not write to GITHUB_STEP_SUMMARY" >&2 || true
   fi
 fi
 
@@ -240,4 +242,10 @@ if ((${#problems[@]} > 0)); then
   fi
   exit 1
 fi
-echo "mutation_gate: ok: every mutant was killed"
+# Only claim kills when some mutant was killed or timed out; an empty or
+# all-skipped report (a diff that selected none) checked nothing.
+if ((killed + timeout > 0)); then
+  echo "mutation_gate: ok: every mutant was killed"
+else
+  echo "mutation_gate: ok: no mutant failed (none were checked)"
+fi
