@@ -79,7 +79,7 @@ def ryl_test(name, srcs, config = None, tool = Label("@tbhb_rules_ryl//:ryl"), *
         **kwargs
     )
 
-def rumdl_test(name, srcs, config = None, tool = Label("@tbhb_rules_rumdl//:rumdl"), **kwargs):
+def rumdl_test(name, srcs, config = None, exclude = [], tool = Label("@tbhb_rules_rumdl//:rumdl"), **kwargs):
     """Lints Markdown with `rumdl check`.
 
     rumdl takes the nearest directory holding `.git` as the project root, for
@@ -91,6 +91,8 @@ def rumdl_test(name, srcs, config = None, tool = Label("@tbhb_rules_rumdl//:rumd
         name: Target name.
         srcs: Files to check.
         config: A rumdl config such as `.rumdl.toml`.
+        exclude: Paths or globs to skip, added to the config's `exclude`
+            on the command line, for files that break a rule on purpose.
         tool: The rumdl binary.
         **kwargs: Passed to `tree_check_test`.
     """
@@ -99,7 +101,7 @@ def rumdl_test(name, srcs, config = None, tool = Label("@tbhb_rules_rumdl//:rumd
         srcs = srcs,
         config = config,
         tool = tool,
-        tool_args = ["check"] + _config_args(config, "--config") + ["."],
+        tool_args = ["check"] + _config_args(config, "--config") + [arg for path in exclude for arg in ["--exclude", path]] + ["."],
         git_root = True,
         **kwargs
     )

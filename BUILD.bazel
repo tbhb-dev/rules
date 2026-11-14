@@ -186,6 +186,10 @@ rumdl_test(
     name = "rumdl_test",
     srcs = [":repo_files"],
     config = ".rumdl.toml",
+    # The link check's fixtures plant broken links and unused references
+    # on purpose, so rumdl's own link rules would fail them. The config
+    # stays equal to the parent copy that nested modules carry.
+    exclude = ["repo/tests/testdata/markdown_links"],
 )
 
 editorconfig_checker_test(
@@ -433,6 +437,7 @@ test_suite(
         "//repo/tests:proof_markdown_links_fragment_fails",
         "//repo/tests:proof_markdown_links_missing_dir_fails",
         "//repo/tests:proof_markdown_links_missing_file_fails",
+        "//repo/tests:proof_markdown_links_scheme_like_fails",
         "//repo/tests:proof_markdown_links_stale_fails",
         "//repo/tests:proof_mise_keys_absent_fails",
         "//repo/tests:proof_mise_keys_extra_fails",
