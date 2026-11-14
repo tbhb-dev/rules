@@ -25,6 +25,18 @@ report counts only them (`selected` equals total) with `changed_units`, the
 changed functions that have mutants. A mutant that mutmut ran outside the
 selection, or left unrun inside it, is `mutant.unmapped=<name>`, which the
 gate fails.
+
+The environment variable MUTATION_MAX_TIMEOUT_PERCENT, set by the action
+from quality's MUTATION_MAX_TIMEOUT_PERCENT (which the gate reads too), is
+required: the most timed-out mutants, in percent of total, that still count
+as killed. The exit status is 1, after the report and log are written, for
+an errored or interrupted run, a failed `mutmut run` or `mutmut results`
+(recorded as interrupted), a mutant never checked, a report the gate would
+reject as incomplete or contradicting itself (counts that don't add up to the
+total, a mutant listed under a verdict its count denies or under an unknown
+status, a mutant.unmapped line), or timeouts above that share; Bazel does not
+cache a failed action, so a starved or incomplete run is rerun. Timeouts within
+the cap exit 0.
 """
 
 import ast
@@ -59,6 +71,7 @@ STATS_KEYS = {
     "errored": ("suspicious", "segfault"),
     "skipped": ("skipped", "caught_by_type_check"),
 }
+MAX_PERCENT = 100
 NOT_RUN = "not checked"
 STATS = Path("mutants/mutmut-cicd-stats.json")
 # Module-level, where mutmut leaves names alone: a mutated case still
@@ -71,13 +84,25 @@ NO_GIT = "use_git_change_detection = false"
 CPU_MAX = Path("/sys/fs/cgroup/cpu.max")
 V1_QUOTA = Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
 V1_PERIOD = Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
+# The environment variable holding the most timed-out mutants, in percent of
+# total, that still count as killed. The action sets it, so it has no default.
+MAX_TIMEOUT_ENV = "MUTATION_MAX_TIMEOUT_PERCENT"
 # Verdicts that depend on the machine (load, signals) rather than the code:
-# the action fails on them, so Bazel never caches one.
-UNSTABLE = ("timeout", "errored", "interrupted")
+# the action fails on them, so Bazel never caches one. Timeouts are such a
+# verdict only above the cap, and `unstable` checks that apart.
+UNSTABLE = ("errored", "interrupted")
 # A mutant mutmut never checked means the run stopped early (killed, out of
 # memory, a crash), so it isn't cached either: a cached aborted run fails
 # every later test with the same inputs.
 NOT_CHECKED = "mutant." + NOT_RUN.replace(" ", "_") + "="
+# The statuses a mutant.<status> line may carry, as the gate knows them: the
+# ones OUTCOMES counts, in the report's spelling, and unmapped.
+LISTED_STATUSES = frozenset(
+    name.replace(" ", "_") for names in OUTCOMES.values() for name in names
+) | {"unmapped", NOT_RUN.replace(" ", "_")}
+# The most characters of the cap the environment may hold, leading zeros
+# included: a longer one is no percentage, and int() would not convert it.
+MAX_CAP_CHARACTERS = 10
 
 SEPARATOR = "ǁ"
 TEST_NAMES = ("test_*.py", "*_test.py", "conftest.py")
@@ -382,8 +407,13 @@ def mutant_lines(statuses: dict[str, str]) -> list[str]:
     ]
 
 
-def report(stats: dict[str, object] | None, results: str) -> str:
-    """Format a full run's report from the cicd stats and `mutmut results`."""
+def report(
+    stats: dict[str, object] | None, results: str, *, failed: bool = False
+) -> str:
+    """Format a full run's report from the cicd stats and `mutmut results`.
+
+    A failed `mutmut run` or `mutmut results` makes the report interrupted.
+    """
     if stats is None:
         lines = ["total=0", *(f"{key}=0" for key in OUTCOMES), "interrupted=1"]
     else:
@@ -392,18 +422,21 @@ def report(stats: dict[str, object] | None, results: str) -> str:
             f"{key}={sum(int(str(stats.get(name, 0))) for name in names)}"
             for key, names in STATS_KEYS.items()
         ]
-        interrupted = 1 if stats.get("check_was_interrupted_by_user") else 0
-        lines.append(f"interrupted={interrupted}")
+        interrupted = stats.get("check_was_interrupted_by_user") or failed
+        lines.append(f"interrupted={int(bool(interrupted))}")
     lines.append("scope=full")
     lines += mutant_lines(results_by_name(results))
     return "\n".join(lines) + "\n"
 
 
-def diff_report(statuses: dict[str, str], selection: Selection) -> str:
+def diff_report(
+    statuses: dict[str, str], selection: Selection, *, failed: bool = False
+) -> str:
     """Format a diff run's report: only the selected mutants count.
 
     A selected mutant mutmut did not run, and one it ran that was not
-    selected, are both unmapped: the selection and the tool disagree.
+    selected, are both unmapped: the selection and the tool disagree. A failed
+    `mutmut run` or `mutmut results` makes the report interrupted.
     """
     selected = {
         name: status
@@ -421,7 +454,7 @@ def diff_report(statuses: dict[str, str], selection: Selection) -> str:
         for glob in selection.globs
         if any(fnmatch.fnmatch(name, glob) for name in selected)
     ]
-    lines += ["interrupted=0", "scope=diff", f"selected={len(selected)}"]
+    lines += [f"interrupted={int(failed)}", "scope=diff", f"selected={len(selected)}"]
     lines.append(f"changed_units={len(units)}")
     lines += mutant_lines({k: v for k, v in selected.items() if v != NOT_RUN})
     lines += [
@@ -475,12 +508,68 @@ def rewrite_source_paths(path: Path, source_paths: list[str]) -> None:
     path.write_text(text)
 
 
-def unstable(text: str) -> list[str]:
-    """Return the machine-dependent verdicts a report records."""
+def timeout_cap() -> int | None:
+    """Return the timeout cap in percent from the environment, or None."""
+    value = os.environ.get(MAX_TIMEOUT_ENV)
+    if (
+        value is not None
+        and len(value) <= MAX_CAP_CHARACTERS
+        and value.isdecimal()
+        and int(value) <= MAX_PERCENT
+    ):
+        return int(value)
+    return None
+
+
+def count(text: str, key: str) -> int:
+    """Return the value of the report line `key=<integer>`."""
+    return int(re.findall(rf"^{key}=(\d+)$", text, re.MULTILINE)[0])
+
+
+def unstable(text: str, max_timeout_percent: int) -> list[str]:
+    """Return the machine-dependent verdicts a report records.
+
+    Timeouts count only above `max_timeout_percent` of the total.
+    """
     lines = text.splitlines()
     found = [key for key in UNSTABLE if f"{key}=0" not in lines]
+    timeouts, total = count(text, "timeout"), count(text, "total")
+    if timeouts * 100 > total * max_timeout_percent:
+        found.append(f"{timeouts} timeouts of {total}, above {max_timeout_percent}%")
     if any(line.startswith(NOT_CHECKED) for line in lines):
         found.append("not_checked")
+    return found
+
+
+def inconsistent(text: str) -> list[str]:
+    """Return how a report contradicts itself, by the checks the gate makes.
+
+    The gate rejects a report whose outcomes don't add up to its total, one
+    that lists more mutants under a verdict than its count for it, one with a
+    status it doesn't know, and any mutant.unmapped line. A runner that
+    cached such a report would fail every later gate with the same inputs.
+    """
+    lines = text.splitlines()
+    total = count(text, "total")
+    counts = {key: count(text, key) for key in OUTCOMES}
+    found = []
+    if sum(counts.values()) != total:
+        found.append(f"counts add up to {sum(counts.values())}, not total {total}")
+    for key, names in OUTCOMES.items():
+        prefixes = tuple("mutant." + name.replace(" ", "_") + "=" for name in names)
+        listed = sum(line.startswith(prefixes) for line in lines)
+        if listed > counts[key]:
+            found.append(f"{listed} {key} mutants listed, but {key} is {counts[key]}")
+    statuses = {
+        line.removeprefix("mutant.").partition("=")[0]
+        for line in lines
+        if line.startswith("mutant.")
+    }
+    unknown = sorted(statuses - LISTED_STATUSES)
+    if unknown:
+        found.append(f"unknown mutant status: {', '.join(unknown)}")
+    if "unmapped" in statuses:
+        found.append("unmapped mutants")
     return found
 
 
@@ -541,12 +630,13 @@ def worker_cap(log: Path, children: int) -> list[str]:
 def run_full(log: Path, children: int) -> str:
     """Run every mutant and return the report."""
     cap = worker_cap(log, children)
-    mutmut(["run", *cap], log)
+    ran = mutmut(["run", *cap], log)
     stats = None
     if mutmut(["export-cicd-stats"], log).returncode == 0:
         stats = load_stats(STATS)
-    results = mutmut(["results", "--all", "true"], log).stdout
-    return report(stats, results)
+    results = mutmut(["results", "--all", "true"], log)
+    failed = ran.returncode != 0 or results.returncode != 0
+    return report(stats, results.stdout, failed=failed)
 
 
 def run_diff(log: Path, selection: Selection, children: int) -> str:
@@ -554,16 +644,19 @@ def run_diff(log: Path, selection: Selection, children: int) -> str:
     if not selection.globs:
         return diff_report({}, selection)
     cap = worker_cap(log, children)
-    mutmut(["run", *cap, *selection.globs], log)
-    results = mutmut(["results", "--all", "true"], log).stdout
-    return diff_report(results_by_name(results), selection)
+    ran = mutmut(["run", *cap, *selection.globs], log)
+    results = mutmut(["results", "--all", "true"], log)
+    failed = ran.returncode != 0 or results.returncode != 0
+    return diff_report(results_by_name(results.stdout), selection, failed=failed)
 
 
 def main(argv: list[str]) -> int:
     """Run mutmut and write the report.
 
-    Returns 2 on bad usage and 1 when the run timed out, errored or was
-    interrupted, so that verdict is not cached.
+    Returns 2 on bad usage and 1 when the run errored, was interrupted (or
+    mutmut failed), left a mutant unchecked, timed out above the cap or wrote
+    a report the gate would reject as incomplete, so that verdict is not
+    cached. Timeouts within the cap return 0.
     """
     if len(argv) != 3 and len(argv) < 5:  # noqa: PLR2004 - positional arguments.
         print(
@@ -576,6 +669,10 @@ def main(argv: list[str]) -> int:
         children = int(argv[2])
     except ValueError:
         print("mutmut_report: MAX_CHILDREN must be an integer", file=sys.stderr)
+        return 2
+    cap = timeout_cap()
+    if cap is None:
+        print(f"mutmut_report: {MAX_TIMEOUT_ENV} must be 0 to 100", file=sys.stderr)
         return 2
     out, log = Path(argv[0]), Path(argv[1])
     log.write_text("")
@@ -599,7 +696,9 @@ def main(argv: list[str]) -> int:
         else run_diff(log, selection, children)
     )
     out.write_text(text)
-    found = unstable(text)
+    # An unstable report is uncacheable already; its contradictions (an
+    # interrupted run lists mutants its zero counts deny) only add noise.
+    found = unstable(text, cap) or inconsistent(text)
     if found:
         print(f"mutmut_report: not cacheable: {', '.join(found)}", file=sys.stderr)
         sys.stderr.write(log.read_text())

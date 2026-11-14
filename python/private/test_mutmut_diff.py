@@ -156,6 +156,12 @@ def test_under() -> None:
     assert not mr.under(PurePosixPath("calc.py"), [])
 
 
+@pytest.fixture(autouse=True)
+def timeout_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Set the cap the action sets from quality's constant."""
+    monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, "10")
+
+
 @pytest.fixture
 def unit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.chdir(tmp_path)
@@ -608,3 +614,106 @@ def test_main_skips_only_with_the_source_paths_attribute(
     assert "scope=full" in Path("report").read_text().splitlines()
     cap = ["--max-children", str(children)] if children else []
     assert runs[0] == ["run", *cap]
+
+
+@pytest.fixture
+def scripted(
+    monkeypatch: pytest.MonkeyPatch, runs: list[list[str]]
+) -> dict[str, object]:
+    """Script what the fake mutmut prints for `results` and how each command exits."""
+    script: dict[str, object] = {"results": "", "codes": {}}
+
+    def fake(args: list[str], log: Path) -> subprocess.CompletedProcess[str]:
+        assert log == Path("log")
+        runs.append(args)
+        codes = script["codes"]
+        assert isinstance(codes, dict)
+        out = script["results"] if args[0] == "results" else ""
+        return subprocess.CompletedProcess(args, codes.get(args[0], 0), str(out), "")
+
+    monkeypatch.setattr(mr, "mutmut", fake)
+    return script
+
+
+@pytest.mark.parametrize(
+    "failing", [{"run": 1}, {"results": 1}, {"run": 2, "results": 3}]
+)
+def test_run_diff_records_a_failed_mutmut_as_interrupted(
+    scripted: dict[str, object], failing: dict[str, int]
+) -> None:
+    scripted["codes"] = failing
+    selection = mr.Selection(globs=["pkg.other.x_f__mutmut_*"])
+    text = mr.run_diff(Path("log"), selection, 0)
+    assert text == mr.diff_report({}, selection, failed=True)
+    assert "interrupted=1" in text.splitlines()
+
+
+def test_run_diff_records_a_successful_mutmut_as_not_interrupted(
+    scripted: dict[str, object],
+) -> None:
+    scripted["results"] = "    pkg.other.x_f__mutmut_1: killed\n"
+    selection = mr.Selection(globs=["pkg.other.x_f__mutmut_*"])
+    text = mr.run_diff(Path("log"), selection, 0)
+    assert "interrupted=0" in text.splitlines()
+    assert "killed=1" in text.splitlines()
+
+
+def test_diff_report_of_a_failed_mutmut_is_interrupted() -> None:
+    assert (
+        "interrupted=1" in mr.diff_report({}, mr.Selection(), failed=True).splitlines()
+    )
+    assert "interrupted=0" in mr.diff_report({}, mr.Selection()).splitlines()
+
+
+@pytest.mark.parametrize("failing", [{"run": 1}, {"results": 1}])
+def test_main_fails_a_diff_when_mutmut_fails(
+    unit: Path,
+    scripted: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    failing: dict[str, int],
+) -> None:
+    # A failed `results` with nothing on stdout once passed as an empty run.
+    scripted["codes"] = failing
+    monkeypatch.chdir(unit)
+    (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["src"]\n')
+    changes = changes_file(unit, {"cli/src/pkg/other.py": [[2, 2]]})
+    assert mr.main(["report", "log", "0", str(changes), "cli"]) == 1
+    lines = Path("report").read_text().splitlines()
+    assert "interrupted=1" in lines
+    assert "scope=diff" in lines
+    assert "mutmut_report: not cacheable: interrupted\n" in capsys.readouterr().err
+
+
+def test_main_fails_a_selected_mutant_mutmut_never_checked(
+    unit: Path,
+    scripted: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    # The mutant is selected and counted in the total, but has no outcome:
+    # the report lists it as unmapped, which the gate rejects.
+    scripted["results"] = "    pkg.other.x_f__mutmut_1: not checked\n"
+    monkeypatch.chdir(unit)
+    (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["src"]\n')
+    changes = changes_file(unit, {"cli/src/pkg/other.py": [[2, 2]]})
+    assert mr.main(["report", "log", "0", str(changes), "cli"]) == 1
+    lines = Path("report").read_text().splitlines()
+    assert "total=1" in lines
+    assert "mutant.unmapped=pkg.other.x_f__mutmut_1" in lines
+    assert capsys.readouterr().err.splitlines()[1] == (
+        "mutmut_report: not cacheable: counts add up to 0, not total 1, "
+        "unmapped mutants"
+    )
+
+
+def test_main_passes_a_diff_whose_mutants_all_have_outcomes(
+    unit: Path,
+    scripted: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scripted["results"] = "    pkg.other.x_f__mutmut_1: killed\n"
+    monkeypatch.chdir(unit)
+    (unit / "pyproject.toml").write_text('[tool.mutmut]\nsource_paths = ["src"]\n')
+    changes = changes_file(unit, {"cli/src/pkg/other.py": [[2, 2]]})
+    assert mr.main(["report", "log", "0", str(changes), "cli"]) == 0

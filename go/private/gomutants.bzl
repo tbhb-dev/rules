@@ -6,6 +6,7 @@
 load(
     "@tbhb_rules//quality:defs.bzl",
     "MUTATION_CHANGES_ATTRS",
+    "MUTATION_RUNNER_ENV",
     "MutationReportInfo",
     "mutation_changes_slice",
     "mutation_gate_test",
@@ -21,10 +22,9 @@ visibility(["//", "//private/...", "//tests/..."])
 # test. The flags attribute follows these, so a consumer's value wins.
 _DEFAULT_FLAGS = ["--timeout-min=20s", "--test-flags=-failfast"]
 
-# A timed-out mutant is unstable, so a slow Windows runner fails the gate when
-# the ceiling (the baseline times the coefficient) is too tight. A Windows
-# execution platform gets a higher floor and ceiling; a timeout still never
-# counts as killed.
+# Timeouts count as killed up to a cap, so a slow Windows runner fails the gate
+# when the ceiling (the baseline times the coefficient) is too tight. A Windows
+# execution platform gets a higher floor and ceiling.
 _WINDOWS_DEFAULT_FLAGS = ["--timeout-min=60s", "--timeout-coefficient=40", "--test-flags=-failfast"]
 
 def default_flags(exec_goos):
@@ -73,6 +73,9 @@ def _gomutants_report_impl(ctx):
         ),
         tools = [ctx.attr._gomutants[DefaultInfo].files_to_run, gomutants],
         outputs = [report, log],
+        # The runner exits non-zero over the timeout cap, so Bazel does not
+        # cache a starved run; the gate reads the same cap.
+        env = MUTATION_RUNNER_ENV,
         mnemonic = "Gomutants",
         progress_message = "Mutation-testing %{label}",
         # gomutants times each mutant's tests against their recorded
@@ -96,6 +99,8 @@ module, and runs gomutants on the package with the toolchain's go, offline
 (modules come from `proxy`). gomutants runs a mutant against the tests of
 its own package. So a change to a package reruns its unit and the units of
 the packages that depend on it, and every other unit is a cache hit.
+The action fails (and Bazel does not cache it) on an errored or interrupted
+run and on timeouts over MUTATION_MAX_TIMEOUT_PERCENT of the mutants.
 
 `changes` (quality's `changes` flag by default) sets the scope. With no
 change set the package runs in full. With one, the action reads the unit's
@@ -123,16 +128,17 @@ slice (the `changes` output group).""",
 )
 
 def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], flags = [], cpus = 0, changes = None, require_scope = "any", mutation_oses = None, **kwargs):
-    """Mutation-tests Go packages with gomutants and fails unless every mutant was killed.
+    """Mutation-tests Go packages with gomutants and fails unless every mutant was killed or timed out (within a cap).
 
     Creates one gomutants_report per package that a test in `tests` is in,
     `<name>.<package>` (one cached gomutants run each), and `<name>`, a
     `mutation_gate_test` over their reports. Fails on a mutant that lived
-    (its tests passed), one no test covers, a timeout, an infrastructure
-    error, a failed run, a diff-scope selection that does not match what
-    gomutants tested, and a full run that found nothing to mutate. A mutant
-    that does not compile is skipped, not killed. Account for a mutant that
-    must stay alive with a reviewed
+    (its tests passed), one no test covers, timeouts over
+    MUTATION_MAX_TIMEOUT_PERCENT of the mutants, an infrastructure error,
+    a failed run, a diff-scope selection that does not match what gomutants
+    tested, and a full run that found nothing to mutate. A mutant that does
+    not compile is skipped, not killed. Account for a mutant that must stay
+    alive with a reviewed
     `// gomutants:disable-next-line <MUTATOR> reason="..."` directive.
 
     Args:

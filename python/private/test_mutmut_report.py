@@ -52,6 +52,12 @@ def test_mutmut_runs_the_module_and_appends_to_the_log(
 
 
 @pytest.fixture(autouse=True)
+def timeout_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Set the cap the action sets from quality's constant."""
+    monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, "10")
+
+
+@pytest.fixture(autouse=True)
 def no_quota(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Keep every test off the host's cgroup files and on a 16-CPU host."""
     monkeypatch.setattr(mr, "CPU_MAX", tmp_path / "no" / "cpu.max")
@@ -273,6 +279,13 @@ def test_report_counts_missing_stats_as_zero() -> None:
     ]
 
 
+def test_report_of_a_failed_mutmut_is_interrupted() -> None:
+    lines = mr.report(ALL_KILLED, "", failed=True).splitlines()
+    assert "interrupted=1" in lines
+    assert "interrupted=0" not in lines
+    assert "interrupted=0" in mr.report(ALL_KILLED, "").splitlines()
+
+
 def test_report_of_a_clean_run() -> None:
     assert mr.report(ALL_KILLED, "    m__mutmut_1: killed\n").endswith(
         "skipped=1\ninterrupted=0\nscope=full\n",
@@ -294,10 +307,27 @@ def test_main_needs_a_report_and_a_log(
     )
 
 
+SURVIVOR = "    m__mutmut_1: survived\n"
+
+
+@pytest.fixture
+def results_text() -> dict[str, str]:
+    """What the fake `mutmut results` prints; a test may replace it."""
+    return {"text": SURVIVOR}
+
+
+@pytest.fixture
+def exit_codes() -> dict[str, int]:
+    """The exit status of each fake mutmut command, by name; 0 when absent."""
+    return {}
+
+
 @pytest.fixture
 def fake_mutmut(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    results_text: dict[str, str],
+    exit_codes: dict[str, int],
 ) -> list[list[str]]:
     monkeypatch.chdir(tmp_path)
     calls: list[list[str]] = []
@@ -306,9 +336,9 @@ def fake_mutmut(
     def fake(args: list[str], log: Path) -> subprocess.CompletedProcess[str]:
         calls.append(args)
         assert log == Path("log")
-        out = "    m__mutmut_1: survived\n" if args[0] == "results" else ""
+        out = results_text["text"] if args[0] == "results" else ""
         code = export_status["code"] if args[0] == "export-cicd-stats" else 0
-        return subprocess.CompletedProcess(args, code, out, "")
+        return subprocess.CompletedProcess(args, exit_codes.get(args[0], code), out, "")
 
     monkeypatch.setattr(mr, "mutmut", fake)
     monkeypatch.setattr(mr, "export_status", export_status, raising=False)
@@ -401,27 +431,125 @@ def test_scratch_config_without_a_pyproject(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("counts", "expected"),
+    ("counts", "cap", "expected"),
     [
-        ({}, []),
-        ({"timeout": "2"}, ["timeout"]),
-        ({"errored": "1", "timeout": "1"}, ["timeout", "errored"]),
-        ({"interrupted": "1", "lived": "3"}, ["interrupted"]),
+        ({}, 10, []),
+        ({"total": "100", "timeout": "5"}, 10, []),
+        ({"total": "100", "timeout": "10"}, 10, []),
+        ({"total": "100", "timeout": "11"}, 10, ["11 timeouts of 100, above 10%"]),
+        ({"timeout": "2"}, 10, ["2 timeouts of 0, above 10%"]),
+        ({"total": "100", "timeout": "1"}, 0, ["1 timeouts of 100, above 0%"]),
+        ({"total": "100"}, 0, []),
+        ({"total": "4", "timeout": "4"}, 100, []),
+        ({"errored": "1", "total": "100", "timeout": "1"}, 10, ["errored"]),
+        ({"interrupted": "1", "lived": "3"}, 10, ["interrupted"]),
+        (
+            {"errored": "1", "total": "10", "timeout": "5"},
+            10,
+            ["errored", "5 timeouts of 10, above 10%"],
+        ),
     ],
 )
-def test_unstable(counts: dict[str, str], expected: list[str]) -> None:
+def test_unstable(counts: dict[str, str], cap: int, expected: list[str]) -> None:
     keys = ["total", *mr.OUTCOMES, "interrupted"]
     base = dict.fromkeys(keys, "0") | counts
     text = "".join(f"{key}={value}\n" for key, value in base.items())
-    assert mr.unstable(text + "mutant.survived=a=b\n") == expected
+    assert mr.unstable(text + "mutant.survived=a=b\n", cap) == expected
 
 
 def test_unstable_flags_a_mutant_never_checked() -> None:
     keys = ["total", *mr.OUTCOMES, "interrupted"]
     text = "".join(f"{key}=0\n" for key in keys)
-    assert mr.unstable(text + "mutant.not_checked=a.x_f__mutmut_1\n") == [
+    assert mr.unstable(text + "mutant.not_checked=a.x_f__mutmut_1\n", 10) == [
         "not_checked",
     ]
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (None, None),
+        ("", None),
+        ("ten", None),
+        ("-1", None),
+        ("1.5", None),
+        ("101", None),
+        ("0", 0),
+        ("10", 10),
+        ("100", 100),
+        # Ten characters, leading zeros included, still convert; eleven don't.
+        ("0" * 8 + "10", 10),
+        ("0" * 9 + "10", None),
+        ("9" * 5000, None),
+    ],
+)
+def test_timeout_cap(
+    monkeypatch: pytest.MonkeyPatch, value: str | None, expected: int | None
+) -> None:
+    if value is None:
+        monkeypatch.delenv(mr.MAX_TIMEOUT_ENV)
+    else:
+        monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, value)
+    assert mr.timeout_cap() == expected
+
+
+@pytest.mark.parametrize("value", [None, "", "lots", "101", "9" * 5000])
+def test_main_needs_the_timeout_cap(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    value: str | None,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    if value is None:
+        monkeypatch.delenv(mr.MAX_TIMEOUT_ENV)
+    else:
+        monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, value)
+    assert mr.main(["report", "log", "0"]) == 2
+    assert capsys.readouterr().err == (
+        "mutmut_report: MUTATION_MAX_TIMEOUT_PERCENT must be 0 to 100\n"
+    )
+    assert not Path("report").exists()
+    assert not Path("log").exists()
+
+
+@pytest.mark.parametrize(
+    "case",  # timeouts, total, cap in percent, exit status
+    [
+        (5, 100, "10", 0),
+        (10, 100, "10", 0),
+        (11, 100, "10", 1),
+        (1, 100, "0", 1),
+        (100, 100, "100", 0),
+    ],
+)
+def test_main_fails_timeouts_above_the_cap_after_writing_the_report(
+    fake_mutmut: list[list[str]],
+    results_text: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    case: tuple[int, int, str, int],
+) -> None:
+    timeout, total, cap, code = case
+    results_text["text"] = ""
+    monkeypatch.setenv(mr.MAX_TIMEOUT_ENV, cap)
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(
+        json.dumps(
+            ALL_KILLED
+            | {"total": total, "killed": total - timeout, "skipped": 0}
+            | {"timeout": timeout}
+        )
+    )
+    Path("pyproject.toml").write_text("")
+    assert mr.main(["report", "log", "0"]) == code
+    assert len(fake_mutmut) == 3
+    lines = Path("report").read_text().splitlines()
+    assert lines[:2] == [f"total={total}", f"killed={total - timeout}"]
+    assert f"timeout={timeout}" in lines
+    message = f"mutmut_report: not cacheable: {timeout} timeouts of {total}, above"
+    assert (message in capsys.readouterr().err) is bool(code)
 
 
 def test_main_fails_an_unstable_run_and_shows_the_log(
@@ -430,16 +558,201 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
 ) -> None:
     stats = Path("mutants/mutmut-cicd-stats.json")
     stats.parent.mkdir()
-    stats.write_text(json.dumps(ALL_KILLED | {"timeout": 1, "segfault": 2}))
+    # One timeout of 100 is within the cap: only the errored mutants are named.
+    stats.write_text(
+        json.dumps(ALL_KILLED | {"total": 100, "timeout": 1, "segfault": 2})
+    )
     Path("pyproject.toml").write_text("")
     assert mr.main(["report", "log", "0"]) == 1
     assert len(fake_mutmut) == 3
     assert capsys.readouterr().err == (
         "mutmut_report: no --max-children (no cgroup CPU quota below the host's CPUs)\n"
-        "mutmut_report: not cacheable: timeout, errored\n"
+        "mutmut_report: not cacheable: errored\n"
         "mutmut_report: full: no change set\n"
         "mutmut_report: no --max-children "
         "(no cgroup CPU quota below the host's CPUs)\n"
+    )
+
+
+def test_main_lists_every_unstable_verdict_in_the_message(
+    fake_mutmut: list[list[str]],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(
+        json.dumps(ALL_KILLED | {"segfault": 1, "check_was_interrupted_by_user": True})
+    )
+    Path("pyproject.toml").write_text("")
+    assert mr.main(["report", "log", "0"]) == 1
+    assert len(fake_mutmut) == 3
+    assert "mutmut_report: not cacheable: errored, interrupted\n" in (
+        capsys.readouterr().err
+    )
+
+
+def report_text(total: int = 1, listed: tuple[str, ...] = (), **counts: int) -> str:
+    """A report with the given counts (killed fills the rest) and listed lines."""
+    base = dict.fromkeys(mr.OUTCOMES, 0) | {"killed": total} | counts
+    lines = [f"total={total}", *(f"{key}={value}" for key, value in base.items())]
+    lines += ["interrupted=0", "scope=full", *listed]
+    return "\n".join(lines) + "\n"
+
+
+def test_inconsistent_accepts_a_report_that_adds_up() -> None:
+    text = report_text(4, ("mutant.survived=a", "mutant.timeout=b"), killed=2, lived=1)
+    assert mr.inconsistent(text.replace("timeout=0", "timeout=1")) == []
+    assert mr.inconsistent(report_text()) == []
+    assert mr.inconsistent(report_text(0, killed=0)) == []
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (report_text(1, killed=0), ["counts add up to 0, not total 1"]),
+        (report_text(1, killed=2), ["counts add up to 2, not total 1"]),
+        (
+            report_text(3, killed=1, lived=1),
+            ["counts add up to 2, not total 3"],
+        ),
+    ],
+)
+def test_inconsistent_wants_the_counts_to_add_up_to_the_total(
+    text: str, expected: list[str]
+) -> None:
+    assert mr.inconsistent(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("status", "key"),
+    [
+        ("survived", "lived"),
+        ("no_tests", "not_covered"),
+        ("timeout", "timeout"),
+        ("suspicious", "errored"),
+        ("segfault", "errored"),
+        ("skipped", "skipped"),
+        ("caught_by_type_check", "skipped"),
+    ],
+)
+def test_inconsistent_wants_each_listed_mutant_counted(status: str, key: str) -> None:
+    listed = (f"mutant.{status}=m__mutmut_1",)
+    assert mr.inconsistent(report_text(1, listed)) == [
+        f"1 {key} mutants listed, but {key} is 0"
+    ]
+    # The count for the verdict, when it covers the listing, makes it pass.
+    assert mr.inconsistent(report_text(1, listed, killed=0, **{key: 1})) == []
+    twice = (*listed, f"mutant.{status}=m__mutmut_2")
+    assert mr.inconsistent(report_text(2, twice, killed=1, **{key: 1})) == [
+        f"2 {key} mutants listed, but {key} is 1"
+    ]
+
+
+def test_inconsistent_names_each_unknown_status_once_in_order() -> None:
+    listed = (
+        "mutant.exploded=a",
+        "mutant.check_was_interrupted_by_user=b",
+        "mutant.exploded=c",
+        "mutant.not_checked=d",
+    )
+    assert mr.inconsistent(report_text(1, listed)) == [
+        "unknown mutant status: check_was_interrupted_by_user, exploded"
+    ]
+    # A line that is not a mutant line is not a status.
+    assert mr.inconsistent(report_text(1, ("lived_mutant.exploded=a",))) == []
+
+
+def test_inconsistent_reads_the_status_before_the_first_equals_sign() -> None:
+    # A mutant name may hold "=": only the text before the first one is the status.
+    known = report_text(1, ("mutant.survived=a=b",), killed=0, lived=1)
+    assert mr.inconsistent(known) == []
+    unknown = report_text(1, ("mutant.exploded=a=b",))
+    assert mr.inconsistent(unknown) == ["unknown mutant status: exploded"]
+
+
+def test_inconsistent_flags_unmapped_mutants_apart_from_unknown_ones() -> None:
+    assert mr.inconsistent(report_text(1, ("mutant.unmapped=pkg.f",))) == [
+        "unmapped mutants"
+    ]
+
+
+def test_inconsistent_leaves_a_mutant_never_checked_to_unstable() -> None:
+    text = report_text(1, ("mutant.not_checked=pkg.f",))
+    assert mr.inconsistent(text) == []
+    assert mr.unstable(text, 10) == ["not_checked"]
+
+
+@pytest.mark.parametrize(
+    "failing", [{"run": 1}, {"results": 1}, {"run": 2, "results": 3}]
+)
+def test_main_fails_when_mutmut_fails_and_records_it_as_interrupted(
+    fake_mutmut: list[list[str]],
+    results_text: dict[str, str],
+    exit_codes: dict[str, int],
+    capsys: pytest.CaptureFixture[str],
+    failing: dict[str, int],
+) -> None:
+    # A failed `results` with nothing on stdout once passed as an empty run.
+    results_text["text"] = ""
+    exit_codes.update(failing)
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(json.dumps(ALL_KILLED))
+    assert mr.main(["report", "log", "0"]) == 1
+    assert len(fake_mutmut) == 3
+    lines = Path("report").read_text().splitlines()
+    assert "interrupted=1" in lines
+    assert "total=4" in lines
+    assert "mutmut_report: not cacheable: interrupted\n" in capsys.readouterr().err
+
+
+def test_main_passes_when_mutmut_succeeds(
+    fake_mutmut: list[list[str]],
+    results_text: dict[str, str],
+) -> None:
+    results_text["text"] = ""
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(json.dumps(ALL_KILLED))
+    assert mr.main(["report", "log", "0"]) == 0
+    assert len(fake_mutmut) == 3
+    assert "interrupted=0" in Path("report").read_text().splitlines()
+
+
+@pytest.mark.parametrize("status", ["suspicious", "segfault"])
+def test_main_fails_a_listed_error_the_stats_do_not_count(
+    fake_mutmut: list[list[str]],
+    results_text: dict[str, str],
+    capsys: pytest.CaptureFixture[str],
+    status: str,
+) -> None:
+    # The stats say errored=0, so the unstable verdicts see nothing, but the
+    # gate rejects the contradiction.
+    results_text["text"] = f"    m__mutmut_1: {status}\n"
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(json.dumps(ALL_KILLED))
+    assert mr.main(["report", "log", "0"]) == 1
+    assert len(fake_mutmut) == 3
+    assert f"mutant.{status}=m__mutmut_1" in Path("report").read_text().splitlines()
+    assert capsys.readouterr().err.splitlines()[1] == (
+        "mutmut_report: not cacheable: 1 errored mutants listed, but errored is 0"
+    )
+
+
+def test_main_fails_counts_that_do_not_add_up(
+    fake_mutmut: list[list[str]],
+    results_text: dict[str, str],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    results_text["text"] = ""
+    stats = Path("mutants/mutmut-cicd-stats.json")
+    stats.parent.mkdir()
+    stats.write_text(json.dumps(ALL_KILLED | {"total": 5}))
+    assert mr.main(["report", "log", "0"]) == 1
+    assert len(fake_mutmut) == 3
+    assert capsys.readouterr().err.splitlines()[1] == (
+        "mutmut_report: not cacheable: counts add up to 4, not total 5"
     )
 
 
@@ -558,11 +871,13 @@ def test_main_rewrites_paths_before_running(
 @pytest.mark.parametrize("children", [1, 2, 20])
 def test_main_overrides_the_worker_cap(
     fake_mutmut: list[list[str]],
+    results_text: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     children: int,
 ) -> None:
     # An explicit cap must bypass quota detection, even above the host's CPUs.
+    results_text["text"] = ""
     monkeypatch.setattr(mr, "max_children", None)
     stats = Path("mutants/mutmut-cicd-stats.json")
     stats.parent.mkdir()

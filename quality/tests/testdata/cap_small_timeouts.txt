@@ -1,0 +1,13 @@
+total=10
+killed=5
+lived=0
+not_covered=0
+timeout=5
+errored=0
+skipped=0
+interrupted=0
+mutant.timeout=pkg.y_f__mutmut_1
+mutant.timeout=pkg.y_f__mutmut_2
+mutant.timeout=pkg.y_f__mutmut_3
+mutant.timeout=pkg.y_f__mutmut_4
+mutant.timeout=pkg.y_f__mutmut_5
