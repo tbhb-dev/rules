@@ -149,6 +149,7 @@ _ERROR_SCRIPT = """#!/usr/bin/env bash
 set -euo pipefail
 gate="$PWD/{gate}"
 work="$TEST_TMPDIR/gate_command_error"
+if command -v cygpath >/dev/null 2>&1; then work=$(cygpath -u "$work"); fi
 mkdir -p "$work/bin"
 real=$(command -v {tool})
 export GATE_REAL_TOOL="$real" GATE_FAULT_PATTERN={pattern} GATE_FAULT_OPTION={option}
