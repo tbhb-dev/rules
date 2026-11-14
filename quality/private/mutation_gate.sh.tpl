@@ -79,9 +79,22 @@ unchecked=0
 full_reports=0 full_total=0
 diff_reports=0 diff_total=0 changed_units=0
 
+# grep's no-match status is valid; operational errors cannot supply a verdict.
+verdict_grep() {
+  local report=$1 step=$2 status
+  shift 2
+  grep "$@" || {
+    status=$?
+    if ((status > 1)); then
+      echo "mutation_gate: $report: $step failed (grep status $status)" >&2
+      exit 1
+    fi
+  }
+}
+
 value_of() {
   local key=$1 report=$2 lines
-  lines=$(grep -E "^${key}=" "$report" || true)
+  lines=$(verdict_grep "$report" "read $key" -E "^${key}=" "$report") || exit 1
   if [[ -z $lines ]]; then
     echo "mutation_gate: $report lacks $key" >&2
     exit 1
@@ -124,7 +137,7 @@ for report in "${reports[@]}"; do
     eval "$key=\$(($key + value))"
     eval "r_$key=\$value"
   done
-  report_mutants=$(grep -E '^mutant\.[a-z_]+=' "$report" || true)
+  report_mutants=$(verdict_grep "$report" 'read mutants' -E '^mutant\.[a-z_]+=' "$report")
   mutants+=$report_mutants$'\n'
   # shellcheck disable=SC2154 # r_<key> is set by the eval above
   report_total=$r_total
@@ -141,7 +154,7 @@ for report in "${reports[@]}"; do
   # that verdict contradicts itself.
   for entry in "${verdicts[@]}"; do
     key=${entry%%:*}
-    listed=$(printf '%s\n' "$report_mutants" | grep -cE "^mutant\.(${entry#*:})=" || true)
+    listed=$(printf '%s\n' "$report_mutants" | verdict_grep "$report" "count $key" -cE "^mutant\.(${entry#*:})=")
     counted=r_$key
     if ((listed > ${!counted})); then
       problems+=("$name: lists $listed $key mutant(s), but $key is ${!counted}")
@@ -149,12 +162,16 @@ for report in "${reports[@]}"; do
   done
   # A mutant mutmut never checked has no outcome, so balanced counts prove
   # nothing about it; a status no verdict names can't be reconciled at all.
-  not_checked=$(grep -cE '^mutant\.not_checked=' "$report" || true)
+  not_checked=$(verdict_grep "$report" 'count not_checked' -cE '^mutant\.not_checked=' "$report")
   if ((not_checked > 0)); then
     problems+=("$name: lists $not_checked mutant.not_checked line(s): mutants no run checked")
   fi
-  unknown=$(grep -E '^mutant\.' "$report" | grep -vE "^mutant\.(${known_statuses}|not_checked)=" |
-    cut -d= -f1 | sort -u | paste -sd, - || true)
+  if ! unknown=$(verdict_grep "$report" 'read status lines' -E '^mutant\.' "$report" |
+    verdict_grep "$report" 'filter known statuses' -vE "^mutant\.(${known_statuses}|not_checked)=" |
+    cut -d= -f1 | sort -u | paste -sd, -); then
+    echo "mutation_gate: $report: collect unknown statuses failed" >&2
+    exit 1
+  fi
   if [[ -n $unknown ]]; then
     problems+=("$name: lists mutants under an unknown status: $unknown")
   fi
@@ -163,7 +180,7 @@ for report in "${reports[@]}"; do
   if ((${#reports[@]} > 1 && r_timeout * 100 > report_total * MAX_TIMEOUT_PERCENT)); then
     problems+=("$name: $r_timeout timeout(s) of $report_total, above $MAX_TIMEOUT_PERCENT%")
   fi
-  scope=$(grep -E '^scope=' "$report" || true)
+  scope=$(verdict_grep "$report" 'read scope' -E '^scope=' "$report")
   case $scope in
   "" | scope=full)
     full_reports=$((full_reports + 1))
@@ -199,7 +216,7 @@ if ((timeout > 0 && total > 0)); then
   timeout_line="mutation_gate: $timeout timed out of $total ($((tenths / 10)).$((tenths % 10))%), counted as killed"
   echo "$timeout_line"
   # mutmut says timeout, gomutants timed_out; the lines print as reported.
-  printf '%s\n' "$mutants" | grep -E '^mutant\.(timeout|timed_out)=' || true
+  printf '%s\n' "$mutants" | verdict_grep "${reports[*]}" 'list timeouts' -E '^mutant\.(timeout|timed_out)='
   if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
     # A summary that cannot be written must not end the run before the verdict,
     # even with stderr closed, so the warning's own failure is ignored too.
@@ -225,7 +242,7 @@ fi
 if ((unchecked > 0)); then
   problems+=("$unchecked not checked")
 fi
-unmapped=$(printf '%s\n' "$mutants" | grep -c '^mutant\.unmapped=' || true)
+unmapped=$(printf '%s\n' "$mutants" | verdict_grep "${reports[*]}" 'count unmapped' -c '^mutant\.unmapped=')
 if ((unmapped > 0)); then
   problems+=("$unmapped unmapped")
 fi
@@ -242,8 +259,9 @@ if ((${#problems[@]} > 0)); then
   fi
   exit 1
 fi
-# Only claim kills when some mutant was killed or timed out; an empty or
-# all-skipped report (a diff that selected none) checked nothing.
+# Only claim kills when some mutant was killed or timed out. A diff that
+# selected none checked nothing; an all-skipped report checked nothing too,
+# including in full scope.
 if ((killed + timeout > 0)); then
   echo "mutation_gate: ok: every mutant was killed"
 else
