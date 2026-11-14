@@ -178,7 +178,7 @@ def test_link_problem_decodes_after_the_split() -> None:
         "/a%23b.md#h has a fragment on a link to another file: link to the file"
     )
     assert problem("#t%6Fp") is None
-    assert problem("#to%23p") == "#to%23p matches no heading in this file"
+    assert problem("#to%23p") == "#to#p matches no heading in this file"
     assert checker.link_problem("d/a.md", "/b.md%23x", tracked, set()) == (
         "/b.md%23x is not a tracked file or directory"
     )
