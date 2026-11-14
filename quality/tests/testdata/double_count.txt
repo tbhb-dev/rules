@@ -1,0 +1,9 @@
+total=10
+killed=10
+lived=0
+not_covered=0
+timeout=1
+errored=0
+skipped=0
+interrupted=0
+mutant.timeout=pkg.x_f__mutmut_1

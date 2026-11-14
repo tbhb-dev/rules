@@ -1,0 +1,13 @@
+total=20
+killed=15
+lived=0
+not_covered=0
+timeout=2
+errored=0
+skipped=3
+interrupted=0
+scope=full
+mutant.timed_out=mod/p/p.go:7:15 CONDITIONALS_BOUNDARY (p/p.go:Pass:CONDITIONALS_BOUNDARY#1)
+mutant.timed_out=mod/p/p.go:9:3 X (p/p.go:Pass:X#1)
+mutant.not_viable=mod/p/p.go:13:11 ARITHMETIC_BASE (p/p.go:Double:ARITHMETIC_BASE#1)
+mutant.equivalent=mod/p/p.go:13:9 Z (p/p.go:Double:Z#1)
