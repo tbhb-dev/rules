@@ -58,6 +58,8 @@ verdicts=(
   "skipped:skipped|caught_by_type_check|not_viable|equivalent"
 )
 
+# The counts are summed and read back through eval, which shellcheck can't see.
+# shellcheck disable=SC2034
 total=0 killed=0 lived=0 not_covered=0 timeout=0 errored=0 skipped=0
 interrupted=0
 mutants=""
@@ -83,8 +85,15 @@ value_of() {
     exit 1
   fi
   local digits=${value#"${value%%[!0]*}"}
-  if ((${#digits} > ${#MAX_COUNT})) ||
-    { ((${#digits} == ${#MAX_COUNT})) && [[ $digits > $MAX_COUNT ]]; }; then
+  local too_big=0
+  if ((${#digits} > ${#MAX_COUNT})); then
+    too_big=1
+  elif ((${#digits} == ${#MAX_COUNT})); then
+    # Equal-length digit strings compare correctly as text; that is the point.
+    # shellcheck disable=SC2071
+    [[ $digits > $MAX_COUNT ]] && too_big=1
+  fi
+  if ((too_big)); then
     echo "mutation_gate: $report: $key is '$value', above the $MAX_COUNT limit" >&2
     exit 1
   fi
@@ -106,9 +115,11 @@ for report in "${reports[@]}"; do
   done
   report_mutants=$(grep -E '^mutant\.[a-z_]+=' "$report" || true)
   mutants+=$report_mutants$'\n'
+  # shellcheck disable=SC2154 # r_<key> is set by the eval above
   report_total=$r_total
   # Every mutant is counted once: the outcomes add up to the total. Fewer
   # means mutants no one checked; more means some were counted twice.
+  # shellcheck disable=SC2154 # r_<key> is set by the eval above
   accounted=$((r_killed + r_lived + r_not_covered + r_timeout + r_errored + r_skipped))
   if ((report_total > accounted)); then
     unchecked=$((unchecked + report_total - accounted))
