@@ -5,6 +5,7 @@ import json
 import re
 import subprocess
 from pathlib import Path, PurePosixPath
+from typing import cast
 
 import pytest
 
@@ -628,6 +629,7 @@ def scripted(
         runs.append(args)
         codes = script["codes"]
         assert isinstance(codes, dict)
+        codes = cast("dict[str, int]", codes)
         out = script["results"] if args[0] == "results" else ""
         return subprocess.CompletedProcess(args, codes.get(args[0], 0), str(out), "")
 

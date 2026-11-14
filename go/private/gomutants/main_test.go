@@ -583,21 +583,25 @@ func TestUnstableDiffSelection(t *testing.T) {
 		{"nothing selected", result{scope: "diff"}, ""},
 		{"full scope selects nothing", result{scope: "full", total: 3}, ""},
 		{
-			"unmapped pair", result{scope: "diff", selected: 1, total: 1, mutants: []string{
+			"unmapped pair",
+			result{scope: "diff", selected: 1, total: 1, mutants: []string{
 				unmapped, "mutant.unmapped=p/p.go:9:3 Y (reported, not selected)", "mutant.lived=p/p.go:1:1 Z (id)",
 			}},
 			"2 unmapped",
 		},
 		{
-			"one unmapped", result{scope: "diff", selected: 1, total: 1, mutants: []string{unmapped}},
+			"one unmapped",
+			result{scope: "diff", selected: 1, total: 1, mutants: []string{unmapped}},
 			"1 unmapped",
 		},
 		{
-			"unmapped and selection", result{scope: "diff", selected: 1, total: 0, mutants: []string{unmapped}},
+			"unmapped and selection",
+			result{scope: "diff", selected: 1, total: 0, mutants: []string{unmapped}},
 			"selected 1, total 0,1 unmapped",
 		},
 		{
-			"other mutants only", result{scope: "diff", selected: 1, total: 1, lived: 1, mutants: []string{"mutant.lived=p/p.go:1:1 Z (id)"}},
+			"other mutants only",
+			result{scope: "diff", selected: 1, total: 1, lived: 1, mutants: []string{"mutant.lived=p/p.go:1:1 Z (id)"}},
 			"",
 		},
 	} {

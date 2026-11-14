@@ -198,6 +198,7 @@ VERDICT_COUNTS = {
             "interrupted=0",
             "mutant.{}=pkg.x_f__mutmut_1".format(status),
         ],
+        newline = "unix",
     )
     for status in VERDICT_COUNTS
 ]
