@@ -21,7 +21,7 @@ if [[ -f .gitleaks.toml ]]; then
   args+=(--config .gitleaks.toml)
 fi
 
-report=$(mktemp)
+report=$(mktemp "${TMPDIR:-/tmp}/gitleaks_text.XXXXXX")
 trap 'rm -f "$report"' EXIT
 args+=(--report-format json --report-path "$report")
 
