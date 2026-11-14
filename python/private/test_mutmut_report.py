@@ -662,6 +662,14 @@ def test_inconsistent_names_each_unknown_status_once_in_order() -> None:
     assert mr.inconsistent(report_text(1, ("lived_mutant.exploded=a",))) == []
 
 
+def test_inconsistent_reads_the_status_before_the_first_equals_sign() -> None:
+    # A mutant name may hold "=": only the text before the first one is the status.
+    known = report_text(1, ("mutant.survived=a=b",), killed=0, lived=1)
+    assert mr.inconsistent(known) == []
+    unknown = report_text(1, ("mutant.exploded=a=b",))
+    assert mr.inconsistent(unknown) == ["unknown mutant status: exploded"]
+
+
 def test_inconsistent_flags_unmapped_mutants_apart_from_unknown_ones() -> None:
     assert mr.inconsistent(report_text(1, ("mutant.unmapped=pkg.f",))) == [
         "unmapped mutants"
