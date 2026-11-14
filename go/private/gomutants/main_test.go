@@ -291,7 +291,7 @@ mutant.timed_out=mod/p/p.go:13:9 X (p/p.go:Double:X#1)
 	if got := r.format(); got != want {
 		t.Errorf("report:\n%s\nwant:\n%s", got, want)
 	}
-	if got := strings.Join(r.unstable(), ","); got != "timeout,errored" {
+	if got := strings.Join(r.unstable(), ","); got != "errored" {
 		t.Errorf("unstable = %s", got)
 	}
 	if err := (&result{}).read([]byte(`{"files":[{"mutations":[{"status":"ODD"}]}]}`), ""); err == nil {
@@ -437,10 +437,6 @@ func TestRunUnstable(t *testing.T) {
 		name, rc, js, reason, mutants string
 	}{
 		{
-			"timeout", "0", strings.Replace(oneLived, "LIVED", "TIMED OUT", 1), "timeout",
-			"mutant.timed_out=p/p.go:7:15 CONDITIONALS_BOUNDARY (p/p.go:Pass:CONDITIONALS_BOUNDARY#1)\n",
-		},
-		{
 			"errored", "0", `{"files":[{"file_name":"p.go","mutations":[
 				{"id":"p/p.go:Pass:Z#1","type":"Z","status":"INFRA ERROR","line":7,"column":15},
 				{"id":"p/p.go:Double:A#1","type":"A","status":"INFRA ERROR","line":13,"column":9},
@@ -485,6 +481,15 @@ func TestRunUnstable(t *testing.T) {
 				t.Errorf("report:\n%s\nwant mutants:\n%s", report, tc.mutants)
 			}
 		})
+	}
+}
+
+func TestRunTimeoutIsCacheable(t *testing.T) {
+	js := strings.Replace(oneLived, "LIVED", "TIMED OUT", 1)
+	code, report := runFake(t, "", "0", &js)
+	want := "mutant.timed_out=p/p.go:7:15 CONDITIONALS_BOUNDARY (p/p.go:Pass:CONDITIONALS_BOUNDARY#1)\n"
+	if code != 0 || !strings.Contains(report, "timeout=1\n") || !strings.HasSuffix(report, want) {
+		t.Errorf("exit %d, report:\n%s", code, report)
 	}
 }
 

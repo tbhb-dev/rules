@@ -98,11 +98,11 @@ in `<name>.report` (MutationReportInfo) and mutmut's output in
 )
 
 def mutmut_test(name, srcs, chdir = "", python_env = DEFAULT_ENV, cpus = 0, changes = None, source_paths = [], mutation_oses = None, **kwargs):
-    """Mutation-tests the tree with mutmut and fails unless every mutant was killed.
+    """Mutation-tests the tree with mutmut and fails unless every mutant was killed or timed out (within a cap).
 
     Creates `<name>.report` (the cached mutmut run) and `<name>`, a
-    `mutation_gate_test` over it: any survivor, timeout, suspicious or
-    untested mutant, crash, interruption or unchecked mutant fails, and so
+    `mutation_gate_test` over it: any survivor, suspicious or
+    untested mutant, too many timeouts (over 10%), crash, interruption or unchecked mutant fails, and so
     does a run that mutated nothing. Mark an equivalent mutant with
     `# pragma: no mutate` and a reason.
 

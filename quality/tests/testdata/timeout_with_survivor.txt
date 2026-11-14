@@ -1,0 +1,14 @@
+total=100
+killed=94
+lived=1
+not_covered=0
+timeout=5
+errored=0
+skipped=0
+interrupted=0
+mutant.timeout=pkg.x_f__mutmut_1
+mutant.timeout=pkg.x_f__mutmut_2
+mutant.timeout=pkg.x_f__mutmut_3
+mutant.timeout=pkg.x_f__mutmut_4
+mutant.timeout=pkg.x_f__mutmut_5
+mutant.survived=pkg.x_g__mutmut_1

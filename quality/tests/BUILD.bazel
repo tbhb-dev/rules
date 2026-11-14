@@ -5,6 +5,7 @@ load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("//quality:defs.bzl", "mutation_gate_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
+load(":gate_output_test.bzl", "gate_output_test")
 load(":mutation_changes_test.bzl", "mutation_changes_test")
 load(":slice_test.bzl", "changes_slice")
 
@@ -56,6 +57,8 @@ PROOF_REASONS = {
     "proof_not_a_number": "killed is 'x', not a non-negative integer",
     "proof_survivor": "FAIL: 1 lived, 2 not checked",
     "proof_three_unchecked": "FAIL: 3 not checked$",
+    "proof_timeout_above_cap": "FAIL: 11 timeout\\(s\\) of 100, above 10%",
+    "proof_timeout_with_survivor": "FAIL: 1 lived$",
     "proof_unchecked": "FAIL: 3280 not checked",
 }
 
@@ -76,6 +79,47 @@ PROOF_REASONS = {
     )
     for proof, pattern in PROOF_REASONS.items()
 ]
+
+# Timeouts count as killed up to 10% of the mutants (10 of 100 passes, 5
+# passes, 11 fails), stay listed, and are counted on stdout and in the job
+# summary. Gate failures list them too.
+mutation_gate_test(
+    name = "timeout_below_cap_gate",
+    reports = ["testdata/timeout_below_cap.txt"],
+    tags = PROOF_TAGS,
+)
+
+gate_output_test(
+    name = "timeout_below_cap_test",
+    gate = ":timeout_below_cap_gate",
+    lines = [
+        "mutation_gate: 5 timed out of 100 (5.0%), counted as killed",
+        "mutant.timeout=pkg.x_f__mutmut_1",
+        "mutant.timeout=pkg.x_f__mutmut_5",
+        "mutation_gate: ok: every mutant was killed",
+    ],
+    summary_lines = ["mutation_gate: 5 timed out of 100 (5.0%), counted as killed"],
+)
+
+mutation_gate_test(
+    name = "timeout_at_cap_gate",
+    reports = ["testdata/timeout_at_cap.txt"],
+    tags = PROOF_TAGS,
+)
+
+gate_output_test(
+    name = "timeout_at_cap_test",
+    gate = ":timeout_at_cap_gate",
+    lines = ["mutation_gate: 10 timed out of 100 (10.0%), counted as killed"],
+    summary_lines = ["mutation_gate: 10 timed out of 100 (10.0%), counted as killed"],
+)
+
+# Timed-out mutants are listed in the gate's output, passing or failing.
+expect_failure_test(
+    name = "proof_timeout_with_survivor_lists_timeouts_fails",
+    pattern = "timeout: pkg.x_f__mutmut_5",
+    test = ":proof_timeout_with_survivor",
+)
 
 # A diff report never satisfies a gate that requires a full run.
 mutation_gate_test(

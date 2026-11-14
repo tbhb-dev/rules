@@ -73,7 +73,7 @@ V1_QUOTA = Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us")
 V1_PERIOD = Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us")
 # Verdicts that depend on the machine (load, signals) rather than the code:
 # the action fails on them, so Bazel never caches one.
-UNSTABLE = ("timeout", "errored", "interrupted")
+UNSTABLE = ("errored", "interrupted")
 # A mutant mutmut never checked means the run stopped early (killed, out of
 # memory, a crash), so it isn't cached either: a cached aborted run fails
 # every later test with the same inputs.

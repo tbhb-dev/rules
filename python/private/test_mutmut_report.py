@@ -404,8 +404,8 @@ def test_scratch_config_without_a_pyproject(tmp_path: Path) -> None:
     ("counts", "expected"),
     [
         ({}, []),
-        ({"timeout": "2"}, ["timeout"]),
-        ({"errored": "1", "timeout": "1"}, ["timeout", "errored"]),
+        ({"timeout": "2"}, []),
+        ({"errored": "1", "timeout": "1"}, ["errored"]),
         ({"interrupted": "1", "lived": "3"}, ["interrupted"]),
     ],
 )
@@ -436,7 +436,7 @@ def test_main_fails_an_unstable_run_and_shows_the_log(
     assert len(fake_mutmut) == 3
     assert capsys.readouterr().err == (
         "mutmut_report: no --max-children (no cgroup CPU quota below the host's CPUs)\n"
-        "mutmut_report: not cacheable: timeout, errored\n"
+        "mutmut_report: not cacheable: errored\n"
         "mutmut_report: full: no change set\n"
         "mutmut_report: no --max-children "
         "(no cgroup CPU quota below the host's CPUs)\n"

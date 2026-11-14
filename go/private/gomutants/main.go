@@ -16,7 +16,7 @@
 // through a fake git (this binary under the name git). Every mutant
 // reported must be one the selection holds and vice versa; a mismatch is
 // reported as mutant.unmapped. It writes the report mutation_gate_test
-// reads and exits 1 after writing one with a timeout, errored or
+// reads and exits 1 after writing one with an errored or
 // interrupted count, so Bazel never caches it.
 //
 // Invoked as git, it answers the two commands gomutants' --changed-since
@@ -265,9 +265,6 @@ func (r result) format() string {
 
 func (r result) unstable() []string {
 	var found []string
-	if r.timeout > 0 {
-		found = append(found, "timeout")
-	}
 	if r.errored > 0 {
 		found = append(found, "errored")
 	}

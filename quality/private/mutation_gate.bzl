@@ -47,9 +47,14 @@ mutation_gate_test = rule(
     implementation = _mutation_gate_impl,
     test = True,
     toolchains = SHELL_TOOLCHAINS,
-    doc = """Passes only when every mutant in `reports` was killed or skipped.
+    doc = """Passes only when every mutant in `reports` was killed, timed out or skipped.
 
-Fails when any mutant lived, was not covered, timed out or errored, when a
+A timed-out mutant counts as killed and stays listed; the gate prints how
+many timed out, and appends that line to `$GITHUB_STEP_SUMMARY` when set.
+It fails when timeouts exceed 10% of the mutants, because a starved CPU
+makes tests time out and that must not pass as kills.
+
+Fails when any mutant lived, was not covered or errored, when a
 run was interrupted, when the full-scope reports mutated nothing, and when
 the counts don't add up to the total (mutants a failed run never checked).
 The counts are summed over all reports.

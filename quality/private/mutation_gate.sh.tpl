@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
-# Fails unless every mutant in the reports was killed or skipped. Generated
-# from mutation_gate.sh.tpl by the mutation_gate_test rule; @@REPORTS@@ and
-# @@REQUIRE_SCOPE@@ are filled in at analysis time.
+# Fails unless every mutant in the reports was killed, timed out within the
+# cap below, or was skipped. Generated from mutation_gate.sh.tpl by the
+# mutation_gate_test rule; @@REPORTS@@ and @@REQUIRE_SCOPE@@ are filled in at
+# analysis time.
 #
 # A report holds one key=value per line, in a format shared by every
 # mutation runner. Required keys, each a non-negative integer: total,
@@ -18,19 +19,29 @@
 # by a pragma, equivalent, or not viable (they don't compile); each stays
 # listed with its tool status.
 #
-# Fails on: any lived, not_covered, timeout or errored mutant; an
-# interrupted run; mutants left unchecked (total above the sum of the
-# outcomes); no mutants in the full-scope reports; any mutant.unmapped; in
-# diff scope, selected other than total; and with require_scope=full, any
-# diff-scope report. A diff report with no mutants passes: its change set
+# A timed-out mutant counts as killed and stays listed (its mutant.timeout or
+# mutant.timed_out lines print). The count line goes to stdout, and to
+# $GITHUB_STEP_SUMMARY when that is set.
+#
+# Fails on: any lived, not_covered or errored mutant; timeouts above
+# MAX_TIMEOUT_PERCENT of total; an interrupted run; mutants left unchecked
+# (total above the sum of the outcomes); no mutants in the full-scope
+# reports; any mutant.unmapped; in diff scope, selected other than total; and
+# with require_scope=full, any diff-scope report. A diff report with no mutants passes: its change set
 # touched no code with mutants.
 
 set -euo pipefail
 
+# Most timed-out mutants, in percent of total, that still count as killed.
+# A starved CPU makes tests time out, so past this share timeouts say the run
+# was starved, not that the tests caught the mutants, and must not pass as
+# kills. One real run on 2 CPUs timed out 212 of 849 mutants, about 25%.
+MAX_TIMEOUT_PERCENT=10
+
 reports=(@@REPORTS@@)
 require_scope=@@REQUIRE_SCOPE@@
 counts=(total killed lived not_covered timeout errored skipped interrupted)
-must_be_zero=(lived not_covered timeout errored)
+must_be_zero=(lived not_covered errored)
 
 total=0 killed=0 lived=0 not_covered=0 timeout=0 errored=0 skipped=0
 interrupted=0
@@ -100,12 +111,28 @@ if ((diff_reports > 0)); then
   echo "mutation_gate: $diff_reports diff-scoped: $diff_total mutants of $changed_units changed unit(s)"
 fi
 
+if ((timeout > 0)); then
+  # Tenths of a percent, rounded down. total is above 0 here: timeouts are
+  # part of it, and a total below the sum of outcomes fails as unchecked.
+  tenths=$((timeout * 1000 / total))
+  timeout_line="mutation_gate: $timeout timed out of $total ($((tenths / 10)).$((tenths % 10))%), counted as killed"
+  echo "$timeout_line"
+  # mutmut says timeout, gomutants timed_out; the lines print as reported.
+  printf '%s\n' "$mutants" | grep -E '^mutant\.(timeout|timed_out)=' || true
+  if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
+    echo "$timeout_line" >>"$GITHUB_STEP_SUMMARY"
+  fi
+fi
+
 problems=()
 for key in "${must_be_zero[@]}"; do
   if ((${!key} > 0)); then
     problems+=("${!key} ${key}")
   fi
 done
+if ((timeout * 100 > total * MAX_TIMEOUT_PERCENT)); then
+  problems+=("$timeout timeout(s) of $total, above $MAX_TIMEOUT_PERCENT%")
+fi
 if ((interrupted > 0)); then
   problems+=("run was interrupted")
 fi

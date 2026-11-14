@@ -21,10 +21,9 @@ visibility(["//", "//private/...", "//tests/..."])
 # test. The flags attribute follows these, so a consumer's value wins.
 _DEFAULT_FLAGS = ["--timeout-min=20s", "--test-flags=-failfast"]
 
-# A timed-out mutant is unstable, so a slow Windows runner fails the gate when
-# the ceiling (the baseline times the coefficient) is too tight. A Windows
-# execution platform gets a higher floor and ceiling; a timeout still never
-# counts as killed.
+# Timeouts count as killed up to a cap, so a slow Windows runner fails the gate
+# when the ceiling (the baseline times the coefficient) is too tight. A Windows
+# execution platform gets a higher floor and ceiling.
 _WINDOWS_DEFAULT_FLAGS = ["--timeout-min=60s", "--timeout-coefficient=40", "--test-flags=-failfast"]
 
 def default_flags(exec_goos):
@@ -123,12 +122,12 @@ slice (the `changes` output group).""",
 )
 
 def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], flags = [], cpus = 0, changes = None, require_scope = "any", mutation_oses = None, **kwargs):
-    """Mutation-tests Go packages with gomutants and fails unless every mutant was killed.
+    """Mutation-tests Go packages with gomutants and fails unless every mutant was killed or timed out (within a cap).
 
     Creates one gomutants_report per package that a test in `tests` is in,
     `<name>.<package>` (one cached gomutants run each), and `<name>`, a
     `mutation_gate_test` over their reports. Fails on a mutant that lived
-    (its tests passed), one no test covers, a timeout, an infrastructure
+    (its tests passed), one no test covers, timeouts over 10% of the mutants, an infrastructure
     error, a failed run, a diff-scope selection that does not match what
     gomutants tested, and a full run that found nothing to mutate. A mutant
     that does not compile is skipped, not killed. Account for a mutant that
