@@ -6,7 +6,7 @@ load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("//quality:defs.bzl", "mutation_gate_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
-load(":gate_output_test.bzl", "gate_output_test", "gate_unwritable_summary_test")
+load(":gate_output_test.bzl", "gate_output_test", "gate_summary_error_test")
 load(":mutation_changes_test.bzl", "mutation_changes_test")
 load(":slice_test.bzl", "changes_slice")
 
@@ -123,11 +123,11 @@ gate_output_test(
     summary_lines = ["mutation_gate: 10 timed out of 100 (10.0%), counted as killed"],
 )
 
-# An unwritable job summary (here a missing directory) ends neither a passing
+# A job summary that cannot be written (here a missing directory) ends neither a passing
 # nor a failing run early: the verdict, the stdout line and the listed
 # timeouts stay, and stderr notes the failed write.
-gate_unwritable_summary_test(
-    name = "unwritable_summary_passes_test",
+gate_summary_error_test(
+    name = "summary_error_passes_test",
     gate = ":timeout_below_cap_gate",
     lines = [
         "mutation_gate: 5 timed out of 100 (5.0%), counted as killed",
@@ -137,8 +137,8 @@ gate_unwritable_summary_test(
     status = 0,
 )
 
-gate_unwritable_summary_test(
-    name = "unwritable_summary_fails_test",
+gate_summary_error_test(
+    name = "summary_error_fails_test",
     gate = ":proof_timeout_with_survivor",
     lines = [
         "mutation_gate: 5 timed out of 100 (5.0%), counted as killed",

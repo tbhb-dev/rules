@@ -200,7 +200,7 @@ if ((timeout > 0 && total > 0)); then
   # mutmut says timeout, gomutants timed_out; the lines print as reported.
   printf '%s\n' "$mutants" | grep -E '^mutant\.(timeout|timed_out)=' || true
   if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
-    # An unwritable summary must not end the run before the verdict.
+    # A summary that cannot be written must not end the run before the verdict.
     echo "$timeout_line" >>"$GITHUB_STEP_SUMMARY" ||
       echo "mutation_gate: could not write to GITHUB_STEP_SUMMARY" >&2
   fi
