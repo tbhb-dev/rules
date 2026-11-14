@@ -10,8 +10,8 @@ generated:
     model: anthropic:claude-sonnet-5-5
     effort: medium
     surface: sdk-cli
-    session: sha-256-64:e99c9bcdb2c83649
-    at: "2026-11-14T01:06:27Z"
+    session: sha-256-64:2a69b3577a6353b0
+    at: "2026-11-14T02:18:28Z"
 ---
 
 # Markdown links
@@ -33,6 +33,19 @@ Output is one `path:line: message` line for each problem. Exit status is 0 when 
 
 The file `.markdown-links.toml` sits at the repository root and lists exclusions as `[[exclude]]` tables. Each has a path `glob`, matched against the file that contains the link, and a `reason` with text in it. The check fails on any exclusion whose glob covers only clean links, which exposes stale entries. Fix or exclude every existing failure, because a baseline file or ratchet would hide them. Fixtures under `repo/tests/testdata/markdown_links` cover a clean tree and one bad case each for a missing file, a missing directory, a bad anchor, a rejected fragment, a scheme-like path, and a stale exclusion.
 
-## Accepted limits
+## Known limits
 
-The scanner matches regular expressions and doesn't parse Markdown. It doesn't handle multi-line reference definitions, deep nesting (a link inside many layers of quotes or lists), escaped parentheses in a destination, or title text that looks like a link. Exclusion globs have no cap: a broad glob hides every failing link under it, so review each glob when you add it.
+- The scanner matches regular expressions and doesn't parse Markdown.
+- The scanner doesn't treat an invalid backtick fence opener as the parser does, because it accepts a backtick fence whose info string holds a backtick.
+- The scanner doesn't see links inside escaped backticks, because its code-span pattern ignores a backslash.
+- The scanner doesn't handle a reference definition inside a single blockquote, because it reads a definition only at the start of a line.
+- The scanner doesn't handle multi-line reference definitions.
+- The scanner doesn't handle deep nesting, such as a link inside many layers of quotes or lists.
+- The scanner doesn't handle escaped parentheses in a destination.
+- The scanner doesn't handle title text that looks like a link.
+- Headings inside HTML comments or `<pre>` blocks create anchors that don't render, so a link to one passes.
+- A destination of `/README.md` passes, because the check reads a leading slash as the repository root.
+- Tracked symlinks that point outside the repository, dangling tracked symlinks and deleted non-Markdown targets pass, because the check compares each destination with the names Git lists.
+- The repository's root rumdl exclusion silences all Markdown lint under `repo/tests/testdata/markdown_links`.
+- The Windows unit tests don't enforce links in the real repository, because `markdown_links_test` in `repo/tests/BUILD.bazel` (lines 268 to 283) is incompatible with Windows.
+- Exclusion globs have no cap, so a broad glob hides every failing link under it; review each glob when you add it.

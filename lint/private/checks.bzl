@@ -93,6 +93,8 @@ def rumdl_test(name, srcs, config = None, exclude = [], tool = Label("@tbhb_rule
         config: A rumdl config such as `.rumdl.toml`.
         exclude: Paths or globs to skip, added to the config's `exclude`
             on the command line, for files that break a rule on purpose.
+            rumdl takes one `--exclude` with the entries comma-separated and
+            rejects a repeated option, so the macro joins them.
         tool: The rumdl binary.
         **kwargs: Passed to `tree_check_test`.
     """
@@ -101,7 +103,7 @@ def rumdl_test(name, srcs, config = None, exclude = [], tool = Label("@tbhb_rule
         srcs = srcs,
         config = config,
         tool = tool,
-        tool_args = ["check"] + _config_args(config, "--config") + [arg for path in exclude for arg in ["--exclude", path]] + ["."],
+        tool_args = ["check"] + _config_args(config, "--config") + (["--exclude", ",".join(exclude)] if exclude else []) + ["."],
         git_root = True,
         **kwargs
     )
