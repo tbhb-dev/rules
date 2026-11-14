@@ -11,12 +11,12 @@ generated:
     effort: medium
     surface: sdk-cli
     session: sha-256-64:e99c9bcdb2c83649
-    at: "2026-11-14T01:03:51Z"
+    at: "2026-11-14T01:06:27Z"
 ---
 
 # Markdown links
 
-`//repo/tests:markdown_links_test` runs in `//:baseline_tests`, which `//:all` includes. It asks Git for the tracked files and reads every tracked `.md` file. A relative link has to point at a tracked file or directory. The check drops a `?query` from the destination before the lookup. It splits the destination at the first `#` and the first `?` before it decodes percent escapes, so `%23` and `%3F` in a name remain part of the name. A `#fragment` on a link to another file fails, so link to the file only. External links pass unchecked: a destination that starts with `scheme://` or `//`, or with `mailto:` or `tel:`. Any other colon belongs to a relative path, so the check looks up `C:foo` and `notes:2026.md` as files. The check ignores code spans, fenced code blocks, indented code blocks, and frontmatter. An indented block starts after a blank line outside a list item, and ends at the next line with fewer than four spaces of indent. Network access stays off.
+`//repo/tests:markdown_links_test` runs in `//:baseline_tests`, which `//:all` includes. It asks Git for the tracked files and reads every tracked `.md` file. A relative link has to point at a tracked file or directory. The check drops a `?query` from the destination before the lookup. It splits the destination at the first `#` and the first `?` before it decodes percent escapes, so `%23` and `%3F` in a name remain part of the name. A `#fragment` on a link to another file fails, so link to the file only. External links pass unchecked: a destination that starts with `scheme://` or `//`, or with `mailto:` or `tel:`. Any other colon belongs to a relative path: the check looks up `C:foo` and `notes:2026.md` as files. The check ignores code spans, fenced code blocks, indented code blocks, and frontmatter. An indented block starts after a blank line outside a list item, and ends at the next line with fewer than four spaces of indent. Network access stays off.
 
 ## Anchors
 

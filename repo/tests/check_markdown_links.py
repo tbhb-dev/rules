@@ -40,7 +40,15 @@ HEADING = re.compile(
 )
 MARKUP = re.compile(r"!?\[([^\]]*)\]\([^)]*\)|[`*~]")
 NOT_SLUG = re.compile(r"[^\w\- ]")
-CODE_INDENT = 4
+INDENTED = re.compile(r"^(?: {0,3}\t| {4})")
+AFTER_BLANK = {
+    "blank": "blank",
+    "code": "gap",
+    "gap": "gap",
+    "list": "list_blank",
+    "list_blank": "list_blank",
+    "text": "blank",
+}
 
 
 class CheckError(Exception):
@@ -59,35 +67,31 @@ def strip_blocks(text: str) -> str:
         end = lines.index("---", 1)
         lines[: end + 1] = [""] * (end + 1)
     fence: str | None = None
-    blank_before = True
-    in_list = False
-    in_indented = False
+    # The kind of the last line: text, list (an item or its continuation),
+    # code (an indented block), or blank after one of them.
+    state = "blank"
     for index, line in enumerate(lines):
         if fence is not None:
             bare = line.strip()
             closes = set(bare) == set(fence) and len(bare) >= len(fence)
             fence = None if closes else fence
             lines[index] = ""
-            continue
-        if not line.strip():
-            blank_before = True
-            continue
-        expanded = line.expandtabs(4)
-        indent = len(expanded) - len(expanded.lstrip(" "))
-        # An indented block cannot interrupt a paragraph or sit in a list item.
-        if indent >= CODE_INDENT and (in_indented or (blank_before and not in_list)):
-            in_indented = True
+        elif not line.strip():
+            state = AFTER_BLANK[state]
+        elif INDENTED.match(line) and state in {"code", "gap", "blank"}:
+            # An indented block cannot interrupt a paragraph or sit in a list.
+            state = "code"
             lines[index] = ""
-            continue
-        in_indented = False
-        blank_before = False
-        if match := FENCE.match(line):
+        elif match := FENCE.match(line):
             fence = match[1]
+            state = "blank"
             lines[index] = ""
-        elif LIST_ITEM.match(line):
-            in_list = True
-        elif indent == 0:
-            in_list = False
+        elif LIST_ITEM.match(line) or (
+            state in {"list", "list_blank"} and line[0].isspace()
+        ):
+            state = "list"
+        else:
+            state = "text"
     return "\n".join(lines)
 
 

@@ -202,6 +202,17 @@ def test_strip_blocks_indented_code_spans_blank_lines() -> None:
     )
 
 
+def test_strip_blocks_indented_code_after_a_fence_and_with_tabs() -> None:
+    assert checker.strip_blocks("```\nx\n```\n    [a](b)\n[c](d)") == "\n\n\n\n[c](d)"
+    assert checker.strip_blocks("t\n\n \t[a](b)") == "t\n\n"
+    assert checker.strip_blocks("t\n\n   \t[a](b)") == "t\n\n"
+    assert checker.strip_blocks("t\n\n    \t[a](b)") == "t\n\n"
+    assert checker.strip_blocks("t\n\n  \n    [a](b)") == "t\n\n  \n"
+    assert checker.strip_blocks("t\n\n    x\n\t\n \t[a](b)\n   [c](d)") == (
+        "t\n\n\n\t\n\n   [c](d)"
+    )
+
+
 def test_strip_blocks_indented_text_continues_a_paragraph() -> None:
     assert checker.strip_blocks("para\n    [a](b)") == "para\n    [a](b)"
     assert checker.strip_blocks("# H\n    [a](b)") == "# H\n    [a](b)"
@@ -211,6 +222,10 @@ def test_strip_blocks_indent_in_list_is_not_code() -> None:
     for marker in ["-", "*", "+", "1.", "12)"]:
         text = f"{marker} item\n\n    [a](b)"
         assert checker.strip_blocks(text) == text
+    wrapped = "- item\n  more\n\n    [a](b)"
+    assert checker.strip_blocks(wrapped) == wrapped
+    spaced = "- item\n\n x\n\n    [a](b)"
+    assert checker.strip_blocks(spaced) == spaced
     nested = "- item\n  - sub\n\n      [a](b)"
     assert checker.strip_blocks(nested) == nested
     assert checker.strip_blocks("-\n\n    [a](b)") == "-\n\n    [a](b)"
