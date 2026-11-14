@@ -568,6 +568,60 @@ func TestUnstableTimeoutCap(t *testing.T) {
 	}
 }
 
+// A diff report must hold an outcome for every selected mutant: the gate
+// rejects any other, so the runner must not let Bazel cache one.
+func TestUnstableDiffSelection(t *testing.T) {
+	unmapped := "mutant.unmapped=p/p.go:7:15 X (selected, not reported)"
+	for _, tc := range []struct {
+		name string
+		r    result
+		want string
+	}{
+		{"selected is total", result{scope: "diff", selected: 2, total: 2}, ""},
+		{"selected above total", result{scope: "diff", selected: 2, total: 1}, "selected 2, total 1"},
+		{"selected below total", result{scope: "diff", selected: 1, total: 2}, "selected 1, total 2"},
+		{"nothing selected", result{scope: "diff"}, ""},
+		{"full scope selects nothing", result{scope: "full", total: 3}, ""},
+		{
+			"unmapped pair", result{scope: "diff", selected: 1, total: 1, mutants: []string{
+				unmapped, "mutant.unmapped=p/p.go:9:3 Y (reported, not selected)", "mutant.lived=p/p.go:1:1 Z (id)",
+			}},
+			"2 unmapped",
+		},
+		{
+			"one unmapped", result{scope: "diff", selected: 1, total: 1, mutants: []string{unmapped}},
+			"1 unmapped",
+		},
+		{
+			"unmapped and selection", result{scope: "diff", selected: 1, total: 0, mutants: []string{unmapped}},
+			"selected 1, total 0,1 unmapped",
+		},
+		{
+			"other mutants only", result{scope: "diff", selected: 1, total: 1, lived: 1, mutants: []string{"mutant.lived=p/p.go:1:1 Z (id)"}},
+			"",
+		},
+	} {
+		if got := strings.Join(tc.r.unstable(10), ","); got != tc.want {
+			t.Errorf("%s: unstable = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+// A selected mutant missing from a successful but empty report once left
+// selected=1, total=0 and exit 0, which Bazel cached.
+func TestRunDiffEmptyReportIsNotCached(t *testing.T) {
+	js := `{"files":[]}`
+	code, report := runFake(t, `{"version":1,"files":{"p/p.go":[[7,7]]}}`, "0", &js)
+	if code != 1 {
+		t.Errorf("exit %d, want 1; report:\n%s", code, report)
+	}
+	for _, want := range []string{"total=0\n", "selected=1\n", "mutant.unmapped=p/p.go:7:15 CONDITIONALS_BOUNDARY (selected, not reported)\n"} {
+		if !strings.Contains(report, want) {
+			t.Errorf("report lacks %q:\n%s", want, report)
+		}
+	}
+}
+
 func TestRunMainNeedsTheTimeoutCap(t *testing.T) {
 	for _, value := range []string{"", "ten", "-1", "101", "1.5"} {
 		t.Run(value, func(t *testing.T) {

@@ -17,7 +17,8 @@
 # selection and the tool disagree on (selected but not run, or run but not
 # selected). A count above 1000000000 is malformed, and so is a report that
 # lists more mutants under a verdict than its count for it (a mutant.timeout
-# line with timeout=0). skipped counts mutants accounted for but not gating: excluded
+# line with timeout=0), and one with a mutant.<status> line whose status is
+# none of the above. skipped counts mutants accounted for but not gating: excluded
 # by a pragma, equivalent, or not viable (they don't compile); each stays
 # listed with its tool status.
 #
@@ -29,7 +30,9 @@
 # MAX_TIMEOUT_PERCENT of total, in the sum and in any one report; an
 # interrupted run; a report whose outcomes don't add up exactly to its total
 # (mutants left unchecked, or counted twice); a mutant listed under a verdict
-# whose count is lower; no mutants in the full-scope reports; any
+# whose count is lower; a mutant.not_checked line (mutmut never ran it, so
+# the counts can't vouch for it); a mutant.<status> line with an unknown
+# status; no mutants in the full-scope reports; any
 # mutant.unmapped; in diff scope, selected other than total; and with
 # require_scope=full, any diff-scope report. A diff report with no mutants
 # passes: its change set touched no code with mutants.
@@ -57,6 +60,12 @@ verdicts=(
   "errored:suspicious|segfault|infra_error"
   "skipped:skipped|caught_by_type_check|not_viable|equivalent"
 )
+# Every status a mutant.<status> line may carry: those above, and the
+# runners' own unmapped. mutant.not_checked is known, and fails, below.
+known_statuses=unmapped
+for entry in "${verdicts[@]}"; do
+  known_statuses+="|${entry#*:}"
+done
 
 # The counts are summed and read back through eval, which shellcheck can't see.
 # shellcheck disable=SC2034
@@ -136,6 +145,17 @@ for report in "${reports[@]}"; do
       problems+=("$name: lists $listed $key mutant(s), but $key is ${!counted}")
     fi
   done
+  # A mutant mutmut never checked has no outcome, so balanced counts prove
+  # nothing about it; a status no verdict names can't be reconciled at all.
+  not_checked=$(grep -cE '^mutant\.not_checked=' "$report" || true)
+  if ((not_checked > 0)); then
+    problems+=("$name: lists $not_checked mutant.not_checked line(s): mutants no run checked")
+  fi
+  unknown=$(grep -E '^mutant\.' "$report" | grep -vE "^mutant\.(${known_statuses}|not_checked)=" |
+    cut -d= -f1 | sort -u | paste -sd, - || true)
+  if [[ -n $unknown ]]; then
+    problems+=("$name: lists mutants under an unknown status: $unknown")
+  fi
   # Each report on its own, so a large clean one can't hide a starved one.
   # With one report this is the sum below.
   if ((${#reports[@]} > 1 && r_timeout * 100 > report_total * MAX_TIMEOUT_PERCENT)); then

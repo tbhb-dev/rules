@@ -61,12 +61,14 @@ PROOF_REASONS = {
     "proof_interrupted": "FAIL: run was interrupted",
     "proof_missing_key": "lacks errored",
     "proof_not_a_number": "killed is 'x', not a non-negative integer",
+    "proof_not_checked": "testdata/not_checked.txt: lists 1 mutant.not_checked line\\(s\\)",
     "proof_survivor": "FAIL: 1 lived, 2 not checked",
     "proof_three_unchecked": "FAIL: 3 not checked$",
     "proof_timeout_above_cap": "FAIL: 11 timeout\\(s\\) of 100, above 10%",
     "proof_timeout_with_survivor": "FAIL: 1 lived$",
     "proof_timeout_zero_total": "FAIL: .*1 timeout\\(s\\) of 0",
     "proof_unchecked": "FAIL: 3280 not checked",
+    "proof_unknown_status": "testdata/unknown_status.txt: lists mutants under an unknown status: mutant.exploded",
 }
 
 [

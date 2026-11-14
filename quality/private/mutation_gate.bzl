@@ -69,8 +69,9 @@ Fails when any mutant lived, was not covered or errored, when a
 run was interrupted, when the full-scope reports mutated nothing, and when
 a report's counts don't add up exactly to its total (mutants a failed run
 never checked, or mutants counted twice). A count above 1000000000, or a
-listed mutant its verdict count denies, makes a report malformed. The
-counts are summed over all reports.
+listed mutant its verdict count denies, makes a report malformed, as does a
+`mutant.not_checked` line (no run checked that mutant) or a `mutant.<status>`
+line with a status no verdict names. The counts are summed over all reports.
 
 A diff-scoped report (`scope=diff`) counts only the mutants of changed
 code, and passes with none. Any `mutant.unmapped` line (the runner's
