@@ -297,6 +297,12 @@ gitleaks_text_scenario_test(
     name = "text_awk_fails_test",
     scenario = "secret_awk_fails",
     subject = "//lint:gitleaks_text",
+    # On Windows the real awk ran, not the extensionless stub, so the test
+    # can't plant its failure there.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )
 
 # Exercise the real tree macro and the history/text executables. The tree
