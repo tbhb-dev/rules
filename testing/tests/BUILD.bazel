@@ -240,7 +240,7 @@ expect_failure_test(
 script_test(
     name = "proof_nul",
     env = {"SUBJECT_STATUS": "1"},
-    script = "nul.sh",
+    script = "embedded_nul.sh",
     tags = PROOF_TAGS,
 )
 
