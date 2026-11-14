@@ -52,11 +52,12 @@ fi
 match=0
 if ((first_line_only)); then
   # No output has no first line, so it must not match, not even '^$'. The
-  # check needs the log's size because $(...) turns empty output into an empty
-  # first line.
+  # check needs the log's size because an empty log would otherwise read as an
+  # empty first line. The line goes straight into grep, not through a shell
+  # variable, which would drop NUL bytes ("ri\0ght" would match '^right$');
+  # -a reads a line with a NUL as text instead of as a binary file.
   if [[ -s $log ]]; then
-    first=$(head -n 1 "$log")
-    printf '%s\n' "$first" | grep -Eq -- "$pattern" || match=$?
+    head -n 1 "$log" | grep -Eaq -- "$pattern" || match=$?
   else
     match=1
   fi
