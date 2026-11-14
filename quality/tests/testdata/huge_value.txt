@@ -1,0 +1,8 @@
+total=100
+killed=0
+lived=0
+not_covered=0
+timeout=4611686018427387904
+errored=0
+skipped=0
+interrupted=0
