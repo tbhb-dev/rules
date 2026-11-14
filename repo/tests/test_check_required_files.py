@@ -225,3 +225,14 @@ def test_symlink_inside_repo_is_present(manifest: Path, repo: Path) -> None:
     (repo / "go.mod").unlink()
     symlink_or_skip(repo / "go.mod", repo / "real.mod")
     assert run(manifest, repo) == []
+
+
+def test_symlink_helper_skips_when_unsupported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refuse(*_args: object, **_kwargs: object) -> None:
+        raise OSError
+
+    monkeypatch.setattr(Path, "symlink_to", refuse)
+    with pytest.raises(pytest.skip.Exception):
+        symlink_or_skip(tmp_path / "link", tmp_path)
