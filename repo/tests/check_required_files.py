@@ -35,6 +35,17 @@ def missing_paths(repo: Path, required: list[str]) -> list[str]:
     return [path for path in dict.fromkeys(required) if not is_present(repo, path)]
 
 
+def c4_exception_paths(entries: list[dict[str, str]]) -> set[str] | None:
+    exceptions = set()
+    for entry in entries:
+        if entry.get("check") != CHECK:
+            continue
+        if "path" not in entry or "reason" not in entry:
+            return None
+        exceptions.add(entry["path"])
+    return exceptions
+
+
 def check(manifest: Path, schema: Path, repo: Path) -> list[str]:
     declaration_path = repo / ".tbhb-repo.toml"
     if not declaration_path.is_file():
@@ -62,13 +73,9 @@ def check(manifest: Path, schema: Path, repo: Path) -> list[str]:
         rules["kind"][kind]["required"] + rules["visibility"][visibility]["required"]
     )
     missing = missing_paths(repo, required)
-    exceptions = set()
-    for entry in declaration.get("exception", []):
-        if entry.get("check") != CHECK:
-            continue
-        if "path" not in entry or "reason" not in entry:
-            return [f"{declaration_path}: C4 exception needs a path and a reason"]
-        exceptions.add(entry["path"])
+    exceptions = c4_exception_paths(declaration.get("exception", []))
+    if exceptions is None:
+        return [f"{declaration_path}: C4 exception needs a path and a reason"]
     errors = [
         f"{repo}: required {'directory' if path.endswith('/') else 'file'} "
         f"{path} is missing"
