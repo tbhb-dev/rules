@@ -442,7 +442,15 @@ test_suite(
         "//repo/tests:proof_mise_keys_absent_fails",
         "//repo/tests:proof_mise_keys_extra_fails",
         "//repo/tests:pytest_test",
-    ],
+        "//repo/tests:required_files_docs_test",
+        "//repo/tests:required_files_go_test",
+    ] + ["//repo/tests:proof_required_files_{}_fails".format(case) for case in [
+        "bad_exception",
+        "missing_dir",
+        "missing_file",
+        "private_license",
+        "unknown_kind",
+    ]],
 )
 
 test_suite(

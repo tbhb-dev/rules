@@ -15,13 +15,19 @@ def _expect_failure_impl(ctx):
 
     wrapped = ctx.attr.test[DefaultInfo].files_to_run.executable
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
+    substitutions = {
+        "@@FIRST_LINE@@": "1" if ctx.attr.first_line else "0",
+        "@@STATUS@@": str(ctx.attr.exit_status),
+        "@@TEST@@": wrapped.short_path,
+    }
+
+    # Last: the substitutions apply in order, so a pattern that contains
+    # another marker, such as "@@STATUS@@", must not be scanned again by it.
+    substitutions["@@PATTERN@@"] = shell.quote(ctx.attr.pattern)
     ctx.actions.expand_template(
         template = ctx.file._runner,
         output = script,
-        substitutions = {
-            "@@PATTERN@@": shell.quote(ctx.attr.pattern),
-            "@@TEST@@": wrapped.short_path,
-        },
+        substitutions = substitutions,
         is_executable = True,
     )
 
@@ -58,6 +64,14 @@ are not forwarded: set them on this target instead. Tag the wrapped test
 `manual`, so `bazel test //...` does not run it on its own and report the
 expected failure as a failure.""",
     attrs = SHELL_ATTRS | {
+        "exit_status": attr.int(
+            default = 0,
+            doc = "Exit status the wrapped test must have. 0 accepts any non-zero status.",
+        ),
+        "first_line": attr.bool(
+            default = False,
+            doc = "Match `pattern` against the first line of output only. Output after the first line is not checked.",
+        ),
         "pattern": attr.string(
             mandatory = True,
             doc = "Extended regular expression the wrapped test's output must match.",
