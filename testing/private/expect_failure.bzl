@@ -66,7 +66,7 @@ expected failure as a failure.""",
         ),
         "first_line": attr.bool(
             default = False,
-            doc = "Match `pattern` against the first line of output only, so a later crash cannot satisfy it.",
+            doc = "Match `pattern` against the first line of output only. Output after the first line is not checked.",
         ),
         "pattern": attr.string(
             mandatory = True,

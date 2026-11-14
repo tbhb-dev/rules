@@ -185,3 +185,43 @@ def test_main_exit_codes(
         f"{repo}: required file go.mod is missing\n"
         f"{repo}: required file LICENSE is missing\n"
     )
+
+
+def symlink_or_skip(link: Path, target: Path) -> None:
+    try:
+        link.symlink_to(target, target_is_directory=target.is_dir())
+    except OSError, NotImplementedError:
+        pytest.skip("this host cannot create symlinks")
+
+
+def test_symlink_to_outside_file_is_missing(
+    manifest: Path, repo: Path, tmp_path: Path
+) -> None:
+    declare(repo, "")
+    populate(repo)
+    outside = tmp_path / "outside.mod"
+    outside.write_text("")
+    (repo / "go.mod").unlink()
+    symlink_or_skip(repo / "go.mod", outside)
+    assert run(manifest, repo) == [f"{repo}: required file go.mod is missing"]
+
+
+def test_symlink_to_outside_directory_is_missing(
+    manifest: Path, repo: Path, tmp_path: Path
+) -> None:
+    declare(repo, "")
+    populate(repo)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (repo / "cmd").rmdir()
+    symlink_or_skip(repo / "cmd", outside)
+    assert run(manifest, repo) == [f"{repo}: required directory cmd/ is missing"]
+
+
+def test_symlink_inside_repo_is_present(manifest: Path, repo: Path) -> None:
+    declare(repo, "")
+    populate(repo)
+    (repo / "real.mod").write_text("")
+    (repo / "go.mod").unlink()
+    symlink_or_skip(repo / "go.mod", repo / "real.mod")
+    assert run(manifest, repo) == []

@@ -24,7 +24,11 @@ CHECK = "C4"
 
 
 def is_present(repo: Path, path: str) -> bool:
-    return (repo / path).is_dir() if path.endswith("/") else (repo / path).is_file()
+    candidate = repo / path
+    # A symlink that leaves the repository does not count as present.
+    if not candidate.resolve().is_relative_to(repo.resolve()):
+        return False
+    return candidate.is_dir() if path.endswith("/") else candidate.is_file()
 
 
 def missing_paths(repo: Path, required: list[str]) -> list[str]:
