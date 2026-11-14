@@ -305,6 +305,18 @@ gitleaks_text_scenario_test(
     }),
 )
 
+gitleaks_text_scenario_test(
+    name = "text_rm_fails_test",
+    scenario = "secret_rm_fails",
+    subject = "//lint:gitleaks_text",
+    # On Windows the real rm ran, not the extensionless stub, so the test
+    # can't plant its failure there.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
 # Exercise the real tree macro and the history/text executables. The tree
 # fixture is assembled by an action so no complete token is checked in.
 genrule(

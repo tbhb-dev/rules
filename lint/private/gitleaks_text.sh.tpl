@@ -22,7 +22,8 @@ if [[ -f .gitleaks.toml ]]; then
 fi
 
 report=$(mktemp "${TMPDIR:-/tmp}/gitleaks_text.XXXXXX")
-trap 'rm -f "$report"' EXIT
+# A failing cleanup must not replace the scanner's status, which exit carries.
+trap 'rm -f "$report" || true' EXIT
 args+=(--report-format json --report-path "$report")
 
 status=0

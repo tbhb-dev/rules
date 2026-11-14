@@ -10,7 +10,7 @@ set -euo pipefail
 ws="$TEST_TMPDIR/ws"
 mkdir -p "$ws"
 case {scenario} in
-  clean | secret | secret_ids | secret_awk_fails) printf '[extend]\\nuseDefault = true\\n' >"$ws/.gitleaks.toml" ;;
+  clean | secret | secret_ids | secret_awk_fails | secret_rm_fails) printf '[extend]\\nuseDefault = true\\n' >"$ws/.gitleaks.toml" ;;
   clean_no_config) ;;
 esac
 case {scenario} in
@@ -32,6 +32,30 @@ if [[ {scenario} == secret_awk_fails ]]; then
     exit 1
   fi
   # The stub copied the script's own report, the last awk argument: it must
+  # hold a finding with the secret redacted.
+  if ! grep -q RuleID "$ws/report.json"; then
+    echo "FAIL: no finding in the report" >&2
+    exit 1
+  fi
+  if grep -Fq "$(printf '%s%s' AKIA Z7Q3XK2M5TNB4VWR)" "$ws/report.json"; then
+    echo "FAIL: the report holds the secret in the clear" >&2
+    exit 1
+  fi
+  exit 0
+fi
+if [[ {scenario} == secret_rm_fails ]]; then
+  # A failing cleanup (status 5) must not replace the scanner's exit status 1.
+  mkdir -p "$ws/stubs"
+  printf '#!/bin/sh\\nfor last; do :; done\\ncp "$last" "%s/report.json"\\nexit 5\\n' "$ws" >"$ws/stubs/rm"
+  chmod +x "$ws/stubs/rm"
+  status=0
+  printf "A title\\n\\naws_access_key_id = AKIA""Z7Q3XK2M5TNB4VWR\\n" | PATH="$ws/stubs:$PATH" BUILD_WORKSPACE_DIRECTORY="$ws" "$PWD/{subject}" >"$ws/out.txt" 2>"$ws/err.txt" || status=$?
+  cat "$ws/out.txt" "$ws/err.txt"
+  if ((status != 1)); then
+    echo "FAIL: exit status $status, expected the scanner's 1" >&2
+    exit 1
+  fi
+  # The stub copied the script's own report, the last rm argument: it must
   # hold a finding with the secret redacted.
   if ! grep -q RuleID "$ws/report.json"; then
     echo "FAIL: no finding in the report" >&2
@@ -84,7 +108,7 @@ gitleaks_text_scenario_test = rule(
     test = True,
     toolchains = SHELL_TOOLCHAINS,
     attrs = SHELL_ATTRS | {
-        "scenario": attr.string(mandatory = True, values = ["clean", "clean_no_config", "secret", "secret_ids", "secret_awk_fails"]),
+        "scenario": attr.string(mandatory = True, values = ["clean", "clean_no_config", "secret", "secret_ids", "secret_awk_fails", "secret_rm_fails"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )
