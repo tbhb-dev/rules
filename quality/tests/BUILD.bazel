@@ -6,7 +6,7 @@ load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("//quality:defs.bzl", "mutation_gate_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
-load(":gate_output_test.bzl", "gate_output_test", "gate_summary_error_test")
+load(":gate_output_test.bzl", "gate_command_error_test", "gate_output_test", "gate_summary_error_test")
 load(":mutation_changes_test.bzl", "mutation_changes_test")
 load(":slice_test.bzl", "changes_slice")
 
@@ -411,3 +411,43 @@ changes_slice(
         ("slice_without_changes_is_none_test", ":unit_without_changes", "testdata/slice/none.txt"),
     ]
 ]
+
+# Each grep shape, and every stage of the unknown-status pipeline, must
+# distinguish no matches from an operational error.
+COMMAND_ERRORS = {
+    "listed": ("grep", "^mutant\\.(survived|lived)=", "count lived"),
+    "mutants": ("grep", "^mutant\\.[a-z_]+=", "read mutants"),
+    "not_checked": ("grep", "^mutant\\.not_checked=", "count not_checked"),
+    "scope": ("grep", "^scope=", "read scope"),
+    "timeout_listing": ("grep", "^mutant\\.(timeout|timed_out)=", "list timeouts"),
+    "unknown_cut": ("cut", "", "collect unknown statuses"),
+    "unknown_filter": ("grep", "^mutant\\.(unmapped|survived|lived|no_tests|not_covered|timeout|timed_out|suspicious|segfault|infra_error|skipped|caught_by_type_check|not_viable|equivalent|not_checked)=", "filter known statuses"),
+    "unknown_paste": ("paste", "", "collect unknown statuses"),
+    "unknown_read": ("grep", "^mutant\\.", "read status lines"),
+    "unknown_sort": ("sort", "", "collect unknown statuses"),
+    "unmapped": ("grep", "^mutant\\.unmapped=", "count unmapped"),
+    "value": ("grep", "^total=", "read total"),
+}
+
+[
+    gate_command_error_test(
+        name = "command_error_{}_test".format(name),
+        gate = ":timeout_below_cap_gate",
+        option = "-E" if name == "timeout_listing" else "",
+        pattern = pattern,
+        report = "quality/tests/testdata/timeout_below_cap.txt",
+        step = step,
+        tool = tool,
+    )
+    for name, (tool, pattern, step) in COMMAND_ERRORS.items()
+]
+
+# Errors above grep's usual status 2 must fail closed too.
+gate_command_error_test(
+    name = "command_error_status_three_test",
+    error_status = 3,
+    gate = ":timeout_below_cap_gate",
+    pattern = "^scope=",
+    report = "quality/tests/testdata/timeout_below_cap.txt",
+    step = "read scope",
+)
