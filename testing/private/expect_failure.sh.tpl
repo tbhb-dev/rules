@@ -51,8 +51,15 @@ fi
 
 match=0
 if ((first_line_only)); then
-  first=$(head -n 1 "$log")
-  printf '%s\n' "$first" | grep -Eq -- "$pattern" || match=$?
+  # No output has no first line, so it must not match, not even '^$'. The
+  # check needs the log's size because $(...) turns empty output into an empty
+  # first line.
+  if [[ -s $log ]]; then
+    first=$(head -n 1 "$log")
+    printf '%s\n' "$first" | grep -Eq -- "$pattern" || match=$?
+  else
+    match=1
+  fi
 else
   grep -Eq -- "$pattern" "$log" || match=$?
 fi

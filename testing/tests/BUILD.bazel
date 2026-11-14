@@ -54,6 +54,32 @@ expect_failure_test(
     test = ":proof_right_reason",
 )
 
+script_test(
+    name = "proof_silent",
+    env = {"SUBJECT_STATUS": "1"},
+    script = "silent.sh",
+    tags = PROOF_TAGS,
+)
+
+# A real blank first line, with output after it, matches '^$'.
+script_test(
+    name = "proof_blank_first_line",
+    env = {
+        "SUBJECT_MESSAGE": "",
+        "SUBJECT_STATUS": "1",
+    },
+    script = "subject.sh",
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_blank_first_line_fails",
+    exit_status = 1,
+    first_line = True,
+    pattern = "^$",
+    test = ":proof_blank_first_line",
+)
+
 # Proofs of the proof: each inner expect_failure_test must fail, and the
 # outer one checks it fails for the stated reason.
 
@@ -132,6 +158,36 @@ expect_failure_test(
     name = "proof_wrapped_later_line_fails",
     pattern = "FAIL: the wrapped test failed \\(exit status 3\\), but its output does not match",
     test = ":proof_wrapped_later_line",
+)
+
+# A wrapped test that fails with no output has no blank line to match.
+expect_failure_test(
+    name = "proof_empty_first_line",
+    exit_status = 1,
+    first_line = True,
+    pattern = "^$",
+    tags = PROOF_TAGS,
+    test = ":proof_silent",
+)
+
+expect_failure_test(
+    name = "proof_empty_first_line_fails",
+    pattern = "FAIL: the wrapped test failed \\(exit status 1\\), but its output does not match",
+    test = ":proof_empty_first_line",
+)
+
+expect_failure_test(
+    name = "proof_empty_grep",
+    exit_status = 1,
+    pattern = "^$",
+    tags = PROOF_TAGS,
+    test = ":proof_silent",
+)
+
+expect_failure_test(
+    name = "proof_empty_grep_fails",
+    pattern = "FAIL: the wrapped test failed \\(exit status 1\\), but its output does not match",
+    test = ":proof_empty_grep",
 )
 
 expect_failure_test_suite(name = "expect_failure_tests")
