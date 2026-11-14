@@ -233,10 +233,7 @@ def tracked_files(root: Path, git: str | None) -> set[str]:
     except (OSError, subprocess.CalledProcessError) as error:
         message = f"git ls-files failed: {error}"
         raise CheckError(message) from error
-    # Only the git tests reach this line, and they skip on Windows (no git).
-    return {  # pragma: no cover
-        name for name in run.stdout.decode().split("\0") if name
-    }
+    return {name for name in run.stdout.decode().split("\0") if name}
 
 
 def file_errors(

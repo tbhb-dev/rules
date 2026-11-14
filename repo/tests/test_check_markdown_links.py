@@ -352,6 +352,22 @@ def test_tracked_files_walk(tmp_path: Path) -> None:
     assert checker.tracked_files(tmp_path, None) == {"a.md", "d/b.md"}
 
 
+def test_tracked_files_git_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **_: object) -> subprocess.CompletedProcess[bytes]:
+        calls.append(command)
+        return subprocess.CompletedProcess(
+            command, 0, stdout=b"a.md\0d/b.md\0", stderr=b""
+        )
+
+    monkeypatch.setattr(checker.subprocess, "run", fake_run)
+    assert checker.tracked_files(tmp_path, "git") == {"a.md", "d/b.md"}
+    assert calls == [["git", "ls-files", "-z"]]
+
+
 @posix_only
 def test_tracked_files_git(tmp_path: Path) -> None:
     tree(tmp_path, {"a.md": "", "d/b.md": "", "ignored.md": ""})
