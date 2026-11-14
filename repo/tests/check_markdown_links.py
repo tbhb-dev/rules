@@ -17,7 +17,7 @@ import argparse
 import os
 import posixpath
 import re
-import subprocess
+import subprocess  # nosec B404
 import sys
 import tomllib
 from pathlib import Path, PurePosixPath
@@ -60,21 +60,35 @@ def blank(text: str) -> str:
     return re.sub(r"[^\n]", " ", text)
 
 
-def strip_blocks(text: str) -> str:
-    """Blank frontmatter, fenced and indented code blocks, keeping line numbers."""
-    lines = text.split("\n")
+def blank_frontmatter(lines: list[str]) -> None:
+    """Blank a leading frontmatter block in place."""
     if lines[0] == "---" and "---" in lines[1:]:
         end = lines.index("---", 1)
         lines[: end + 1] = [""] * (end + 1)
+
+
+def closes_fence(line: str, fence: str) -> bool:
+    bare = line.strip()
+    return set(bare) == set(fence) and len(bare) >= len(fence)
+
+
+def text_state(line: str, state: str) -> str:
+    """The state after a non-blank line that opens or closes no block."""
+    in_list = state in {"list", "list_blank"} and line[0].isspace()
+    return "list" if LIST_ITEM.match(line) or in_list else "text"
+
+
+def strip_blocks(text: str) -> str:
+    """Blank frontmatter, fenced and indented code blocks, keeping line numbers."""
+    lines = text.split("\n")
+    blank_frontmatter(lines)
     fence: str | None = None
     # The kind of the last line: text, list (an item or its continuation),
     # code (an indented block), or blank after one of them.
     state = "blank"
     for index, line in enumerate(lines):
         if fence is not None:
-            bare = line.strip()
-            closes = set(bare) == set(fence) and len(bare) >= len(fence)
-            fence = None if closes else fence
+            fence = None if closes_fence(line, fence) else fence
             lines[index] = ""
         elif not line.strip():
             state = AFTER_BLANK[state]
@@ -86,12 +100,8 @@ def strip_blocks(text: str) -> str:
             fence = match[1]
             state = "blank"
             lines[index] = ""
-        elif LIST_ITEM.match(line) or (
-            state in {"list", "list_blank"} and line[0].isspace()
-        ):
-            state = "list"
         else:
-            state = "text"
+            state = text_state(line, state)
     return "\n".join(lines)
 
 
@@ -211,8 +221,10 @@ def tracked_files(root: Path, git: str | None) -> set[str]:
             for directory, _, names in os.walk(root)
             for name in names
         }
+    # B404 and B603 on the import and call: the check runs the git it is
+    # given, with a fixed argument list and no shell.
     try:
-        run = subprocess.run(  # noqa: S603 -- Fixed argument list.
+        run = subprocess.run(  # noqa: S603  # nosec B603
             [git, "ls-files", "-z"],
             cwd=root,
             capture_output=True,
@@ -221,7 +233,32 @@ def tracked_files(root: Path, git: str | None) -> set[str]:
     except (OSError, subprocess.CalledProcessError) as error:
         message = f"git ls-files failed: {error}"
         raise CheckError(message) from error
-    return {name for name in run.stdout.decode().split("\0") if name}
+    # Only the git tests reach this line, and they skip on Windows (no git).
+    return {  # pragma: no cover
+        name for name in run.stdout.decode().split("\0") if name
+    }
+
+
+def file_errors(
+    root: Path,
+    source: str,
+    tracked: set[str],
+    exclusions: list[tuple[str, int]],
+    used: set[str],
+) -> list[str]:
+    """The problems in one Markdown file; adds each exclusion it uses to used."""
+    text = (root / source).read_text()
+    page = anchors(text)
+    errors = []
+    for line, dest in destinations(text):
+        problem = link_problem(source, dest, tracked, page)
+        if problem is None:
+            continue
+        hits = [g for g, _ in exclusions if PurePosixPath(source).full_match(g)]
+        used.update(hits)
+        if not hits:
+            errors.append(f"{source}:{line}: {problem}")
+    return errors
 
 
 def check(root: Path, git: str | None = None) -> list[str]:
@@ -234,16 +271,7 @@ def check(root: Path, git: str | None = None) -> list[str]:
     used: set[str] = set()
     errors: list[str] = []
     for source in sorted(name for name in files if name.endswith(".md")):
-        text = (root / source).read_text()
-        page = anchors(text)
-        for line, dest in destinations(text):
-            problem = link_problem(source, dest, tracked, page)
-            if problem is None:
-                continue
-            hits = [g for g, _ in exclusions if PurePosixPath(source).full_match(g)]
-            used.update(hits)
-            if not hits:
-                errors.append(f"{source}:{line}: {problem}")
+        errors += file_errors(root, source, tracked, exclusions, used)
     errors += [
         f"{CONFIG}:{line}: exclusion {glob} matches no failing link"
         for glob, line in exclusions

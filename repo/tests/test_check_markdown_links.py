@@ -13,6 +13,13 @@ from repo.tests import check_markdown_links as checker
 
 DATA = Path(__file__).parent / "testdata" / "markdown_links"
 
+# The Windows test sandbox has no git and no POSIX shell. The tests that need
+# them skip there; pyproject.toml excludes the functions behind this decorator
+# from coverage.
+posix_only = pytest.mark.skipif(
+    sys.platform == "win32", reason="needs git and a POSIX shell"
+)
+
 
 def tree(root: Path, files: dict[str, str]) -> Path:
     for name, text in files.items():
@@ -345,6 +352,7 @@ def test_tracked_files_walk(tmp_path: Path) -> None:
     assert checker.tracked_files(tmp_path, None) == {"a.md", "d/b.md"}
 
 
+@posix_only
 def test_tracked_files_git(tmp_path: Path) -> None:
     tree(tmp_path, {"a.md": "", "d/b.md": "", "ignored.md": ""})
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
@@ -474,7 +482,7 @@ def test_main_root_file_stands_for_its_directory(
     )
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="the fake git is a shell script")
+@posix_only
 def test_main_resolves_git_in_test_srcdir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
