@@ -1,0 +1,13 @@
+total=10
+killed=9
+skipped=0
+lived=1
+timeout=0
+not_covered=0
+errored=0
+interrupted=0
+scope=diff
+selected=10
+changed_units=1
+mutant.survived=pkg.x_f__mutmut_3
+mutant.unmapped=pkg.lost

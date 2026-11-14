@@ -1,0 +1,10 @@
+total=10
+killed=8
+skipped=0
+lived=1
+timeout=0
+not_covered=0
+errored=1
+interrupted=0
+mutant.survived=pkg.x_f__mutmut_3
+mutant.suspicious=pkg.x_f__mutmut_4

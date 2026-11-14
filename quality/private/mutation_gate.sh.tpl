@@ -4,8 +4,8 @@
 
 # Fails unless every mutant in the reports was killed, timed out within the
 # cap below, or was skipped. Generated from mutation_gate.sh.tpl by the
-# mutation_gate_test rule; @@MAX_TIMEOUT_PERCENT@@, @@REPORTS@@ and
-# @@REQUIRE_SCOPE@@ are filled in at analysis time.
+# mutation_gate_test rule; @@MAX_TIMEOUT_PERCENT@@, @@REPORTS@@,
+# @@REQUIRE_SCOPE@@ and @@ADVISORY@@ are filled in at analysis time.
 #
 # A report holds one key=value per line, in a format shared by every
 # mutation runner. Required keys, each a non-negative integer: total,
@@ -36,6 +36,10 @@
 # mutant.unmapped; in diff scope, selected other than total; and with
 # require_scope=full, any diff-scope report. A diff report with no mutants
 # passes: its change set touched no code with mutants.
+#
+# With advisory=true, lived and not_covered mutants (survivors) don't fail
+# the gate: it lists them, prints one advisory line with their count, and
+# exits 0 when they are the only problem. Every other failure above stays.
 
 set -euo pipefail
 
@@ -49,6 +53,7 @@ MAX_COUNT=1000000000
 
 reports=(@@REPORTS@@)
 require_scope=@@REQUIRE_SCOPE@@
+advisory=@@ADVISORY@@
 counts=(total killed lived not_covered timeout errored skipped interrupted)
 must_be_zero=(lived not_covered errored)
 # Each count with the status names the runners list its mutants under
@@ -204,6 +209,10 @@ if ((timeout > 0 && total > 0)); then
 fi
 
 for key in "${must_be_zero[@]}"; do
+  # Advisory waves through survivors only; errored mutants still fail.
+  if [[ $advisory == true && $key =~ ^(lived|not_covered)$ ]]; then
+    continue
+  fi
   if ((${!key} > 0)); then
     problems+=("${!key} ${key}")
   fi
@@ -236,5 +245,17 @@ if ((${#problems[@]} > 0)); then
     printf '%s\n' "$mutants" | sed -n 's/^mutant\.\([a-z_]*\)=\(.*\)$/  \1: \2/p' >&2
   fi
   exit 1
+fi
+if [[ $advisory == true ]]; then
+  survivors=$((lived + not_covered))
+  printf '%s\n' "$mutants" | grep -E '^mutant\.(survived|lived|no_tests|not_covered)=' || true
+  advisory_line="mutation_gate: advisory, $survivors survivors (not failing)"
+  echo "$advisory_line"
+  if [[ -n ${GITHUB_STEP_SUMMARY:-} ]]; then
+    echo "$advisory_line" >>"$GITHUB_STEP_SUMMARY"
+  fi
+  if ((survivors > 0)); then
+    exit 0
+  fi
 fi
 echo "mutation_gate: ok: every mutant was killed"

@@ -43,6 +43,119 @@ mutation_gate_test(
 
 PROOF_TAGS = ["manual"]
 
+# Advisory mode waves through survivors (lived, not_covered) and nothing
+# else. The first gate must pass and report them; the same report without
+# advisory fails; every other failure stays a failure in advisory mode.
+mutation_gate_test(
+    name = "advisory_survivors_gate",
+    advisory = True,
+    reports = ["testdata/advisory_survivors.txt"],
+    tags = PROOF_TAGS,
+)
+
+gate_output_test(
+    name = "advisory_survivors_test",
+    gate = ":advisory_survivors_gate",
+    lines = [
+        "mutant.survived=pkg.x_f__mutmut_3",
+        "mutant.no_tests=pkg.x_g__mutmut_1",
+        "mutation_gate: advisory, 2 survivors (not failing)",
+    ],
+    summary_lines = ["mutation_gate: advisory, 2 survivors (not failing)"],
+)
+
+mutation_gate_test(
+    name = "advisory_clean_gate",
+    advisory = True,
+    reports = ["testdata/all_killed.txt"],
+    tags = PROOF_TAGS,
+)
+
+gate_output_test(
+    name = "advisory_clean_test",
+    gate = ":advisory_clean_gate",
+    lines = [
+        "mutation_gate: advisory, 0 survivors (not failing)",
+        "mutation_gate: ok: every mutant was killed",
+    ],
+)
+
+mutation_gate_test(
+    name = "proof_advisory_survivors_off",
+    reports = ["testdata/advisory_survivors.txt"],
+    tags = PROOF_TAGS,
+)
+
+expect_failure_test(
+    name = "proof_advisory_survivors_off_fails",
+    pattern = "FAIL: 1 lived, 1 not_covered$",
+    test = ":proof_advisory_survivors_off",
+)
+
+# Each must fail for the stated reason; ADVISORY_PROOFS run with advisory.
+ADVISORY_PROOFS = {
+    "proof_advisory_empty": [
+        "testdata/empty.txt",
+        "FAIL: no mutants were generated",
+        "any",
+    ],
+    "proof_advisory_errored": [
+        "testdata/advisory_errored.txt",
+        "FAIL: 1 errored$",
+        "any",
+    ],
+    "proof_advisory_interrupted": [
+        "testdata/interrupted.txt",
+        "FAIL: run was interrupted",
+        "any",
+    ],
+    "proof_advisory_malformed": [
+        "testdata/advisory_malformed.txt",
+        "killed is 'x', not a non-negative integer",
+        "any",
+    ],
+    "proof_advisory_require_full": [
+        "testdata/diff_ok.txt",
+        "1 diff-scoped report\\(s\\), but a full run is required",
+        "full",
+    ],
+    "proof_advisory_timeout_above_cap": [
+        "testdata/advisory_timeout_above_cap.txt",
+        "FAIL: 11 timeout\\(s\\) of 100, above 10%",
+        "any",
+    ],
+    "proof_advisory_unchecked": [
+        "testdata/survivor.txt",
+        "FAIL: 2 not checked$",
+        "any",
+    ],
+    "proof_advisory_unmapped": [
+        "testdata/advisory_unmapped.txt",
+        "FAIL: 1 unmapped$",
+        "any",
+    ],
+}
+
+[
+    mutation_gate_test(
+        name = proof,
+        advisory = True,
+        reports = [report],
+        require_scope = scope,
+        tags = PROOF_TAGS,
+    )
+    for proof, (report, _, scope) in ADVISORY_PROOFS.items()
+]
+
+[
+    expect_failure_test(
+        name = proof + "_fails",
+        pattern = pattern,
+        test = ":" + proof,
+    )
+    for proof, (_, pattern, _) in ADVISORY_PROOFS.items()
+]
+
 # Each case must fail for the stated reason. The wrapped gates are manual so
 # `bazel test //...` runs them only through expect_failure_test.
 PROOF_REASONS = {
