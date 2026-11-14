@@ -8,4 +8,8 @@ Code such as `[x](nowhere.md)` is skipped too.
 [y](nowhere.md)
 ```
 
+A [query](docs/guide.md?plain=1) resolves.
+
+    [z](nowhere.md)
+
 [ref]: docs/guide.md

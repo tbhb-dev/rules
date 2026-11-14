@@ -250,6 +250,7 @@ MARKDOWN_LINKS_BAD = {
     "fragment": "README.md:3: guide.md#intro has a fragment on a link to another file",
     "missing_dir": "README.md:3: nowhere/ is not a tracked file or directory",
     "missing_file": "README.md:3: guide.md is not a tracked file or directory",
+    "scheme_like": "README.md:3: C:foo is not a tracked file or directory",
     "stale": "\\.markdown-links\\.toml:1: exclusion README.md matches no failing link",
 }
 

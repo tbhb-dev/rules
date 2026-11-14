@@ -31,7 +31,8 @@ LINK = re.compile(
     r"|^ {0,3}\[[^\]\n]+\]:[ \t]*(<[^>\n]*>|\S+)",
     re.MULTILINE,
 )
-SCHEME = re.compile(r"^(?:[A-Za-z][A-Za-z0-9+.-]*:|//)")
+SCHEME = re.compile(r"^(?:[A-Za-z][A-Za-z0-9+.-]*://|//|mailto:|tel:)", re.IGNORECASE)
+LIST_ITEM = re.compile(r"^\s*(?:[-*+]|\d{1,9}[.)])(?:\s|$)")
 HEADING = re.compile(
     r"^ {0,3}#{1,6}(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$"
     r"|^ {0,3}(\S[^\n]*)\n {0,3}(?:=+|-+)[ \t]*$",
@@ -39,6 +40,7 @@ HEADING = re.compile(
 )
 MARKUP = re.compile(r"!?\[([^\]]*)\]\([^)]*\)|[`*~]")
 NOT_SLUG = re.compile(r"[^\w\- ]")
+CODE_INDENT = 4
 
 
 class CheckError(Exception):
@@ -51,21 +53,41 @@ def blank(text: str) -> str:
 
 
 def strip_blocks(text: str) -> str:
-    """Blank frontmatter and fenced blocks, keeping line numbers."""
+    """Blank frontmatter, fenced and indented code blocks, keeping line numbers."""
     lines = text.split("\n")
     if lines[0] == "---" and "---" in lines[1:]:
         end = lines.index("---", 1)
         lines[: end + 1] = [""] * (end + 1)
     fence: str | None = None
+    blank_before = True
+    in_list = False
+    in_indented = False
     for index, line in enumerate(lines):
         if fence is not None:
             bare = line.strip()
             closes = set(bare) == set(fence) and len(bare) >= len(fence)
             fence = None if closes else fence
             lines[index] = ""
-        elif match := FENCE.match(line):
+            continue
+        if not line.strip():
+            blank_before = True
+            continue
+        expanded = line.expandtabs(4)
+        indent = len(expanded) - len(expanded.lstrip(" "))
+        # An indented block cannot interrupt a paragraph or sit in a list item.
+        if indent >= CODE_INDENT and (in_indented or (blank_before and not in_list)):
+            in_indented = True
+            lines[index] = ""
+            continue
+        in_indented = False
+        blank_before = False
+        if match := FENCE.match(line):
             fence = match[1]
             lines[index] = ""
+        elif LIST_ITEM.match(line):
+            in_list = True
+        elif indent == 0:
+            in_list = False
     return "\n".join(lines)
 
 
@@ -121,7 +143,9 @@ def link_problem(
     """Why a destination fails to resolve, or None when it resolves."""
     if SCHEME.match(dest):
         return None
-    target, _, fragment = unquote(dest).partition("#")
+    # Split at the raw `#` and `?`, then decode: `%23` and `%3F` stay in names.
+    target, _, fragment = dest.partition("#")
+    target, fragment = unquote(target.partition("?")[0]), unquote(fragment)
     if not target:
         return page_problem(fragment, page)
     if fragment:

@@ -3,6 +3,7 @@
 
 """Tests for the Markdown link check."""
 
+import sys
 from pathlib import Path
 lazy import subprocess
 
@@ -139,6 +140,118 @@ def test_link_problem_resolves() -> None:
 )
 def test_link_problem_skips_external(dest: str) -> None:
     assert problem(dest) is None
+
+
+@pytest.mark.parametrize(
+    "dest", ["C:foo", "a:b/c.md", "notes:2026.md", "javascript:x.md", "https:x.md"]
+)
+def test_link_problem_checks_scheme_like_paths(dest: str) -> None:
+    assert problem(dest) == f"{dest} is not a tracked file or directory"
+
+
+def test_link_problem_scheme_case_and_tracked_scheme_like_path() -> None:
+    assert problem("HTTPS://a.example/x") is None
+    assert problem("MailTo:a@b") is None
+    assert problem("TEL:1") is None
+    tracked = {"a:b", "a:b/c.md", "d"}
+    assert checker.link_problem("d/a.md", "/a:b/c.md", tracked, set()) is None
+
+
+def test_link_problem_splits_the_query() -> None:
+    assert problem("b.md?plain=1") is None
+    assert problem("b.md?") is None
+    assert problem("?x=1") is None
+    assert problem("?x=1#top") is None
+    assert problem("#top?x") == "#top?x matches no heading in this file"
+    assert problem("c.md?x=1") == "c.md?x=1 is not a tracked file or directory"
+    assert problem("b.md?x=1#h") == (
+        "b.md?x=1#h has a fragment on a link to another file: link to the file"
+    )
+    assert problem("../../x.md?a") == "../../x.md?a points outside the repository"
+
+
+def test_link_problem_decodes_after_the_split() -> None:
+    tracked = {"a#b.md", "a?b.md", "d"}
+    assert checker.link_problem("d/a.md", "/a%23b.md", tracked, set()) is None
+    assert checker.link_problem("d/a.md", "/a%3Fb.md", tracked, set()) is None
+    assert checker.link_problem("d/a.md", "/a%23b.md#h", tracked, set()) == (
+        "/a%23b.md#h has a fragment on a link to another file: link to the file"
+    )
+    assert problem("#t%6Fp") is None
+    assert problem("#to%23p") == "#to%23p matches no heading in this file"
+    assert checker.link_problem("d/a.md", "/b.md%23x", tracked, set()) == (
+        "/b.md%23x is not a tracked file or directory"
+    )
+
+
+def test_strip_blocks_indented_code() -> None:
+    assert checker.strip_blocks("a\n\n    [a](b)\n\n\t[c](d)\n[e](f)") == (
+        "a\n\n\n\n\n[e](f)"
+    )
+    assert checker.strip_blocks("\n    [a](b)") == "\n"
+    assert checker.strip_blocks("    [a](b)") == ""
+    assert checker.strip_blocks("   [a](b)") == "   [a](b)"
+
+
+def test_strip_blocks_indented_code_spans_blank_lines() -> None:
+    assert checker.strip_blocks("t\n\n    [a](b)\n\n    [c](d)\n\nend") == (
+        "t\n\n\n\n\n\nend"
+    )
+    assert checker.strip_blocks("t\n\n    x\n\n  y\n\n    [c](d)") == (
+        "t\n\n\n\n  y\n\n"
+    )
+
+
+def test_strip_blocks_indented_text_continues_a_paragraph() -> None:
+    assert checker.strip_blocks("para\n    [a](b)") == "para\n    [a](b)"
+    assert checker.strip_blocks("# H\n    [a](b)") == "# H\n    [a](b)"
+
+
+def test_strip_blocks_indent_in_list_is_not_code() -> None:
+    for marker in ["-", "*", "+", "1.", "12)"]:
+        text = f"{marker} item\n\n    [a](b)"
+        assert checker.strip_blocks(text) == text
+    nested = "- item\n  - sub\n\n      [a](b)"
+    assert checker.strip_blocks(nested) == nested
+    assert checker.strip_blocks("-\n\n    [a](b)") == "-\n\n    [a](b)"
+    assert checker.strip_blocks("-x\n\n    [a](b)") == "-x\n\n"
+    assert checker.strip_blocks("1.5\n\n    [a](b)") == "1.5\n\n"
+    assert checker.strip_blocks("1234567890. x\n\n    [a](b)") == ("1234567890. x\n\n")
+
+
+def test_strip_blocks_list_ends_at_unindented_text() -> None:
+    assert checker.strip_blocks("- item\n\ntext\n\n    [a](b)") == (
+        "- item\n\ntext\n\n"
+    )
+    assert checker.strip_blocks("- item\n\n  more\n\n    [a](b)") == (
+        "- item\n\n  more\n\n    [a](b)"
+    )
+
+
+def test_strip_blocks_fence_inside_indented_code() -> None:
+    assert checker.strip_blocks("t\n\n    ```\n    [a](b)\n\nend") == "t\n\n\n\n\nend"
+
+
+def test_destinations_skip_indented_code() -> None:
+    assert checker.destinations("[a](x.md)\n\n    [b](y.md)\n\n[c](z.md)\n") == [
+        (1, "x.md"),
+        (5, "z.md"),
+    ]
+
+
+def test_anchors_ignore_indented_code() -> None:
+    assert checker.anchors("# A\n\n    # B\n") == {"a"}
+
+
+def test_check_indented_code_query_and_scheme_like(tmp_path: Path) -> None:
+    root = tree(
+        tmp_path,
+        {
+            "a.md": "[q](b.md?x=1) [s](C:foo)\n\n    [i](gone.md)\n",
+            "b.md": "",
+        },
+    )
+    assert checker.check(root) == ["a.md:1: C:foo is not a tracked file or directory"]
 
 
 def test_link_problem_failures() -> None:
@@ -291,6 +404,7 @@ def test_check_ignores_non_markdown_and_untracked(tmp_path: Path) -> None:
     ("case", "line"),
     [
         ("missing_file", "README.md:3: guide.md is not a tracked file or directory"),
+        ("scheme_like", "README.md:3: C:foo is not a tracked file or directory"),
         ("missing_dir", "README.md:3: nowhere/ is not a tracked file or directory"),
         ("bad_anchor", "README.md:3: #no-such-heading matches no heading in this file"),
         (
@@ -345,6 +459,7 @@ def test_main_root_file_stands_for_its_directory(
     )
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="the fake git is a shell script")
 def test_main_resolves_git_in_test_srcdir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
