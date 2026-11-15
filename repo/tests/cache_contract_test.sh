@@ -58,7 +58,7 @@ skipped_steps=$(grep -c "if: steps.cache.outputs.cache-hit != 'true'" "$ci")
 ! grep -q 'restore-keys:' "$ci" || fail 'lookup must require an exact hit'
 ! grep -q 'cache-version:' "${workflows[@]}" || fail 'split key family'
 grep -qF "if: failure() && inputs.cache-save == 'true'" "$action" || fail 'failed warms must discard partial archives'
-# The two matrices must cover the same platforms.
+# Cache warming must cover the plan's default platforms on main pushes.
 matrix_os() {
   awk -v job="$1" '
     /^  [^ ]/ { in_job = ($0 == "  " job ":") }
@@ -68,8 +68,20 @@ matrix_os() {
   ' "$ci"
 }
 warm_matrix=$(matrix_os cache-warm)
-test_matrix=$(matrix_os bazel)
-[[ -n $warm_matrix && $warm_matrix == "$test_matrix" ]] || fail 'warm and test matrices differ'
+python3 - "$warm_matrix" "$ci" <<'PY'
+import json
+import re
+import sys
+from pathlib import Path
+
+expression, workflow = sys.argv[1:]
+source = " ".join(expression.split()).removeprefix("os: ${{").removesuffix("}}").strip()
+source = source.replace("github.event_name", "event").replace("&&", "and").replace("||", "or")
+warm = eval(source, {"__builtins__": {}, "fromJSON": json.loads, "event": "push"})
+default = re.search(r"\.os // (\[[^]]+\])", Path(workflow).read_text())[1]
+if warm != json.loads(default):
+    sys.exit("FAIL: warm and default test platforms differ")
+PY
 
 # Read literal build/run labels and target input values, including tools
 # selected by the caller. This detects a new run-only tool in either workflow.
