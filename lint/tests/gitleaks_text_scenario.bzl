@@ -10,7 +10,7 @@ set -euo pipefail
 ws="$TEST_TMPDIR/ws"
 mkdir -p "$ws"
 case {scenario} in
-  clean | secret | secret_ids | secret_awk_fails) printf '[extend]\\nuseDefault = true\\n' >"$ws/.gitleaks.toml" ;;
+  clean | secret | secret_ids | secret_awk_fails) printf '# Local policy only\\n' >"$ws/.gitleaks.toml" ;;
   clean_no_config) ;;
 esac
 case {scenario} in
