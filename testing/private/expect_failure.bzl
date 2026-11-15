@@ -13,6 +13,9 @@ def _expect_failure_impl(ctx):
     if not ctx.attr.pattern:
         fail("pattern must not be empty: a failure for any reason would pass")
 
+    if ctx.attr.exit_status < 0 or ctx.attr.exit_status > 255:
+        fail("exit_status must be from 0 to 255, got {}: no test can exit with it".format(ctx.attr.exit_status))
+
     wrapped = ctx.attr.test[DefaultInfo].files_to_run.executable
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
     substitutions = {
