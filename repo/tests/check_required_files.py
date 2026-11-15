@@ -27,8 +27,8 @@ from jsonschema import Draft202012Validator, SchemaError
 CHECK = "C4"
 # Status 1 means the check found problems; 2 means an input is unusable.
 UNUSABLE = 2
-# The two lookaheads of the path pattern in manifest.schema.json: no leading
-# slash and no `..` segment.
+# The path pattern in manifest.schema.json rejects a leading slash or a
+# `..` segment.
 ABSOLUTE_OR_PARENT = re.compile(r"/|.*(?:^|/)\.\.(?:/|$)")
 
 
