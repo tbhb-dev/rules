@@ -171,3 +171,20 @@ bzl_library(
 )
 
 exports_files(["commit_identity/check_trailers.py"])
+
+exports_files([
+    "content/check_design.py",
+    "content/index.sh.tpl",
+])
+
+bzl_library(
+    name = "content",
+    srcs = ["content.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        ":tree_check",
+        "//runtime:defs",
+        "//shell:defs",
+        "@bazel_skylib//lib:shell",
+    ],
+)

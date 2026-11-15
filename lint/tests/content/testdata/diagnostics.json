@@ -1,0 +1,179 @@
+{
+  "bad_appendix_name": [
+    "designs/small-design/evidence.md:1: appendix name must be [A-Z]-<kebab>.md"
+  ],
+  "bad_appendix_type": [
+    "designs/small-design/A-evidence.md:1: type must be Design Appendix"
+  ],
+  "bad_count": [
+    "designs/small-design/README.md:1: decisions_open must be a nonnegative integer",
+    "designs/small-design/README.md:1: decisions_open must equal 1 D headings"
+  ],
+  "bad_evidence": [
+    "designs/small-design/README.md:48: Evidence must start with proven, existing, new or unverified"
+  ],
+  "bad_parent": [
+    "designs/small-design/A-evidence.md:1: appendix parent must be README.md"
+  ],
+  "bad_sections": [
+    "designs/small-design/README.md:1: section order must be: Summary, Decisions for tbhb, Already decided, Proposal, How it works, Risks and unknowns, Plan, Appendices"
+  ],
+  "bad_status": [
+    "designs/small-design/README.md:1: status must be draft, decided or superseded"
+  ],
+  "bad_table": [
+    "designs/small-design/README.md:1: status table must precede Summary"
+  ],
+  "bad_tags": [
+    "designs/small-design/README.md:1: tags must be a nonempty list of kebab-case words"
+  ],
+  "bad_title": [
+    "designs/small-design/README.md:1: title must be a nonempty string"
+  ],
+  "bad_updated": [
+    "designs/small-design/README.md:1: updated must be a YYYY-MM-DD date",
+    "designs/small-design/README.md:1: updated must use YYYY-MM-DD"
+  ],
+  "broken_anchor": [
+    "designs/small-design/README.md:38: relative link anchor does not resolve: #missing"
+  ],
+  "broken_link": [
+    "designs/small-design/README.md:42: relative link does not resolve: missing.md"
+  ],
+  "count_mismatch": [
+    "designs/small-design/README.md:1: decisions_open must equal 1 D headings"
+  ],
+  "forbidden_term": [
+    "designs/small-design/README.md:38: forbidden term: checkerbot"
+  ],
+  "index_bad_slug": [
+    "designs/Bad_slug:1: design slug must be kebab case"
+  ],
+  "index_missing_metadata": [
+    "designs/small-design/README.md:1: missing required frontmatter: owner",
+    "designs/small-design/README.md:1: owner must be a nonempty string"
+  ],
+  "index_nested": [
+    "designs/small-design/nested:1: design directories cannot hold subdirectories"
+  ],
+  "index_no_readme": [
+    "designs/small-design/README.md:1: missing README.md",
+    "designs/small-design/A-evidence.md:8: relative link does not resolve: README.md",
+    "designs/small-design/B-alternatives.md:8: relative link does not resolve: README.md",
+    "designs/small-design/README.md:1: README must link appendix A-evidence.md",
+    "designs/small-design/README.md:1: README must link appendix B-alternatives.md"
+  ],
+  "index_stale": [
+    "designs/README.md:1: stale designs index; run the designs_index target"
+  ],
+  "invalid_yaml": [
+    "designs/small-design/README.md:2: invalid YAML frontmatter",
+    "designs/small-design/README.md:1: type must be Design Draft",
+    "designs/small-design/README.md:1: missing required frontmatter: type",
+    "designs/small-design/README.md:1: missing required frontmatter: title",
+    "designs/small-design/README.md:1: missing required frontmatter: description",
+    "designs/small-design/README.md:1: missing required frontmatter: tags",
+    "designs/small-design/README.md:1: missing required frontmatter: status",
+    "designs/small-design/README.md:1: missing required frontmatter: owner",
+    "designs/small-design/README.md:1: missing required frontmatter: updated",
+    "designs/small-design/README.md:1: missing required frontmatter: decisions_open",
+    "designs/small-design/README.md:1: title must be a nonempty string",
+    "designs/small-design/README.md:1: description must be a nonempty string",
+    "designs/small-design/README.md:1: owner must be a nonempty string",
+    "designs/small-design/README.md:1: tags must be a nonempty list of kebab-case words",
+    "designs/small-design/README.md:1: status must be draft, decided or superseded",
+    "designs/small-design/README.md:1: updated must be a YYYY-MM-DD date",
+    "designs/small-design/README.md:1: updated must use YYYY-MM-DD",
+    "designs/small-design/README.md:1: decisions_open must be a nonnegative integer",
+    "designs/small-design/README.md:1: decisions_open must equal 1 D headings"
+  ],
+  "long_readme": [
+    "designs/small-design/README.md:251: README exceeds 250 lines"
+  ],
+  "long_summary": [
+    "designs/small-design/README.md:18: Summary exceeds 150 words"
+  ],
+  "malformed_link": [
+    "designs/small-design/README.md:38: invalid link destination"
+  ],
+  "missing_backlink": [
+    "designs/small-design/A-evidence.md:1: appendix needs a link back to README.md"
+  ],
+  "missing_bullet": [
+    "designs/small-design/README.md:24: D item missing Why bullet"
+  ],
+  "missing_evidence": [
+    "designs/small-design/README.md:46: Evidence must start with proven, existing, new or unverified",
+    "designs/small-design/README.md:48: Evidence must start with proven, existing, new or unverified",
+    "designs/small-design/README.md:44: Risks table needs an Evidence column"
+  ],
+  "missing_frontmatter": [
+    "designs/small-design/README.md:1: missing frontmatter",
+    "designs/small-design/README.md:1: type must be Design Draft",
+    "designs/small-design/README.md:1: missing required frontmatter: type",
+    "designs/small-design/README.md:1: missing required frontmatter: title",
+    "designs/small-design/README.md:1: missing required frontmatter: description",
+    "designs/small-design/README.md:1: missing required frontmatter: tags",
+    "designs/small-design/README.md:1: missing required frontmatter: status",
+    "designs/small-design/README.md:1: missing required frontmatter: owner",
+    "designs/small-design/README.md:1: missing required frontmatter: updated",
+    "designs/small-design/README.md:1: missing required frontmatter: decisions_open",
+    "designs/small-design/README.md:1: title must be a nonempty string",
+    "designs/small-design/README.md:1: description must be a nonempty string",
+    "designs/small-design/README.md:1: owner must be a nonempty string",
+    "designs/small-design/README.md:1: tags must be a nonempty list of kebab-case words",
+    "designs/small-design/README.md:1: status must be draft, decided or superseded",
+    "designs/small-design/README.md:1: updated must be a YYYY-MM-DD date",
+    "designs/small-design/README.md:1: updated must use YYYY-MM-DD",
+    "designs/small-design/README.md:1: decisions_open must be a nonnegative integer",
+    "designs/small-design/README.md:1: decisions_open must equal 1 D headings"
+  ],
+  "missing_if_no": [
+    "designs/small-design/README.md:24: D item missing If no bullet"
+  ],
+  "missing_if_yes": [
+    "designs/small-design/README.md:24: D item missing If yes bullet"
+  ],
+  "missing_keys": [
+    "designs/small-design/README.md:1: missing required frontmatter: owner",
+    "designs/small-design/README.md:1: owner must be a nonempty string"
+  ],
+  "missing_readme": [
+    "designs/small-design/README.md:1: missing README.md",
+    "designs/small-design/A-evidence.md:8: relative link does not resolve: README.md",
+    "designs/small-design/README.md:1: README must link appendix A-evidence.md"
+  ],
+  "missing_recommendation": [
+    "designs/small-design/README.md:24: D item missing Recommendation bullet"
+  ],
+  "missing_reversible": [
+    "designs/small-design/README.md:24: D item missing Reversible bullet"
+  ],
+  "non_mapping": [
+    "designs/small-design/README.md:2: frontmatter must be a mapping",
+    "designs/small-design/README.md:1: type must be Design Draft",
+    "designs/small-design/README.md:1: missing required frontmatter: type",
+    "designs/small-design/README.md:1: missing required frontmatter: title",
+    "designs/small-design/README.md:1: missing required frontmatter: description",
+    "designs/small-design/README.md:1: missing required frontmatter: tags",
+    "designs/small-design/README.md:1: missing required frontmatter: status",
+    "designs/small-design/README.md:1: missing required frontmatter: owner",
+    "designs/small-design/README.md:1: missing required frontmatter: updated",
+    "designs/small-design/README.md:1: missing required frontmatter: decisions_open",
+    "designs/small-design/README.md:1: title must be a nonempty string",
+    "designs/small-design/README.md:1: description must be a nonempty string",
+    "designs/small-design/README.md:1: owner must be a nonempty string",
+    "designs/small-design/README.md:1: tags must be a nonempty list of kebab-case words",
+    "designs/small-design/README.md:1: status must be draft, decided or superseded",
+    "designs/small-design/README.md:1: updated must be a YYYY-MM-DD date",
+    "designs/small-design/README.md:1: updated must use YYYY-MM-DD",
+    "designs/small-design/README.md:1: decisions_open must be a nonnegative integer",
+    "designs/small-design/README.md:1: decisions_open must equal 1 D headings"
+  ],
+  "unlinked_appendix": [
+    "designs/small-design/README.md:1: README must link appendix A-evidence.md"
+  ],
+  "wrong_type": [
+    "designs/small-design/README.md:1: type must be Design Draft"
+  ]
+}
