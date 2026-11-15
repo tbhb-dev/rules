@@ -14,6 +14,7 @@ one line each. A `.tbhb-repo.toml` exception for C4 hides one missing path.
 
 import argparse
 import json
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -22,6 +23,9 @@ from typing import TypeIs
 from jsonschema import Draft202012Validator
 
 CHECK = "C4"
+# The two lookaheads of the path pattern in manifest.schema.json: no leading
+# slash and no `..` segment.
+ABSOLUTE_OR_PARENT = re.compile(r"/|.*(?:^|/)\.\.(?:/|$)")
 
 
 def is_present(repo: Path, path: str) -> bool:
@@ -110,6 +114,9 @@ def required_list(entry: object) -> list[str] | str:
     paths: object = entry.get("required")
     if not is_string_list(paths):
         return "needs a required list of strings"
+    for path in paths:
+        if ABSOLUTE_OR_PARENT.match(path):
+            return f"required path {path} must be relative with no .. segment"
     return paths
 
 
