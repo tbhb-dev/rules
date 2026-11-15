@@ -162,7 +162,7 @@ def structurizr_workspace(name, dsl, workspace_json, diagrams_dir, data = [], **
     x86_64, Linux arm64 and macOS arm64, excluding Windows (no JRE pin).
     The only CI run read so far ran Structurizr on Linux x86_64, before the
     plan added Linux arm64 and macOS arm64. No Linux arm64 or macOS CI result
-    is recorded here, and Windows is unsupported.
+    exists for this plan yet, and Windows is unsupported.
 
     The exporter produces a main diagram and a legend (`-key`) for each
     view. Both are rendered with `!pragma layout smetana`, headless, using
