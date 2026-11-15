@@ -226,6 +226,45 @@ def test_missing_required_key(
     )
 
 
+@pytest.mark.parametrize("value", ["1", "[]", "'go'"])
+@pytest.mark.parametrize(
+    ("table", "other"),
+    [("kind", "[visibility.public]"), ("visibility", "[kind.go]")],
+)
+def test_table_of_wrong_type(  # noqa: PLR0913, PLR0917 -- Fixtures and parameters.
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    table: str,
+    other: str,
+    value: str,
+) -> None:
+    declare(repo, "")
+    manifest.write_text(f"{table} = {value}\n{other}\nrequired = []\n")
+    assert_main_output(manifest, repo, capsys, f"{manifest}: {table} must be a table\n")
+
+
+@pytest.mark.parametrize("value", ["1", "[]", "'go'"])
+@pytest.mark.parametrize(("table", "name"), [("kind", "go"), ("visibility", "public")])
+def test_entry_of_wrong_type(  # noqa: PLR0913, PLR0917 -- Fixtures and parameters.
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    table: str,
+    name: str,
+    value: str,
+) -> None:
+    declare(repo, "")
+    manifest.write_text(
+        "[kind.go]\nrequired = []\n[visibility.public]\nrequired = []\n".replace(
+            f"[{table}.{name}]\nrequired = []", f"[{table}]\n{name} = {value}"
+        )
+    )
+    assert_main_output(
+        manifest, repo, capsys, f'{manifest}: {table} "{name}" must be a table\n'
+    )
+
+
 def test_manifest_invalid_toml(
     manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
