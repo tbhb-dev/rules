@@ -10,3 +10,4 @@
 //tools:pip_audit
 //:pnpm_audit
 //tests/self:govulncheck
+@tbhb_rules//lint:pr_size
