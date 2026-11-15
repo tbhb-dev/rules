@@ -12,7 +12,7 @@ generated:
     surface: cli
     session: sha-256-64:debb814921f029ad
     subagent: sha-256-64:a5922f2e895088d6
-    at: "2026-11-15T06:42:51Z"
+    at: "2026-11-15T06:44:59Z"
 ---
 
 # Structurizr tooling
@@ -34,7 +34,7 @@ The pinned tools render with a headless Java runtime and Smetana, using Liberati
 
 JSON and SVG comparisons use bytes on every supported platform (Linux and macOS on x64 and arm64). Linux x86_64 CI proved SVG and JSON byte-identical to the committed files generated on macOS arm64. The Java virtual machine uses Coordinated Universal Time (UTC) and the en_US.UTF-8 locale. PNG byte comparisons run only on macOS arm64. PNG measurements use Structurizr 2025.11.09, Temurin 21.0.13+9, PlantUML 1.2026.10, and Liberation Sans 2.1.5. Missing and orphan images fail on every supported platform.
 
-The CI plan selects Linux x86_64, Linux arm64 and macOS arm64 for Structurizr and excludes Windows because the Java runtime pins cover Linux and macOS only. The only CI run read so far ran Structurizr on Linux x86_64, before the plan added Linux arm64 and macOS arm64. No Linux arm64 or macOS CI result is recorded here, and Windows is unsupported.
+The CI plan selects Linux x86_64, Linux arm64 and macOS arm64 for Structurizr and excludes Windows because the Java runtime pins cover Linux and macOS only. The only CI run read so far ran Structurizr on Linux x86_64, before the plan added Linux arm64 and macOS arm64. No Linux arm64 or macOS CI result exists for this plan yet, and Windows is unsupported.
 
 Treat workspace sources as trusted input. Java HTTP(S) requests use an unreachable proxy and PlantUML uses its sandbox profile, but `!script`, `!plugin`, and absolute `!include` directives can access the host. The pinned command-line tool doesn't expose a restricted mode for validation, inspection, or export. Use only trusted workspace sources and imports. Name the source `workspace.dsl`.
 
