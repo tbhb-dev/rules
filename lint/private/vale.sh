@@ -119,4 +119,4 @@ awk '
 ' "$config" >"$shared_config"
 
 echo "vale: linting ${#files[@]} files with ${#packages[@]} packages"
-exec vale --config="$shared_config" --no-wrap "${files[@]}"
+exec vale --config="$shared_config" --no-exit --no-wrap "${files[@]}"

@@ -446,38 +446,27 @@ PROOF_REASONS = {
     ]
 ]
 
-[
-    rule(
-        name = "proof_" + tool + "_possessive",
-        srcs = ["testdata/vocabulary/bad.md"] + (glob(["testdata/vocabulary/styles/**"]) if tool == "vale" else []),
-        config = "testdata/vocabulary/vale.ini" if tool == "vale" else None,
-        tags = PROOF_TAGS,
-    )
-    for tool, rule in [
-        ("cspell", cspell_test),
-        ("vale", vale_test),
-    ]
-]
+cspell_test(
+    name = "proof_cspell_possessive",
+    srcs = ["testdata/vocabulary/bad.md"],
+    tags = PROOF_TAGS,
+)
 
-[
-    expect_failure_test(
-        name = tool + "_possessive_fails_test",
-        pattern = pattern,
-        test = ":proof_" + tool + "_possessive",
-    )
-    for tool, pattern in [
-        (
-            "cspell",
-            # cspell:disable-next-line
-            "bad\\.md:3:[0-9]+ - Unknown word \\(Renovatte\\)",
-        ),
-        (
-            "vale",
-            # cspell:disable-next-line
-            "Renovatte.s.*Vale\\.Spelling",
-        ),
-    ]
-]
+expect_failure_test(
+    name = "cspell_possessive_fails_test",
+    # cspell:disable-next-line
+    pattern = "bad\\.md:3:[0-9]+ - Unknown word \\(Renovatte\\)",
+    test = ":proof_cspell_possessive",
+)
+
+# Vale must report the misspelled base while allowing the check to pass.
+vale_test(
+    name = "vale_possessive_advisory_test",
+    srcs = ["testdata/vocabulary/bad.md"] + glob(["testdata/vocabulary/styles/**"]),
+    config = "testdata/vocabulary/vale.ini",
+    # cspell:disable-next-line
+    output_guard = "Renovatte.s.*Vale\\.Spelling",
+)
 
 # The shared coined-terms rule flags the coined sense and leaves ordinary
 # English alone. The fixture runs only that rule from the real rule file.
@@ -491,38 +480,26 @@ vale_test(
 )
 
 vale_test(
-    name = "proof_vale_coined_terms",
+    name = "vale_coined_terms_flagged_test",
     srcs = [
         "testdata/coined_terms/bad.md",
         "//:.vale/project/CoinedTerms.yml",
     ],
     config = "testdata/coined_terms/vale.ini",
-    tags = PROOF_TAGS,
-)
-
-expect_failure_test(
-    name = "vale_coined_terms_flagged_test",
-    pattern = "project\\.CoinedTerms",
-    test = ":proof_vale_coined_terms",
+    output_guard = "project\\.CoinedTerms",
 )
 
 # Ordinary uses of surviving terms that the rule still flags. The test passes
 # while Vale flags every line, so a narrowing that clears one fails it and
 # says to move that line to ok.md.
 vale_test(
-    name = "proof_vale_coined_terms_known_hits",
+    name = "vale_coined_terms_known_hits_test",
     srcs = [
         "testdata/coined_terms/known_hits.md",
         "//:.vale/project/CoinedTerms.yml",
     ],
     config = "testdata/coined_terms/vale.ini",
-    tags = PROOF_TAGS,
-)
-
-expect_failure_test(
-    name = "vale_coined_terms_known_hits_test",
-    pattern = "5 errors",
-    test = ":proof_vale_coined_terms_known_hits",
+    output_guard = "5 errors",
 )
 
 cspell_test(

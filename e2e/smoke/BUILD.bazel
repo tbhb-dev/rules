@@ -189,38 +189,27 @@ expect_failure_test(
     ]
 ]
 
-[
-    rule(
-        name = "proof_" + tool + "_possessive",
-        srcs = ["testdata/vocabulary/bad.md"] + (glob(["testdata/vocabulary/styles/**"]) if tool == "vale" else []),
-        config = "testdata/vocabulary/vale.ini" if tool == "vale" else None,
-        tags = PROOF_TAGS,
-    )
-    for tool, rule in [
-        ("cspell", cspell_test),
-        ("vale", vale_test),
-    ]
-]
+cspell_test(
+    name = "proof_cspell_possessive",
+    srcs = ["testdata/vocabulary/bad.md"],
+    tags = PROOF_TAGS,
+)
 
-[
-    expect_failure_test(
-        name = tool + "_possessive_fails_test",
-        pattern = pattern,
-        test = ":proof_" + tool + "_possessive",
-    )
-    for tool, pattern in [
-        (
-            "cspell",
-            # cspell:disable-next-line
-            "bad\\.md:3:[0-9]+ - Unknown word \\(Renovatte\\)",
-        ),
-        (
-            "vale",
-            # cspell:disable-next-line
-            "Renovatte.s.*Vale\\.Spelling",
-        ),
-    ]
-]
+expect_failure_test(
+    name = "cspell_possessive_fails_test",
+    # cspell:disable-next-line
+    pattern = "bad\\.md:3:[0-9]+ - Unknown word \\(Renovatte\\)",
+    test = ":proof_cspell_possessive",
+)
+
+# Vale must report the misspelled base while allowing the check to pass.
+vale_test(
+    name = "vale_possessive_advisory_test",
+    srcs = ["testdata/vocabulary/bad.md"] + glob(["testdata/vocabulary/styles/**"]),
+    config = "testdata/vocabulary/vale.ini",
+    # cspell:disable-next-line
+    output_guard = "Renovatte.s.*Vale\\.Spelling",
+)
 
 cspell_test(
     name = "cspell_local_vocabulary_test",
