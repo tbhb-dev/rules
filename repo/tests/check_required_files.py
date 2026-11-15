@@ -51,29 +51,63 @@ def check(manifest: Path, schema: Path, repo: Path) -> list[str]:
     if not declaration_path.is_file():
         return [f"{declaration_path}: missing"]
     try:
-        declaration = tomllib.loads(declaration_path.read_text())
+        declaration = tomllib.loads(declaration_path.read_bytes().decode())
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as error:
         return [f"{declaration_path}: invalid TOML: {error}"]
-    validator = Draft202012Validator(json.loads(schema.read_text()))
+    try:
+        schema_data = json.loads(schema.read_bytes())
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        return [f"{schema}: invalid JSON: {error}"]
+    validator = Draft202012Validator(schema_data)
     problems = sorted(
         f"{declaration_path}: {error.json_path}: {error.message}"
         for error in validator.iter_errors(declaration)
     )
     if problems:
         return problems
-    rules = tomllib.loads(manifest.read_text())
-    kind = declaration["kind"]
-    visibility = "private" if declaration["private"] else "public"
+    return check_manifest(
+        manifest,
+        repo,
+        declaration["kind"],
+        "private" if declaration["private"] else "public",
+        declaration.get("exception", []),
+    )
+
+
+def check_manifest(
+    manifest: Path,
+    repo: Path,
+    kind: str,
+    visibility: str,
+    entries: list[dict[str, str]],
+) -> list[str]:
+    declaration_path = repo / ".tbhb-repo.toml"
+    try:
+        rules = tomllib.loads(manifest.read_bytes().decode())
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as error:
+        return [f"{manifest}: invalid TOML: {error}"]
     for table, name in (("kind", kind), ("visibility", visibility)):
         if name not in rules.get(table, {}):
             return [
                 f'{declaration_path}: {table} "{name}" has no entry in the manifest'
             ]
+        required_list: list[object] = rules[table][name].get("required")
+        if not isinstance(required_list, list) or not all(
+            isinstance(path, str) for path in required_list
+        ):
+            return [f'{manifest}: {table} "{name}" needs a required list of strings']
     required = (
         rules["kind"][kind]["required"] + rules["visibility"][visibility]["required"]
     )
+    return check_paths(repo, required, entries)
+
+
+def check_paths(
+    repo: Path, required: list[str], entries: list[dict[str, str]]
+) -> list[str]:
+    declaration_path = repo / ".tbhb-repo.toml"
     missing = missing_paths(repo, required)
-    exceptions = c4_exception_paths(declaration.get("exception", []))
+    exceptions = c4_exception_paths(entries)
     if exceptions is None:
         return [f"{declaration_path}: C4 exception needs a path and a reason"]
     errors = [

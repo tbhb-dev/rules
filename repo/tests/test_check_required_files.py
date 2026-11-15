@@ -159,6 +159,130 @@ def test_invalid_utf8(
     )
 
 
+@pytest.mark.parametrize(("table", "name"), [("kind", "go"), ("visibility", "public")])
+def test_required_string(
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    table: str,
+    name: str,
+) -> None:
+    declare(repo, "")
+    manifest.write_text(
+        "[kind.go]\nrequired = ''\n[visibility.public]\nrequired = ''\n"
+        if table == "kind"
+        else "[kind.go]\nrequired = []\n[visibility.public]\nrequired = ''\n"
+    )
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f'{manifest}: {table} "{name}" needs a required list of strings\n',
+    )
+
+
+@pytest.mark.parametrize(("table", "name"), [("kind", "go"), ("visibility", "public")])
+def test_required_non_string_item(
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    table: str,
+    name: str,
+) -> None:
+    declare(repo, "")
+    manifest.write_text(
+        "[kind.go]\nrequired = []\n[visibility.public]\nrequired = []\n".replace(
+            f"[{table}.{name}]\nrequired = []",
+            f"[{table}.{name}]\nrequired = ['ok', 1]",
+        )
+    )
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f'{manifest}: {table} "{name}" needs a required list of strings\n',
+    )
+
+
+@pytest.mark.parametrize(("table", "name"), [("kind", "go"), ("visibility", "public")])
+def test_missing_required_key(
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    table: str,
+    name: str,
+) -> None:
+    declare(repo, "")
+    manifest.write_text(
+        "[kind.go]\nrequired = []\n[visibility.public]\nrequired = []\n".replace(
+            f"[{table}.{name}]\nrequired = []", f"[{table}.{name}]"
+        )
+    )
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f'{manifest}: {table} "{name}" needs a required list of strings\n',
+    )
+
+
+def test_manifest_invalid_toml(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    manifest.write_text("kind =")
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{manifest}: invalid TOML: Invalid value (at end of document)\n",
+    )
+
+
+def test_manifest_invalid_utf8(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    manifest.write_bytes(b"\xff")
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{manifest}: invalid TOML: "
+        "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\n",
+    )
+
+
+def test_schema_invalid_json(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    schema = manifest.with_name("schema.json")
+    schema.write_text("{")
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{schema}: invalid JSON: "
+        "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\n",
+    )
+
+
+def test_schema_invalid_utf8(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    schema = manifest.with_name("schema.json")
+    schema.write_bytes(b"\xff")
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{schema}: invalid JSON: "
+        "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\n",
+    )
+
+
 def test_exception_without_check(
     manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
