@@ -7,7 +7,7 @@ set -euo pipefail
 # Stand in for Java at the runner boundary. Rendering and font discovery are
 # separate: an SVG's font-family alone cannot prove which TTF Java used.
 if [[ ${1:-} == -Djava.awt.headless=true ]]; then
-  format='' destination='' fonts=''
+  format='' destination='' fonts='' home=''
   while (($#)); do
     case $1 in
     -f)
@@ -19,10 +19,21 @@ if [[ ${1:-} == -Djava.awt.headless=true ]]; then
       shift
       ;;
     -Dsun.java2d.fontpath=*) fonts=${1#*=} ;;
+    -Duser.home=*) home=${1#*=} ;;
     -tsvg | -tpng) format=${1#-t} ;;
     esac
     shift
   done
+  # Java keeps a host-wide font cache under user.home that hides the pinned
+  # fonts, so each render must run with its own home.
+  case $format in
+  svg | png)
+    if [[ -z $home || $home == "${HOME:-}" ]]; then
+      echo "stub java: render without a private user.home" >&2
+      exit 4
+    fi
+    ;;
+  esac
   case $format in
   json) echo '{}' >"$destination/workspace.json" ;;
   plantuml) printf '@startuml\n@enduml\n' >"$destination/view.puml" ;;
