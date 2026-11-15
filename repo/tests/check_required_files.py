@@ -17,6 +17,7 @@ import json
 import sys
 import tomllib
 from pathlib import Path
+from typing import TypeIs
 
 from jsonschema import Draft202012Validator
 
@@ -86,20 +87,41 @@ def check_manifest(
         rules = tomllib.loads(manifest.read_bytes().decode())
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as error:
         return [f"{manifest}: invalid TOML: {error}"]
+    required: list[str] = []
     for table, name in (("kind", kind), ("visibility", visibility)):
-        if name not in rules.get(table, {}):
+        names: object = rules.get(table, {})
+        if not is_table(names):
+            return [f"{manifest}: {table} must be a table"]
+        if name not in names:
             return [
                 f'{declaration_path}: {table} "{name}" has no entry in the manifest'
             ]
-        required_list: list[object] = rules[table][name].get("required")
-        if not isinstance(required_list, list) or not all(
-            isinstance(path, str) for path in required_list
-        ):
-            return [f'{manifest}: {table} "{name}" needs a required list of strings']
-    required = (
-        rules["kind"][kind]["required"] + rules["visibility"][visibility]["required"]
-    )
+        paths = required_list(names[name])
+        if isinstance(paths, str):
+            return [f'{manifest}: {table} "{name}" {paths}']
+        required += paths
     return check_paths(repo, required, entries)
+
+
+def required_list(entry: object) -> list[str] | str:
+    """Return a manifest entry's required paths, or what is wrong with the entry."""
+    if not is_table(entry):
+        return "must be a table"
+    paths: object = entry.get("required")
+    if not is_string_list(paths):
+        return "needs a required list of strings"
+    return paths
+
+
+def is_table(value: object) -> TypeIs[dict[str, object]]:
+    return isinstance(value, dict)
+
+
+def is_string_list(value: object) -> TypeIs[list[str]]:
+    if not isinstance(value, list):
+        return False
+    items: list[object] = value
+    return all(isinstance(item, str) for item in items)
 
 
 def check_paths(
