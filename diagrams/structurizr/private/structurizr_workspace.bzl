@@ -152,27 +152,27 @@ def structurizr_workspace(name, dsl, workspace_json, diagrams_dir, data = [], **
     Lint runs both `validate -w` and `inspect -w -s error,warning`, even
     after validation fails. ERROR and WARNING inspections fail; INFO and
     IGNORE do not. Any command error fails. Violation lines in the inspect
-    output also fail when the count wraps the process exit status to zero.
+    output also fail.
 
-    JSON and SVG comparisons use bytes on every supported platform (Linux and
-    macOS on x64 and arm64). Linux x86_64 CI proved SVG and JSON byte-identical
-    to committed files generated on macOS arm64. PNG byte comparisons run only
-    on macOS arm64. Missing SVGs or PNGs and orphan files fail on all supported
-    platforms. JVM settings use UTC and en_US.UTF-8. The CI plan selects Linux
-    x86_64, Linux arm64 and macOS arm64, excluding Windows (no JRE pin).
-    The only CI run read so far ran Structurizr on Linux x86_64, before the
-    plan added Linux arm64 and macOS arm64. No Linux arm64 or macOS CI result
-    exists for this plan yet, and Windows is unsupported.
+    JSON and SVG comparisons use bytes. Linux x86_64 and macOS arm64 produce
+    byte-identical JSON and SVG output, checked against the committed files.
+    Linux arm64 is in the CI plan but has no recorded measurement, and macOS
+    x86_64 has no CI leg. PNG byte comparisons run only on macOS arm64, and
+    the update target writes PNGs only there. Missing SVGs or PNGs and orphan
+    files fail on every platform. JVM settings use UTC and en_US.UTF-8. The CI
+    plan selects Linux x86_64, Linux arm64 and macOS arm64, excluding Windows
+    (no JRE pin).
 
     The exporter produces a main diagram and a legend (`-key`) for each
     view. Both are rendered with `!pragma layout smetana`, headless, using
     the pinned JRE, MIT PlantUML and SIL-OFL-1.1 Liberation Sans 2.1.5.
-    Graphviz is unnecessary. Fontconfig sees only pinned fonts; the renderer
-    also checks that the JVM opened the pinned TTF and that SVGs specify
-    Liberation Sans, which no test covers yet.
-    Linux requires host libfontconfig and libfreetype. Java HTTP(S) requests
-    use an unreachable proxy; PlantUML uses its sandbox profile. DSL is trusted
-    input: scripts, plugins and absolute includes can access the host.
+    Graphviz is unnecessary. On Linux, Fontconfig sees only pinned fonts and
+    the host needs libfontconfig and libfreetype; on macOS nothing restricts
+    host fonts. On both, the renderer checks that the JVM opened the pinned
+    TTFs and that SVGs specify Liberation Sans, which no test covers. Java
+    HTTP(S) requests use an unreachable proxy; PlantUML uses its sandbox
+    profile. DSL is trusted input: scripts, plugins and absolute includes can
+    access the host.
 
     Paths are relative to this package. Keep committed renders byte for
     byte in Git and exclude them from whitespace and line-ending fixers.

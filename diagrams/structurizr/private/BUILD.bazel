@@ -22,10 +22,3 @@ bzl_library(
         "@tbhb_rules//shell:defs",
     ],
 )
-
-bzl_library(
-    name = "formatter_include",
-    srcs = ["formatter_include.bzl"],
-    visibility = ["//:__subpackages__"],
-    deps = ["@tbhb_rules//format:defs"],
-)

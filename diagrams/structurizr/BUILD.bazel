@@ -15,7 +15,6 @@ load(
     "tombi_test",
 )
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
-load("//private:formatter_include.bzl", "formatter_include")
 
 repo_files(
     exclude = [
@@ -87,16 +86,8 @@ editorconfig_checker_test(
 
 # This module's own formatting: `bazel run //:format` rewrites the tree,
 # `//:format.check` and `format_test` check it, with the parent module's
-# formatters. shfmt takes the bash dialect of the templates from
-# .editorconfig.
-formatter_include(
-    name = "shfmt_templates",
-    include = ["*.sh.tpl"],
-    formatter = "@tbhb_rules//format:shfmt",
-)
-
+# formatters.
 FORMATTERS = [
-    ":shfmt_templates",
     "@tbhb_rules//format:buildifier",
     "@tbhb_rules//format:rumdl",
     "@tbhb_rules//format:ryl",
