@@ -406,6 +406,16 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: bazelisk run @tbhb_rules//lint:commit_identity -- "${BASE_SHA}" "${HEAD_SHA}"
 
+      - name: Check the pull request size
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          git cat-file -e "${BASE_SHA}^{commit}" || git fetch origin "${BASE_SHA}"
+          bazelisk run @tbhb_rules//lint:pr_size -- "${BASE_SHA}" "${HEAD_SHA}"
+
       # Advisories change without any input changing, so the audit is never
       # a cached test.
       - name: Audit the locked Python dependencies
