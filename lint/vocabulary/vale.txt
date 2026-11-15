@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+(?i)build
+(?i)chore
+(?i)ci
+(?i)docs
+(?i)feat
+(?i)fix
+(?i)perf
+(?i)refactor
+(?i)revert
+(?i)style
+(?i)test

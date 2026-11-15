@@ -56,6 +56,7 @@ def vale_test(
     """
     cache_files = dict(kwargs.pop("cache_files", {}))
     cache_files[Label("//lint/vocabulary:words.txt")] = "vale/words.txt"
+    cache_files[Label("//lint/vocabulary:vale.txt")] = "vale/accept.txt"
     include_args = []
     for pattern in include:
         include_args += ["--include", pattern]

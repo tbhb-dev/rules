@@ -7,5 +7,6 @@ repo_files()
 
 exports_files([
     "cspell.config.cjs",
+    "vale.txt",
     "words.txt",
 ])

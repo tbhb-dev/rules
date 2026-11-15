@@ -95,7 +95,7 @@ fi
 # vocabularies and all paths relative to its config directory.
 vocabulary="$styles/config/vocabularies/tbhb_rules"
 mkdir -p "$vocabulary"
-cp "$XDG_CACHE_HOME/vale/words.txt" "$vocabulary/accept.txt"
+cat "$XDG_CACHE_HOME/vale/words.txt" "$XDG_CACHE_HOME/vale/accept.txt" >"$vocabulary/accept.txt"
 touch "$vocabulary/reject.txt"
 for accept in "$styles"/config/vocabularies/*/accept.txt; do
   # Each expression still requires an accepted base word. Comments and empty
