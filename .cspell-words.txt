@@ -169,6 +169,7 @@ stampable
 starlark
 strconcat
 strerror
+structurizr
 subagentstart
 subdirs
 subpackages
