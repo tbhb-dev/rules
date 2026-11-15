@@ -4,8 +4,10 @@
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//lint/private:commit_identity.bzl", "commit_identity")
 load("//lint/private:gitleaks_text.bzl", "gitleaks_text")
+load("//lint/private:pr_size.bzl", "pr_size")
 load("//repo:defs.bzl", "repo_files")
 load("//runtime:defs.bzl", "python_tool")
 
@@ -87,4 +89,22 @@ alias(
     name = "zizmor",
     actual = "@tbhb_rules_zizmor//:zizmor",
     visibility = ["//visibility:public"],
+)
+
+pr_size(
+    name = "pr_size",
+    visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "pr_size_test",
+    srcs = ["pr_size_test.sh"],
+    data = [
+        ":pr_size",
+        "@tbhb_rules_git//:git",
+    ],
+    env = {
+        "CHECKER_RLOCATIONPATH": "$(rlocationpath :pr_size)",
+        "GIT_RLOCATIONPATH": "$(rlocationpath @tbhb_rules_git//:git)",
+    },
 )

@@ -59,11 +59,16 @@ The `repo` job clones the full history and makes these checks in order. An empty
 3. `bazel mod tidy` in each of `module-dirs`, then `git diff --exit-code` on their `MODULE.bazel`.
 4. `//:gitleaks_history`.
 5. On a pull request, `@tbhb_rules//lint:gitleaks_text` on its title and body.
-6. `pip-audit-target`. Failures are non-blocking on pull requests. On pushes and schedules they fail the job.
-7. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
-8. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
-9. zizmor, with the online audits, and the pedantic persona.
-10. `bazelisk run @tbhb_rules//lint:codeowners_errors` checks CODEOWNERS owners and syntax through the GitHub API, with `curl` and `jq`. API failures fail the check when a CODEOWNERS file exists.
+6. On a pull request, `@tbhb_rules//lint:commit_identity` and `@tbhb_rules//lint:pr_size`.
+7. `pip-audit-target`. Failures are non-blocking on pull requests. On pushes and schedules they fail the job.
+8. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
+9. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
+10. zizmor, with the online audits, and the pedantic persona.
+11. `bazelisk run @tbhb_rules//lint:codeowners_errors` checks CODEOWNERS owners and syntax through the GitHub API, with `curl` and `jq`. API failures fail the check when a CODEOWNERS file exists.
+
+The size check fails when a pull request adds more than 400 `scc` Code lines in programming languages or 1,500 raw lines, including config. It uses the three-dot base/head diff. Deletions are free. Blanks and comments are free under the Code limit and count under the raw limit. Tests and Bazel files count as code. Renovate (`tbhb-dev-renovate[bot]`) is exempt. Other events skip the step. Failures feed the caller's `conclusion` job.
+
+The pinned `scc` release detects generated files. Git's `linguist-generated` and `linguist-vendored` attributes also exempt files. [The shared policy](../../lint/private/pr-size-exempt.txt) lists path globs for lockfiles, vendor trees, and test data. It also maps `scc` language globs: `[prose]` exempts prose, and `[raw-only]` covers config and data formats. Other `scc` languages count under both limits. Unknown formats count under the raw limit. Consumers add path globs in `.github/pr-size-exempt.txt`, one per line. The file accepts blank lines and `#` comments. Both files change through reviewed pull requests. No label or input raises a limit. Large changes must split into stacked PRs.
 
 On a pull request and on a push alike, the history scan covers only the tested commit's history, so a finding on another open pull request's branch, which the full clone also holds, fails only that pull request. The title and body get the same rules as the history, the private ones included, because a squash merge makes them the commit message.
 
