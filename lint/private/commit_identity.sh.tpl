@@ -51,7 +51,8 @@ while IFS=$'\t' read -r sha pair; do
   emails=${emails//$'\r'/}
   if grep -Fxq -- agent@tonyburns.net <<<"$emails"; then
     message=$(git log -1 --format=%B "$sha")
-    if ! problems=$(printf '%s' "$message" | "$trailers"); then
+    committer_time=$(git log -1 --format=%ct "$sha")
+    if ! problems=$(printf '%s' "$message" | "$trailers" "$committer_time"); then
       commit_failed=1
       while IFS= read -r problem; do
         problem=${problem%$'\r'}

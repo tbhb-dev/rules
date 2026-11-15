@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+import subprocess
+import sys
 from io import StringIO
 
 import pytest
@@ -103,7 +105,16 @@ def test_check_message_orders_and_signoff() -> None:
 @given(
     st.lists(
         st.sampled_from(
-            ["effort", "harness", "model", "session", "subagent", "surface"]
+            [
+                "effort",
+                "harness",
+                "launch",
+                "model",
+                "session",
+                "started_at",
+                "subagent",
+                "surface",
+            ]
         ),
         unique=True,
         min_size=1,
@@ -113,8 +124,10 @@ def test_check_value_order_property(keys: list[str]) -> None:
     samples = {
         "effort": "low",
         "harness": "codex",
+        "launch": ROOT,
         "model": "openai:m",
         "session": ROOT,
+        "started_at": "2025-01-01T00:00:00Z",
         "subagent": CHILD,
         "surface": "cli",
     }
@@ -218,3 +231,187 @@ def test_main(
     monkeypatch.setattr(ai.sys, "stdin", StringIO(text))
     assert ai.main() == status
     assert capsys.readouterr() == (output, "")
+
+
+@pytest.mark.parametrize("value", [ROOT, H + "0123456789abcdef", H + "0" * 16])
+def test_launch_accepts(value: str) -> None:
+    assert ai.check_pair(f"launch={value}") is None
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "nope",
+        "sha256:0123456789abcdef",
+        H + "a" * 15,
+        H + "a" * 17,
+        H + "ABCDEF0123456789",
+        H + "g" * 16,
+        "SHA-256-64:0123456789abcdef",
+    ],
+)
+def test_launch_rejects(value: str) -> None:
+    assert ai.check_pair(f"launch={value}") == "bad launch hash"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2025-01-01T00:00:00Z",
+        "2024-02-29T23:59:59Z",
+        "2000-02-29T12:34:56Z",
+        "0001-01-01T00:00:00Z",
+        "9999-12-31T23:59:59Z",
+    ],
+)
+def test_started_at_accepts(value: str) -> None:
+    assert ai.check_pair(f"started_at={value}") is None
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2025-01-01",
+        "20250101T000000Z",
+        "2025-1-01T00:00:00Z",
+        "2025-01-1T00:00:00Z",
+        "2025-01-01T0:00:00Z",
+        "2025-01-01T00:0:00Z",
+        "2025-01-01T00:00:0Z",
+        "2025-01-01T00:00:00",
+        "2025-01-01T00:00:00+00:00",
+        "2025-01-01T00:00:00-05:00",
+        "2025-01-01T00:00:00.1Z",
+        "2025-01-01T00:00:00.000Z",
+        "2025-01-01t00:00:00Z",
+        "2025-01-01T00:00:00z",
+        "2025-13-01T00:00:00Z",
+        "2025-00-01T00:00:00Z",
+        "2025-02-30T00:00:00Z",
+        "2025-02-29T00:00:00Z",
+        "1900-02-29T00:00:00Z",
+        "2025-01-00T00:00:00Z",
+        "2025-04-31T00:00:00Z",
+        "2025-01-01T24:00:00Z",
+        "2025-01-01T00:60:00Z",
+        "2025-01-01T00:00:60Z",
+        "0000-01-01T00:00:00Z",
+        "\uff12\uff10\uff12\uff15-01-01T00:00:00Z",
+        "2025-01-01X00:00:00Z",
+        "2025-01-01T00:00:00ZZ",
+    ],
+)
+def test_started_at_rejects(value: str) -> None:
+    assert ai.check_pair(f"started_at={value}") == "bad started_at"
+
+
+@pytest.mark.parametrize("key", ["launch", "started_at"])
+@pytest.mark.parametrize("value", ["", "a b", "a,b", "a;b"])
+def test_new_attribute_syntax(key: str, value: str) -> None:
+    pair = f"{key}={value}"
+    assert ai.check_pair(pair) == f"bad attribute {pair!r}"
+
+
+@pytest.mark.parametrize(
+    "blob",
+    [
+        f"harness=codex;model=m;launch={ROOT}",
+        f"harness=codex;launch={ROOT};launch={ROOT};model=m",
+        f"{GOOD};started_at=2025-01-01T00:00:00Z;started_at=2025-01-01T00:00:00Z",
+        f"{GOOD};surface=cli;started_at=2025-01-01T00:00:00Z",
+        f"harness=codex;model=m;started_at=2025-01-01T00:00:00Z;session={ROOT}",
+        f"{GOOD};subagent={CHILD};started_at=2025-01-01T00:00:00Z",
+    ],
+)
+def test_new_attribute_order_rejects(blob: str) -> None:
+    assert ai.check_value(f"LLM {blob}") == "attributes out of order or duplicated"
+
+
+def test_old_and_new_attributes_together() -> None:
+    assert (
+        ai.check_value(
+            f"LLM effort=high;harness=codex:1;launch={ROOT};model=openai:m;"
+            f"session={ROOT};started_at=2025-01-01T00:00:00Z;subagent={CHILD};surface=cli"
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    ("value", "committer_time", "problem"),
+    [
+        ("2025-01-01T00:00:00Z", 1735689600, None),
+        ("2025-01-01T00:05:00Z", 1735689600, None),
+        (
+            "2025-01-01T00:05:01Z",
+            1735689600,
+            "started_at is more than 300 seconds after the committer date",
+        ),
+        ("2024-12-31T00:00:00Z", 1735689600, None),
+        ("9999-12-31T23:59:59Z", None, None),
+        ("2025-01-01T00:05:01Z", None, None),
+        (
+            "1970-01-01T00:05:01Z",
+            0,
+            "started_at is more than 300 seconds after the committer date",
+        ),
+    ],
+)
+def test_started_at_skew(
+    value: str, committer_time: int | None, problem: str | None
+) -> None:
+    line = f"Generated-by: LLM {GOOD};started_at={value}"
+    assert ai.check_agent_message(line, committer_time) == (
+        [] if problem is None else [f"{line}: {problem}"]
+    )
+
+
+def test_started_at_checks_each_line() -> None:
+    first = f"Generated-by: LLM {GOOD};started_at=2025-01-01T00:05:00Z"
+    second = f"Assisted-by: LLM {GOOD};started_at=2025-01-01T00:05:01Z"
+    assert ai.check_agent_message(f"{first}\n{second}", 1735689600) == [
+        f"{second}: started_at is more than 300 seconds after the committer date"
+    ]
+
+
+@pytest.mark.parametrize("committer_time", [None, 1735689600])
+def test_main_started_at(
+    committer_time: int | None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    line = f"Generated-by: LLM {GOOD};started_at=2025-01-01T00:05:01Z"
+    monkeypatch.setattr(ai.sys, "stdin", StringIO(line))
+    assert ai.main(committer_time) == int(committer_time is not None)
+    expected = (
+        ""
+        if committer_time is None
+        else f"{line}: started_at is more than 300 seconds after the committer date\n"
+    )
+    assert capsys.readouterr() == (expected, "")
+
+
+@pytest.mark.parametrize(
+    ("args", "timestamp", "status"),
+    [
+        ([], "2025-01-01T00:05:01Z", 0),
+        (["1735689600"], "2025-01-01T00:05:00Z", 0),
+        (["1735689600"], "2025-01-01T00:05:01Z", 1),
+    ],
+)
+def test_cli_started_at(args: list[str], timestamp: str, status: int) -> None:
+    line = f"Generated-by: LLM {GOOD};started_at={timestamp}"
+    result = subprocess.run(
+        [sys.executable, ai.__file__, *args],
+        input=line,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == status
+    assert result.stderr == ""
+    assert result.stdout == (
+        ""
+        if status == 0
+        else f"{line}: started_at is more than 300 seconds after the committer date\n"
+    )
