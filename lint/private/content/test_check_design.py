@@ -913,3 +913,29 @@ def test_supporting_readme_errors_and_design_inputs(design: Path) -> None:
             "status must be draft, decided or superseded",
         )
     ]
+
+
+def test_indented_whitespace_and_equal_list_indent() -> None:
+    assert checker.prose("\t\ntext") == "\t\ntext"
+    assert (
+        checker.prose("12. item\n\n    continuation") == "12. item\n\n    continuation"
+    )
+    assert (
+        checker.prose("- item\n  - child\n\n  parent")
+        == "- item\n  - child\n\n  parent"
+    )
+
+
+def test_destination_offset_and_spacing() -> None:
+    text = "> before <a b>)tail"
+    assert checker.inline_destination(text, text.index("<")) == (
+        "<a b>",
+        text.index(")") + 1,
+    )
+    assert checker.destinations('[x](  <asset> "title" ) tail') == [
+        (0, "<asset>", True)
+    ]
+    assert checker.bare_destination_end("before file(1) rest", 7) == len(
+        "before file(1)"
+    )
+    assert checker.reference_label("  A\tB  ") == "a b"
