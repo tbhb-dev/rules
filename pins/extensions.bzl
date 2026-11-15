@@ -391,6 +391,34 @@ def _tools_impl(mctx):
         url = "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_windows_amd64.exe",
     )
 
+    http_archive(
+        name = "tbhb_rules_scc_macos_arm64",
+        build_file_content = _EXPORT.format("scc"),
+        sha256 = "7201c7aa4aace058d43308462cba72adb18f6094c08c0741727455976d0a0747",
+        url = "https://github.com/boyter/scc/releases/download/v4.1.0/scc_Darwin_arm64.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_scc_linux_x86_64",
+        build_file_content = _EXPORT.format("scc"),
+        sha256 = "c7328436d3027f4357d3d7853f7dc3ac2bbcb4ca08f1adad91a27c593884079b",
+        url = "https://github.com/boyter/scc/releases/download/v4.1.0/scc_Linux_x86_64.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_scc_linux_arm64",
+        build_file_content = _EXPORT.format("scc"),
+        sha256 = "6e0d2a1f8d3540ba7df185477dec40bb7340f1b214bfd303147de5cad2bd7b8b",
+        url = "https://github.com/boyter/scc/releases/download/v4.1.0/scc_Linux_arm64.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_scc_windows_x86_64",
+        build_file_content = _EXPORT.format("scc.exe"),
+        sha256 = "4a433984f45ff29c94eeb3af6db5b511c58f5bf74063dccedafcbf473cb8ff31",
+        url = "https://github.com/boyter/scc/releases/download/v4.1.0/scc_Windows_x86_64.zip",
+    )
+
     _tool_hub(
         name = "tbhb_rules_actionlint",
         tool = "actionlint",
@@ -550,6 +578,17 @@ def _tools_impl(mctx):
             "linux_x86_64": "@tbhb_rules_zizmor_linux_x86_64//:zizmor",
             "macos_arm64": "@tbhb_rules_zizmor_macos_arm64//:zizmor",
             "windows_x86_64": "@tbhb_rules_zizmor_windows_x86_64//:zizmor.exe",
+        },
+    )
+
+    _tool_hub(
+        name = "tbhb_rules_scc",
+        tool = "scc",
+        binaries = {
+            "linux_arm64": "@tbhb_rules_scc_linux_arm64//:scc",
+            "linux_x86_64": "@tbhb_rules_scc_linux_x86_64//:scc",
+            "macos_arm64": "@tbhb_rules_scc_macos_arm64//:scc",
+            "windows_x86_64": "@tbhb_rules_scc_windows_x86_64//:scc.exe",
         },
     )
 
