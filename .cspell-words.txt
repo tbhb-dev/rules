@@ -50,6 +50,7 @@ exhaustruct
 extensionless
 filegroup
 flatmap
+fontconfig
 frontmatter
 fsfe
 funlen
@@ -85,6 +86,8 @@ junitxml
 keepends
 ldconfig
 libexec
+libfontconfig
+libfreetype
 lightningcss
 listy
 LLMX
