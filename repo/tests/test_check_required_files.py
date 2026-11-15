@@ -631,7 +631,9 @@ def test_schema_that_is_not_a_schema_is_unusable(
     schema.write_text('{"type": 5}')
     assert checker.main([str(manifest), str(schema), str(repo)]) == checker.UNUSABLE
     captured = capsys.readouterr()
-    assert captured.out.startswith(f"{schema}: invalid schema: 5 is not valid")
+    assert captured.out == (
+        f"{schema}: invalid schema: 5 is not valid under any of the given schemas\n"
+    )
     assert captured.err == ""
 
 
