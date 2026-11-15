@@ -158,6 +158,11 @@ sh_test(
         "//:BUILD.bazel",
     ],
     env = {"ROOT_RLOCATIONPATH": "$(rlocationpath //:BUILD.bazel)"},
+    # Tech debt: the script calls python3, which the windows-2025 shell lacks; run it with the pinned interpreter and remove this.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )
 
 sh_test(
