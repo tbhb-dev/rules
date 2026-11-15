@@ -61,9 +61,9 @@ for event in ("pull_request", "push"):
         os_list = eval(source, {"__builtins__": {}, "fromJSON": json.loads, "event": event})
     else:
         os_list = [os.strip() for os in expression.strip("[]").split(",")]
-    expected = ["ubuntu-26.04", "ubuntu-26.04-arm", "windows-2025"]
+    expected = ["ubuntu-26.04", "ubuntu-26.04-arm"]
     if event == "push":
-        expected.insert(2, "macos-26")
+        expected += ["macos-26", "windows-2025"]
     print(f"{job} {event}: {json.dumps(os_list)}", flush=True)
     if os_list != expected:
         print(f"FAIL: {job} {event}: expected {json.dumps(expected)}", file=sys.stderr)
@@ -72,27 +72,12 @@ sys.exit(bool(failures))
 PY
 done
 
-# Windows still runs on pull requests, but only its failures are advisory.
-# Job-level continue-on-error makes a failed leg report success to needs.
-advisory=$(job_block bazel | sed -n 's/^    continue-on-error: //p')
-python3 - "$advisory" <<'PY'
-import sys
-
-expression = sys.argv[1].removeprefix("${{").removesuffix("}}").strip() or "False"
-source = expression.replace("github.event_name", "event").replace("matrix.os", "os")
-source = source.replace("&&", "and").replace("||", "or")
-failures = 0
-for event in ("pull_request", "push", "schedule", "workflow_dispatch"):
-    for os in ("windows-2025", "ubuntu-26.04", "ubuntu-26.04-arm", "macos-26"):
-        actual = eval(source, {"__builtins__": {}}, {"event": event, "os": os})
-        expected = event == "pull_request" and os == "windows-2025"
-        print(f"bazel {event} {os}: continue-on-error={actual}", flush=True)
-        if actual != expected:
-            print(f"FAIL: bazel {event} {os}: expected continue-on-error={expected}",
-                  file=sys.stderr)
-            failures += 1
-sys.exit(bool(failures))
-PY
+# Windows and macOS run on pushes and schedules, not on pull requests, so
+# no job tolerates a failure: a failed row must fail `conclusion`.
+if job_block bazel | grep -q '^    continue-on-error:'; then
+  echo "FAIL: bazel must not set continue-on-error" >&2
+  exit 1
+fi
 
 # The Xcode jobs must succeed without running steps on pull requests, while
 # pushes retain the workspace selection and failure-only log uploads.
