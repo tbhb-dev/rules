@@ -5,6 +5,7 @@
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import tomlkit
 
@@ -12,10 +13,11 @@ import tomlkit
 def rule_ids(config: Path) -> set[str]:
     """Resolve the path extensions used by the wrapper's effective config."""
     policy = tomlkit.parse(config.read_text())
-    extension = policy.get("extend", {})
+    extension: dict[str, Any] = dict(policy.get("extend", {}))
     inherited = rule_ids(Path(extension["path"])) if "path" in extension else set()
     inherited.difference_update(extension.get("disabledRules", []))
-    return inherited | {rule["id"] for rule in policy.get("rules", [])}
+    rules: list[dict[str, Any]] = list(policy.get("rules", []))
+    return inherited | {str(rule["id"]) for rule in rules}
 
 
 def require_rules(config: Path) -> None:
