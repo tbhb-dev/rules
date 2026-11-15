@@ -399,7 +399,10 @@ PROOF_REASONS = {
 [
     rule(
         name = tool + "_vocabulary_test",
-        srcs = ["testdata/vocabulary/clean.md"] + (glob(["testdata/vocabulary/styles/**"]) + ["testdata/vocabulary/local.md"] if tool == "vale" else []),
+        srcs = ["testdata/vocabulary/clean.md"] + (glob(["testdata/vocabulary/styles/**"]) + [
+            "testdata/vocabulary/local.md",
+            "testdata/vocabulary/commits.md",
+        ] if tool == "vale" else []),
         config = "testdata/vocabulary/vale.ini" if tool == "vale" else None,
     )
     for tool, rule in [
