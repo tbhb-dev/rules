@@ -85,6 +85,14 @@ sh_test(
     env = {"WORKFLOW_RLOCATIONPATH": "$(rlocationpath //:.github/workflows/repo-checks.yml)"},
 )
 
+# External index failures must not block pull requests.
+sh_test(
+    name = "pip_audit_test",
+    srcs = ["pip_audit_test.sh"],
+    data = ["//:.github/workflows/repo-checks.yml"],
+    env = {"WORKFLOW_RLOCATIONPATH": "$(rlocationpath //:.github/workflows/repo-checks.yml)"},
+)
+
 # The CI plan must keep a nonempty matrix when only Apple is selected.
 sh_test(
     name = "ci_plan_test",
