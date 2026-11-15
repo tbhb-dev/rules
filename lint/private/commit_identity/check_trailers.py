@@ -132,5 +132,20 @@ def main(committer_time: int | None = None) -> int:
     return int(bool(problems))
 
 
+def cli(args: list[str]) -> int:
+    """Validate the optional committer date argument before reading stdin."""
+    if len(args) > 1:
+        print("expected at most one committer date argument")
+        return 1
+    committer_time = None
+    if args:
+        try:
+            committer_time = int(args[0])
+        except ValueError:
+            print(f"bad committer date argument: {args[0]!r}")
+            return 1
+    return main(committer_time)
+
+
 if __name__ == "__main__":
-    sys.exit(main(*map(int, sys.argv[1:])))
+    sys.exit(cli(sys.argv[1:]))
