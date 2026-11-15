@@ -83,6 +83,11 @@ sh_test(
     srcs = ["codeowners_errors_test.sh"],
     data = ["//lint:codeowners_errors"],
     env = {"SCRIPT_RLOCATIONPATH": "$(rlocationpath //lint:codeowners_errors)"},
+    # The script's jq is absent from the Windows test PATH.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )
 
 # The retries in repo-checks.yml must give up before the job's timeout.
