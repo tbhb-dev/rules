@@ -54,7 +54,10 @@ jobs:
               {"id": "root", "dir": ".", "deps": ["python"]},
               {"id": "smoke", "dir": "e2e/smoke", "deps": ["root"]},
               {"id": "d2", "dir": "diagrams/d2", "deps": ["root"]},
-              {"id": "structurizr", "dir": "diagrams/structurizr", "deps": ["root"]},
+              {
+                "id": "structurizr", "dir": "diagrams/structurizr", "deps": ["root"],
+                "os": ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26"]
+              },
               {"id": "d2-smoke", "dir": "diagrams/d2/e2e/smoke", "deps": ["root", "d2"]},
               {"id": "go", "dir": "go", "deps": ["root"]},
               {"id": "go-smoke", "dir": "go/e2e/smoke", "deps": ["root", "go"]},
@@ -107,14 +110,17 @@ jobs:
             | [$ws[]
                 | select(.id as $id | .deps as $deps
                     | $owners | any(. == $id or (. as $o | $deps | index($o) != null)))
-                | {id, dir}]
+                | {id, dir, os: (.os // ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"])}]
           ' <<<"${WORKSPACES}")"
           # Apple and Swift workspaces need Xcode, so their smoke consumers have
           # jobs of their own on a GitHub-hosted macOS runner.
           # GitHub fails an empty matrix; Apple or Swift changes keep root checks running.
-          matrix="$(jq -c '
+          matrix="$(jq -c --arg event "${EVENT}" '
             map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke"))
-            | if length == 0 then [{id: "root", dir: "."}] else . end
+            | if length == 0 then [{id: "root", dir: ".",
+                os: ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"]}] else . end
+            | [.[] | . as $workspace | .os[] | {os: ., workspace: ($workspace | {id, dir})}]
+            | map(select($event != "pull_request" or .os != "macos-26"))
           ' <<<"${selected}")"
           apple="$(jq -r 'any(.[]; .id == "apple-smoke")' <<<"${selected}")"
           swift="$(jq -r 'any(.[]; .id == "swift-smoke")' <<<"${selected}")"
@@ -224,10 +230,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(github.event_name == 'pull_request'
-          && '["ubuntu-26.04","ubuntu-26.04-arm","windows-2025"]'
-          || '["ubuntu-26.04","ubuntu-26.04-arm","macos-26","windows-2025"]') }}
-        workspace: ${{ fromJSON(needs.plan.outputs.workspaces) }}
+        include: ${{ fromJSON(needs.plan.outputs.workspaces) }}
     defaults:
       run:
         shell: bash
