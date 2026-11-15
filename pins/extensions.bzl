@@ -556,6 +556,27 @@ def _tools_impl(mctx):
     # Structurizr and PlantUML run on the pinned JRE, with no system Java.
     # These archives stay outside the source tree; their own license notices
     # travel with their files, like the other downloaded tools.
+    # Liberation Sans 2.1.5 is SIL-OFL-1.1 (archive LICENSE, Google/Red Hat).
+    # Keep all four styles and the upstream notice together.
+    http_archive(
+        name = "tbhb_rules_liberation_fonts_archive",
+        build_file_content = "filegroup(name = \"fonts\", srcs = glob([\"LiberationSans-*.ttf\"]) + [\"LICENSE\"], visibility = [\"//visibility:public\"])",
+        sha256 = "7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0",
+        strip_prefix = "liberation-fonts-ttf-2.1.5",
+        url = "https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz",
+    )
+
+    _tool_files_hub(
+        name = "tbhb_rules_liberation_fonts",
+        tool = "fonts",
+        files = {
+            "linux_arm64": "@tbhb_rules_liberation_fonts_archive//:fonts",
+            "linux_x86_64": "@tbhb_rules_liberation_fonts_archive//:fonts",
+            "macos_arm64": "@tbhb_rules_liberation_fonts_archive//:fonts",
+            "macos_x86_64": "@tbhb_rules_liberation_fonts_archive//:fonts",
+        },
+    )
+
     http_archive(
         name = "tbhb_rules_structurizr_cli_archive",
         build_file_content = "filegroup(name = \"cli\", srcs = glob([\"lib/*.jar\"]), visibility = [\"//visibility:public\"])",

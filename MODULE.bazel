@@ -31,6 +31,7 @@ use_repo(
     "tbhb_rules_git",
     "tbhb_rules_gitleaks",
     "tbhb_rules_jre",
+    "tbhb_rules_liberation_fonts",
     "tbhb_rules_plantuml",
     "tbhb_rules_rumdl",
     "tbhb_rules_ryl",
