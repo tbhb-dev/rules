@@ -167,11 +167,13 @@ shfmt
 sitecustomize
 skylib
 sloglint
+softwaresystem
 srcs
 stampable
 starlark
 strconcat
 strerror
+structurizr
 subagentstart
 subdirs
 subpackages
@@ -181,6 +183,7 @@ takewhile
 tbhb
 tbhbdev
 clipkg
+Temurin
 testifylint
 testonly
 testpaths
@@ -218,6 +221,3 @@ swiftc
 swiftlint
 tsan
 xcrun
-softwaresystem
-structurizr
-Temurin

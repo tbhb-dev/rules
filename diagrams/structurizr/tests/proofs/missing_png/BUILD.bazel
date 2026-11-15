@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("//:defs.bzl", "structurizr_workspace")
+
+repo_files()
+
+structurizr_workspace(
+    name = "workspace",
+    data = glob([
+        "testdata/documentation/**",
+        "testdata/decisions/**",
+    ]),
+    diagrams_dir = "testdata/diagrams",
+    dsl = "testdata/workspace.dsl",
+    tags = ["manual"],
+    workspace_json = "testdata/workspace.json",
+)
+
+expect_failure_test(
+    name = "rejects_missing_png",
+    exit_status = 1,
+    first_line = True,
+    pattern = "^missing: diagrams/structurizr\\-containers\\-key\\.png$",
+    test = ":workspace_freshness_test",
+)
