@@ -57,7 +57,7 @@ def check_pair(pair: str, committer_time: int | None = None) -> str | None:
     key, _, value = pair.partition("=")
     problem = None
     if key not in ATTR_ORDER:
-        problem = f"unknown attribute {key}"
+        print(f"::warning::unknown attribute {key}", file=sys.stderr)
     elif key == "effort" and value not in EFFORTS:
         problem = f"bad effort {value}"
     elif key in {"launch", "session", "subagent"} and not HASH_RE.fullmatch(value):
