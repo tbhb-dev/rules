@@ -88,7 +88,7 @@ def _tool_files_hub_impl(rctx):
     for platform, label in sorted(rctx.attr.files.items()):
         lines.append("        {}: [{}],".format(repr(":" + platform), repr(label)))
     lines += [
-        "    }, no_match_error = {}),".format(repr("no pinned {} files for this platform".format(rctx.attr.tool))),
+        "    }}, no_match_error = {}),".format(repr("no pinned {} files for this platform".format(rctx.attr.tool))),
         "    visibility = [\"//visibility:public\"],",
         ")",
     ]
