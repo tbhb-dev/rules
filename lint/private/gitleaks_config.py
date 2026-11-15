@@ -4,20 +4,19 @@
 """Attach the module's base to local policy without changing source files."""
 
 import sys
+import tomllib
 from pathlib import Path
-from typing import Any
 
 import tomlkit
 
 
 def rule_ids(config: Path) -> set[str]:
     """Resolve the path extensions used by the wrapper's effective config."""
-    policy = tomlkit.parse(config.read_text())
-    extension: dict[str, Any] = dict(policy.get("extend", {}))
+    policy = tomllib.loads(config.read_text())
+    extension = policy.get("extend", {})
     inherited = rule_ids(Path(extension["path"])) if "path" in extension else set()
     inherited.difference_update(extension.get("disabledRules", []))
-    rules: list[dict[str, Any]] = list(policy.get("rules", []))
-    return inherited | {str(rule["id"]) for rule in rules}
+    return inherited | {rule["id"] for rule in policy.get("rules", [])}
 
 
 def require_rules(config: Path) -> None:
