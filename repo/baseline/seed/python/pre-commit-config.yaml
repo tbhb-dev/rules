@@ -117,9 +117,10 @@ repos:
   - repo: local
     hooks:
       - id: spelling-and-prose
+        # cspell errors block; Vale findings remain advisory in the output.
         name: cspell and vale
         language: system
-        entry: bazelisk test //:cspell_test //:vale_test
+        entry: bazelisk test --test_output=all //:cspell_test //:vale_test
         stages: [pre-push]
         always_run: true
         pass_filenames: false
