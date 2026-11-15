@@ -4,7 +4,7 @@
 
 # Run the plan's actual jq selection and filters, without the GitHub API.
 # Accept a workflow path so the same test can check an earlier revision.
-# Run with bash repo/tests/ci_plan_test.sh [workflow], with jq on PATH.
+# Run with bash repo/tests/ci_plan_test.sh [workflow], with jq and python3 on PATH.
 set -euo pipefail
 workflow=${1:-${TEST_SRCDIR:-.}/${WORKFLOW_RLOCATIONPATH:-.github/workflows/ci.yml}}
 dir=$(mktemp -d "${TMPDIR:-/tmp}/ci-plan-test.XXXXXX")
@@ -37,6 +37,89 @@ job_block() {
     found { print }
   ' "$workflow"
 }
+
+# Evaluate each OS expression for both events before combining it with the
+# plan's nonempty workspace matrix. Python's operators match this expression.
+for job in cache-warm bazel; do
+  os=$(job_block "$job" | awk '
+    /^        os: / { sub(/^        os: /, ""); print; found = 1; next }
+    found && /^          / { print; next }
+    found { exit }
+  ')
+  python3 - "$job" "$os" <<'PY'
+import json
+import sys
+
+job, expression = sys.argv[1:]
+expression = " ".join(expression.split())
+failures = 0
+for event in ("pull_request", "push"):
+    if expression.startswith("${{"):
+        source = expression[3:-2].strip()
+        source = source.replace("github.event_name", "event")
+        source = source.replace("&&", "and").replace("||", "or")
+        os_list = eval(source, {"__builtins__": {}, "fromJSON": json.loads, "event": event})
+    else:
+        os_list = [os.strip() for os in expression.strip("[]").split(",")]
+    expected = ["ubuntu-26.04", "ubuntu-26.04-arm", "windows-2025"]
+    if event == "push":
+        expected.insert(2, "macos-26")
+    print(f"{job} {event}: {json.dumps(os_list)}", flush=True)
+    if os_list != expected:
+        print(f"FAIL: {job} {event}: expected {json.dumps(expected)}", file=sys.stderr)
+        failures += 1
+sys.exit(bool(failures))
+PY
+done
+
+# The Xcode jobs must succeed without running steps on pull requests, while
+# pushes retain the workspace selection and failure-only log uploads.
+python3 - "$workflow" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+workflow = Path(sys.argv[1]).read_text()
+failures = 0
+for job in ("apple", "swift"):
+    block = re.search(rf"^  {job}:\n(.*?)(?=^  \S|\Z)", workflow, re.M | re.S)[1]
+    runner = re.search(r"^    runs-on: (.+)$", block, re.M)[1]
+    steps = re.split(r"^      - ", block, flags=re.M)[1:]
+    conditions = []
+    for step in steps:
+        condition = re.search(r"^        if: (.+)$", step, re.M)
+        conditions.append(condition[1] if condition else "True")
+
+    for event in ("pull_request", "push"):
+        def evaluate(expression, selected="true", failed=False):
+            source = expression.removeprefix("${{").removesuffix("}}").strip()
+            source = source.replace("github.event_name", "event")
+            source = source.replace(f"env.RUN_{job.upper()}", "selected")
+            source = source.replace("failure()", "failed")
+            source = source.replace("&&", "and").replace("||", "or")
+            return eval(source, {"__builtins__": {}}, {
+                "event": event, "selected": selected, "failed": failed,
+            })
+
+        actual_runner = evaluate(runner) if runner.startswith("${{") else runner
+        expected_runner = "ubuntu-26.04" if event == "pull_request" else "xcode-27"
+        actual_steps = [evaluate(condition) for condition in conditions]
+        print(f"{job} {event}: runs-on={actual_runner} steps={actual_steps}", flush=True)
+        if actual_runner != expected_runner:
+            print(f"FAIL: {job} {event}: expected runs-on={expected_runner}", file=sys.stderr)
+            failures += 1
+        for selected in ("false", "true"):
+            for failed in (False, True):
+                actual = [evaluate(condition, selected, failed) for condition in conditions]
+                run = event == "push" and selected == "true"
+                expected = [run] * 4 + [run and failed]
+                if actual != expected:
+                    print(f"FAIL: {job} {event} selected={selected} failure={failed}: "
+                          f"steps={actual}, expected {expected}", file=sys.stderr)
+                    failures += 1
+sys.exit(bool(failures))
+PY
+
 plan_job=$(job_block plan)
 outputs=$(awk '
   /^    outputs:$/ { found = 1; next }

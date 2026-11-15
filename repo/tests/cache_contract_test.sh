@@ -59,8 +59,17 @@ skipped_steps=$(grep -c "if: steps.cache.outputs.cache-hit != 'true'" "$ci")
 ! grep -q 'cache-version:' "${workflows[@]}" || fail 'split key family'
 grep -qF "if: failure() && inputs.cache-save == 'true'" "$action" || fail 'failed warms must discard partial archives'
 # The two matrices must cover the same platforms.
-matrices=$(grep 'os: \[ubuntu-' "$ci" | sort -u | wc -l | tr -d ' ')
-[[ $matrices == 1 ]] || fail 'warm and test matrices differ'
+matrix_os() {
+  awk -v job="$1" '
+    /^  [^ ]/ { in_job = ($0 == "  " job ":") }
+    in_job && /^        os:/ { block=1 }
+    block && !/^        os:|^          / { exit }
+    block { print }
+  ' "$ci"
+}
+warm_matrix=$(matrix_os cache-warm)
+test_matrix=$(matrix_os bazel)
+[[ -n $warm_matrix && $warm_matrix == "$test_matrix" ]] || fail 'warm and test matrices differ'
 
 # Read literal build/run labels and target input values, including tools
 # selected by the caller. This detects a new run-only tool in either workflow.
