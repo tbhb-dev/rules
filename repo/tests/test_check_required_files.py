@@ -4,6 +4,7 @@
 """Tests for the required files check."""
 
 import json
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -23,7 +24,12 @@ SCHEMA_TEXT = json.dumps(
                 "type": "array",
                 "items": {
                     "type": "object",
-                    "properties": {"reason": {"type": "string", "pattern": "\\S"}},
+                    "required": ["check", "path", "reason"],
+                    "properties": {
+                        "check": {"type": "string"},
+                        "path": {"type": "string", "minLength": 1},
+                        "reason": {"type": "string", "pattern": "\\S"},
+                    },
                 },
             },
         },
@@ -73,19 +79,25 @@ def test_clean(manifest: Path, repo: Path) -> None:
     assert run(manifest, repo) == []
 
 
-def assert_main_output(
+def assert_main_output(  # noqa: PLR0913 -- Fixtures and output assertions.
     manifest: Path,
     repo: Path,
     capsys: pytest.CaptureFixture[str],
     expected: str,
     status: int = 1,
+    *,
+    prefix: bool = False,
 ) -> None:
     assert (
         checker.main([str(manifest), str(manifest.with_name("schema.json")), str(repo)])
         == status
     )
     captured = capsys.readouterr()
-    assert captured.out == expected
+    if prefix:
+        assert captured.out.startswith(expected)
+        assert len(captured.out.splitlines()) == 1
+    else:
+        assert captured.out == expected
     assert captured.err == ""
 
 
@@ -128,8 +140,7 @@ def test_missing_visibility_key(
         manifest,
         repo,
         capsys,
-        f'{repo / ".tbhb-repo.toml"}: visibility "public" '
-        "has no entry in the manifest\n",
+        f"{manifest}: visibility must be a table\n",
     )
 
 
@@ -142,7 +153,7 @@ def test_missing_kind_key(
         manifest,
         repo,
         capsys,
-        f'{repo / ".tbhb-repo.toml"}: kind "go" has no entry in the manifest\n',
+        f"{manifest}: kind must be a table\n",
     )
 
 
@@ -154,8 +165,8 @@ def test_invalid_utf8(
         manifest,
         repo,
         capsys,
-        f"{repo / '.tbhb-repo.toml'}: invalid TOML: "
-        "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\n",
+        f"{repo / '.tbhb-repo.toml'}: invalid TOML:",
+        prefix=True,
     )
 
 
@@ -269,7 +280,25 @@ def test_entry_of_wrong_type(  # noqa: PLR0913, PLR0917 -- Fixtures and paramete
 
 
 @pytest.mark.parametrize(
-    "path", ["/etc/hostname", "/", "..", "../go.mod", "cmd/..", "cmd/../go.mod"]
+    "path",
+    [
+        "/etc/hostname",
+        "/",
+        "..",
+        "../go.mod",
+        "cmd/..",
+        "cmd/../go.mod",
+        "",
+        ".",
+        "./",
+        "a\nb",
+        "a\n/../go.mod",
+        "a\rb",
+        "a\\b",
+        "C:go.mod",
+        "z:/go.mod",
+        "a\x00b",
+    ],
 )
 @pytest.mark.parametrize(("table", "name"), [("kind", "go"), ("visibility", "public")])
 def test_required_path_outside_repository(  # noqa: PLR0913, PLR0917 -- Fixtures and parameters.
@@ -285,15 +314,15 @@ def test_required_path_outside_repository(  # noqa: PLR0913, PLR0917 -- Fixtures
     manifest.write_text(
         "[kind.go]\nrequired = []\n[visibility.public]\nrequired = []\n".replace(
             f"[{table}.{name}]\nrequired = []",
-            f"[{table}.{name}]\nrequired = ['go.mod', '{path}']",
+            f"[{table}.{name}]\nrequired = ['go.mod', {json.dumps(path)}]",
         )
     )
     assert_main_output(
         manifest,
         repo,
         capsys,
-        f'{manifest}: {table} "{name}" required path {path} '
-        "must be relative with no .. segment\n",
+        f'{manifest}: {table} "{name}" required path {path!r} '
+        "must be a safe relative path\n",
     )
 
 
@@ -324,7 +353,8 @@ def test_manifest_invalid_toml(
         manifest,
         repo,
         capsys,
-        f"{manifest}: invalid TOML: Invalid value (at end of document)\n",
+        f"{manifest}: invalid TOML:",
+        prefix=True,
     )
 
 
@@ -337,8 +367,8 @@ def test_manifest_invalid_utf8(
         manifest,
         repo,
         capsys,
-        f"{manifest}: invalid TOML: "
-        "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\n",
+        "manifest or schema: cannot read UTF-8\n",
+        status=2,
     )
 
 
@@ -352,8 +382,9 @@ def test_schema_invalid_json(
         manifest,
         repo,
         capsys,
-        f"{schema}: invalid JSON: "
-        "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)\n",
+        f"{schema}: invalid schema: invalid JSON:",
+        status=2,
+        prefix=True,
     )
 
 
@@ -367,17 +398,17 @@ def test_schema_invalid_utf8(
         manifest,
         repo,
         capsys,
-        f"{schema}: invalid JSON: "
-        "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\n",
+        "manifest or schema: cannot read UTF-8\n",
+        status=2,
     )
 
 
-def test_exception_without_check(
+def test_other_exception(
     manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     declare(
         repo,
-        "[[exception]]\npath = 'go.mod'\nreason = 'Other check.'\n"
+        "[[exception]]\ncheck = 'C8'\npath = 'go.mod'\nreason = 'Other check.'\n"
         "[[exception]]\ncheck = 'C4'\npath = 'LICENSE'\nreason = 'Not yet.'\n",
     )
     populate(repo)
@@ -397,7 +428,8 @@ def test_c4_exception_without_reason(
         manifest,
         repo,
         capsys,
-        f"{repo / '.tbhb-repo.toml'}: C4 exception needs a path and a reason\n",
+        f"{repo / '.tbhb-repo.toml'}: $.exception[0]:",
+        prefix=True,
     )
 
 
@@ -410,7 +442,8 @@ def test_c4_exception_without_path(
         manifest,
         repo,
         capsys,
-        f"{repo / '.tbhb-repo.toml'}: C4 exception needs a path and a reason\n",
+        f"{repo / '.tbhb-repo.toml'}: $.exception[0]:",
+        prefix=True,
     )
 
 
@@ -429,7 +462,7 @@ def test_invalid_toml(manifest: Path, repo: Path) -> None:
     [
         ("schema_version = 1\nkind = 'rust'\nprivate = false\n", "$.kind"),
         ("schema_version = 1\nkind = 'go'\nprivate = 'no'\n", "$.private"),
-        ("schema_version = 1\nkind = 'go'\n", "'private' is a required"),
+        ("schema_version = 1\nkind = 'go'\n", "$:"),
         (
             (
                 "schema_version = 1\nkind = 'go'\nprivate = false\n"
@@ -603,8 +636,9 @@ def test_missing_manifest_is_unusable(
         manifest,
         repo,
         capsys,
-        f"{manifest}: cannot read: No such file or directory\n",
+        f"{manifest}: cannot read:",
         status=2,
+        prefix=True,
     )
 
 
@@ -618,8 +652,9 @@ def test_missing_schema_is_unusable(
         manifest,
         repo,
         capsys,
-        f"{schema}: cannot read: No such file or directory\n",
+        f"{schema}: cannot read:",
         status=2,
+        prefix=True,
     )
 
 
@@ -631,9 +666,8 @@ def test_schema_that_is_not_a_schema_is_unusable(
     schema.write_text('{"type": 5}')
     assert checker.main([str(manifest), str(schema), str(repo)]) == checker.UNUSABLE
     captured = capsys.readouterr()
-    assert captured.out == (
-        f"{schema}: invalid schema: 5 is not valid under any of the given schemas\n"
-    )
+    assert captured.out.startswith(f"{schema}: invalid schema:")
+    assert len(captured.out.splitlines()) == 1
     assert captured.err == ""
 
 
@@ -655,3 +689,298 @@ def test_real_manifest_resolves_every_kind(repo: Path, visibility: str) -> None:
         assert errors
         assert all(error.endswith(" is missing") for error in errors)
         assert f"{repo}: required file .tbhb-repo.toml is missing" in errors
+
+
+@pytest.mark.parametrize("declaration", [None, "kind =", "kind = 'go'\n"])
+@pytest.mark.parametrize("input_name", ["manifest.toml", "schema.json"])
+@pytest.mark.parametrize("failure", ["missing", "oserror", "utf8"])
+def test_unreadable_input_precedes_declaration(  # noqa: PLR0913, PLR0917 -- Input matrix.
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    declaration: str | None,
+    input_name: str,
+    failure: str,
+) -> None:
+    if declaration is not None:
+        (repo / ".tbhb-repo.toml").write_text(declaration)
+    path = manifest.with_name(input_name)
+    path.unlink()
+    if failure == "oserror":
+        path.mkdir()
+    elif failure == "utf8":
+        path.write_bytes(b"\xff")
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        "manifest or schema: cannot read UTF-8"
+        if failure == "utf8"
+        else f"{path}: cannot read:",
+        status=2,
+        prefix=True,
+    )
+
+
+@pytest.mark.parametrize("declaration", [None, "kind =", "kind = 'go'\n"])
+@pytest.mark.parametrize("schema_text", ["{", "{}", "true", '{"type": "object"}'])
+def test_bad_schema_precedes_declaration(
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    declaration: str | None,
+    schema_text: str,
+) -> None:
+    if declaration is not None:
+        (repo / ".tbhb-repo.toml").write_text(declaration)
+    schema = manifest.with_name("schema.json")
+    schema.write_text(schema_text)
+    assert_main_output(
+        manifest, repo, capsys, f"{schema}: invalid schema:", status=2, prefix=True
+    )
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"type": "array"},
+        {"type": "object", "required": ["kind", "private"]},
+        {"type": "object", "required": ["kind", "private"], "properties": {}},
+        {
+            "type": "object",
+            "required": ["kind", "private"],
+            "properties": {"kind": True, "private": True},
+        },
+        {
+            "type": "object",
+            "required": ["kind", "private"],
+            "properties": {"kind": {}, "private": {"type": "boolean"}},
+        },
+        {
+            "type": "object",
+            "required": ["kind", "private"],
+            "properties": {"kind": {"type": "string"}, "private": {"type": "string"}},
+        },
+    ],
+)
+def test_schema_contract(
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    data: object,
+) -> None:
+    declare(repo, "")
+    schema = manifest.with_name("schema.json")
+    schema.write_text(json.dumps(data))
+    assert_main_output(
+        manifest, repo, capsys, f"{schema}: invalid schema:", status=2, prefix=True
+    )
+
+
+def test_string_kind_schema(manifest: Path, repo: Path) -> None:
+    declare(repo, "")
+    populate(repo)
+    data = json.loads(SCHEMA_TEXT)
+    data["properties"]["kind"] = {"type": "string"}
+    manifest.with_name("schema.json").write_text(json.dumps(data))
+    assert run(manifest, repo) == []
+
+
+@pytest.mark.parametrize(
+    "input_name", ["manifest.toml", "schema.json", ".tbhb-repo.toml"]
+)
+def test_oserror_without_filename(
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    input_name: str,
+) -> None:
+    declare(repo, "")
+    original = Path.read_bytes
+
+    def refuse(path: Path) -> bytes:
+        if path.name == input_name:
+            msg = "read failed"
+            raise OSError(msg)
+        return original(path)
+
+    monkeypatch.setattr(Path, "read_bytes", refuse)
+    assert_main_output(manifest, repo, capsys, "cannot read:", status=2, prefix=True)
+
+
+@pytest.mark.parametrize("key", ["path", "reason"])
+@pytest.mark.parametrize("value", [None, 1, "", " "])
+def test_c4_helper_rejects_bad_fields(key: str, value: object) -> None:
+    entry: dict[str, object] = {"check": "C4", "path": "go.mod", "reason": "Needed."}
+    if value is None:
+        entry.pop(key)
+    else:
+        entry[key] = value
+    assert checker.c4_exception_paths([entry]) is None
+    assert checker.check_paths(Path("repo"), [], [entry]) == [
+        "repo/.tbhb-repo.toml: C4 exception needs a path and a reason"
+    ]
+
+
+def test_c4_helper_ignores_other_checks() -> None:
+    assert checker.c4_exception_paths([{}, {"check": "C8"}]) == set()
+
+
+def test_empty_manifest(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    manifest.write_text("")
+    assert_main_output(manifest, repo, capsys, f"{manifest}: kind must be a table\n")
+
+
+def test_real_manifest_check_and_main(
+    repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    manifest = BASELINE / "manifest.toml"
+    schema = BASELINE / "repo.schema.json"
+    declare(repo, "")
+    errors = checker.check(manifest, schema, repo)
+    assert errors
+    assert all(error.endswith(" is missing") for error in errors)
+    assert checker.main([str(manifest), str(schema), str(repo)]) == 1
+    assert capsys.readouterr().out == "".join(f"{error}\n" for error in errors)
+    rules = tomllib.loads(manifest.read_text())
+    for path in (
+        rules["kind"]["go"]["required"] + rules["visibility"]["public"]["required"]
+    ):
+        target = repo / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.touch()
+    assert checker.check(manifest, schema, repo) == []
+    assert checker.main([str(manifest), str(schema), str(repo)]) == 0
+    assert capsys.readouterr().out == ""
+
+
+@pytest.mark.parametrize("content", [b"kind =", b"\xff"])
+def test_check_manifest_invalid_toml(
+    manifest: Path, repo: Path, content: bytes
+) -> None:
+    manifest.write_bytes(content)
+    errors = checker.check_manifest(manifest, repo, "go", "public", [])
+    assert len(errors) == 1
+    assert errors[0].startswith(f"{manifest}: invalid TOML:")
+
+
+@pytest.mark.parametrize("data", [True, {}, {"type": "array"}])
+def test_schema_contract_needs_object(data: object) -> None:
+    with pytest.raises(
+        checker.SchemaError, match=r"^schema must define an object declaration$"
+    ):
+        checker.validate_schema_contract(data)
+
+
+@pytest.mark.parametrize(
+    ("required", "properties"),
+    [
+        (None, {}),
+        ([], {}),
+        (["kind"], {}),
+        (["private"], {}),
+        (["kind", "private"], None),
+    ],
+)
+def test_schema_contract_needs_fields(required: object, properties: object) -> None:
+    with pytest.raises(
+        checker.SchemaError, match=r"^schema must require and define kind and private$"
+    ):
+        checker.validate_schema_contract(
+            {"type": "object", "required": required, "properties": properties}
+        )
+
+
+@pytest.mark.parametrize(("kind", "private"), [(None, {}), ({}, None), (True, {})])
+def test_schema_contract_needs_property_schemas(kind: object, private: object) -> None:
+    with pytest.raises(
+        checker.SchemaError, match=r"^schema must define kind and private$"
+    ):
+        checker.validate_schema_contract(
+            {
+                "type": "object",
+                "required": ["kind", "private"],
+                "properties": {"kind": kind, "private": private},
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    ("kind", "private"),
+    [
+        ({}, {"type": "boolean"}),
+        ({"enum": []}, {"type": "boolean"}),
+        ({"enum": [1]}, {"type": "boolean"}),
+        ({"type": "string"}, {}),
+        ({"enum": ["go"]}, {"type": "string"}),
+    ],
+)
+def test_schema_contract_needs_field_types(kind: object, private: object) -> None:
+    with pytest.raises(
+        checker.SchemaError,
+        match=r"^schema must constrain kind to strings and private to booleans$",
+    ):
+        checker.validate_schema_contract(
+            {
+                "type": "object",
+                "required": ["kind", "private"],
+                "properties": {"kind": kind, "private": private},
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    "exception",
+    [
+        None,
+        True,
+        {},
+        {"type": "object"},
+        {"type": "array"},
+        {"type": "array", "items": True},
+        {"type": "array", "items": {}},
+        {"type": "array", "items": {"type": "string"}},
+    ],
+)
+def test_schema_needs_exception_objects(
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    exception: object,
+) -> None:
+    declare(repo, "")
+    data = json.loads(SCHEMA_TEXT)
+    if exception is None:
+        del data["properties"]["exception"]
+    else:
+        data["properties"]["exception"] = exception
+    manifest.with_name("schema.json").write_text(json.dumps(data))
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{manifest.with_name('schema.json')}: invalid schema: "
+        "schema must define exception as an array of objects\n",
+        status=2,
+    )
+
+
+def test_invalid_nested_schema(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    data = json.loads(SCHEMA_TEXT)
+    data["properties"]["unused"] = {"type": 5}
+    manifest.with_name("schema.json").write_text(json.dumps(data))
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{manifest.with_name('schema.json')}: invalid schema:",
+        status=2,
+        prefix=True,
+    )
