@@ -12,12 +12,12 @@ generated:
     surface: cli
     session: sha-256-64:debb814921f029ad
     subagent: sha-256-64:c04c2891d8f854b6
-    at: "2026-11-15T07:49:20Z"
+    at: "2026-11-15T09:29:31Z"
 ---
 
 # The required files
 
-`//repo/tests:check_required_files` checks a consumer root against the baseline `manifest.toml` and `repo.schema.json`. A successful check exits with status 0. Check failures exit with status 1. The checker exits with status 2 if it can't read an input or if the schema fails while it validates the declaration. It doesn't check references the declaration never reaches.
+`//repo/tests:check_required_files` checks a consumer root against the baseline `manifest.toml` and `repo.schema.json`. A successful check exits with status 0. Check failures exit with status 1. The checker exits with status 2 if it can't read an input or if the schema fails while it validates the declaration. It doesn't check references in schema parts the declaration doesn't use.
 
 Consumers must declare `kind` and a boolean `private` value in `.tbhb-repo.toml`. The checker combines the selected `[kind.<kind>]` entry with `[visibility.public]` or `[visibility.private]`. Unknown kinds and invalid declarations exit with status 1 only when the manifest and schema are readable.
 
