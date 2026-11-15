@@ -10,6 +10,26 @@ load("@rules_testing//lib:util.bzl", "util")
 load("@tbhb_rules//quality:defs.bzl", "mutation_os_constraints")
 load("//:defs.bzl", "mutmut_test")
 
+def _test_mutmut_forwards_gate_attrs(name):
+    cases = []
+    for suffix, kwargs in [
+        ("default", {}),
+        ("advisory", {"advisory": True}),
+        ("full_scope", {"require_scope": "full"}),
+        ("both", {"advisory": True, "require_scope": "full"}),
+    ]:
+        subject = name + "_" + suffix
+        util.helper_target(mutmut_test, name = subject, srcs = ["//:pyproject.toml"], **kwargs)
+        gate = native.existing_rule(subject)
+        cases.append((gate["advisory"], gate["require_scope"], kwargs.get("advisory", False), kwargs.get("require_scope", "any")))
+
+    def impl(env):
+        for advisory, require_scope, expected_advisory, expected_scope in cases:
+            env.expect.that_bool(advisory).equals(expected_advisory)
+            env.expect.that_str(require_scope).equals(expected_scope)
+
+    unit_test(name = name, impl = impl)
+
 def _test_mutmut_compatibility(name):
     cases = []
     not_windows = select({
@@ -62,4 +82,4 @@ def _test_bad_name(name):
     analysis_test(name = name, impl = _expect_bad_name, target = name + "_subject", expect_failure = True)
 
 def analysis_test_suite(name):
-    test_suite(name = name, tests = [_test_mutmut_compatibility, _test_bad_name])
+    test_suite(name = name, tests = [_test_mutmut_compatibility, _test_mutmut_forwards_gate_attrs, _test_bad_name])

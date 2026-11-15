@@ -204,6 +204,32 @@ def _test_gomutants_target_compatible_with(name):
 
     unit_test(name = name, impl = impl)
 
+def _test_gomutants_forwards_gate_attrs(name):
+    cases = []
+    for suffix, kwargs in [
+        ("default", {}),
+        ("advisory", {"advisory": True}),
+        ("full_scope", {"require_scope": "full"}),
+        ("both", {"advisory": True, "require_scope": "full"}),
+    ]:
+        subject = name + "_" + suffix
+        util.helper_target(
+            gomutants_test,
+            name = subject,
+            tests = [FIXTURE + "/a:a_test", FIXTURE + "/b:b_test"],
+            go_mod = FIXTURE + ":go.mod",
+            **kwargs
+        )
+        gate = native.existing_rule(subject)
+        cases.append((gate["advisory"], gate["require_scope"], kwargs.get("advisory", False), kwargs.get("require_scope", "any")))
+
+    def impl(env):
+        for advisory, require_scope, expected_advisory, expected_scope in cases:
+            env.expect.that_bool(advisory).equals(expected_advisory)
+            env.expect.that_str(require_scope).equals(expected_scope)
+
+    unit_test(name = name, impl = impl)
+
 def _test_gomutants_mutation_oses(name):
     cases = []
     for suffix, oses, caller in [
@@ -263,6 +289,7 @@ def analysis_test_suite(name):
             _test_deadcode_without_go_targets,
             _test_follows_deps_and_embed,
             _test_gomutants_flags_by_exec_os,
+            _test_gomutants_forwards_gate_attrs,
             _test_gomutants_target_compatible_with,
             _test_gomutants_mutation_oses,
             _test_mutation_oses_bad_name,
