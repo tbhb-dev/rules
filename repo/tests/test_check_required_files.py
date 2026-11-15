@@ -6,6 +6,7 @@
 import json
 import tomllib
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -669,6 +670,50 @@ def test_schema_that_is_not_a_schema_is_unusable(
     assert captured.out.startswith(f"{schema}: invalid schema:")
     assert len(captured.out.splitlines()) == 1
     assert captured.err == ""
+
+
+@pytest.mark.parametrize(
+    "reference", ["#/$defs/missing", "https://example.invalid/x.json"]
+)
+def test_unresolvable_schema_reference(
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    reference: str,
+) -> None:
+    declare(repo, "")
+    schema = manifest.with_name("schema.json")
+    data = json.loads(SCHEMA_TEXT)
+    data["$ref"] = reference
+    retrieve = Mock(side_effect=AssertionError("network access"))
+    monkeypatch.setattr("urllib.request.urlopen", retrieve)
+    schema.write_text(json.dumps(data))
+    assert_main_output(
+        manifest, repo, capsys, f"{schema}: invalid schema: ", status=2, prefix=True
+    )
+    retrieve.assert_not_called()
+
+
+def test_unresolvable_reference_diagnostic(
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    declare(repo, "")
+    error = checker.Unresolvable(ref="missing\nreference")
+    monkeypatch.setattr(
+        checker.Draft202012Validator, "iter_errors", Mock(side_effect=error)
+    )
+    schema = manifest.with_name("schema.json")
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{schema}: invalid schema: {str(error).splitlines()[0]}\n",
+        status=2,
+    )
 
 
 BASELINE = Path(__file__).parents[1] / "baseline"
