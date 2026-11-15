@@ -83,6 +83,7 @@ PROOF_TAGS = ["manual"]
 mutmut_test(
     name = "proof_mutmut_survivor",
     srcs = glob(["weak/**"]),
+    advisory = False,
     chdir = "weak",
     cpus = 2,
     tags = PROOF_TAGS,
