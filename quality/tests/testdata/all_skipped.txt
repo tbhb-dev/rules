@@ -1,0 +1,9 @@
+total=5
+killed=0
+lived=0
+not_covered=0
+timeout=0
+errored=0
+skipped=5
+interrupted=0
+scope=full
