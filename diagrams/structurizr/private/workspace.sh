@@ -33,10 +33,9 @@ lint() {
     cat "$scratch/validate.log"
   fi
   # Inspect exits with the number of displayed violations. Also check its
-  # output, because 256 violations wrap the process exit status to zero.
-  # The pinned CLI is silent for a clean error,warning inspection (covered
-  # by workspace_lint_test). Treat any unexpected output as a failure too.
-  if ((inspect_status)) || [[ -s $scratch/inspect.log ]]; then
+  # output for violation lines, because 256 violations wrap the process exit
+  # status to zero. Other output, such as a launcher notice, passes.
+  if ((inspect_status)) || grep -Eq '^(ERROR|WARNING) *\|' "$scratch/inspect.log"; then
     echo "inspect: workspace failed inspection (ERROR,WARNING)"
     cat "$scratch/inspect.log"
     inspect_status=1
