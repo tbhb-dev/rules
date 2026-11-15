@@ -64,8 +64,9 @@ mutation_gate_test = rule(
     toolchains = SHELL_TOOLCHAINS,
     doc = """Passes only when every mutant in `reports` was killed, timed out or skipped.
 
-A timed-out mutant counts as killed and stays listed; the gate prints how
-many timed out, and appends that line to `$GITHUB_STEP_SUMMARY` when set.
+With at least one kill, a timed-out mutant counts as killed and stays listed;
+the gate prints how many timed out, and appends that line to
+`$GITHUB_STEP_SUMMARY` when set. Timeouts without any kills fail the gate.
 It fails when timeouts exceed MUTATION_MAX_TIMEOUT_PERCENT of the mutants,
 in the sum and in any one report, because a starved CPU makes tests time
 out and that must not pass as kills.
@@ -88,9 +89,9 @@ are listed without failing the gate. The gate prints
 `mutation_gate: advisory, N survivors (not failing)` and appends it to
 `$GITHUB_STEP_SUMMARY` when set. Every other failure still fails: errored
 mutants, interrupted runs, incomplete or inconsistent accounting, malformed
-reports, timeouts above the cap, `mutant.unmapped`, an empty full-scope run,
-and a diff report under `require_scope = "full"`. Blocking nightly runs
-must leave it False.""",
+reports, timeouts above the cap or without any kills, `mutant.unmapped`, an
+empty full-scope run, and a diff report under `require_scope = "full"`.
+Blocking nightly runs must leave it False.""",
     attrs = SHELL_ATTRS | {
         "advisory": attr.bool(
             default = False,

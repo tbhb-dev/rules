@@ -103,6 +103,7 @@ expect_failure_test(
 )
 
 ADVISORY_PROOFS = {
+    "diff_zero_kill_timeout": ("diff_zero_kill_timeout", "FAIL: no mutant was killed \\(1 timed out\\)$", "any"),
     "double_count": ("double_count", "counts add up to 11, above total 10", "any"),
     "empty": ("empty", "FAIL: no mutants were generated", "any"),
     "errored": ("advisory_errored", "FAIL: 1 errored$", "any"),
@@ -112,6 +113,7 @@ ADVISORY_PROOFS = {
     "timeout_above_cap": ("advisory_timeout_above_cap", "FAIL: 11 timeout\\(s\\) of 100, above 10%", "any"),
     "unchecked": ("survivor", "FAIL: 2 not checked$", "any"),
     "unmapped": ("advisory_unmapped", "FAIL: 1 unmapped$", "any"),
+    "zero_kill_timeout": ("zero_kill_timeout", "FAIL: no mutant was killed \\(1 timed out\\)$", "any"),
 }
 
 [
@@ -128,6 +130,7 @@ ADVISORY_PROOFS = {
 [
     expect_failure_test(
         name = "proof_advisory_" + name + "_fails",
+        exit_status = 1,
         pattern = pattern,
         test = ":proof_advisory_" + name,
     )
@@ -151,6 +154,7 @@ PROOF_REASONS = {
     "proof_diff_selected_mismatch": "selected is 3, total 2",
     "proof_diff_survivor": "FAIL: 1 lived$",
     "proof_diff_unmapped": "FAIL: 1 unmapped$",
+    "proof_diff_zero_kill_timeout": "FAIL: no mutant was killed \\(1 timed out\\)$",
     "proof_double_count": "testdata/double_count.txt: counts add up to 11, above total 10",
     "proof_duplicate_key": "sets killed more than once",
     "proof_empty": "FAIL: no mutants were generated",
@@ -168,6 +172,7 @@ PROOF_REASONS = {
     "proof_timeout_zero_total": "FAIL: .*1 timeout\\(s\\) of 0",
     "proof_unchecked": "FAIL: 3280 not checked",
     "proof_unknown_status": "testdata/unknown_status.txt: lists mutants under an unknown status: mutant.exploded",
+    "proof_zero_kill_timeout": "FAIL: no mutant was killed \\(1 timed out\\)$",
 }
 
 [
@@ -182,6 +187,7 @@ PROOF_REASONS = {
 [
     expect_failure_test(
         name = proof + "_fails",
+        exit_status = 1,
         pattern = pattern,
         test = ":" + proof,
     )
@@ -204,9 +210,9 @@ gate_output_test(
     ],
 )
 
-# Timeouts count as killed up to 10% of the mutants (10 of 100 passes, 5
-# passes, 11 fails), stay listed, and are counted on stdout and in the job
-# summary. Gate failures list them too.
+# With at least one kill, timeouts count as killed up to 10% of the mutants
+# (10 of 100 passes, 5 passes, 11 fails), stay listed, and are counted on
+# stdout and in the job summary. Gate failures list them too.
 mutation_gate_test(
     name = "timeout_below_cap_gate",
     reports = ["testdata/timeout_below_cap.txt"],

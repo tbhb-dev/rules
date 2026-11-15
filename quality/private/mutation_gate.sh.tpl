@@ -22,18 +22,19 @@
 # by a pragma, equivalent, or not viable (they don't compile); each stays
 # listed with its tool status.
 #
-# A timed-out mutant counts as killed and stays listed (its mutant.timeout or
-# mutant.timed_out lines print). The count line goes to stdout, and to
-# $GITHUB_STEP_SUMMARY when that variable is set and writable; a failed write
-# there only warns on stderr, and delivery isn't guaranteed under a sandbox or
-# with a cached test result.
+# With at least one kill, a timed-out mutant counts as killed and stays listed
+# (its mutant.timeout or mutant.timed_out lines print). The count line goes to
+# stdout, and to $GITHUB_STEP_SUMMARY when that variable is set and writable;
+# a failed write there only warns on stderr, and delivery isn't guaranteed
+# under a sandbox or with a cached test result.
 #
 # Fails on: any lived, not_covered or errored mutant; timeouts above
-# MAX_TIMEOUT_PERCENT of total, in the sum and in any one report; an
-# interrupted run; a report whose outcomes don't add up exactly to its total
-# (mutants left unchecked, or counted twice); a mutant listed under a verdict
-# whose count is lower; a mutant.not_checked line (mutmut never ran it, so
-# the counts can't vouch for it); a mutant.<status> line with an unknown
+# MAX_TIMEOUT_PERCENT of total, in the sum and in any one report; timeouts
+# without any kills in the sum; an interrupted run; a report whose outcomes
+# don't add up exactly to its total (mutants left unchecked, or counted twice);
+# a mutant listed under a verdict whose count is lower; a mutant.not_checked
+# line (mutmut never ran it, so the counts can't vouch for it);
+# a mutant.<status> line with an unknown
 # status; no mutants in the full-scope reports; any
 # mutant.unmapped; in diff scope, selected other than total; and with
 # require_scope=full, any diff-scope report. A diff report with no mutants
@@ -239,6 +240,9 @@ for key in "${must_be_zero[@]}"; do
 done
 if ((timeout * 100 > total * MAX_TIMEOUT_PERCENT)); then
   problems+=("$timeout timeout(s) of $total, above $MAX_TIMEOUT_PERCENT%")
+fi
+if ((killed == 0 && timeout > 0)); then
+  problems+=("no mutant was killed ($timeout timed out)")
 fi
 if ((interrupted > 0)); then
   problems+=("run was interrupted")
