@@ -75,7 +75,7 @@ for platform in apple swift; do
 done
 
 failures=0
-for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/private/simulator/tbhb_rules_swift_simulator/test_simulator_runtime.py; do
+for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/private/simulator/tbhb_rules_swift_simulator/test_simulator_runtime.py diagrams/structurizr/defs.bzl; do
   printf '%s\n' "$path" >"$dir/changed"
   result=$(WORKSPACES="$workspaces" bash -euo pipefail -c "$plan" -- "$dir/changed" 2>&1) || {
     echo "FAIL: $path: $result" >&2
@@ -85,27 +85,32 @@ for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs
   echo "$path: $summary"
   case $path in
   apple/e2e/smoke/BUILD.bazel)
-    assertion='.matrix == [{id: "root", dir: "."}] and .apple == true and .swift == false'
+    assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == true and .swift == false'
     ;;
   README.md)
     # A root file must retain every workspace in the shared matrix.
-    assertion='.matrix == (.selected | map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke"))) and (.matrix | length > 1)'
+    assertion='(.matrix | map(.workspace) | unique) == (.selected | map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke") | {id, dir}) | unique) and (.matrix | length > 1)'
     ;;
   e2e/smoke/README.md)
-    assertion='.matrix == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false'
+    assertion='(.matrix | map(.workspace) | unique) == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false'
     ;;
   swift/defs.bzl)
-    assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
+    assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == false and .swift == true'
     ;;
   swift/e2e/smoke/BUILD.bazel | swift/private/simulator/tbhb_rules_swift_simulator/test_simulator_runtime.py)
-    assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
+    assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == false and .swift == true'
+    ;;
+  diagrams/structurizr/defs.bzl)
+    assertion='(.matrix | map(.workspace) | unique) == [{id: "structurizr", dir: "diagrams/structurizr"}] and (.matrix | map(.os) | sort) == ["macos-26", "ubuntu-26.04", "ubuntu-26.04-arm"]'
     ;;
   *) assertion='true' ;;
   esac
-  if ! jq -e "(.matrix | length > 0) and ($assertion)" <<<"$result" >/dev/null; then
+  if ! jq -e "(.matrix | length > 0) and ($assertion)
+      and ([.matrix[] | select(.workspace.id == \"structurizr\" and .os == \"windows-2025\")] | length == 0)
+      and ([.matrix[] | select(.workspace.id == \"root\")] | if length == 0 then true else map(.os) | sort == [\"macos-26\", \"ubuntu-26.04\", \"ubuntu-26.04-arm\", \"windows-2025\"] end)" <<<"$result" >/dev/null; then
     echo "FAIL: $path: unexpected matrix or smoke selection" >&2
     failures=$((failures + 1))
   fi
 done
 ((failures == 0)) || exit 1
-echo 'PASS: Apple and Swift changes keep a root matrix and select their smoke; root changes keep the shared matrix; all matrices are nonempty'
+echo 'PASS: Apple and Swift changes keep a root matrix and select their smoke; root changes keep the shared matrix; all matrices are nonempty; Structurizr excludes Windows'
