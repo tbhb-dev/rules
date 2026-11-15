@@ -76,8 +76,17 @@ render() {
     cat "$scratch/fonts.log"
     error "SVG rendering failed"
   }
-  local face
+  local face os
+  os=$(uname -s)
   for face in Regular Bold Italic BoldItalic; do
+    # Linux fontconfig maps all faces but Java registers them only on demand.
+    # Require the exact pinned file, including its directory and extension.
+    # macOS still requires eager registration by its native font manager.
+    if [[ $os == Linux ]] &&
+      sed -n 's/^INFO: FC font [^ ]* maps to family //p' "$scratch/fonts.log" |
+      grep -Fx "Liberation Sans in file $fonts/LiberationSans-$face.ttf" >/dev/null; then
+      continue
+    fi
     grep -F "Registered file $fonts/LiberationSans-$face.ttf as font ** TrueType Font: Family=Liberation Sans " "$scratch/fonts.log" >/dev/null || {
       cat "$scratch/fonts.log"
       error "JVM did not use the pinned Liberation Sans TTF: $face"
