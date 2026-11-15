@@ -39,3 +39,5 @@ uv
 workerd
 x_defs
 zizmor
+Structurizr
+Temurin

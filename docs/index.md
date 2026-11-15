@@ -23,11 +23,10 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 
 ## Architecture content rules
 
-* [Arc42 section TEMPLATE](content/arc42-section-template.md) - Required structure for an arc42 section page.
-* [Arc42 section WRITING](content/arc42-section-writing.md) - Rules for writing an arc42 section page.
-* [Arc42 section REVIEW](content/arc42-section-review.md) - Rules for reviewing an arc42 section page.
-* [Structurizr workspace TEMPLATE](content/structurizr-workspace-template.md) - Required structure for a Structurizr DSL workspace.
-* [Structurizr workspace WRITING](content/structurizr-workspace-writing.md) - Rules for writing and updating a Structurizr workspace.
-* [Structurizr workspace REVIEW](content/structurizr-workspace-review.md) - Rules for reviewing a Structurizr workspace and its exports.
-* [Structurizr macro reference](reference/structurizr.md) - Workspace lint, exports, update targets and pinned rendering tools.
-* [Structurizr tooling](../diagrams/structurizr/README.md) - Export, lint and refresh committed Structurizr workspace diagrams.
+* [Arc42 section template](content/arc42-section-template.md) - Required structure for an arc42 section page.
+* [Arc42 section writing](content/arc42-section-writing.md) - Rules for writing an arc42 section page.
+* [Arc42 section review](content/arc42-section-review.md) - Rules for reviewing an arc42 section page.
+* [Structurizr workspace template](content/structurizr-workspace-template.md) - Required structure for a Structurizr workspace source.
+* [Structurizr workspace writing](content/structurizr-workspace-writing.md) - Rules for writing and updating a Structurizr workspace.
+* [Structurizr workspace review](content/structurizr-workspace-review.md) - Rules for reviewing a Structurizr workspace and its exports.
+* [Structurizr macro reference](reference/structurizr.md) - Workspace lint, exports, update targets, and pinned rendering tools.

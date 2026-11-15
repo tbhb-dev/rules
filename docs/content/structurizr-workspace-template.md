@@ -1,8 +1,8 @@
 ---
-description: Required structure for a Structurizr DSL workspace.
+description: Required structure for a Structurizr workspace source.
 status: stable
 tags: [architecture, docs]
-title: Structurizr workspace TEMPLATE
+title: Structurizr workspace template
 type: Content Template
 generated:
   - role: generated
@@ -11,12 +11,12 @@ generated:
     effort: medium
     surface: exec
     session: sha-256-64:fcedc7c9c8a10316
-    at: "2026-11-15T02:44:22Z"
+    at: "2026-11-15T02:47:26Z"
 ---
 
-# Structurizr workspace TEMPLATE
+# Structurizr workspace template
 
-Keep the DSL at `docs/architecture/workspace.dsl`. Commit `workspace.json` beside it and SVG and PNG files under `docs/architecture/diagrams/`.
+Keep the workspace source at `docs/architecture/workspace.dsl`. Commit `workspace.json` beside it and SVG and PNG files under `docs/architecture/diagrams/`.
 
 ```text
 workspace "System" "Purpose of the system." {
@@ -37,4 +37,4 @@ workspace "System" "Purpose of the system." {
 }
 ```
 
-Replace names and descriptions with current responsibilities. Add containers, technologies and views that explain the system. Follow the [writing rules](structurizr-workspace-writing.md).
+Replace names and descriptions with current responsibilities. Add containers, technologies, and views that explain the system. Follow the [writing rules](structurizr-workspace-writing.md).
