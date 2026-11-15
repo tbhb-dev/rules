@@ -10,8 +10,8 @@ import pytest
 
 from repo.tests import check_required_files as checker
 
-# The mutation run copies no baseline files, so the tests use a reduced schema.
-# The shell tests run the real repo.schema.json.
+# Most tests use a reduced schema to isolate declaration validation.
+# The shell tests and baseline test use the real repo.schema.json.
 SCHEMA_TEXT = json.dumps(
     {
         "type": "object",
@@ -642,9 +642,6 @@ BASELINE = Path(__file__).parents[1] / "baseline"
 
 @pytest.mark.parametrize("visibility", ["public", "private"])
 def test_real_manifest_resolves_every_kind(repo: Path, visibility: str) -> None:
-    # The mutation run copies no baseline files.
-    if not (BASELINE / "manifest.toml").is_file():
-        pytest.skip("the baseline is not in this run's files")
     kinds = json.loads((BASELINE / "repo.schema.json").read_bytes())["properties"][
         "kind"
     ]["enum"]

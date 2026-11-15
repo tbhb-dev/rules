@@ -11,17 +11,19 @@ generated:
     effort: medium
     surface: exec
     session: sha-256-64:a380dfec5db32fa9
-    at: "2026-11-15T03:02:28Z"
+    at: "2026-11-15T03:04:28Z"
 ---
 
 # The required files
 
-`//repo/tests:check_required_files` takes the baseline `manifest.toml`, `repo.schema.json` and a consumer's root. It reads `kind` and `private` from the consumer's `.tbhb-repo.toml`, then takes the `required` list of `[kind.<kind>]` plus the one of `[visibility.public]` or `[visibility.private]`. It prints one line for each required path the repository lacks, then fails. A path that ends in `/` must be a directory, and any other path must be a file.
+`//repo/tests:check_required_files` checks a consumer root against the baseline `manifest.toml` and `repo.schema.json`. Exit status must be 0 for success, 1 for check failures, or 2 for an unreadable input or a schema that fails validation.
 
-The check also fails for a missing or invalid `.tbhb-repo.toml`, an unknown kind, and a non-boolean `private` value. An `[[exception]]` with `check = "C4"` hides one named path and needs a reason with text. An exception for a path that isn't missing fails. Stale exception diagnostics must appear in path order. A manifest `kind` or `visibility` table, or an entry in one, that isn't a table fails with one line that names it. A required path that is absolute or has a `..` segment fails with one line that names the path.
+Consumers must declare `kind` and a boolean `private` value in `.tbhb-repo.toml`. The checker combines the selected `[kind.<kind>]` entry with `[visibility.public]` or `[visibility.private]`. Unknown kinds and invalid declarations fail the check.
 
-A successful check must exit with status 0. Check failures must exit with status 1. An unreadable input or an invalid schema must produce a diagnostic and exit with status 2. Each `required` value must be a list of strings.
+Manifest tables and their entries must be tables, and each `required` value must be a list of strings. Required paths must be relative and contain no `..` segment. Paths ending in `/` must identify directories. Other paths must identify files. Table errors, invalid paths and missing paths produce one diagnostic line per failure.
 
-This repository fits no kind and has no `.tbhb-repo.toml`, so nothing runs the check against it. The fixtures in `repo/tests/testdata/required_files` have a small manifest and run in `//:baseline_tests`. The unit tests must also resolve every kind in the real baseline manifest for public and private visibility. The fixtures hold a clean `go` repository and a clean `docs` repository. The bad repositories show a missing file, a missing directory, an unknown kind, a bad exception, and a private repository without its license file.
+An `[[exception]]` with `check = "C4"` must name a path and provide a reason with text. It hides that missing path. Stale exceptions fail the check, with diagnostics in sorted path order.
+
+Unit tests must resolve every declared kind in the real baseline manifest for public and private visibility. Both ordinary test runs and mutation runs must include those baseline files. Fixtures under `repo/tests/testdata/required_files` use a small manifest and run in `//:baseline_tests`. Clean fixtures cover `go` and `docs`. Bad fixtures cover missing files and directories, unknown kinds, bad exceptions and a private repository without its license file. This repository fits no kind and has no `.tbhb-repo.toml`, so the checker doesn't run against its root.
 
 Failure proofs using `expect_failure_test` must set `exit_status` from 0 through 255. A value of 0 accepts any nonzero exit status.
