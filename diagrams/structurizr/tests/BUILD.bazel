@@ -14,6 +14,13 @@ sh_test(
     data = ["//private:runner"],
 )
 
+sh_test(
+    name = "export_messages_test",
+    srcs = ["export_messages_test.sh"],
+    args = ["$(rlocationpath //private:runner)"],
+    data = ["//private:runner"],
+)
+
 structurizr_workspace(
     name = "workspace",
     data = glob([

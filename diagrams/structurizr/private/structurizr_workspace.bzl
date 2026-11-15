@@ -154,7 +154,10 @@ def structurizr_workspace(name, dsl, workspace_json, diagrams_dir, data = [], **
     IGNORE do not. Any command error fails. Violation lines in the inspect
     output also fail.
 
-    JSON and SVG comparisons use bytes. Linux x86_64 and macOS arm64 produce
+    Freshness compares JSON and SVG bytes and reports those exports as
+    current, stating that it did not compare PNG bytes. The PNG test compares
+    bytes and reports committed PNG exports as current only on macOS arm64;
+    stale PNGs fail only there. Linux x86_64 and macOS arm64 produce
     byte-identical JSON and SVG output, checked against the committed files.
     Linux arm64 is in the CI plan but has no recorded measurement, and macOS
     x86_64 has no CI leg. PNG byte comparisons run only on macOS arm64, and
