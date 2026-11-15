@@ -72,6 +72,28 @@ sys.exit(bool(failures))
 PY
 done
 
+# Windows still runs on pull requests, but only its failures are advisory.
+# Job-level continue-on-error makes a failed leg report success to needs.
+advisory=$(job_block bazel | sed -n 's/^    continue-on-error: //p')
+python3 - "$advisory" <<'PY'
+import sys
+
+expression = sys.argv[1].removeprefix("${{").removesuffix("}}").strip() or "False"
+source = expression.replace("github.event_name", "event").replace("matrix.os", "os")
+source = source.replace("&&", "and").replace("||", "or")
+failures = 0
+for event in ("pull_request", "push", "schedule", "workflow_dispatch"):
+    for os in ("windows-2025", "ubuntu-26.04", "ubuntu-26.04-arm", "macos-26"):
+        actual = eval(source, {"__builtins__": {}}, {"event": event, "os": os})
+        expected = event == "pull_request" and os == "windows-2025"
+        print(f"bazel {event} {os}: continue-on-error={actual}", flush=True)
+        if actual != expected:
+            print(f"FAIL: bazel {event} {os}: expected continue-on-error={expected}",
+                  file=sys.stderr)
+            failures += 1
+sys.exit(bool(failures))
+PY
+
 # The Xcode jobs must succeed without running steps on pull requests, while
 # pushes retain the workspace selection and failure-only log uploads.
 python3 - "$workflow" <<'PY'
