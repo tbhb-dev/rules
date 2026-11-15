@@ -24,6 +24,13 @@ repo_files()
 
 CLEAN = glob(["testdata/clean/**"])
 
+tree_check_test(
+    name = "clean_job_timeouts",
+    srcs = CLEAN,
+    strip_prefix = "testdata/clean",
+    tool = "@tbhb_rules//lint:job_timeouts",
+)
+
 ryl_test(
     name = "clean_ryl",
     srcs = CLEAN,
