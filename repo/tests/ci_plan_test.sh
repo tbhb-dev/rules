@@ -167,7 +167,7 @@ done
 
 failures=0
 for event in pull_request push; do
-  platforms='["ubuntu-26.04", "ubuntu-26.04-arm", "windows-2025"]'
+  platforms='["ubuntu-26.04", "ubuntu-26.04-arm"]'
   if [[ $event == push ]]; then
     platforms='["macos-26", "ubuntu-26.04", "ubuntu-26.04-arm", "windows-2025"]'
   fi
@@ -205,7 +205,7 @@ for event in pull_request push; do
     # cspell:ignore argjson
     if ! jq -e --argjson platforms "$platforms" --arg event "$event" "(.matrix | length > 0) and ($assertion)
       and ([.matrix[] | select(.workspace.id == \"structurizr\" and .os == \"windows-2025\")] | length == 0)
-      and (\$event != \"pull_request\" or ([.matrix[] | select(.os == \"macos-26\")] | length == 0))
+      and (\$event != \"pull_request\" or ([.matrix[] | select(.os == \"macos-26\" or .os == \"windows-2025\")] | length == 0))
       and ([.matrix[] | select(.workspace.id == \"root\")] | if length == 0 then true else map(.os) | sort == \$platforms end)" <<<"$result" >/dev/null; then
       echo "FAIL: $path: unexpected matrix or smoke selection" >&2
       failures=$((failures + 1))

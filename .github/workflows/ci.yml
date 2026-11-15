@@ -120,7 +120,7 @@ jobs:
             | if length == 0 then [{id: "root", dir: ".",
                 os: ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"]}] else . end
             | [.[] | . as $workspace | .os[] | {os: ., workspace: ($workspace | {id, dir})}]
-            | map(select($event != "pull_request" or .os != "macos-26"))
+            | map(select($event != "pull_request" or (.os != "macos-26" and .os != "windows-2025")))
           ' <<<"${selected}")"
           apple="$(jq -r 'any(.[]; .id == "apple-smoke")' <<<"${selected}")"
           swift="$(jq -r 'any(.[]; .id == "swift-smoke")' <<<"${selected}")"
