@@ -51,11 +51,11 @@ render() {
   local sources=("$out/diagrams/"*.puml) source
   ((${#sources[@]})) || error "export produced no PlantUML views"
   for source in "${sources[@]}"; do
-    awk '{print} /^@startuml/ {print "!pragma layout smetana"}' "$source" >"$source.tmp"
+    awk '{print} /^@startuml/ {print "!pragma layout smetana\nskinparam defaultFontName Liberation Sans"}' "$source" >"$source.tmp"
     mv "$source.tmp" "$source"
   done
-  java_run -jar "$plantuml" -failfast2 -tsvg "${sources[@]}"
-  java_run -jar "$plantuml" -failfast2 -tpng "${sources[@]}"
+  java_run "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tsvg "${sources[@]}"
+  java_run "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tpng "${sources[@]}"
   for source in "${sources[@]}"; do
     [[ -s ${source%.puml}.svg && -s ${source%.puml}.png ]] || error "render produced no images for ${source##*/}"
   done
@@ -129,8 +129,8 @@ lint | render)
   scratch=$(mktemp -d "${TEST_TMPDIR:-${TMPDIR:-/tmp}}/structurizr.XXXXXX")
   trap 'rm -rf "$scratch"' EXIT
   if [[ $mode == render ]]; then
-    plantuml=$4 out=$5
-    shift 5
+    plantuml=$4 out=$5 fonts=$6
+    shift 6
   else
     shift 3
   fi
