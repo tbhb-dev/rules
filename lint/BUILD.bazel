@@ -34,6 +34,13 @@ python_tool(
     visibility = ["//visibility:public"],
 )
 
+python_tool(
+    name = "gitleaks_guard",
+    main = "//lint/private:gitleaks_guard.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
+
 # `common --//lint:gitleaks_private_config` (in a consumer's .bazelrc:
 # `common --@tbhb_rules//lint:gitleaks_private_config`) makes gitleaks_test
 # and gitleaks_history require the private gitleaks config in

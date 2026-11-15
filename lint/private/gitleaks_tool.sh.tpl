@@ -88,6 +88,8 @@ if [[ -n $committed ]]; then
     config="$dir/private.toml"
   fi
   "$prepare" "$base" "$committed" "$dir"
+else
+  "$prepare" --check "$base"
 fi
 unset GITLEAKS_CONFIG GITLEAKS_CONFIG_TOML
 status=0
