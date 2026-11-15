@@ -397,10 +397,27 @@ def test_main_started_at(
         ([], "2025-01-01T00:05:01Z", 0),
         (["1735689600"], "2025-01-01T00:05:00Z", 0),
         (["1735689600"], "2025-01-01T00:05:01Z", 1),
+        (["0"], "1970-01-01T00:05:00Z", 0),
+        (["0"], "1970-01-01T00:05:01Z", 1),
+        (["-1"], "1970-01-01T00:05:00Z", 1),
     ],
 )
-def test_cli_started_at(args: list[str], timestamp: str, status: int) -> None:
+def test_cli_started_at(
+    args: list[str],
+    timestamp: str,
+    status: int,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     line = f"Generated-by: LLM {GOOD};started_at={timestamp}"
+    expected = (
+        ""
+        if status == 0
+        else f"{line}: started_at is more than 300 seconds after the committer date\n"
+    )
+    monkeypatch.setattr(ai.sys, "stdin", StringIO(line))
+    assert ai.cli(args) == status
+    assert capsys.readouterr() == (expected, "")
     result = subprocess.run(
         [sys.executable, ai.__file__, *args],
         input=line,
@@ -410,8 +427,36 @@ def test_cli_started_at(args: list[str], timestamp: str, status: int) -> None:
     )
     assert result.returncode == status
     assert result.stderr == ""
-    assert result.stdout == (
-        ""
-        if status == 0
-        else f"{line}: started_at is more than 300 seconds after the committer date\n"
+    assert result.stdout == expected
+
+
+@pytest.mark.parametrize(
+    ("args", "problem"),
+    [
+        ([""], "bad committer date argument: ''"),
+        (["nope"], "bad committer date argument: 'nope'"),
+        (["bad\ndate"], "bad committer date argument: 'bad\\ndate'"),
+        (["1", "2"], "expected at most one committer date argument"),
+        (["1", "2", "3"], "expected at most one committer date argument"),
+    ],
+    ids=["empty", "non_integer", "multiline", "extra", "two_extra"],
+)
+def test_cli_bad_committer_date(
+    args: list[str],
+    problem: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(ai.sys, "stdin", StringIO(f"Generated-by: LLM {GOOD}"))
+    assert ai.cli(args) == 1
+    assert capsys.readouterr() == (f"{problem}\n", "")
+    result = subprocess.run(
+        [sys.executable, ai.__file__, *args],
+        input=f"Generated-by: LLM {GOOD}",
+        capture_output=True,
+        text=True,
+        check=False,
     )
+    assert result.returncode == 1
+    assert result.stdout == f"{problem}\n"
+    assert result.stderr == ""

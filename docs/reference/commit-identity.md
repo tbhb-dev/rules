@@ -6,12 +6,12 @@ title: Commit identity
 type: Reference
 generated:
   - role: generated
-    harness: codex:0.164.0
+    harness: codex:0.166.0
     model: openai:gpt-6.1-sol
-    effort: medium
+    effort: high
     surface: exec
-    session: sha-256-64:198a322fd49f797a
-    at: "2026-11-15T02:11:02Z"
+    session: sha-256-64:71d8d9019fd0e66b
+    at: "2026-11-15T06:17:01Z"
 ---
 
 # Commit identity
@@ -49,6 +49,8 @@ Attributes appear once each, in the order below. Unknown attributes fail. Model 
 | `surface` | Optional. Identifies the interface. |
 
 Attribute names must match `[a-z_]+`. `launch` must use the `session` hash format. `started_at` must be a real Coordinated Universal Time (UTC) instant in exactly `YYYY-MM-DDTHH:MM:SSZ` format, with uppercase `T` and `Z` and whole seconds. It must be at most 300 seconds after the committer date. Earlier times have no age limit. Without a committer date, the checker validates only the timestamp format and instant.
+
+The committer date comes from `git log --format=%ct`, which the committing agent can set with `GIT_COMMITTER_DATE`. The bound checks consistency between self-reported timestamps and doesn't prove when the agent made the commit.
 
 ## Output
 
