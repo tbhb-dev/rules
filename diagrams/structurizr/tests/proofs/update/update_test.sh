@@ -8,7 +8,9 @@ set -euo pipefail
 runfiles=${RUNFILES_DIR:-${TEST_SRCDIR:?}}
 update=$runfiles/$1 json=$runfiles/$2 svg=$runfiles/$3
 workspace=$(mktemp -d "${TEST_TMPDIR:-${TMPDIR:-/tmp}}/update.XXXXXX")
-package=${1%/*}
+# The runfiles path starts with the repository name; the update writes the package path.
+package=${1#*/}
+package=${package%/*}
 diagrams=$workspace/$package/testdata/diagrams
 mkdir -p "$diagrams"
 echo stale >"$diagrams/structurizr-orphan.svg"
