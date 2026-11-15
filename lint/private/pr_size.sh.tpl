@@ -7,9 +7,17 @@ set -euo pipefail
 scc="$PWD/@@SCC@@"
 git="$PWD/@@GIT@@"
 policy="$PWD/@@POLICY@@"
+if (($# != 2)); then
+  echo 'usage: pr_size_count BASE HEAD' >&2
+  exit 2
+fi
+if [[ ! -x $scc ]]; then
+  echo 'pr_size_count: scc missing or not executable' >&2
+  exit 1
+fi
 cd "${BUILD_WORKSPACE_DIRECTORY:?run with bazel run}"
 if [[ ${PR_AUTHOR:-} == 'tbhb-dev-renovate[bot]' ]]; then
-  echo 'pr_size: Renovate exempt; code=0/400 raw=0/1500'
+  echo '{"code_lines": 0, "code_limit": 400, "raw_lines": 0, "raw_limit": 1500, "failed": null}'
   exit 0
 fi
 base=$1 head=$2
@@ -86,11 +94,10 @@ while IFS= read -r -d '' path; do
   done
   code=$((code + ${amount:-0}))
 done <"$work/files"
-echo "pr_size: code=$code/400 raw=$raw/1500"
-failed=()
-((code > 400)) && failed+=('400 added Code lines')
-((raw > 1500)) && failed+=('1500 raw added lines')
-if ((${#failed[@]})); then
-  echo "pr_size: FAIL: ${failed[*]}; code=$code/400 raw=$raw/1500; split into stacked PRs" >&2
-  exit 1
+failed=null
+if ((code > 400)); then
+  failed='"code"'
+elif ((raw > 1500)); then
+  failed='"raw"'
 fi
+printf '{"code_lines": %d, "code_limit": 400, "raw_lines": %d, "raw_limit": 1500, "failed": %s}\n' "$code" "$raw" "$failed"

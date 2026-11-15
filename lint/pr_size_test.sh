@@ -5,6 +5,7 @@
 set -euo pipefail
 runfiles=$PWD
 checker=${PR_SIZE:-${TEST_SRCDIR:?}/${CHECKER_RLOCATIONPATH:?}}
+counter=${TEST_SRCDIR:?}/${COUNTER_RLOCATIONPATH:?}
 git=${TEST_SRCDIR:+${TEST_SRCDIR}/${GIT_RLOCATIONPATH}}
 git=${git:-git}
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_TEMPLATE_DIR=''
@@ -32,13 +33,22 @@ check() {
   if ((code > 400)); then [[ $output == *'400 added Code lines'* ]]; fi
   if ((raw > 1500)); then [[ $output == *'1500 raw added lines'* ]]; fi
 }
+count_json() {
+  local code=$1 raw=$2 failed=$3 output
+  local repo=$PWD
+  output=$(cd "$runfiles" && BUILD_WORKSPACE_DIRECTORY="$repo" "$counter" "$base" HEAD)
+  echo "$output"
+  [[ $output == "{\"code_lines\": $code, \"code_limit\": 400, \"raw_lines\": $raw, \"raw_limit\": 1500, \"failed\": $failed}" ]]
+}
 new_repo code_limit
 lines 400 'x = 1' >source.py
 commit
 check 0 400 400
+count_json 400 400 null
 lines 401 'x = 1' >source.py
 commit
 check 1 401 401
+count_json 401 401 '"code"'
 new_repo raw_limit
 lines 1500 'key: value' >config.yaml
 commit
