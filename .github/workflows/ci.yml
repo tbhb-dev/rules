@@ -260,7 +260,14 @@ jobs:
 
       - name: Test
         working-directory: ${{ matrix.workspace.dir }}
-        run: bazelisk test --config=ci //...
+        run: |
+          # Exclude mutation reports and their dependents, including suites
+          # and failure proofs. Mutation runs in its own nightly workflow.
+          # cspell:ignore rdeps
+          bazelisk query 'rdeps(//..., kind("mutmut_report|gomutants_report", //...))' >"$RUNNER_TEMP/mutation-excludes"
+          echo '//...' >"$RUNNER_TEMP/test-targets"
+          sed 's/^/-/' "$RUNNER_TEMP/mutation-excludes" >>"$RUNNER_TEMP/test-targets"
+          bazelisk test --config=ci --target_pattern_file="$RUNNER_TEMP/test-targets"
 
       # Prints disk and temp space after the tests, including when they fail.
       - name: Report macOS disk and temp space after the tests
@@ -273,13 +280,6 @@ jobs:
           # cspell:ignore maxfiles maxfilesperproc
           sysctl kern.maxfiles kern.maxfilesperproc 2>&1 || true
           ulimit -a || true
-
-      # Mutation reports rerun along the dependency graph: an edit reruns
-      # its unit and the dependents, and the others stay cached. mutmut does
-      # not run on Windows.
-      - name: Prove incremental mutation
-        if: matrix.workspace.id == 'python-workspace' && runner.os != 'Windows'
-        run: python/e2e/incremental.sh
 
       # govulncheck_test needs the network and gives a different answer as
       # advisories are published, so it is manual and `//...` skips it. The
