@@ -6,8 +6,16 @@ load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("//lint/private:commit_identity.bzl", "commit_identity")
 load("//lint/private:gitleaks_text.bzl", "gitleaks_text")
 load("//repo:defs.bzl", "repo_files")
+load("//runtime:defs.bzl", "python_tool")
 
 repo_files()
+
+python_tool(
+    name = "job_timeouts",
+    main = "//lint/private/job_timeouts:check_job_timeouts.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
 
 # `common --//lint:gitleaks_private_config` (in a consumer's .bazelrc:
 # `common --@tbhb_rules//lint:gitleaks_private_config`) makes gitleaks_test

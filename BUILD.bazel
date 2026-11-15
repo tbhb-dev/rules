@@ -217,6 +217,12 @@ workflow_lint_test(
     srcs = [":repo_files"],
 )
 
+tree_check_test(
+    name = "job_timeouts_test",
+    srcs = [":repo_files"],
+    tool = "//lint:job_timeouts",
+)
+
 # Shell scripts. A shebang-based selection rule is planned for lint/; until
 # it lands, the scripts are listed here.
 SHELL_SCRIPTS = [
