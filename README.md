@@ -5,7 +5,7 @@ Shared Bazel rules for tbhb-dev repositories: whole-tree lint tests with pinned 
 | Family | Load from | Contents |
 | --- | --- | --- |
 | format | `@tbhb_rules//format:defs.bzl` | `formatter`, `format` (fix and `.check` runners), `format_test`, and ready formatters `//format:shfmt`, `:buildifier`, `:tombi`, `:rumdl` and `:ryl` |
-| lint | `@tbhb_rules//lint:defs.bzl` | `gitleaks_test`, `gitleaks_history`, `ryl_test`, `tombi_test`, `rumdl_test`, `editorconfig_checker_test`, `actionlint_test`, `zizmor_test`, `shellcheck_test`, `shfmt_test`, `bats_test`, `codeowners_test`, `vale_test`, `vale_sync`, `cspell_test`, and the generic `tree_check_test` |
+| lint | `@tbhb_rules//lint:defs.bzl` | `gitleaks_test`, `gitleaks_history`, `ryl_test`, `tombi_test`, `rumdl_test`, `editorconfig_checker_test`, `actionlint_test`, `zizmor_test`, `shellcheck_test`, `shfmt_test`, `bats_test`, `codeowners_test`, `vale_test`, `vale_sync`, `cspell_test`, `design_test`, `designs_index`, `designs_index_test`, and the generic `tree_check_test` |
 | quality | `@tbhb_rules//quality:defs.bzl` | `mutation_gate_test` and its `MutationReportInfo` |
 | repo | `@tbhb_rules//repo:defs.bzl` | `repo_files`, `repo_layout_test` |
 | runtime | `@tbhb_rules//runtime:defs.bzl` | the pinned Python runtime (python-build-standalone and uv) that the Python-based checks share |
@@ -76,6 +76,12 @@ Notes on individual tools:
 Both targets accept a trailing straight or curly apostrophe and `s` only when they accept the base word. cspell ignores just the suffix and still checks the base. Vale adds the shared `tbhb_rules` vocabulary alongside the configured vocabularies in its scratch copy and gives each accepted expression an optional possessive suffix. A misspelled base still fails both checks. Project configs, dictionaries, and pinned Vale packages continue to apply.
 
 For cspell outside Bazel, import `lint/vocabulary/cspell.config.cjs` from a local rules checkout using [cspell's configuration imports](https://cspell.org/docs/Configuration/imports). The automatic Vale vocabulary applies to `vale_test`. `vale_sync` continues to sync style packages for editors. Vale's [vocabulary format](https://docs.vale.sh/keys/vocabularies) describes how to add local terms.
+
+### Design content
+
+Designs have a README and optional appendices. Copy the skeleton and checklists from [`content/design/`](content/design/TEMPLATE.md), then load `design_test` from `@tbhb_rules//lint:defs.bzl` over your repository's files. Supply private terms through `forbidden_terms`.
+
+For a flat `designs/<slug>/README.md` directory, use `designs_index` to generate its table and `designs_index_test` to check freshness, layout, and each design together. See [the content types reference](docs/reference/content-types.md) for examples and the full list of checks.
 
 ### Failure proofs
 

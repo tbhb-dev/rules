@@ -11,6 +11,8 @@ exclude = [
   ".vale",
   "tmp",
   "LICENSE",
+  # Failure proofs intentionally contain broken Markdown links and structure.
+  "lint/tests/content/testdata",
 ]
 
 [MD003]

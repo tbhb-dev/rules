@@ -189,7 +189,14 @@ rumdl_test(
     # The link check's fixtures plant broken links and unused references
     # on purpose, so rumdl's own link rules would fail them. The config
     # stays equal to the parent copy that nested modules carry.
-    exclude = ["repo/tests/testdata/markdown_links"],
+    exclude = [
+        ".git",
+        ".vale",
+        "tmp",
+        "LICENSE",
+        "lint/tests/content/testdata",
+        "repo/tests/testdata/markdown_links",
+    ],
 )
 
 editorconfig_checker_test(
@@ -225,6 +232,7 @@ SHELL_SCRIPTS = [
     "format/private/format.sh.tpl",
     "lint/private/codeowners.sh",
     "lint/private/cspell.sh.tpl",
+    "lint/private/content/index.sh.tpl",
     "lint/private/commit_identity.sh.tpl",
     "lint/private/gitleaks_history.sh.tpl",
     "lint/private/gitleaks_text.sh.tpl",
@@ -341,6 +349,7 @@ repo_layout_test(
         "ansible",
         "astro",
         "cloudflare",
+        "content",
         "diagrams",
         "docs",
         "e2e",

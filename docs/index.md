@@ -9,6 +9,7 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 ## Reference
 
 * [Commit identity](reference/commit-identity.md) - Allowed identities and required agent identity trailers.
+* [Content types](reference/content-types.md) - Reusable design templates, checks, and directory indexes for consuming repositories.
 * [Decision records](reference/decision-records.md) - Where decision records live, their names and frontmatter, and what the check enforces.
 * [Frontmatter reference](reference/frontmatter.md) - The frontmatter fields, their values, and how they map to commit trailers.
 * [Markdown links](reference/markdown-links.md) - How the check resolves relative and in-page links in tracked Markdown files.
