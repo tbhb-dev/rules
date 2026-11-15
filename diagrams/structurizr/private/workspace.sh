@@ -3,7 +3,7 @@
 # Copyright Tony Burns
 
 set -euo pipefail
-export LC_ALL=C
+export LC_ALL=en_US.UTF-8
 
 error() {
   echo "structurizr_workspace: error: $*" >&2
@@ -34,6 +34,8 @@ lint() {
   fi
   # Inspect exits with the number of displayed violations. Also check its
   # output, because 256 violations wrap the process exit status to zero.
+  # The pinned CLI is silent for a clean error,warning inspection (covered
+  # by workspace_lint_test). Treat any unexpected output as a failure too.
   if ((inspect_status)) || [[ -s $scratch/inspect.log ]]; then
     echo "inspect: workspace failed inspection (ERROR,WARNING)"
     cat "$scratch/inspect.log"
@@ -52,12 +54,38 @@ render() {
   local sources=("$out/diagrams/"*.puml) source
   ((${#sources[@]})) || error "export produced no PlantUML views"
   for source in "${sources[@]}"; do
-    awk '{print} /^@startuml/ {print "!pragma layout smetana\nskinparam defaultFontName Liberation Sans"}' "$source" >"$source.tmp"
+    awk '{print} /^@startuml/ && !inserted++ {print "!pragma layout smetana\nskinparam defaultFontName Liberation Sans"}' "$source" >"$source.tmp"
     mv "$source.tmp" "$source"
   done
-  java_run "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tsvg "${sources[@]}"
+  # Fontconfig must never discover host font directories on Linux. Java on
+  # macOS uses its native font manager; debugfonts below verifies the TTF used.
+  [[ -f $fonts/LiberationSans-Regular.ttf ]] || error "pinned Liberation Sans font is missing"
+  mkdir -p "$scratch/pinned-fonts"
+  cp -L "$fonts/"*.ttf "$scratch/pinned-fonts/"
+  fonts=$(cd "$scratch/pinned-fonts" && pwd -P)
+  mkdir -p "$scratch/font-cache"
+  # Escape paths for XML, including scratch paths supplied by Bazel.
+  local font_dir cache_dir
+  font_dir=$(printf '%s' "$fonts" | sed 's/\&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')
+  cache_dir=$(printf '%s' "$scratch/font-cache" | sed 's/\&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')
+  export FONTCONFIG_FILE="$scratch/fonts.conf"
+  printf '<fontconfig><dir>%s</dir><cachedir>%s</cachedir></fontconfig>\n' "$font_dir" "$cache_dir" >"$FONTCONFIG_FILE"
+  java_run -Dsun.java2d.debugfonts=true "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tsvg "${sources[@]}" >"$scratch/fonts.log" 2>&1 || {
+    cat "$scratch/fonts.log"
+    error "SVG rendering failed"
+  }
+  local face
+  for face in Regular Bold Italic BoldItalic; do
+    grep -F "Registered file $fonts/LiberationSans-$face.ttf as font ** TrueType Font: Family=Liberation Sans " "$scratch/fonts.log" >/dev/null || {
+      cat "$scratch/fonts.log"
+      error "JVM did not use the pinned Liberation Sans TTF: $face"
+    }
+  done
   java_run "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tpng "${sources[@]}"
   for source in "${sources[@]}"; do
+    local families
+    families=$(grep -o '<text[^>]*' "${source%.puml}.svg" | grep -o 'font-family="[^"]*"' | sort -u)
+    [[ $families == 'font-family="Liberation Sans"' ]] || error "SVG does not use only Liberation Sans: ${source##*/}"
     [[ -s ${source%.puml}.svg && -s ${source%.puml}.png ]] || error "render produced no images for ${source##*/}"
   done
 }
