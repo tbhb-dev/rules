@@ -52,7 +52,7 @@ def check(manifest: Path, schema: Path, repo: Path) -> list[str]:
         return [f"{declaration_path}: missing"]
     try:
         declaration = tomllib.loads(declaration_path.read_text())
-    except tomllib.TOMLDecodeError as error:
+    except (tomllib.TOMLDecodeError, UnicodeDecodeError) as error:
         return [f"{declaration_path}: invalid TOML: {error}"]
     validator = Draft202012Validator(json.loads(schema.read_text()))
     problems = sorted(
@@ -65,7 +65,7 @@ def check(manifest: Path, schema: Path, repo: Path) -> list[str]:
     kind = declaration["kind"]
     visibility = "private" if declaration["private"] else "public"
     for table, name in (("kind", kind), ("visibility", visibility)):
-        if name not in rules[table]:
+        if name not in rules.get(table, {}):
             return [
                 f'{declaration_path}: {table} "{name}" has no entry in the manifest'
             ]

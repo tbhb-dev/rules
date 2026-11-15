@@ -119,6 +119,46 @@ def test_missing_visibility_table(
     )
 
 
+def test_missing_visibility_key(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    manifest.write_text("[kind.go]\nrequired = []\n")
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f'{repo / ".tbhb-repo.toml"}: visibility "public" '
+        "has no entry in the manifest\n",
+    )
+
+
+def test_missing_kind_key(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    manifest.write_text("[visibility.public]\nrequired = []\n")
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f'{repo / ".tbhb-repo.toml"}: kind "go" has no entry in the manifest\n',
+    )
+
+
+def test_invalid_utf8(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    (repo / ".tbhb-repo.toml").write_bytes(b"\xff")
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{repo / '.tbhb-repo.toml'}: invalid TOML: "
+        "'utf-8' codec can't decode byte 0xff in position 0: invalid start byte\n",
+    )
+
+
 def test_exception_without_check(
     manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
