@@ -72,6 +72,54 @@ sys.exit(bool(failures))
 PY
 done
 
+# The Xcode jobs must succeed without running steps on pull requests, while
+# pushes retain the workspace selection and failure-only log uploads.
+python3 - "$workflow" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+workflow = Path(sys.argv[1]).read_text()
+failures = 0
+for job in ("apple", "swift"):
+    block = re.search(rf"^  {job}:\n(.*?)(?=^  \S|\Z)", workflow, re.M | re.S)[1]
+    runner = re.search(r"^    runs-on: (.+)$", block, re.M)[1]
+    steps = re.split(r"^      - ", block, flags=re.M)[1:]
+    conditions = []
+    for step in steps:
+        condition = re.search(r"^        if: (.+)$", step, re.M)
+        conditions.append(condition[1] if condition else "True")
+
+    for event in ("pull_request", "push"):
+        def evaluate(expression, selected="true", failed=False):
+            source = expression.removeprefix("${{").removesuffix("}}").strip()
+            source = source.replace("github.event_name", "event")
+            source = source.replace(f"env.RUN_{job.upper()}", "selected")
+            source = source.replace("failure()", "failed")
+            source = source.replace("&&", "and").replace("||", "or")
+            return eval(source, {"__builtins__": {}}, {
+                "event": event, "selected": selected, "failed": failed,
+            })
+
+        actual_runner = evaluate(runner) if runner.startswith("${{") else runner
+        expected_runner = "ubuntu-26.04" if event == "pull_request" else "xcode-27"
+        actual_steps = [evaluate(condition) for condition in conditions]
+        print(f"{job} {event}: runs-on={actual_runner} steps={actual_steps}", flush=True)
+        if actual_runner != expected_runner:
+            print(f"FAIL: {job} {event}: expected runs-on={expected_runner}", file=sys.stderr)
+            failures += 1
+        for selected in ("false", "true"):
+            for failed in (False, True):
+                actual = [evaluate(condition, selected, failed) for condition in conditions]
+                run = event == "push" and selected == "true"
+                expected = [run] * 4 + [run and failed]
+                if actual != expected:
+                    print(f"FAIL: {job} {event} selected={selected} failure={failed}: "
+                          f"steps={actual}, expected {expected}", file=sys.stderr)
+                    failures += 1
+sys.exit(bool(failures))
+PY
+
 plan_job=$(job_block plan)
 outputs=$(awk '
   /^    outputs:$/ { found = 1; next }
