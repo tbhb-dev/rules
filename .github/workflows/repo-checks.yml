@@ -407,9 +407,10 @@ jobs:
         run: bazelisk run @tbhb_rules//lint:commit_identity -- "${BASE_SHA}" "${HEAD_SHA}"
 
       # Advisories change without any input changing, so the audit is never
-      # a cached test.
+      # a cached test. External index failures must not block pull requests.
       - name: Audit the locked Python dependencies
         if: inputs.pip-audit-target != ''
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
         env:
           TARGET: ${{ inputs.pip-audit-target }}
         run: bazelisk run "${TARGET}"
