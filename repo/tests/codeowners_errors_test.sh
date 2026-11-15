@@ -71,6 +71,14 @@ for codeowners in .github/CODEOWNERS CODEOWNERS docs/CODEOWNERS; do
 done
 
 touch "$BUILD_WORKSPACE_DIRECTORY/CODEOWNERS"
+for response in '{}' '{"message":"Not Found"}' '{"errors":null}'; do
+  export CURL_RESPONSE=$response
+  run_check
+  [[ $status == 1 ]] || fail "response without an errors list did not fail: $response"
+  expect_curl
+  [[ $output == '::error::CODEOWNERS API response has no errors list.' ]] || fail "missing errors list was hidden: $output"
+done
+
 export CURL_RESPONSE='{"errors":[{"line":2,"kind":"Invalid owner","message":"Unknown team"},{"line":7,"kind":"Invalid pattern","message":"Invalid syntax"}]}'
 run_check
 [[ $status == 1 ]] || fail 'two errors did not fail'

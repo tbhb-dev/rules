@@ -16,6 +16,10 @@ response="$(curl -fsSL \
   -H "Accept: application/vnd.github+json" \
   "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/codeowners/errors?ref=${HEAD_SHA}")"
 errors="$(printf '%s' "${response}" | jq '.errors')"
+if ! printf '%s' "${errors}" | jq -e 'type == "array"' >/dev/null; then
+  echo "::error::CODEOWNERS API response has no errors list."
+  exit 1
+fi
 count="$(printf '%s' "${errors}" | jq 'length')"
 if [ "${count}" -ne 0 ]; then
   echo "::error::CODEOWNERS has ${count} owner or syntax error(s):"
