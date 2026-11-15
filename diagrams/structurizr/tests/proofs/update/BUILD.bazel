@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("//:defs.bzl", "structurizr_workspace")
+
+repo_files()
+
+structurizr_workspace(
+    name = "workspace",
+    data = glob([
+        "testdata/documentation/**",
+        "testdata/decisions/**",
+    ]),
+    diagrams_dir = "testdata/diagrams",
+    dsl = "testdata/workspace.dsl",
+    tags = ["manual"],
+    workspace_json = "testdata/workspace.json",
+)
+
+# Runs the update target into a scratch workspace directory. The fixture holds
+# one orphan SVG, which the update must not write.
+sh_test(
+    name = "update_test",
+    srcs = ["update_test.sh"],
+    args = [
+        "$(rlocationpath :workspace)",
+        "$(rlocationpath testdata/workspace.json)",
+        "$(rlocationpath testdata/diagrams/structurizr-context.svg)",
+    ],
+    data = [
+        "testdata/diagrams/structurizr-context.svg",
+        "testdata/workspace.json",
+        ":workspace",
+    ],
+)

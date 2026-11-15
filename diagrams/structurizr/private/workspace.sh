@@ -10,10 +10,12 @@ error() {
   exit 2
 }
 
-# Each JVM refuses HTTP(S) connections. PlantUML's sandbox profile also
-# disables includes and local file access from the exported diagram text.
+# Each JVM ignores option variables from the environment and refuses HTTP(S)
+# connections. PlantUML's sandbox profile also disables includes and local
+# file access from the exported diagram text.
 java_run() {
-  "$java" -Djava.awt.headless=true -Duser.timezone=UTC \
+  env -u JAVA_TOOL_OPTIONS -u _JAVA_OPTIONS -u JDK_JAVA_OPTIONS "$java" \
+    -Djava.awt.headless=true -Duser.timezone=UTC \
     -Duser.language=en -Duser.country=US -Djava.net.useSystemProxies=false \
     -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9 \
     -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9 \
@@ -34,7 +36,8 @@ lint() {
   fi
   # Inspect exits with the number of displayed violations. Also check its
   # output for violation lines, because 256 violations wrap the process exit
-  # status to zero. Other output, such as a launcher notice, passes.
+  # status to zero. No test covers that wrap, which needs 256 violations.
+  # Other output, such as a launcher notice, passes.
   if ((inspect_status)) || grep -Eq '^(ERROR|WARNING) *\|' "$scratch/inspect.log"; then
     echo "inspect: workspace failed inspection (ERROR,WARNING)"
     cat "$scratch/inspect.log"
@@ -83,7 +86,7 @@ render() {
   java_run "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tpng "${sources[@]}"
   for source in "${sources[@]}"; do
     local families
-    families=$(grep -o '<text[^>]*' "${source%.puml}.svg" | grep -o 'font-family="[^"]*"' | sort -u)
+    families=$(grep -o '<text[^>]*' "${source%.puml}.svg" | grep -o 'font-family="[^"]*"' | sort -u || true)
     [[ $families == 'font-family="Liberation Sans"' ]] || error "SVG does not use only Liberation Sans: ${source##*/}"
     [[ -s ${source%.puml}.svg && -s ${source%.puml}.png ]] || error "render produced no images for ${source##*/}"
   done
@@ -137,7 +140,17 @@ update() {
   cp "$out/workspace.json" "$BUILD_WORKSPACE_DIRECTORY/$workspace_json"
   chmod 0644 "$BUILD_WORKSPACE_DIRECTORY/$workspace_json"
   shopt -s nullglob
-  for fresh in "$out/diagrams/"*.svg "$out/diagrams/"*.png; do
+  # PNG bytes are only measured on macOS arm64. Other platforms would write
+  # PNGs that the macOS arm64 test rejects.
+  local images=("$out/diagrams/"*.svg) os arch
+  os=$(uname -s)
+  arch=$(uname -m)
+  if [[ $os == Darwin && $arch == arm64 ]]; then
+    images+=("$out/diagrams/"*.png)
+  else
+    echo "structurizr_workspace: skipped PNG files; update them on macOS arm64"
+  fi
+  for fresh in "${images[@]}"; do
     destination="$BUILD_WORKSPACE_DIRECTORY/$diagrams_dir/${fresh##*/}"
     cp "$fresh" "$destination"
     chmod 0644 "$destination"

@@ -29,15 +29,15 @@ resvg
 rules_js
 rules_multitool
 shellcheck
+Structurizr
 subcommand
 subpackages?
 subtree
 tbhb_rules
+Temurin
 tombi
 toolchains
 uv
 workerd
 x_defs
 zizmor
-Structurizr
-Temurin
