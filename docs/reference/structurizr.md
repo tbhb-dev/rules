@@ -12,7 +12,7 @@ generated:
     surface: cli
     session: sha-256-64:debb814921f029ad
     subagent: sha-256-64:a5922f2e895088d6
-    at: "2026-11-15T06:44:59Z"
+    at: "2026-11-15T06:46:14Z"
 ---
 
 # Structurizr macro reference
@@ -45,7 +45,7 @@ Frontmatter `at` timestamps use Coordinated Universal Time (UTC).
 
 ## Tool pins
 
-- Keep literal `http_archive` and `http_file` declarations in `pins/extensions.bzl`. They pin the Structurizr command-line tool at 2025.11.09, the Temurin Java runtime at 21.0.13+9, and the PlantUML build under the Massachusetts Institute of Technology (MIT) license at 1.2026.10, plus Liberation Sans 2.1.5 under the `SIL OFL 1.1` license. Bazel verifies Secure Hash Algorithm 256 digests. Renovate reads versions from the release URLs of Structurizr, PlantUML and Temurin. It can't parse the Liberation Sans attachment URL and doesn't update the Temurin `strip_prefix`, so change those by hand.
+- Keep literal `http_archive` and `http_file` declarations in `pins/extensions.bzl`. They pin the Structurizr command-line tool at 2025.11.09, the Temurin Java runtime at 21.0.13+9, and the PlantUML build under the Massachusetts Institute of Technology (MIT) license at 1.2026.10, plus Liberation Sans 2.1.5 under the `SIL OFL 1.1` license. Bazel verifies Secure Hash Algorithm 256 digests. Renovate reads versions from the release URLs of Structurizr, PlantUML, and Temurin. It can't parse the Liberation Sans attachment URL and doesn't update the Temurin `strip_prefix`, so change those by hand.
 - Use `override_repo` to replace the `tbhb_rules_structurizr_cli`, `tbhb_rules_jre`, `tbhb_rules_plantuml`, or `tbhb_rules_liberation_fonts` hub. Java runtime pins cover Linux and macOS on x64 and arm64.
 - Download each release asset outside the source tree before updating pins. Compute its digest and compare published checksums. Change each URL, digest, and archive prefix together. Repeat lint, failure proofs, and rendering stability measurements before updating fixtures.
 - Preserve upstream license notices in downloaded repositories. Structurizr uses `Apache-2.0`, the PlantUML build uses `MIT`, and Temurin uses `GPL-2.0` with the Classpath exception. Liberation Sans 2.1.5 uses `SIL OFL 1.1` (`SIL-OFL-1.1`). Downloaded tools stay outside the source tree.
