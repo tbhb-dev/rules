@@ -1,10 +1,18 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("//:defs.bzl", "structurizr_workspace")
 
 repo_files()
+
+sh_test(
+    name = "font_usage_test",
+    srcs = ["font_usage_test.sh"],
+    args = ["$(rlocationpath //private:runner)"],
+    data = ["//private:runner"],
+)
 
 structurizr_workspace(
     name = "workspace",
