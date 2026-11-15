@@ -630,3 +630,26 @@ def test_schema_that_is_not_a_schema_is_unusable(
     captured = capsys.readouterr()
     assert captured.out.startswith(f"{schema}: invalid schema: 5 is not valid")
     assert captured.err == ""
+
+
+BASELINE = Path(__file__).parents[1] / "baseline"
+
+
+@pytest.mark.parametrize("visibility", ["public", "private"])
+def test_real_manifest_resolves_every_kind(repo: Path, visibility: str) -> None:
+    # The mutation run copies no baseline files.
+    if not (BASELINE / "manifest.toml").is_file():
+        pytest.skip("the baseline is not in this run's files")
+    kinds = json.loads((BASELINE / "repo.schema.json").read_bytes())["properties"][
+        "kind"
+    ]["enum"]
+    assert kinds
+    for kind in kinds:
+        errors = checker.check_manifest(
+            BASELINE / "manifest.toml", repo, kind, visibility, []
+        )
+        # An empty repository lacks every path, so each line names a missing
+        # path; any other line means the manifest and the check disagree.
+        assert errors
+        assert all(error.endswith(" is missing") for error in errors)
+        assert f"{repo}: required file .tbhb-repo.toml is missing" in errors
