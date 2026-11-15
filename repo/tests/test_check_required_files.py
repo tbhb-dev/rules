@@ -703,6 +703,7 @@ def test_unresolvable_reference_diagnostic(
 ) -> None:
     declare(repo, "")
     error = checker.Unresolvable(ref="missing\nreference")
+    monkeypatch.setattr(checker.Draft202012Validator, "check_schema", Mock())
     monkeypatch.setattr(
         checker.Draft202012Validator, "iter_errors", Mock(side_effect=error)
     )
