@@ -26,3 +26,10 @@ expect_failure_test(
     pattern = "^validate: workspace failed validation$",
     test = ":workspace_lint_test",
 )
+
+expect_failure_test(
+    name = "rejects_validate_syntax",
+    exit_status = 1,
+    pattern = "^Unexpected tokens .* at line 2 of .*workspace\\.dsl: invalid$",
+    test = ":workspace_lint_test",
+)
