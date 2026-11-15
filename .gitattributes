@@ -40,3 +40,8 @@ pyproject.toml export-ignore
 uv.lock export-ignore
 mise.toml export-ignore
 mise.lock export-ignore
+
+# Structurizr exports are compared byte for byte.
+structurizr-*.svg -text linguist-generated
+structurizr-*.png binary linguist-generated
+workspace.json -text linguist-generated
