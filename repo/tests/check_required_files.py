@@ -93,7 +93,7 @@ def check(manifest: Path, schema: Path, repo: Path) -> list[str]:
             f"{declaration_path}: {error.json_path}: {error.message}"
             for error in validator.iter_errors(declaration)
         )
-    except Unresolvable as error:
+    except (Unresolvable, RecursionError) as error:
         raise SchemaError(str(error)) from error
     if problems:
         return problems

@@ -6,17 +6,18 @@ title: Required files
 type: Reference
 generated:
   - role: generated
-    harness: codex:0.166.0
-    model: openai:gpt-6.1-sol
-    effort: high
-    surface: exec
-    session: sha-256-64:e68bf218f590ab9d
-    at: "2026-11-15T04:44:34Z"
+    harness: claude-code:2.1.322
+    model: anthropic:claude-sonnet-5-5
+    effort: medium
+    surface: cli
+    session: sha-256-64:debb814921f029ad
+    subagent: sha-256-64:c04c2891d8f854b6
+    at: "2026-11-15T07:49:20Z"
 ---
 
 # The required files
 
-`//repo/tests:check_required_files` checks a consumer root against the baseline `manifest.toml` and `repo.schema.json`. A successful check exits with status 0. Check failures exit with status 1. An unreadable input or an unusable schema produces exit status 2.
+`//repo/tests:check_required_files` checks a consumer root against the baseline `manifest.toml` and `repo.schema.json`. A successful check exits with status 0. Check failures exit with status 1. The checker exits with status 2 if it can't read an input or if the schema fails while it validates the declaration. It doesn't check references the declaration never reaches.
 
 Consumers must declare `kind` and a boolean `private` value in `.tbhb-repo.toml`. The checker combines the selected `[kind.<kind>]` entry with `[visibility.public]` or `[visibility.private]`. Unknown kinds and invalid declarations exit with status 1 only when the manifest and schema are readable.
 

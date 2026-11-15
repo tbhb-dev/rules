@@ -695,6 +695,19 @@ def test_unresolvable_schema_reference(
     retrieve.assert_not_called()
 
 
+def test_recursive_schema_reference(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    schema = manifest.with_name("schema.json")
+    data = json.loads(SCHEMA_TEXT)
+    data["$ref"] = "#"
+    schema.write_text(json.dumps(data))
+    assert_main_output(
+        manifest, repo, capsys, f"{schema}: invalid schema: ", status=2, prefix=True
+    )
+
+
 def test_unresolvable_reference_diagnostic(
     manifest: Path,
     repo: Path,
