@@ -159,19 +159,22 @@ def test_invalid_utf8(
     )
 
 
+@pytest.mark.parametrize("value", ["''", "1", "true", "{}"])
 @pytest.mark.parametrize(("table", "name"), [("kind", "go"), ("visibility", "public")])
-def test_required_string(
+def test_required_not_list(  # noqa: PLR0913, PLR0917 -- Fixtures and parameters.
     manifest: Path,
     repo: Path,
     capsys: pytest.CaptureFixture[str],
     table: str,
     name: str,
+    value: str,
 ) -> None:
     declare(repo, "")
     manifest.write_text(
-        "[kind.go]\nrequired = ''\n[visibility.public]\nrequired = ''\n"
-        if table == "kind"
-        else "[kind.go]\nrequired = []\n[visibility.public]\nrequired = ''\n"
+        "[kind.go]\nrequired = []\n[visibility.public]\nrequired = []\n".replace(
+            f"[{table}.{name}]\nrequired = []",
+            f"[{table}.{name}]\nrequired = {value}",
+        )
     )
     assert_main_output(
         manifest,
