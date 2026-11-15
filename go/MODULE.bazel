@@ -73,7 +73,7 @@ use_repo(tools, "tbhb_rules_go_arch_lint", "tbhb_rules_gobco", "tbhb_rules_golan
 # version selection.
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
-use_repo(go_deps, "com_github_gomutants_gomutants", "com_github_rillig_gobco", "org_golang_x_tools", "org_golang_x_vuln")
+use_repo(go_deps, "com_github_bazelbuild_buildtools", "com_github_gomutants_gomutants", "com_github_rillig_gobco", "org_golang_x_tools", "org_golang_x_vuln")
 
 # Dev dependencies: this module's own tests.
 bazel_dep(name = "rules_testing", version = "0.9.0", dev_dependency = True)
@@ -92,6 +92,35 @@ go_mod_proxy.from_file(
 use_repo(go_mod_proxy, "gomod_fixture_proxy", "self_go_mod_proxy")
 
 # The Go SDK the tests build with, from go.mod's toolchain line; consumers
-# bring their own.
+# bring their own. Keep the archive pins aligned with go.mod's toolchain.
+# //tools:go_sdk_checksums verifies them against Go's published release list.
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk", dev_dependency = True)
-go_sdk.from_file(go_mod = "//:go.mod")
+go_sdk.from_file(
+    go_mod = "//:go.mod",
+    sdks = {
+        "darwin_amd64": [
+            "go1.27.4.darwin-amd64.tar.gz",
+            "2b799377704ef12db39bd254995d5c348c9cc8d86562ca817724390e56c38f43",
+        ],
+        "darwin_arm64": [
+            "go1.27.4.darwin-arm64.tar.gz",
+            "91a44a2b8a716600ad94a4f143e156116620db8828086a6e3602291be9bd0bb4",
+        ],
+        "linux_amd64": [
+            "go1.27.4.linux-amd64.tar.gz",
+            "7226736c2339719cda28fbf3a54d71aa63bcefe376e98cef00034268dab24840",
+        ],
+        "linux_arm64": [
+            "go1.27.4.linux-arm64.tar.gz",
+            "3392582988a273a87ab5043ee1b2c9c17a2c3c00580bf9326c47a2e0aaaeac92",
+        ],
+        "windows_amd64": [
+            "go1.27.4.windows-amd64.zip",
+            "178ab98950ac69ab25069307dc6ade79f3816e414cce95b4da166a115cde1e7e",
+        ],
+        "windows_arm64": [
+            "go1.27.4.windows-arm64.zip",
+            "9e7a72565792b8ab370b37ac9ac109799237abacb39ff2f541c438b963c0cc64",
+        ],
+    },
+)

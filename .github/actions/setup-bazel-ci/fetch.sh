@@ -4,8 +4,9 @@
 
 # The list includes optional local targets from several workspaces. Query
 # the local graph first, then fetch every listed target that it declares.
-# External tools are mandatory. Retry download and mirror failures within
-# the budget; other query or fetch failures stop immediately. The composite
+# Go tools also require the workspace to expose tbhb_rules_go. Other external
+# tools are mandatory. Retry download and mirror failures within the budget;
+# other query, mapping or fetch failures stop immediately. The composite
 # action discards the incomplete cache on failure.
 set -euo pipefail
 : "${TARGETS:?}"
@@ -68,10 +69,15 @@ for workspace in "${workspaces[@]}"; do
   (
     cd "$workspace"
     if [[ $TARGETS == @default ]]; then
+      retry bazelisk mod dump_repo_mapping ''
+      mapping=$(cat "$out")
       retry bazelisk query //... --output=label
       declared=$(cat "$out")
       targets=()
       while read -r label; do
+        if [[ $label == @tbhb_rules_go//* ]]; then
+          grep -q '"tbhb_rules_go":' <<<"$mapping" || continue
+        fi
         if [[ $label == //* && $label != //... ]]; then
           grep -qxF "$label" <<<"$declared" || continue
         fi

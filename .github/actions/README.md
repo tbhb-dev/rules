@@ -19,7 +19,7 @@ Run it after `checkout`. It runs these steps in order:
 4. On Linux under a container CPU quota, size the workers to it. The step exports the quota (rounded up, from `cpu.max` or cgroup v1) as `PYTEST_XDIST_AUTO_NUM_WORKERS`, for `-n auto` in a `pytest_test`, and adds `build --local_resources=cpu=N` to `~/.bazelrc`, because Bazel counts the host's CPUs. `mutmut_test` reads the quota itself. Without a quota the step does nothing.
 5. On Linux arm64, download a pinned Rust toolchain and zig, check both against pinned hashes, and put them on `PATH` for the source build of complexipy, with `cc`, `c++` and `ar` running zig. A runner image without Rust or a C compiler works too.
 6. Shorten Bazel's output root and enable long paths, on Windows only.
-7. Read `fetch-targets.txt` beside the action and fetch `//...`, the Bazel subcommand tools (including `buildozer` for `bazel mod tidy`), and each run-only target that the workspace declares. The list covers `gitleaks`, `zizmor`, `gazelle`, `pip-audit`, `pnpm audit`, `govulncheck`, and the tools that scan the title and body of a pull request. `@tbhb_rules//lint:zizmor` resolves `@tbhb_rules_zizmor//:zizmor` through the rules module's repository mapping, including from nested workspaces. Retry with pauses that start at 30 seconds and double. When the next pause would pass `retry-budget-minutes`, the step fails and prints the last URL from the output.
+7. Read `fetch-targets.txt` beside the action and fetch `//...`, the Bazel subcommand tools (including `buildozer` for `bazel mod tidy`), and each run-only target that the workspace declares. The list covers `gitleaks`, `zizmor`, `gazelle`, `pip-audit`, `pnpm audit`, `govulncheck`, and the tools that scan the title and body of a pull request. Workspaces that expose `tbhb_rules_go` also fetch the Go SDK checksum tool. `@tbhb_rules//lint:zizmor` resolves `@tbhb_rules_zizmor//:zizmor` through the rules module's repository mapping, including from nested workspaces. Retry with pauses that start at 30 seconds and double. When the next pause would pass `retry-budget-minutes`, the step fails and prints the last URL from the output.
 
 | Input               | Default  | Meaning                                                                                                 |
 |---------------------|----------|---------------------------------------------------------------------------------------------------------|
@@ -181,6 +181,26 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
 ```
+
+### Go SDK archive checksums
+
+A Go consumer exposes `@tbhb_rules_go//tools:go_sdk_checksums` through its pinned `tbhb_rules_go` module. Run `bazelisk run @tbhb_rules_go//tools:go_sdk_checksums` from that workspace to compare recorded SDK archive hashes with `https://go.dev/dl/?mode=json&include=all`. For each unknown archive or mismatched hash, the command reports its source, version, OS, and architecture. On success, it prints the count checked. An empty set of pins fails.
+
+The checker reads literal `sdks = {"linux_amd64": ["go1.27.3.linux-amd64.tar.gz", "<sha256>"]}` dictionaries on the `go_sdk` extension's `download` and `from_file` tags, including extension aliases. With `download`, the version comes from `version`. For `from_file`, the workspace-root `go_mod` label points to a file whose `toolchain` directive (falling back to `go`) supplies the version. Generated `go_download_sdk_rule` repository attributes and Bazel 9's JSON-encoded `facts` in `MODULE.bazel.lock` also supply archive records. The checker compares hashes for the recorded platforms, regardless of the current host. Dynamic dictionaries and unsupported `from_file` labels fail with a diagnostic.
+
+This repository records six archive pins in each of `go/MODULE.bazel` and `go/e2e/smoke/MODULE.bazel`, covering macOS, Linux, and Windows on both amd64 and arm64. Both workspaces turn off lockfiles. Keep their literal filenames and hashes aligned with their `go.mod` toolchain when bumping Go.
+
+Add these inputs to the consumer's `repo-checks.yml` call:
+
+```yaml
+with:
+  go-sdk-checksum-dirs: .
+  go-sdk-checksum-workspace: .
+```
+
+Separate module directories with spaces and use paths relative to the checkout. The workspace must resolve `@tbhb_rules_go`. On pull requests and pushes, the workflow passes the base commit hash to `--changed-since`. The command compares SDK records in changed `MODULE.bazel` and `MODULE.bazel.lock` files, ignoring source line numbers and unrelated module edits, and contacts go.dev only if those records changed. A missing or unreadable baseline triggers validation. Existing checkout credentials work for this check, which doesn't need an extra token or permission. Comparing hashes with go.dev uses a network-dependent `bazel run`. Tests for parsing, comparison, and change selection use a saved release-list fixture and fake HTTP responses without network access.
+
+The checker's small `releases.json` test fixture contains only factual release metadata copied from Go's public release list on 2026-11-11, trimmed to three archives. This repository's Apache-2.0 license covers the fixture and tests. Neither contains Go source code.
 
 ### The private gitleaks config
 

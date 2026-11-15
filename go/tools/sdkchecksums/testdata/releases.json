@@ -1,0 +1,35 @@
+[
+  {
+    "version": "go1.27.3",
+    "stable": true,
+    "files": [
+      {
+        "filename": "go1.27.3.linux-amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64",
+        "version": "go1.27.3",
+        "sha256": "65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40",
+        "size": 70588678,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.27.3.linux-armv6l.tar.gz",
+        "os": "linux",
+        "arch": "armv6l",
+        "version": "go1.27.3",
+        "sha256": "d6f4e11dd7157030d7ac11c51c8f73201a2db932d593c3106b1da11cc32bfdf8",
+        "size": 69020373,
+        "kind": "archive"
+      },
+      {
+        "filename": "go1.27.3.windows-arm64.zip",
+        "os": "windows",
+        "arch": "arm64",
+        "version": "go1.27.3",
+        "sha256": "c507872ff21f8a7cd3c1c217b059c6f7271a4a9d8e692810ef9dd3e1f601197c",
+        "size": 75113075,
+        "kind": "archive"
+      }
+    ]
+  }
+]
