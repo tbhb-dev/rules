@@ -3,9 +3,10 @@
 # Copyright Tony Burns
 
 # Fails unless every mutant in the reports was killed, timed out within the
-# cap below, or was skipped. Generated from mutation_gate.sh.tpl by the
-# mutation_gate_test rule; @@MAX_TIMEOUT_PERCENT@@, @@REPORTS@@ and
-# @@REQUIRE_SCOPE@@ are filled in at analysis time.
+# cap below, or was skipped, and fails if all mutants were skipped. Generated
+# from mutation_gate.sh.tpl by the mutation_gate_test rule;
+# @@MAX_TIMEOUT_PERCENT@@, @@REPORTS@@ and @@REQUIRE_SCOPE@@ are filled in at
+# analysis time.
 #
 # A report holds one key=value per line, in a format shared by every
 # mutation runner. Required keys, each a non-negative integer: total,
@@ -20,7 +21,8 @@
 # line with timeout=0), and one with a mutant.<status> line whose status is
 # none of the above. skipped counts mutants accounted for but not gating: excluded
 # by a pragma, equivalent, or not viable (they don't compile); each stays
-# listed with its tool status.
+# listed with its tool status. If all mutants across the reports were skipped,
+# the gate fails because nothing was checked.
 #
 # A timed-out mutant counts as killed and stays listed (its mutant.timeout or
 # mutant.timed_out lines print). The count line goes to stdout, and to
@@ -34,7 +36,8 @@
 # (mutants left unchecked, or counted twice); a mutant listed under a verdict
 # whose count is lower; a mutant.not_checked line (mutmut never ran it, so
 # the counts can't vouch for it); a mutant.<status> line with an unknown
-# status; no mutants in the full-scope reports; any
+# status; no mutants in the full-scope reports; all mutants skipped across
+# the reports when total is positive; any
 # mutant.unmapped; in diff scope, selected other than total; and with
 # require_scope=full, any diff-scope report. A diff report with no mutants
 # passes: its change set touched no code with mutants.
@@ -257,6 +260,10 @@ if ((diff_reports > 0)) && [[ $require_scope == full ]]; then
   problems+=("$diff_reports diff-scoped report(s), but a full run is required")
 fi
 
+if ((total > 0 && skipped == total)); then
+  problems+=("all $total mutant(s) were skipped; nothing was checked")
+fi
+
 if ((${#problems[@]} > 0)); then
   joined=$(printf '%s, ' "${problems[@]}")
   echo "mutation_gate: FAIL: ${joined%, }" >&2
@@ -280,8 +287,8 @@ if [[ $advisory == true ]]; then
   fi
 fi
 # Only claim kills when some mutant was killed or timed out. A diff that
-# selected none checked nothing; an all-skipped report checked nothing too,
-# including in full scope.
+# selected none checked nothing and still passes; all-skipped reports fail
+# above when the summed total is positive.
 if ((killed + timeout > 0)); then
   echo "mutation_gate: ok: every mutant was killed"
 else
