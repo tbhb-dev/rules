@@ -861,3 +861,55 @@ def test_heading_text_contract() -> None:
     assert checker.heading_text("[unclosed](missing") == "unclosed(missing"
     assert checker.heading_text("[A][ref] [B][] [C] <em>D</em>") == "A B C D"
     assert checker.anchors("---\ntitle: Hidden\n---\n# Visible") == {"visible"}
+
+
+def test_indented_list_example_is_code() -> None:
+    assert checker.prose("\n    - [example](missing.png)") == "\n" + " " * len(
+        "    - [example](missing.png)"
+    )
+
+
+def test_indented_list_boundaries() -> None:
+    assert checker.prose("100. item\n\n\tcode") == "100. item\n\n     "
+    assert (
+        checker.prose("- item\n paragraph\n\n    code")
+        == "- item\n paragraph\n\n        "
+    )
+    assert checker.prose("\n    code\n \nend") == "\n        \n \nend"
+
+
+def test_supporting_readme_errors_and_design_inputs(design: Path) -> None:
+    project = design.parents[1] / "project"
+    project.mkdir()
+    path = project / "README.md"
+    path.write_text("# Project\n\n[not a design link](missing.png)\n")
+    replace(design, "Use Markdown.", "Use [project](../../project/README.md#missing).")
+    errors = checker.check(design.parents[1], [])
+    assert errors == [
+        checker.problem(
+            design / "README.md",
+            34,
+            "relative link anchor does not resolve: ../../project/README.md#missing",
+        )
+    ]
+    path.unlink()
+    assert checker.check(design.parents[1], []) == [
+        checker.problem(
+            design / "README.md",
+            34,
+            "relative link does not resolve: ../../project/README.md#missing",
+        )
+    ]
+    shutil.copytree(design, design.parent / "second-design")
+    replace(design, "../../project/README.md#missing", "../second-design/README.md")
+    replace(
+        design.parent / "second-design", "../../project/README.md#missing", "README.md"
+    )
+    replace(design.parent / "second-design", "status: draft", "status: bad")
+    assert checker.check(design.parents[1], []) == [
+        checker.problem(
+            design.parent / "second-design/README.md",
+            1,
+            "status must be draft, decided or superseded",
+        )
+    ]

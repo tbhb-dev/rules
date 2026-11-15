@@ -149,9 +149,9 @@ def blank_indented(text: str) -> str:
         if line.strip():
             if indent < list_indent:
                 list_indent = 0
-            if marker:
-                list_indent = marker.end()
             code = indent >= CODE_INDENT and not list_indent and (blank or code)
+            if marker and not code:
+                list_indent = list_indent or marker.end()
         if code:
             lines[i] = re.sub(r"[^\n]", " ", line)
         blank = not line.strip()
