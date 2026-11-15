@@ -96,7 +96,8 @@ def destinations(text: str) -> list[tuple[int, str, bool]]:
     visible = list(text)
     for match in LINK.finditer(text):
         end = match.end()
-        if match[1] is None:
+        # Only reference definitions capture a destination in group 2.
+        if match[2] is None:
             parsed = inline_destination(text, end)
             if parsed is None:
                 continue
