@@ -195,6 +195,7 @@ for event in pull_request push; do
       ;;
     *) assertion='true' ;;
     esac
+    # cspell:ignore argjson
     if ! jq -e --argjson platforms "$platforms" --arg event "$event" "(.matrix | length > 0) and ($assertion)
       and ([.matrix[] | select(.workspace.id == \"structurizr\" and .os == \"windows-2025\")] | length == 0)
       and (\$event != \"pull_request\" or ([.matrix[] | select(.os == \"macos-26\")] | length == 0))
