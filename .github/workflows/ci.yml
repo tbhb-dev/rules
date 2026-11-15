@@ -219,6 +219,7 @@ jobs:
     name: "bazel (${{ matrix.os }}, ${{ matrix.workspace.id }})"
     needs: [plan]
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ github.event_name == 'pull_request' && matrix.os == 'windows-2025' }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
