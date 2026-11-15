@@ -32,7 +32,15 @@ def tracked_configs(root: Path) -> list[Path]:
         .decode()
         .split("\0")
     )
-    return sorted({root / p for p in paths if Path(p).name == ".gitleaks.toml"})
+    # Baseline snapshots describe consumers on their recorded rules version.
+    # They are shared source files, not live policy for this checkout.
+    return sorted(
+        {
+            root / p
+            for p in paths
+            if Path(p).name == ".gitleaks.toml" and not p.startswith("repo/baseline/")
+        }
+    )
 
 
 def generate(source: str, version: str, license_text: str) -> str:
