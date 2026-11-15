@@ -45,7 +45,6 @@ path = [
   ".rylignore",
   ".cspell-words.txt",
   ".github/actions/setup-bazel-ci/fetch-targets.txt",
-  ".github/pr-size-exempt.txt",
   ".vale/config/vocabularies/project/*.txt",
 ]
 SPDX-FileCopyrightText = "Tony Burns"

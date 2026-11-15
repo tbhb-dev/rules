@@ -1,2 +1,0 @@
-# Temporary: rules#287 predates the size check. Remove right after it merges.
-diagrams/structurizr/*
