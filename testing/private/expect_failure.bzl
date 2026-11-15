@@ -69,7 +69,7 @@ expected failure as a failure.""",
     attrs = SHELL_ATTRS | {
         "exit_status": attr.int(
             default = 0,
-            doc = "Exit status the wrapped test must have. 0 accepts any non-zero status.",
+            doc = "Exit status the wrapped test must have, from 0 through 255. 0 accepts any non-zero status.",
         ),
         "first_line": attr.bool(
             default = False,
