@@ -17,7 +17,7 @@ tool (
 require github.com/bazelbuild/buildtools v0.0.0-20260904073137-eaa4d125b423
 
 require (
-	github.com/gomutants/gomutants v0.7.2 // indirect
+	github.com/gomutants/gomutants v0.7.3 // indirect
 	github.com/rillig/gobco v1.3.4 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
