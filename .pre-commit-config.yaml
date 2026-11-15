@@ -22,6 +22,8 @@ exclude: |
     |\.bazel-.*/|bazel-.*/|tmp/|\.worktrees/
     |(.*/)?(mutants|testdata)/
     |.*\.d2\.(svg|png|sha256)$
+    |(.*/)?structurizr-[^/]*\.(svg|png)$
+    |(.*/)?workspace\.json$
     |(.*/)?worker-configuration\.d\.ts$
   )
 

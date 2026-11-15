@@ -28,6 +28,9 @@ path = [
   "**/*.d2.svg",
   "**/*.d2.png",
   "**/*.d2.sha256",
+  # Structurizr and PlantUML exports of original workspace sources.
+  "**/structurizr-*.svg",
+  "**/structurizr-*.png",
 ]
 SPDX-FileCopyrightText = "Tony Burns"
 SPDX-License-Identifier = "Apache-2.0"

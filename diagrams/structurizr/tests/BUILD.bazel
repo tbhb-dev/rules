@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("//:defs.bzl", "structurizr_workspace")
+
+repo_files()
+
+structurizr_workspace(
+    name = "workspace",
+    data = glob([
+        "testdata/documentation/**",
+        "testdata/decisions/**",
+    ]),
+    diagrams_dir = "testdata/diagrams",
+    dsl = "testdata/workspace.dsl",
+    workspace_json = "testdata/workspace.json",
+)
