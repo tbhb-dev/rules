@@ -59,6 +59,7 @@ run = [
   "bazelisk test //...",
   "cd e2e/smoke && bazelisk test //...",
   "cd diagrams/d2 && bazelisk test //...",
+  "cd diagrams/structurizr && bazelisk test //...",
   "cd diagrams/d2/e2e/smoke && bazelisk test //...",
   "cd go && bazelisk test //...",
   "cd go/e2e/smoke && bazelisk test //...",
