@@ -37,8 +37,8 @@ def _renders_impl(ctx):
     tree = ctx.actions.declare_directory(ctx.label.name + "/exports")
     ctx.actions.run(
         executable = ctx.executable._runner,
-        arguments = ["render", java.path, _cli(ctx).dirname, _package_file(ctx, ctx.file.dsl), ctx.file._plantuml.path, tree.path] + _sources(ctx),
-        inputs = depset([ctx.file.dsl, ctx.file._plantuml] + ctx.files.data + ctx.files._cli + runtime),
+        arguments = ["render", java.path, _cli(ctx).dirname, _package_file(ctx, ctx.file.dsl), ctx.file._plantuml.path, tree.path, ctx.files._fonts[0].dirname] + _sources(ctx),
+        inputs = depset([ctx.file.dsl, ctx.file._plantuml] + ctx.files.data + ctx.files._cli + ctx.files._fonts + runtime),
         outputs = [tree],
         mnemonic = "StructurizrExport",
         progress_message = "Exporting Structurizr workspace %{input}",
@@ -47,6 +47,7 @@ def _renders_impl(ctx):
 
 _TOOL_ATTRS = {
     "_cli": attr.label(default = Label("@tbhb_rules_structurizr_cli//:structurizr"), cfg = "exec"),
+    "_fonts": attr.label(default = Label("@tbhb_rules_liberation_fonts//:fonts"), cfg = "exec"),
     "_jre": attr.label(default = Label("@tbhb_rules_jre//:java"), executable = True, cfg = "exec"),
     "_plantuml": attr.label(default = Label("@tbhb_rules_plantuml//:plantuml"), allow_single_file = True, cfg = "exec"),
     "_runner": attr.label(default = Label("//private:runner"), executable = True, cfg = "exec"),
@@ -161,8 +162,8 @@ def structurizr_workspace(name, dsl, workspace_json, diagrams_dir, data = [], **
 
     The exporter produces a main diagram and a legend (`-key`) for each
     view. Both are rendered with `!pragma layout smetana`, headless, using
-    the pinned JRE and MIT PlantUML. Graphviz is unnecessary. Java HTTP(S)
-    requests use an unreachable proxy; PlantUML uses its sandbox profile.
+    the pinned JRE, MIT PlantUML and SIL-OFL-1.1 Liberation Sans 2.1.5.
+    Graphviz is unnecessary. Java HTTP(S) requests use an unreachable proxy; PlantUML uses its sandbox profile.
 
     Paths are relative to this package. Keep committed renders byte for
     byte in Git and exclude them from whitespace and line-ending fixers.
