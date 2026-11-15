@@ -11,7 +11,7 @@ generated:
     effort: medium
     surface: exec
     session: sha-256-64:a380dfec5db32fa9
-    at: "2026-11-15T02:57:24Z"
+    at: "2026-11-15T02:57:38Z"
 ---
 
 # The required files
@@ -22,4 +22,4 @@ The check also fails for a missing or invalid `.tbhb-repo.toml`, an unknown kind
 
 A successful check must exit with status 0. Check failures must exit with status 1. An unreadable input or an invalid schema must produce a diagnostic and exit with status 2. Each `required` value must be a list of strings.
 
-This repository fits no kind and has no `.tbhb-repo.toml`, so nothing runs the check against it. The fixtures in `repo/tests/testdata/required_files` have a small manifest and run in `//:baseline_tests`. They hold a clean `go` repository and a clean `docs` repository. The bad repositories show a missing file, a missing directory, an unknown kind, a bad exception, and a private repository without its license file.
+This repository fits no kind and has no `.tbhb-repo.toml`, so nothing runs the check against it. The fixtures in `repo/tests/testdata/required_files` have a small manifest and run in `//:baseline_tests`. The unit tests must also resolve every kind in the real baseline manifest for public and private visibility. They hold a clean `go` repository and a clean `docs` repository. The bad repositories show a missing file, a missing directory, an unknown kind, a bad exception, and a private repository without its license file.
