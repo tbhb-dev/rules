@@ -215,3 +215,6 @@ swiftc
 swiftlint
 tsan
 xcrun
+softwaresystem
+structurizr
+Temurin
