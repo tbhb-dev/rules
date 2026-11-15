@@ -99,6 +99,14 @@ sh_test(
     }),
 )
 
+# A nightly run must propagate failures and reject an empty target selection.
+sh_test(
+    name = "mutation_nightly_test",
+    srcs = ["mutation_nightly_test.sh"],
+    data = ["//:.github/workflows/mutation-nightly.yml"],
+    env = {"WORKFLOW_RLOCATIONPATH": "$(rlocationpath //:.github/workflows/mutation-nightly.yml)"},
+)
+
 # setup-bazel-ci's CPU quota script, against fake cgroup files. The cases
 # that expect a count need a host with more than 2 CPUs.
 sh_test(

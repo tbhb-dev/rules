@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+name: mutation-nightly
+
+on:
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  mutation:
+    name: "mutation (${{ matrix.workspace }})"
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      # Each nested module is outside the root's //... scope.
+      matrix:
+        workspace: [., go, go/e2e/smoke, python, python/e2e/single, python/e2e/workspace]
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.workspace }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Bazel for CI
+        uses: ./.github/actions/setup-bazel-ci
+        with:
+          disk-cache: ${{ github.workflow }}-${{ matrix.workspace }}
+          cache-save: false
+          working-directory: ${{ matrix.workspace }}
+
+      # The macros do not add a mutation tag. Select their gate rules,
+      # excluding manual proofs with deliberately surviving mutants.
+      # No change set is supplied: regular gates run over their full inputs.
+      # Fixture targets with explicit change sets retain their proof scope.
+      - name: Run mutation gates
+        run: |
+          bazelisk query '
+            kind("mutation_gate_test rule",
+              attr("generator_function", "mutmut_test|gomutants_test", //...))
+            except attr("tags", "manual", //...)
+          ' >"$RUNNER_TEMP/mutation-targets"
+          test -s "$RUNNER_TEMP/mutation-targets"
+          bazelisk test --config=ci --target_pattern_file="$RUNNER_TEMP/mutation-targets"
