@@ -52,17 +52,18 @@ Keep a job named `conclusion` in your own `ci.yml` and call this action from it.
 
 ## `repo-checks.yml`
 
-The `repo` job clones the full history and makes these checks in order. An empty input skips its check, except for gitleaks, zizmor, and CODEOWNERS. The CODEOWNERS check skips when the caller's checkout has no `.github/CODEOWNERS`, `CODEOWNERS`, or `docs/CODEOWNERS` file.
+The `repo` job clones the full history and makes these checks in order. An empty input skips its check, except for workflow job timeouts, gitleaks, zizmor, and CODEOWNERS. The CODEOWNERS check skips when the caller's checkout has no `.github/CODEOWNERS`, `CODEOWNERS`, or `docs/CODEOWNERS` file.
 
-1. `bazel run //:gazelle -- -mode=diff` in each of `gazelle-dirs`.
-2. `bazel mod tidy` in each of `module-dirs`, then `git diff --exit-code` on their `MODULE.bazel`.
-3. `//:gitleaks_history`.
-4. On a pull request, `@tbhb_rules//lint:gitleaks_text` on its title and body.
-5. `pip-audit-target`. Failures are non-blocking on pull requests. On pushes and schedules they fail the job.
-6. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
-7. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
-8. zizmor, with the online audits, and the pedantic persona.
-9. `bazelisk run @tbhb_rules//lint:codeowners_errors` checks CODEOWNERS owners and syntax through the GitHub API, with `curl` and `jq`. API failures fail the check when a CODEOWNERS file exists.
+1. `@tbhb_rules//lint:job_timeouts` requires `timeout-minutes` on every job in `.github/workflows/*.yml` and `*.yaml`. Jobs that call reusable workflows with `uses:` are exempt.
+2. `bazel run //:gazelle -- -mode=diff` in each of `gazelle-dirs`.
+3. `bazel mod tidy` in each of `module-dirs`, then `git diff --exit-code` on their `MODULE.bazel`.
+4. `//:gitleaks_history`.
+5. On a pull request, `@tbhb_rules//lint:gitleaks_text` on its title and body.
+6. `pip-audit-target`. Failures are non-blocking on pull requests. On pushes and schedules they fail the job.
+7. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
+8. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
+9. zizmor, with the online audits, and the pedantic persona.
+10. `bazelisk run @tbhb_rules//lint:codeowners_errors` checks CODEOWNERS owners and syntax through the GitHub API, with `curl` and `jq`. API failures fail the check when a CODEOWNERS file exists.
 
 On a pull request and on a push alike, the history scan covers only the tested commit's history, so a finding on another open pull request's branch, which the full clone also holds, fails only that pull request. The title and body get the same rules as the history, the private ones included, because a squash merge makes them the commit message.
 
