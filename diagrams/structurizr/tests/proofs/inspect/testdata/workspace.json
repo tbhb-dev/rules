@@ -1,0 +1,167 @@
+{
+  "configuration" : {
+    "scope" : "SoftwareSystem"
+  },
+  "description" : "A small catalog.",
+  "documentation" : { },
+  "id" : 0,
+  "model" : {
+    "people" : [ {
+      "description" : "Reads the catalog.",
+      "id" : "1",
+      "name" : "Reader",
+      "properties" : {
+        "structurizr.dsl.identifier" : "reader"
+      },
+      "relationships" : [ {
+        "description" : "Reads catalog",
+        "destinationId" : "3",
+        "id" : "6",
+        "sourceId" : "1",
+        "tags" : "Relationship",
+        "technology" : "HTTPS"
+      }, {
+        "description" : "Reads catalog",
+        "destinationId" : "2",
+        "id" : "7",
+        "linkedRelationshipId" : "6",
+        "sourceId" : "1",
+        "technology" : "HTTPS"
+      } ],
+      "tags" : "Element,Person"
+    } ],
+    "softwareSystems" : [ {
+      "containers" : [ {
+        "description" : "Serves catalog pages.",
+        "documentation" : { },
+        "id" : "3",
+        "name" : "Web",
+        "properties" : {
+          "structurizr.dsl.identifier" : "web"
+        },
+        "relationships" : [ {
+          "description" : "Reads entries",
+          "destinationId" : "4",
+          "id" : "5",
+          "sourceId" : "3",
+          "tags" : "Relationship",
+          "technology" : "SQL"
+        } ],
+        "tags" : "Element,Container",
+        "technology" : "Java"
+      }, {
+        "description" : "Stores catalog entries.",
+        "documentation" : { },
+        "id" : "4",
+        "name" : "Store",
+        "properties" : {
+          "structurizr.dsl.identifier" : "store"
+        },
+        "tags" : "Element,Container",
+        "technology" : "SQL"
+      } ],
+      "description" : "Provides catalog entries.",
+      "documentation" : {
+        "decisions" : [ {
+          "content" : "# 1. Use a catalog\n\nDate: 2026-11-14\n\n## Status\n\nAccepted\n\n## Context\n\nReaders need entries.\n\n## Decision\n\nServe a catalog.\n\n## Consequences\n\nKeep entries in a store.\n",
+          "date" : "2026-11-14T05:00:00Z",
+          "format" : "Markdown",
+          "id" : "1",
+          "status" : "Accepted",
+          "title" : "Use a catalog"
+        } ],
+        "sections" : [ {
+          "content" : "# Context\n\nReaders browse catalog entries.\n",
+          "filename" : "01-context.md",
+          "format" : "Markdown",
+          "order" : 1,
+          "title" : ""
+        } ]
+      },
+      "id" : "2",
+      "name" : "Catalog",
+      "properties" : {
+        "structurizr.dsl.identifier" : "catalog"
+      },
+      "tags" : "Element,Software System"
+    } ]
+  },
+  "name" : "Catalog",
+  "properties" : {
+    "structurizr.inspection.error" : "0",
+    "structurizr.inspection.info" : "0",
+    "structurizr.inspection.ignore" : "0",
+    "structurizr.inspection.warning" : "0"
+  },
+  "views" : {
+    "configuration" : {
+      "branding" : { },
+      "styles" : { },
+      "terminology" : { }
+    },
+    "containerViews" : [ {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "description" : "Catalog containers.",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "3",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "4",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "containers",
+      "name" : "Container View: Catalog",
+      "order" : 2,
+      "relationships" : [ {
+        "id" : "5"
+      }, {
+        "id" : "6"
+      } ],
+      "softwareSystemId" : "2"
+    } ],
+    "systemContextViews" : [ {
+      "automaticLayout" : {
+        "applied" : false,
+        "edgeSeparation" : 0,
+        "implementation" : "Graphviz",
+        "nodeSeparation" : 300,
+        "rankDirection" : "LeftRight",
+        "rankSeparation" : 300,
+        "vertices" : false
+      },
+      "description" : "Catalog context.",
+      "elements" : [ {
+        "id" : "1",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "2",
+        "x" : 0,
+        "y" : 0
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "key" : "context",
+      "name" : "System Context View: Catalog",
+      "order" : 1,
+      "relationships" : [ {
+        "id" : "7"
+      } ],
+      "softwareSystemId" : "2"
+    } ]
+  }
+}
