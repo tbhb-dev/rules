@@ -1,5 +1,5 @@
 ---
-type: Design Draft
+type: Content Template
 title: Design title
 description: A skeleton for a design README and its appendices.
 tags: [design, content]
@@ -11,7 +11,7 @@ generated:
     effort: high
     surface: exec
     session: sha-256-64:59fe70e1ae90cafb
-    at: "2026-11-15T14:56:36Z"
+    at: "2026-11-15T14:57:05Z"
 ---
 
 # Design title

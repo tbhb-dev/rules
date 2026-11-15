@@ -11,3 +11,7 @@ reason = "The fixtures plant one broken link each, for the check's own tests."
 [[exclude]]
 glob = "repo/tests/testdata/markdown_links/clean/docs/skipped.md"
 reason = "The clean fixture needs a failing link that an exclusion covers."
+
+[[exclude]]
+glob = "lint/tests/content/testdata/**"
+reason = "The design check fixtures deliberately contain broken links and anchors."
