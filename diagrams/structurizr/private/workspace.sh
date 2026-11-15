@@ -65,14 +65,17 @@ render() {
   mkdir -p "$scratch/pinned-fonts"
   cp -L "$fonts/"*.ttf "$scratch/pinned-fonts/"
   fonts=$(cd "$scratch/pinned-fonts" && pwd -P)
-  mkdir -p "$scratch/font-cache"
+  mkdir -p "$scratch/font-cache" "$scratch/java-home"
   # Escape paths for XML, including scratch paths supplied by Bazel.
   local font_dir cache_dir
   font_dir=$(printf '%s' "$fonts" | sed 's/\&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')
   cache_dir=$(printf '%s' "$scratch/font-cache" | sed 's/\&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')
   export FONTCONFIG_FILE="$scratch/fonts.conf"
   printf '<fontconfig><dir>%s</dir><cachedir>%s</cachedir></fontconfig>\n' "$font_dir" "$cache_dir" >"$FONTCONFIG_FILE"
-  java_run -Dsun.java2d.debugfonts=true "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tsvg "${sources[@]}" >"$scratch/fonts.log" 2>&1 || {
+  # Java caches its parsed fontconfig under user.home/.java/fonts, keyed by host
+  # and not by FONTCONFIG_FILE. A cache from another render hides the pinned
+  # mapping, so every render gets its own home.
+  java_run -Dsun.java2d.debugfonts=true "-Duser.home=$scratch/java-home" "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tsvg "${sources[@]}" >"$scratch/fonts.log" 2>&1 || {
     cat "$scratch/fonts.log"
     error "SVG rendering failed"
   }
@@ -92,7 +95,7 @@ render() {
       error "JVM did not use the pinned Liberation Sans TTF: $face"
     }
   done
-  java_run "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tpng "${sources[@]}"
+  java_run "-Duser.home=$scratch/java-home" "-Dsun.java2d.fontpath=$fonts" -jar "$plantuml" -failfast2 -tpng "${sources[@]}"
   for source in "${sources[@]}"; do
     local families
     families=$(grep -o '<text[^>]*' "${source%.puml}.svg" | grep -o 'font-family="[^"]*"' | sort -u || true)
