@@ -265,6 +265,53 @@ def test_entry_of_wrong_type(  # noqa: PLR0913, PLR0917 -- Fixtures and paramete
     )
 
 
+@pytest.mark.parametrize(
+    "path", ["/etc/hostname", "/", "..", "../go.mod", "cmd/..", "cmd/../go.mod"]
+)
+@pytest.mark.parametrize(("table", "name"), [("kind", "go"), ("visibility", "public")])
+def test_required_path_outside_repository(  # noqa: PLR0913, PLR0917 -- Fixtures and parameters.
+    manifest: Path,
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+    table: str,
+    name: str,
+    path: str,
+) -> None:
+    declare(repo, "")
+    populate(repo)
+    manifest.write_text(
+        "[kind.go]\nrequired = []\n[visibility.public]\nrequired = []\n".replace(
+            f"[{table}.{name}]\nrequired = []",
+            f"[{table}.{name}]\nrequired = ['go.mod', '{path}']",
+        )
+    )
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f'{manifest}: {table} "{name}" required path {path} '
+        "must be relative with no .. segment\n",
+    )
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["..rc", "rc..", "a..b", "...", "cmd/..rc", "cmd/rc..", "cmd/.../x", "a/b/c"],
+)
+def test_required_path_with_dots_inside_repository(
+    manifest: Path, repo: Path, path: str
+) -> None:
+    declare(repo, "")
+    populate(repo)
+    (repo / path).parent.mkdir(parents=True, exist_ok=True)
+    (repo / path).write_text("")
+    manifest.write_text(
+        f"[kind.go]\nrequired = ['{path}']\n"
+        f"[visibility.public]\nrequired = ['{path}']\n"
+    )
+    assert run(manifest, repo) == []
+
+
 def test_manifest_invalid_toml(
     manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
