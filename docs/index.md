@@ -30,3 +30,4 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 * [Structurizr workspace WRITING](content/structurizr-workspace-writing.md) - Rules for writing and updating a Structurizr workspace.
 * [Structurizr workspace REVIEW](content/structurizr-workspace-review.md) - Rules for reviewing a Structurizr workspace and its exports.
 * [Structurizr macro reference](reference/structurizr.md) - Workspace lint, exports, update targets and pinned rendering tools.
+* [Structurizr tooling](../diagrams/structurizr/README.md) - Export, lint and refresh committed Structurizr workspace diagrams.
