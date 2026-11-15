@@ -888,7 +888,7 @@ def test_c4_helper_rejects_bad_fields(key: str, value: object) -> None:
         entry[key] = value
     assert checker.c4_exception_paths([entry]) is None
     assert checker.check_paths(Path("repo"), [], [entry]) == [
-        "repo/.tbhb-repo.toml: C4 exception needs a path and a reason"
+        f"{Path('repo') / '.tbhb-repo.toml'}: C4 exception needs a path and a reason"
     ]
 
 
