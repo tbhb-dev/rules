@@ -58,7 +58,7 @@ def _mutation_gate_impl(ctx):
         RunEnvironmentInfo(inherited_environment = ["GITHUB_STEP_SUMMARY"]),
     ]
 
-mutation_gate_test = rule(
+_mutation_gate_test = rule(
     implementation = _mutation_gate_impl,
     test = True,
     toolchains = SHELL_TOOLCHAINS,
@@ -98,7 +98,9 @@ mutants, interrupted runs, incomplete or inconsistent accounting, malformed
 reports, timeouts above the cap or without any kills, `mutant.unmapped`, an
 empty full-scope run, an all-skipped run, and a diff report under
 `require_scope = "full"`.
-Blocking nightly runs must leave it False.""",
+When advisory is omitted, the macro reads //quality:advisory (False by
+default). Explicit True or False overrides the flag. Blocking full runs
+must leave the flag off and must not set advisory = True.""",
     attrs = SHELL_ATTRS | {
         "advisory": attr.bool(
             default = False,
@@ -120,3 +122,21 @@ Blocking nightly runs must leave it False.""",
         ),
     },
 )
+
+def mutation_gate_test(name, advisory = None, **kwargs):
+    """Checks mutation reports, using the advisory flag unless overridden.
+
+    Args:
+        name: Target name.
+        advisory: None reads //quality:advisory; True permits survivors;
+            False blocks them even when the flag is on.
+        **kwargs: Passed to the gate rule.
+    """
+    _mutation_gate_test(
+        name = name,
+        advisory = select({
+            Label("//quality:advisory_enabled"): True,
+            "//conditions:default": False,
+        }) if advisory == None else advisory,
+        **kwargs
+    )

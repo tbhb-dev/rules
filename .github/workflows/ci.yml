@@ -256,7 +256,14 @@ jobs:
 
       - name: Test
         working-directory: ${{ matrix.workspace.dir }}
-        run: bazelisk test --config=ci //...
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          flags=()
+          if [[ $EVENT == pull_request ]]; then
+            flags+=(--@tbhb_rules//quality:advisory)
+          fi
+          bazelisk test --config=ci "${flags[@]}" //...
 
       # Prints disk and temp space after the tests, including when they fail.
       - name: Report macOS disk and temp space after the tests

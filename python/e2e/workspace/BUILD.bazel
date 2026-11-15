@@ -230,6 +230,7 @@ import_linter_test(
 mutmut_test(
     name = "proof_mutmut_member_survivor",
     srcs = [":weak"],
+    advisory = False,
     chdir = "weak",
     cpus = 2,
     tags = PROOF_TAGS,
@@ -239,6 +240,7 @@ mutmut_test(
 mutmut_test(
     name = "proof_mutmut_diff_survivor",
     srcs = [":weak"],
+    advisory = False,
     changes = "changes/half.json",
     chdir = "weak",
     cpus = 2,
@@ -250,6 +252,7 @@ mutmut_test(
 mutmut_test(
     name = "proof_mutmut_diff_input_changed",
     srcs = [":weak"],
+    advisory = False,
     changes = "changes/config.json",
     chdir = "weak",
     cpus = 2,
@@ -261,6 +264,7 @@ mutmut_test(
 mutmut_test(
     name = "proof_mutmut_diff_added_file",
     srcs = [":weak"],
+    advisory = False,
     changes = "changes/added.json",
     chdir = "weak",
     cpus = 2,
@@ -271,6 +275,7 @@ mutmut_test(
 mutmut_test(
     name = "proof_mutmut_diff_where_full_required",
     srcs = [":weak"],
+    advisory = False,
     changes = "changes/double.json",
     chdir = "weak",
     cpus = 2,

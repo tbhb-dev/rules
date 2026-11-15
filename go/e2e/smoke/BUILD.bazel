@@ -342,6 +342,7 @@ MUTATION_PROOFS = {
 [
     gomutants_test(
         name = proof,
+        advisory = False,
         changes = "mutation/changes/{}.json".format(changes) if changes else None,
         tags = ["manual"],
         tests = [test],

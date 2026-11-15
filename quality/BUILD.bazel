@@ -2,10 +2,23 @@
 # Copyright Tony Burns
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("//quality/private:mutation_changes.bzl", "mutation_changes")
 load("//repo:defs.bzl", "repo_files")
 
 repo_files()
+
+bool_flag(
+    name = "advisory",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "advisory_enabled",
+    flag_values = {":advisory": "true"},
+    visibility = ["//visibility:public"],
+)
 
 bzl_library(
     name = "defs",

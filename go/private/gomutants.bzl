@@ -127,7 +127,7 @@ slice (the `changes` output group).""",
     toolchains = [GO_TOOLCHAIN],
 )
 
-def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], flags = [], cpus = 0, changes = None, require_scope = "any", mutation_oses = None, advisory = False, **kwargs):
+def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], flags = [], cpus = 0, changes = None, require_scope = "any", mutation_oses = None, advisory = None, **kwargs):
     """Mutation-tests Go packages with gomutants and fails unless every mutant was killed or timed out (within a cap).
 
     Creates one gomutants_report per package that a test in `tests` is in,
@@ -161,8 +161,9 @@ def gomutants_test(name, tests, go_mod, go_sum = None, proxy = None, data = [], 
             Otherwise a list of linux, macos, windows: reports and gate run
             only on a listed OS that also meets target_compatible_with.
             An empty list skips all OSes; unknown names fail at load time.
-        advisory: Report survivors without failing on them; every other
-            failure still fails. Blocking nightly runs must leave it False.
+        advisory: None reads quality's advisory flag (False by default).
+            True permits survivors; False blocks them even with the flag on.
+            Every other failure still fails. Full runs must leave the flag off.
         **kwargs: Passed to the gate test; target_compatible_with is applied
             to the reports and the gate.
     """

@@ -15,7 +15,7 @@ summary="$work/summary.md"
 : >"$summary"
 status=0
 GITHUB_STEP_SUMMARY=$summary "$gate" >"$work/out.log" 2>&1 || status=$?
-if ((status != 0)); then
+if ((status != {status})); then
   echo "gate_output_test: FAIL: the gate exited $status" >&2
   cat "$work/out.log" >&2
   exit 1
@@ -34,28 +34,32 @@ for line in {summary_lines}; do
     exit 1
   fi
 done
-# The gate must also pass with the variable unset.
-env -u GITHUB_STEP_SUMMARY "$gate" >/dev/null 2>&1 || {{
-  echo "gate_output_test: FAIL: the gate fails without GITHUB_STEP_SUMMARY" >&2
+# The verdict must also hold with the variable unset.
+status=0
+env -u GITHUB_STEP_SUMMARY "$gate" >/dev/null 2>&1 || status=$?
+if ((status != {status})); then
+  echo "gate_output_test: FAIL: the verdict changes without GITHUB_STEP_SUMMARY" >&2
   exit 1
-}}
+fi
 """
 
 def _impl(ctx):
     if not ctx.attr.lines:
         fail("lines must not be empty")
-    gate = ctx.attr.gate[DefaultInfo].files_to_run.executable
+    target = ctx.attr.gate[0] if type(ctx.attr.gate) == "list" else ctx.attr.gate
+    gate = target[DefaultInfo].files_to_run.executable
     script = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
         output = script,
         content = _SCRIPT.format(
             gate = gate.short_path,
+            status = ctx.attr.status,
             lines = " ".join([shell.quote(line) for line in ctx.attr.lines]),
             summary_lines = " ".join([shell.quote(line) for line in ctx.attr.summary_lines]),
         ),
         is_executable = True,
     )
-    runfiles = ctx.runfiles(files = [gate]).merge(ctx.attr.gate[DefaultInfo].default_runfiles)
+    runfiles = ctx.runfiles(files = [gate]).merge(target[DefaultInfo].default_runfiles)
     executable, runfiles = shell_executable(ctx, script, runfiles)
     return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
@@ -70,7 +74,32 @@ each of `summary_lines`, then once more with it unset.""",
     attrs = SHELL_ATTRS | {
         "gate": attr.label(mandatory = True, executable = True, cfg = "target"),
         "lines": attr.string_list(doc = "Whole lines the gate's output must hold."),
+        "status": attr.int(default = 0, values = [0, 1]),
         "summary_lines": attr.string_list(doc = "Whole lines the summary file must hold."),
+    },
+)
+
+def _mode_impl(_settings, attr):
+    return {"//quality:advisory": attr.advisory}
+
+_mode = transition(
+    implementation = _mode_impl,
+    inputs = [],
+    outputs = ["//quality:advisory"],
+)
+
+gate_mode_test = rule(
+    implementation = _impl,
+    test = True,
+    toolchains = SHELL_TOOLCHAINS,
+    doc = "Checks the gate's verdict and output with the advisory flag on or off.",
+    attrs = SHELL_ATTRS | {
+        "advisory": attr.bool(),
+        "gate": attr.label(mandatory = True, executable = True, cfg = _mode),
+        "lines": attr.string_list(),
+        "status": attr.int(default = 0, values = [0, 1]),
+        "summary_lines": attr.string_list(),
+        "_allowlist_function_transition": attr.label(default = "@bazel_tools//tools/allowlists/function_transition_allowlist"),
     },
 )
 

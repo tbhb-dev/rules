@@ -6,7 +6,7 @@ load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("//quality:defs.bzl", "mutation_gate_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
-load(":gate_output_test.bzl", "gate_command_error_test", "gate_output_test", "gate_summary_error_test")
+load(":gate_output_test.bzl", "gate_command_error_test", "gate_mode_test", "gate_output_test", "gate_summary_error_test")
 load(":mutation_changes_test.bzl", "mutation_changes_test")
 load(":slice_test.bzl", "changes_slice")
 
@@ -58,6 +58,42 @@ mutation_gate_test(
 
 PROOF_TAGS = ["manual"]
 
+# The same gate must change verdict only for survivors when PR mode is on.
+mutation_gate_test(
+    name = "flag_survivors_gate",
+    reports = ["testdata/advisory_survivors.txt"],
+    tags = PROOF_TAGS,
+)
+
+gate_mode_test(
+    name = "pr_survivors_test",
+    advisory = True,
+    gate = ":flag_survivors_gate",
+    lines = ["mutation_gate: advisory, 2 survivors (not failing)"],
+    summary_lines = ["mutation_gate: advisory, 2 survivors (not failing)"],
+)
+
+gate_mode_test(
+    name = "blocking_survivors_test",
+    gate = ":flag_survivors_gate",
+    lines = ["mutation_gate: FAIL: 1 lived, 1 not_covered"],
+    status = 1,
+)
+
+mutation_gate_test(
+    name = "flag_errored_gate",
+    reports = ["testdata/advisory_errored.txt"],
+    tags = PROOF_TAGS,
+)
+
+gate_mode_test(
+    name = "pr_errored_test",
+    advisory = True,
+    gate = ":flag_errored_gate",
+    lines = ["mutation_gate: FAIL: 1 errored"],
+    status = 1,
+)
+
 # Advisory permits survivors only; all other verdict checks still apply.
 mutation_gate_test(
     name = "advisory_survivors_gate",
@@ -107,6 +143,7 @@ gate_output_test(
 
 mutation_gate_test(
     name = "proof_advisory_survivors_off",
+    advisory = False,
     reports = ["testdata/advisory_survivors.txt"],
     tags = PROOF_TAGS,
 )
@@ -115,6 +152,14 @@ expect_failure_test(
     name = "proof_advisory_survivors_off_fails",
     pattern = "FAIL: 1 lived, 1 not_covered$",
     test = ":proof_advisory_survivors_off",
+)
+
+gate_mode_test(
+    name = "pr_explicit_blocking_test",
+    advisory = True,
+    gate = ":proof_advisory_survivors_off",
+    lines = ["mutation_gate: FAIL: 1 lived, 1 not_covered"],
+    status = 1,
 )
 
 ADVISORY_PROOFS = {
@@ -131,6 +176,35 @@ ADVISORY_PROOFS = {
     "unmapped": ("advisory_unmapped", "FAIL: 1 unmapped$", "any"),
     "zero_kill_timeout": ("zero_kill_timeout", "FAIL: no mutant was killed \\(1 timed out\\)$", "any"),
 }
+
+# The PR switch preserves zero-kill and full-scope verdicts.
+PR_FAILURES = {
+    "all_skipped": ("all_skipped", "mutation_gate: FAIL: all 5 mutant(s) were skipped; nothing was checked", "any"),
+    "diff_zero_kill_timeout": ("diff_zero_kill_timeout", "mutation_gate: FAIL: no mutant was killed (1 timed out)", "any"),
+    "require_full": ("diff_ok", "mutation_gate: FAIL: 1 diff-scoped report(s), but a full run is required", "full"),
+    "zero_kill_timeout": ("zero_kill_timeout", "mutation_gate: FAIL: no mutant was killed (1 timed out)", "any"),
+}
+
+[
+    mutation_gate_test(
+        name = "flag_" + name + "_gate",
+        reports = ["testdata/{}.txt".format(report)],
+        require_scope = scope,
+        tags = PROOF_TAGS,
+    )
+    for name, (report, _, scope) in PR_FAILURES.items()
+]
+
+[
+    gate_mode_test(
+        name = "pr_" + name + "_test",
+        advisory = True,
+        gate = ":flag_" + name + "_gate",
+        lines = [line],
+        status = 1,
+    )
+    for name, (_, line, _) in PR_FAILURES.items()
+]
 
 [
     mutation_gate_test(
@@ -197,6 +271,7 @@ PROOF_REASONS = {
 [
     mutation_gate_test(
         name = proof,
+        advisory = False,
         reports = ["testdata/{}.txt".format(proof.removeprefix("proof_"))],
         tags = PROOF_TAGS,
     )
