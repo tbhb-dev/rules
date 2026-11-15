@@ -6,7 +6,9 @@
 
 Usage: check_required_files.py MANIFEST SCHEMA REPO
 MANIFEST is the baseline's manifest.toml, SCHEMA its repo.schema.json, and REPO
-the consumer's root. The required paths are the repository's `[kind.<kind>]`
+the consumer's root. Exit status 1 means the check found problems; 2 means an
+input could not be read or SCHEMA is not a schema. The required paths are the
+repository's `[kind.<kind>]`
 list plus the `[visibility.public]` or `[visibility.private]` list. A path that
 ends in `/` must be a directory; any other path must be a file. Failures are
 one line each. A `.tbhb-repo.toml` exception for C4 hides one missing path.
@@ -20,9 +22,11 @@ import tomllib
 from pathlib import Path
 from typing import TypeIs
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, SchemaError
 
 CHECK = "C4"
+# Status 1 means the check found problems; 2 means an input is unusable.
+UNUSABLE = 2
 # The two lookaheads of the path pattern in manifest.schema.json: no leading
 # slash and no `..` segment.
 ABSOLUTE_OR_PARENT = re.compile(r"/|.*(?:^|/)\.\.(?:/|$)")
@@ -63,6 +67,7 @@ def check(manifest: Path, schema: Path, repo: Path) -> list[str]:
         schema_data = json.loads(schema.read_bytes())
     except (json.JSONDecodeError, UnicodeDecodeError) as error:
         return [f"{schema}: invalid JSON: {error}"]
+    Draft202012Validator.check_schema(schema_data)
     validator = Draft202012Validator(schema_data)
     problems = sorted(
         f"{declaration_path}: {error.json_path}: {error.message}"
@@ -147,7 +152,7 @@ def check_paths(
     ]
     errors += [
         f"{declaration_path}: exception for {path} but it is not missing"
-        for path in exceptions
+        for path in sorted(exceptions)
         if path not in missing
     ]
     return errors
@@ -159,7 +164,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("schema", type=Path)
     parser.add_argument("repo", type=Path)
     args = parser.parse_args(argv)
-    errors = check(args.manifest, args.schema, args.repo)
+    try:
+        errors = check(args.manifest, args.schema, args.repo)
+    except OSError as error:
+        sys.stdout.write(f"{error.filename}: cannot read: {error.strerror}\n")
+        return UNUSABLE
+    except SchemaError as error:
+        sys.stdout.write(f"{args.schema}: invalid schema: {error.message}\n")
+        return UNUSABLE
     sys.stdout.write("".join(f"{error}\n" for error in errors))
     return 1 if errors else 0
 
