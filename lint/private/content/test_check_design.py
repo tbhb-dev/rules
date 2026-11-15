@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
-# cspell:ignore checkerbot checkerbotany anycheckerbot ncheckerbot
+# cspell:ignore setext xxasset checkerbot checkerbotany anycheckerbot ncheckerbot
 
 import json
 import re
@@ -686,3 +686,178 @@ def test_summary_counts_fenced_code(design: Path) -> None:
 def test_decision_code_values(design: Path) -> None:
     replace(design, "- **Recommendation:** Accept it.", "- **Recommendation:** `true`")
     assert checker.check(design, []) == []
+
+
+def test_supporting_readme(design: Path) -> None:
+    project = design.parents[1] / "project"
+    project.mkdir()
+    (project / "README.md").write_text("# Project\n")
+    replace(design, "Use Markdown.", "Use [project](../../project/README.md#project).")
+    assert checker.check(design.parents[1], []) == []
+
+
+@pytest.mark.parametrize("name", ["README.md", "A-evidence.md"])
+def test_unused_definitions_do_not_connect(design: Path, name: str) -> None:
+    if name == "README.md":
+        replace(design, "- [Evidence](A-evidence.md)", "[unused]: A-evidence.md", name)
+        expected = "README must link appendix A-evidence.md"
+    else:
+        replace(design, "[Design](README.md)", "[unused]: README.md", name)
+        expected = "appendix needs a link back to README.md"
+    assert any(expected in error for error in checker.check(design, []))
+
+
+@pytest.mark.parametrize("usage", ["[Evidence][ref]", "[ref][]", "[ref]"])
+def test_reference_usages_connect(design: Path, usage: str) -> None:
+    replace(
+        design,
+        "[Evidence](A-evidence.md)",
+        usage + '\n\n[REF]: A-evidence.md "Evidence"',
+    )
+    assert checker.check(design, []) == []
+
+
+@pytest.mark.parametrize(
+    "destination",
+    ["plot(1).png", 'plot((1)).png "Plot"', '<plot(1).png> "Plot"'],
+)
+def test_balanced_link_destinations(design: Path, destination: str) -> None:
+    for name in ("plot(1).png", "plot((1)).png"):
+        (design / name).write_bytes(b"plot")
+    assert checker.links(design / "README.md", f"![plot]({destination})")[1] == []
+
+
+@pytest.mark.parametrize("indent", ["    ", "\t"])
+def test_indented_code_is_not_prose(design: Path, indent: str) -> None:
+    block = f"\n\n{indent}[example](does-not-exist.png)\n{indent}## Fake\n"
+    replace(design, "Ship a check.", "Ship a check." + block)
+    assert checker.check(design, []) == []
+    assert (
+        checker.prose(block)
+        == "\n\n"
+        + " " * (len(indent) + len("[example](does-not-exist.png)"))
+        + "\n"
+        + " " * (len(indent) + 7)
+        + "\n"
+    )
+
+
+def test_list_continuation_is_prose(design: Path) -> None:
+    replace(design, "Ship a check.", "- Item\n\n    [example](does-not-exist.png)")
+    assert any("does-not-exist.png" in error for error in checker.check(design, []))
+
+
+def test_rendered_and_setext_anchors(design: Path) -> None:
+    target = design / "headings.md"
+    target.write_text(
+        "Title\n===\n\nOther\n---\n\n# [Decision](https://example.com)\n"
+        "\nDecision\n---\n\n# **Bold** and `code`\n"
+    )
+    assert checker.anchors(target.read_text()) == {
+        "title",
+        "other",
+        "decision",
+        "decision-1",
+        "bold-and-code",
+    }
+    assert (
+        checker.links(
+            design / "README.md",
+            "[title](headings.md#title) [other](headings.md#other) "
+            "[decision](headings.md#decision) [duplicate](headings.md#decision-1)",
+        )[1]
+        == []
+    )
+
+
+def test_invalid_date_frontmatter_continues(
+    design: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    bad = design.parent / "a-bad"
+    shutil.copytree(design, bad)
+    replace(bad, 'updated: "2026-11-11"', "updated: 2026-02-30")
+    replace(design, "status: draft", "status: bad")
+    assert checker.main([str(design.parent)]) == 1
+    output = capsys.readouterr().out
+    assert f"{bad.as_posix()}/README.md:2: invalid YAML frontmatter" in output
+    assert f"{design.as_posix()}/README.md:1: status must be" in output
+
+
+@pytest.mark.parametrize(
+    ("text", "start", "expected"),
+    [
+        ("asset) trailing", 0, ("asset", 6)),
+        ("xxasset) trailing", 2, ("asset", 8)),
+        ("<a b> 'title')tail", 0, ("<a b>", 14)),
+        ("asset (title))", 0, ("asset", 14)),
+        ("a(b(c)).png)", 0, ("a(b(c)).png", 12)),
+        (")", 0, ("", 1)),
+        ("", 0, None),
+        ("unfinished", 0, None),
+        ("<unfinished)", 0, None),
+        ("<asset>oops)", 0, None),
+        ("asset 'title'", 0, None),
+        ("asset(unbalanced)", 0, None),
+    ],
+)
+def test_inline_destination_contract(
+    text: str, start: int, expected: tuple[str, int] | None
+) -> None:
+    assert checker.inline_destination(text, start) == expected
+
+
+def test_reference_destination_contract(design: Path) -> None:
+    text = (
+        "[Visible][  My Label ] [MY LABEL][] [my label] [unknown]\n"
+        '[my label]: <A-evidence.md> "Title"\n'
+        "[unused]: missing.md\n"
+        "[broken](unfinished"
+    )
+    definition = text.index("[my label]:")
+    unused = text.index("[unused]:")
+    assert checker.destinations(text) == [
+        (definition, "<A-evidence.md>", False),
+        (unused, "missing.md", False),
+        (0, "<A-evidence.md>", True),
+        (text.index("[MY LABEL][]"), "<A-evidence.md>", True),
+        (text.index("[my label]"), "<A-evidence.md>", True),
+    ]
+    targets, errors = checker.links(design / "README.md", text, used_only=True)
+    assert targets == {(design / "A-evidence.md").resolve()}
+    assert errors == [
+        checker.problem(
+            design / "README.md", 3, "relative link does not resolve: missing.md"
+        )
+    ]
+    assert checker.destinations("[inline](asset)\n[unused]: asset") == [
+        (0, "asset", True),
+        (16, "asset", False),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("    code\n    next\n\n    more\nend", "        \n        \n\n        \nend"),
+        ("paragraph\n    continuation", "paragraph\n    continuation"),
+        (
+            "- item\n\n    continuation\nend\n\n    code",
+            "- item\n\n    continuation\nend\n\n        ",
+        ),
+        ("1. item\n\n\tcontinuation", "1. item\n\n\tcontinuation"),
+        ("   - item\n\n     continuation", "   - item\n\n     continuation"),
+        ("   text\n\n   more", "   text\n\n   more"),
+    ],
+)
+def test_indented_block_contract(text: str, expected: str) -> None:
+    assert checker.prose(text) == expected
+
+
+def test_heading_text_contract() -> None:
+    assert (
+        checker.heading_text('Before [A](a(1)) and [B](b "title") after')
+        == "Before A and B after"
+    )
+    assert checker.heading_text("[unclosed](missing") == "unclosed(missing"
+    assert checker.heading_text("[A][ref] [B][] [C] <em>D</em>") == "A B C D"
+    assert checker.anchors("---\ntitle: Hidden\n---\n# Visible") == {"visible"}

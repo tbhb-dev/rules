@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
+# cspell:ignore Setext
 
 """Check design directories and render their deterministic Markdown index."""
 
@@ -16,6 +17,7 @@ from urllib.parse import unquote, urlsplit
 import yaml
 
 ENCODING = "utf-8"
+CODE_INDENT = 4
 EMPTY_SECTION = (1, [])
 EVIDENCE = re.compile(r"^(proven|existing|new|unverified)\b", re.IGNORECASE)
 REQUIRED = (
@@ -44,9 +46,71 @@ SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---[ \t]*(?:\n|$)", re.DOTALL)
 INLINE_CODE = re.compile(r"(`+)(?!`)(.*?)(?<!`)\1(?!`)", re.DOTALL)
 LINK = re.compile(
-    r"!?\[[^\]\n]*\]\(\s*(<[^>]*>|[^\s)]*)(?:\s+[^)]*)?\)|^ {0,3}\[[^\]]+\]:\s*(\S+)",
+    r"!?\[[^\]\n]*\]\(\s*|^ {0,3}\[([^\]]+)\]:\s*(<[^>]*>|\S+)",
     re.MULTILINE,
 )
+LINK_END = re.compile(r"\s*(?:\"[^\"]*\"\s*|'[^']*'\s*|\([^)]*\)\s*)?\)")
+
+
+def bare_destination_end(text: str, start: int) -> int:
+    end = start
+    depth = 0
+    while end < len(text):
+        char = text[end]
+        if char.isspace() or (char == ")" and depth == 0):
+            break
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        end += 1
+    return end
+
+
+def inline_destination(text: str, start: int) -> tuple[str, int] | None:
+    """Read an angle destination or a bare one with balanced parentheses."""
+    if text[start : start + 1] == "<":
+        end = text.find(">", start)
+        if end == -1:
+            return None
+        end += 1
+    else:
+        end = bare_destination_end(text, start)
+    closing = LINK_END.match(text, end)
+    if closing is None:
+        return None
+    return text[start:end], closing.end()
+
+
+REFERENCE = re.compile(r"!?\[([^\]\n]+)\](?:\[([^\]\n]*)\])?")
+
+
+def reference_label(label: str) -> str:
+    return " ".join(label.split()).casefold()
+
+
+def destinations(text: str) -> list[tuple[int, str, bool]]:
+    """Return destinations with offsets and whether an actual link uses them."""
+    definitions = {}
+    found = []
+    visible = list(text)
+    for match in LINK.finditer(text):
+        end = match.end()
+        if match[1] is None:
+            parsed = inline_destination(text, end)
+            if parsed is None:
+                continue
+            destination, end = parsed
+            found.append((match.start(), destination, True))
+        else:
+            definitions[reference_label(match[1])] = match[2]
+            found.append((match.start(), match[2], False))
+        visible[match.start() : end] = [" "] * (end - match.start())
+    for match in REFERENCE.finditer("".join(visible)):
+        label = reference_label(match[2] or match[1])
+        if label in definitions:
+            found.append((match.start(), definitions[label], True))
+    return found
 
 
 def problem(path: Path, line: int, message: str) -> str:
@@ -63,7 +127,7 @@ def read(path: Path) -> tuple[str, dict[str, object], list[str]]:
         return text, {}, [problem(path, 1, "missing frontmatter")]
     try:
         data: object = yaml.safe_load(match[1])
-    except yaml.YAMLError:
+    except ValueError, yaml.YAMLError:
         return text, {}, [problem(path, 2, "invalid YAML frontmatter")]
     if not isinstance(data, dict):
         return text, {}, [problem(path, 2, "frontmatter must be a mapping")]
@@ -72,11 +136,33 @@ def read(path: Path) -> tuple[str, dict[str, object], list[str]]:
     return text, typed, []
 
 
+def blank_indented(text: str) -> str:
+    """Hide indented code blocks, retaining list continuation prose."""
+    lines = text.splitlines(keepends=True)
+    list_indent = 0
+    code = False
+    blank = True
+    for i, line in enumerate(lines):
+        expanded = line.expandtabs(CODE_INDENT)
+        indent = len(expanded) - len(expanded.lstrip())
+        marker = re.match(r" *(?:[-*+]|\d+[.)]) +", expanded)
+        if line.strip():
+            if indent < list_indent:
+                list_indent = 0
+            if marker:
+                list_indent = marker.end()
+            code = indent >= CODE_INDENT and not list_indent and (blank or code)
+        if code:
+            lines[i] = re.sub(r"[^\n]", " ", line)
+        blank = not line.strip()
+    return "".join(lines)
+
+
 def prose(text: str, *, keep_comments: bool = False, keep_spans: bool = False) -> str:
     """Blank comments and code while preserving offsets and line numbers."""
     if not keep_comments:
         text = re.sub(r"<!--[\s\S]*?-->", lambda m: re.sub(r"[^\n]", " ", m[0]), text)
-    lines = text.splitlines(keepends=True)
+    lines = blank_indented(text).splitlines(keepends=True)
     fence: tuple[str, int] | None = None
     for i, line in enumerate(lines):
         marker = re.match(r" {0,3}((`|~)\2{2,})", line)
@@ -223,14 +309,27 @@ def check_risks(path: Path, risk_line: int, risks: list[str]) -> list[str]:
     return errors
 
 
+def heading_text(heading: str) -> str:
+    for match in reversed(list(re.finditer(r"!?\[([^\]]*)\]\(\s*", heading))):
+        parsed = inline_destination(heading, match.end())
+        if parsed is not None:
+            heading = heading[: match.start()] + match[1] + heading[parsed[1] :]
+    heading = REFERENCE.sub(lambda m: m[1], heading)
+    return re.sub(r"<[^>]*>", "", heading)
+
+
 def anchors(text: str) -> set[str]:
-    """Collect GitHub-style ATX heading anchors, including duplicate headings."""
+    """Collect ATX and Setext anchors, including duplicate headings."""
     found = set(re.findall(r'<a\s+(?:id|name)=["\']([^"\']+)', text))
     counts: dict[str, int] = {}
-    for heading in re.findall(
-        r"^ {0,3}#{1,6}\s+(.+?)\s*#*\s*$", prose(text, keep_spans=True), re.MULTILINE
+    clean = prose(FRONTMATTER.sub("", text), keep_spans=True)
+    for match in re.finditer(
+        r"^ {0,3}(?:#{1,6}\s+(.+?)\s*#*\s*$|"
+        r"(\S[^\n]*)\n {0,3}(?:=+|-+)[ \t]*$)",
+        clean,
+        re.MULTILINE,
     ):
-        plain = re.sub(r"<[^>]*>", "", heading)
+        plain = heading_text(match[1] or match[2])
         slug = re.sub(r"[^\w -]", "", plain.lower()).replace(" ", "-")
         count = counts.get(slug, 0)
         counts[slug] = count + 1
@@ -251,18 +350,20 @@ def link_problem(target: Path, fragment: str, destination: str) -> str:
     return ""
 
 
-def links(path: Path, text: str) -> tuple[set[Path], list[str]]:
+def links(
+    path: Path, text: str, *, used_only: bool = False
+) -> tuple[set[Path], list[str]]:
     targets = set()
     errors = []
-    for match in LINK.finditer(text):
-        destination = (match[1] or match[2]).strip("<>")
+    for offset, raw, used in destinations(text):
+        destination = raw.strip("<>")
         try:
             url = urlsplit(destination)
         except ValueError:
             errors.append(
                 problem(
                     path,
-                    text[: match.start()].count("\n") + 1,
+                    text[:offset].count("\n") + 1,
                     "invalid link destination",
                 )
             )
@@ -272,10 +373,11 @@ def links(path: Path, text: str) -> tuple[set[Path], list[str]]:
         target = (
             (path.parent / unquote(url.path)).resolve() if url.path else path.resolve()
         )
-        targets.add(target)
+        if used or not used_only:
+            targets.add(target)
         message = link_problem(target, url.fragment, destination)
         if message:
-            errors.append(problem(path, text[: match.start()].count("\n") + 1, message))
+            errors.append(problem(path, text[:offset].count("\n") + 1, message))
     return targets, errors
 
 
@@ -306,7 +408,7 @@ def check_directory(
         text, data, failures = read(path)
         errors.extend(failures)
         clean = prose(text)
-        targets, failures = links(path, clean)
+        targets, failures = links(path, clean, used_only=True)
         targets_by_file[path] = targets
         errors.extend(failures)
         expected_type = "Design Draft" if path == readme else "Design Appendix"
@@ -373,12 +475,23 @@ def check_appendix(
 
 
 def check(root: Path, forbidden_terms: list[str], max_lines: int = 250) -> list[str]:
+    documents = {path: read(path) for path in root.rglob("*.md")}
+    designs = {
+        path
+        for path, (_, data, _) in documents.items()
+        if data.get("type") in ("Design Draft", "Design Appendix")
+    }
+    supporting = {
+        target
+        for path in designs
+        for target in links(path, prose(documents[path][0]))[0]
+    }
     directories = sorted(
         {
             path.parent
-            for path in root.rglob("*.md")
-            if path.name == "README.md"
-            or read(path)[1].get("type") in ("Design Draft", "Design Appendix")
+            for path in documents
+            if path in designs
+            or (path.name == "README.md" and path.resolve() not in supporting)
         }
     )
     if not directories:
