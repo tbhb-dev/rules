@@ -939,3 +939,21 @@ def test_destination_offset_and_spacing() -> None:
         "before file(1)"
     )
     assert checker.reference_label("  A\tB  ") == "a b"
+
+
+def test_angle_destination_boundaries() -> None:
+    text = "<one>) then <two>)"
+    assert checker.inline_destination(text, 0) == ("<one>", len("<one>)"))
+    assert checker.inline_destination("<>)", 0) == ("<>", len("<>)"))
+    assert checker.inline_destination(") <unfinished", 2) is None
+
+
+def test_reference_offsets_after_other_links() -> None:
+    text = "[inline](asset)\n[ref]: target\nend [ref]"
+    assert checker.destinations(text) == [
+        (0, "asset", True),
+        (text.index("[ref]:"), "target", False),
+        (text.rindex("[ref]"), "target", True),
+    ]
+    text = "[broken](unfinished\n[good](asset)"
+    assert checker.destinations(text) == [(text.index("[good]"), "asset", True)]
