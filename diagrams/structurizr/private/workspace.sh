@@ -139,7 +139,12 @@ check() {
     fi
   done <"$manifest"
   if ((problems)); then return 1; fi
-  echo "structurizr_workspace: committed exports are current"
+  if [[ $mode == check ]]; then
+    echo "structurizr_workspace: committed JSON and SVG exports are current"
+    echo "structurizr_workspace: PNG bytes were not compared by this test; the PNG test compares them on macOS arm64 only"
+  else
+    echo "structurizr_workspace: committed PNG exports are current"
+  fi
 }
 
 update() {
