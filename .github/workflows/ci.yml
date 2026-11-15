@@ -54,6 +54,7 @@ jobs:
               {"id": "root", "dir": ".", "deps": ["python"]},
               {"id": "smoke", "dir": "e2e/smoke", "deps": ["root"]},
               {"id": "d2", "dir": "diagrams/d2", "deps": ["root"]},
+              {"id": "structurizr", "dir": "diagrams/structurizr", "deps": ["root"]},
               {"id": "d2-smoke", "dir": "diagrams/d2/e2e/smoke", "deps": ["root", "d2"]},
               {"id": "go", "dir": "go", "deps": ["root"]},
               {"id": "go-smoke", "dir": "go/e2e/smoke", "deps": ["root", "go"]},
@@ -420,7 +421,8 @@ jobs:
       gazelle-dirs: go go/e2e/smoke
       govulncheck-target: //tests/self:govulncheck
       govulncheck-working-directory: go
-      module-dirs: . ansible astro cloudflare diagrams/d2 go playwright python storybook tokens typescript
+      module-dirs: >-
+        . ansible astro cloudflare diagrams/d2 diagrams/structurizr go playwright python storybook tokens typescript
       pnpm-audit-dirs: typescript cloudflare astro storybook tokens
       pnpm-audit-workspace: typescript
 
