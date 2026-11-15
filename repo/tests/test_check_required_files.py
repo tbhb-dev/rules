@@ -4,7 +4,7 @@
 """Tests for the required files check."""
 
 import json
-lazy from pathlib import Path
+from pathlib import Path
 
 import pytest
 
@@ -574,3 +574,59 @@ def test_symlink_helper_skips_when_unsupported(
     monkeypatch.setattr(Path, "symlink_to", refuse)
     with pytest.raises(pytest.skip.Exception):
         symlink_or_skip(tmp_path / "link", tmp_path)
+
+
+def test_stale_exceptions_are_sorted(manifest: Path, repo: Path) -> None:
+    declare(
+        repo,
+        "".join(
+            f"[[exception]]\ncheck = 'C4'\npath = '{name}'\nreason = 'Stale.'\n"
+            for name in ("c", "a", "b")
+        ),
+    )
+    populate(repo)
+    assert run(manifest, repo) == [
+        f"{repo / '.tbhb-repo.toml'}: exception for {name} but it is not missing"
+        for name in ("a", "b", "c")
+    ]
+
+
+def test_missing_manifest_is_unusable(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    manifest.unlink()
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{manifest}: cannot read: No such file or directory\n",
+        status=2,
+    )
+
+
+def test_missing_schema_is_unusable(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    schema = manifest.with_name("schema.json")
+    schema.unlink()
+    assert_main_output(
+        manifest,
+        repo,
+        capsys,
+        f"{schema}: cannot read: No such file or directory\n",
+        status=2,
+    )
+
+
+def test_schema_that_is_not_a_schema_is_unusable(
+    manifest: Path, repo: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    declare(repo, "")
+    schema = manifest.with_name("schema.json")
+    schema.write_text('{"type": 5}')
+    assert checker.main([str(manifest), str(schema), str(repo)]) == checker.UNUSABLE
+    captured = capsys.readouterr()
+    assert captured.out.startswith(f"{schema}: invalid schema: 5 is not valid")
+    assert captured.err == ""
