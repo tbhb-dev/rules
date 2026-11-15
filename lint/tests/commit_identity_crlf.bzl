@@ -16,6 +16,7 @@ case "$*" in
     printf '%s%s\\n' agent@tonyburns.net "$ENDING" agent@tonyburns.net "$ENDING"
     ;;
   'log -1 --format=%B abc123') printf 'change%s\\n' "$ENDING" ;;
+  'log -1 --format=%ct abc123') printf '1735689600%s\\n' "$ENDING" ;;
   *) echo "unexpected git arguments: $*" >&2; exit 2 ;;
 esac
 """

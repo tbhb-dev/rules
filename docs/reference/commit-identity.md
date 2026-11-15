@@ -8,10 +8,10 @@ generated:
   - role: generated
     harness: codex:0.164.0
     model: openai:gpt-6.1-sol
-    effort: high
+    effort: medium
     surface: exec
-    session: sha-256-64:c5904b7f27d4f212
-    at: "2026-11-11T17:29:13Z"
+    session: sha-256-64:198a322fd49f797a
+    at: "2026-11-15T02:11:02Z"
 ---
 
 # Commit identity
@@ -41,10 +41,14 @@ Attributes appear once each, in the order below. Unknown attributes fail. Model 
 | --- | --- |
 | `effort` | Optional. One of `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`. |
 | `harness` | Required. Before its first colon, the value must be `claude-code`, `codex`, or `antigravity`. A version suffix is optional. |
+| `launch` | Optional. Hash of the launch identifier. |
 | `model` | Required. Identifies the model. |
 | `session` | Optional. `sha-256-64:` followed by exactly 16 lowercase hexadecimal digits. |
+| `started_at` | Optional. Launch timestamp. |
 | `subagent` | Optional. The same hash format as `session`. |
 | `surface` | Optional. Identifies the interface. |
+
+Attribute names must match `[a-z_]+`. `launch` must use the `session` hash format. `started_at` must be a real Coordinated Universal Time (UTC) instant in exactly `YYYY-MM-DDTHH:MM:SSZ` format, with uppercase `T` and `Z` and whole seconds. It must be at most 300 seconds after the committer date. Earlier times have no age limit. Without a committer date, the checker validates only the timestamp format and instant.
 
 ## Output
 
