@@ -50,6 +50,8 @@ check_commit "$human" "$agent" change $'author and committer are not an allowed 
 check_commit "$agent" "$human" change $'author and committer are not an allowed pair: tbhb.dev Agent <agent@tonyburns.net> (author) -> Tony Burns <tony@tonyburns.net> (committer)\\nmissing Generated-by or Assisted-by trailer'
 check_commit "$agent" "$agent" $'change\\n\\nAssisted-by: LLM harness=codex;model=m'
 check_commit "$agent" "$agent" $'change\\n\\nGenerated-by: nope\\nAssisted-by: nope' $'Generated-by: nope: must start with literal LLM\\nAssisted-by: nope: must start with literal LLM'
+GIT_COMMITTER_DATE=2025-01-01T00:00:00Z check_commit "$agent" "$agent" "$valid;started_at=2025-01-01T00:05:00Z"
+GIT_COMMITTER_DATE=2025-01-01T00:00:00Z check_commit "$agent" "$agent" "$valid;started_at=2025-01-01T00:05:01Z" 'Generated-by: LLM harness=codex;model=openai:m;started_at=2025-01-01T00:05:01Z: started_at is more than 300 seconds after the committer date'
 check_output "$base" 1 "${expected_range}commit_identity: $failures of $count commits failed. $summary"
 """
 
