@@ -96,7 +96,7 @@ def destinations(text: str) -> list[tuple[int, str, bool]]:
     visible = list(text)
     for match in LINK.finditer(text):
         end = match.end()
-        if match.lastindex is None:
+        if match[1] is None:
             parsed = inline_destination(text, end)
             if parsed is None:
                 continue
@@ -140,7 +140,7 @@ def blank_indented(text: str) -> str:
     """Hide indented code blocks, retaining list continuation prose."""
     lines = text.splitlines(keepends=True)
     list_indent = 0
-    # None and False are both false before the first nonblank line assigns code.
+    # None and False are both false before the first non-blank line assigns code.
     code = False  # pragma: no mutate
     blank = True
     for i, line in enumerate(lines):
