@@ -105,6 +105,10 @@ sh_test(
     srcs = ["mutation_nightly_test.sh"],
     data = ["//:.github/workflows/mutation-nightly.yml"],
     env = {"WORKFLOW_RLOCATIONPATH": "$(rlocationpath //:.github/workflows/mutation-nightly.yml)"},
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )
 
 # setup-bazel-ci's CPU quota script, against fake cgroup files. The cases

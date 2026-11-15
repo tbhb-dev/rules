@@ -56,3 +56,8 @@ jobs:
           ' >"$RUNNER_TEMP/mutation-targets"
           test -s "$RUNNER_TEMP/mutation-targets"
           bazelisk test --config=ci --target_pattern_file="$RUNNER_TEMP/mutation-targets"
+
+      - name: Prove incremental mutation
+        if: matrix.workspace == 'python/e2e/workspace'
+        working-directory: .
+        run: python/e2e/incremental.sh
