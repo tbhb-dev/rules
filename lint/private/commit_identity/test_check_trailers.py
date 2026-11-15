@@ -44,7 +44,7 @@ def test_check_value_accepts(value: str) -> None:
         ("LLM a=b c=d", "need exactly one attribute blob"),
         ("LLM harness=codex;", "bad attribute ''"),
         ("LLM harness=codex;Bad=1", "bad attribute 'Bad=1'"),
-        ("LLM harness=codex;color=red", "unknown attribute color"),
+        ("LLM harness=codex;color=red", "model required"),
         ("LLM effort=huge;harness=codex", "bad effort huge"),
         ("LLM harness=codex;session=nope", "bad session hash"),
         (f"LLM harness=codex;session={ROOT};subagent=x", "bad subagent hash"),
@@ -72,7 +72,7 @@ def test_check_pair() -> None:
     assert ai.check_pair("surface=a:b/c") is None
     assert ai.check_pair("harness=") == "bad attribute 'harness='"
     assert ai.check_pair("=x") == "bad attribute '=x'"
-    assert ai.check_pair("a=b=c") is not None
+    assert ai.check_pair("model=a b") == "bad attribute 'model=a b'"
     for effort in ai.EFFORTS:
         assert ai.check_pair(f"effort={effort}") is None
     assert ai.check_pair("subagent=sha-256-64:ABCDEF0123456789") == "bad subagent hash"
@@ -231,6 +231,31 @@ def test_main(
     monkeypatch.setattr(ai.sys, "stdin", StringIO(text))
     assert ai.main() == status
     assert capsys.readouterr() == (output, "")
+
+
+@pytest.mark.parametrize(
+    ("blob", "status", "problem"),
+    [
+        ("color=red;harness=codex;model=m", 0, ""),
+        (
+            "color=red;effort=huge;harness=codex;model=m",
+            1,
+            "bad effort huge",
+        ),
+    ],
+)
+def test_unknown_attribute_warns(blob: str, status: int, problem: str) -> None:
+    line = f"Generated-by: LLM {blob}"
+    result = subprocess.run(
+        [sys.executable, ai.__file__],
+        input=line,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == status
+    assert result.stdout == (f"{line}: {problem}\n" if problem else "")
+    assert result.stderr == "::warning::unknown attribute color\n"
 
 
 @pytest.mark.parametrize("value", [ROOT, H + "0123456789abcdef", H + "0" * 16])

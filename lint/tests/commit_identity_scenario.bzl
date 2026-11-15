@@ -52,6 +52,12 @@ check_commit "$agent" "$agent" $'change\\n\\nAssisted-by: LLM harness=codex;mode
 check_commit "$agent" "$agent" $'change\\n\\nGenerated-by: nope\\nAssisted-by: nope' $'Generated-by: nope: must start with literal LLM\\nAssisted-by: nope: must start with literal LLM'
 GIT_COMMITTER_DATE=2025-01-01T00:00:00Z check_commit "$agent" "$agent" "$valid;started_at=2025-01-01T00:05:00Z"
 GIT_COMMITTER_DATE=2025-01-01T00:00:00Z check_commit "$agent" "$agent" "$valid;started_at=2025-01-01T00:05:01Z" 'Generated-by: LLM harness=codex;model=openai:m;started_at=2025-01-01T00:05:01Z: started_at is more than 300 seconds after the committer date'
+check_commit "$agent" "$agent" $'change\\n\\nGenerated-by: LLM effort=huge;harness=codex;model=m' 'Generated-by: LLM effort=huge;harness=codex;model=m: bad effort huge'
+commit "$agent" "$agent" "$valid;version=next"
+count=$((count + 1))
+warning='::warning::unknown attribute version'
+check_output HEAD~1 0 "$warning"$'\\n''commit_identity: 1 commits checked'
+expected_range="$warning"$'\\n'"$expected_range"
 check_output "$base" 1 "${expected_range}commit_identity: $failures of $count commits failed. $summary"
 """
 
