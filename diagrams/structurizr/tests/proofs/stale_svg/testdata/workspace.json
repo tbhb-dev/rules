@@ -64,7 +64,7 @@
       "documentation" : {
         "decisions" : [ {
           "content" : "# 1. Use a catalog\n\nDate: 2026-11-14\n\n## Status\n\nAccepted\n\n## Context\n\nReaders need entries.\n\n## Decision\n\nServe a catalog.\n\n## Consequences\n\nKeep entries in a store.\n",
-          "date" : "2026-11-14T05:00:00Z",
+          "date" : "2026-11-14T00:00:00Z",
           "format" : "Markdown",
           "id" : "1",
           "status" : "Accepted",

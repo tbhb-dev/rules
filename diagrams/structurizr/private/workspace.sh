@@ -13,7 +13,8 @@ error() {
 # Each JVM refuses HTTP(S) connections. PlantUML's sandbox profile also
 # disables includes and local file access from the exported diagram text.
 java_run() {
-  "$java" -Djava.awt.headless=true -Djava.net.useSystemProxies=false \
+  "$java" -Djava.awt.headless=true -Duser.timezone=UTC \
+    -Duser.language=en -Duser.country=US -Djava.net.useSystemProxies=false \
     -Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=9 \
     -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=9 \
     -Dhttp.nonProxyHosts= -Dplantuml.security.profile=SANDBOX "$@"
