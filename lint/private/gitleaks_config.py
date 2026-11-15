@@ -4,9 +4,25 @@
 """Attach the module's base to local policy without changing source files."""
 
 import sys
+import tomllib
 from pathlib import Path
 
 import tomlkit
+
+
+def rule_ids(config: Path) -> set[str]:
+    """Resolve the path extensions used by the wrapper's effective config."""
+    policy = tomllib.loads(config.read_text())
+    extension = policy.get("extend", {})
+    inherited = rule_ids(Path(extension["path"])) if "path" in extension else set()
+    inherited.difference_update(extension.get("disabledRules", []))
+    return inherited | {rule["id"] for rule in policy.get("rules", [])}
+
+
+def require_rules(config: Path) -> None:
+    if not rule_ids(config):
+        message = "effective gitleaks config has zero rules; refusing to scan"
+        raise ValueError(message)
 
 
 def prepare(base: Path, committed: Path, directory: Path) -> None:
@@ -26,10 +42,14 @@ def prepare(base: Path, committed: Path, directory: Path) -> None:
             raise ValueError(message)
         policy["extend"] = {"path": effective.as_posix()}
         private.write_text(tomlkit.dumps(policy))
+    require_rules(private if private.exists() else effective)
 
 
 if __name__ == "__main__":
     try:
-        prepare(*(Path(arg) for arg in sys.argv[1:]))
+        if sys.argv[1] == "--check":
+            require_rules(Path(sys.argv[2]))
+        else:
+            prepare(*(Path(arg) for arg in sys.argv[1:]))
     except (ValueError, OSError) as error:
         sys.exit(f"gitleaks_tool: FAIL: {error}")

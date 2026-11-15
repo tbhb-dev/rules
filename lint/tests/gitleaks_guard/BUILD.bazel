@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
+load("//lint:defs.bzl", "tree_check_test")
+load("//repo:defs.bzl", "repo_files")
+load("//testing:defs.bzl", "expect_failure_test")
+
+repo_files()
+
+pytest_test(
+    name = "pytest_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/tests/gitleaks_guard"],
+    coverage = None,
+)
+
+[
+    tree_check_test(
+        name = case + "_test",
+        srcs = ["testdata/" + case + "/tools.bzl"],
+        strip_prefix = "lint/tests/gitleaks_guard/testdata/" + case,
+        tags = ["manual"] if case == "raw" else [],
+        tool = "//lint:gitleaks_guard",
+        tool_args = ["--tree"],
+    )
+    for case in [
+        "clean",
+        "raw",
+    ]
+]
+
+expect_failure_test(
+    name = "raw_fails_test",
+    pattern = "tools.bzl:7: gitleaks_guard: use @tbhb_rules//lint:gitleaks",
+    test = ":raw_test",
+)

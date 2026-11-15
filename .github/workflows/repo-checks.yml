@@ -310,6 +310,9 @@ jobs:
       - name: Check workflow job timeouts
         run: bazelisk run @tbhb_rules//lint:job_timeouts
 
+      - name: Check the gitleaks tool mapping
+        run: bazelisk run @tbhb_rules//lint:gitleaks_guard
+
       # The Go workspaces' BUILD files, as gazelle would write them.
       - name: Check that gazelle has nothing to change
         if: inputs.gazelle-dirs != ''
