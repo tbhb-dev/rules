@@ -151,8 +151,8 @@ def structurizr_workspace(name, dsl, workspace_json, diagrams_dir, data = [], **
 
     Lint runs both `validate -w` and `inspect -w -s error,warning`, even
     after validation fails. ERROR and WARNING inspections fail; INFO and
-    IGNORE do not. Any command error fails. Inspection output also fails
-    when the violation count wraps the process exit status to zero.
+    IGNORE do not. Any command error fails. Violation lines in the inspect
+    output also fail when the count wraps the process exit status to zero.
 
     JSON and SVG comparisons use bytes on every supported platform (Linux and
     macOS on x64 and arm64). Linux x86_64 CI proved SVG and JSON byte-identical
@@ -160,15 +160,16 @@ def structurizr_workspace(name, dsl, workspace_json, diagrams_dir, data = [], **
     on macOS arm64. Missing SVGs or PNGs and orphan files fail on all supported
     platforms. JVM settings use UTC and en_US.UTF-8. The CI plan selects Linux
     x86_64, Linux arm64 and macOS arm64, excluding Windows (no JRE pin).
-    The observed CI run at 37704af1 ran Structurizr only on Linux x86_64;
-    Linux arm64, macOS and Windows renders remain unmeasured by CI, including
-    SVG metrics on those platforms.
+    The only CI run read so far ran Structurizr on Linux x86_64, before the
+    plan added Linux arm64 and macOS arm64. No Linux arm64 or macOS CI result
+    is recorded here, and Windows is unsupported.
 
     The exporter produces a main diagram and a legend (`-key`) for each
     view. Both are rendered with `!pragma layout smetana`, headless, using
     the pinned JRE, MIT PlantUML and SIL-OFL-1.1 Liberation Sans 2.1.5.
     Graphviz is unnecessary. Fontconfig sees only pinned fonts; the renderer
-    verifies the JVM opened the pinned TTF and SVGs specify Liberation Sans.
+    also checks that the JVM opened the pinned TTF and that SVGs specify
+    Liberation Sans, which no test covers yet.
     Linux requires host libfontconfig and libfreetype. Java HTTP(S) requests
     use an unreachable proxy; PlantUML uses its sandbox profile. DSL is trusted
     input: scripts, plugins and absolute includes can access the host.
