@@ -809,8 +809,18 @@ def test_oserror_without_filename(
     assert_main_output(manifest, repo, capsys, "cannot read:", status=2, prefix=True)
 
 
-@pytest.mark.parametrize("key", ["path", "reason"])
-@pytest.mark.parametrize("value", [None, 1, "", " "])
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("path", None),
+        ("path", 1),
+        ("path", ""),
+        ("reason", None),
+        ("reason", 1),
+        ("reason", ""),
+        ("reason", " "),
+    ],
+)
 def test_c4_helper_rejects_bad_fields(key: str, value: object) -> None:
     entry: dict[str, object] = {"check": "C4", "path": "go.mod", "reason": "Needed."}
     if value is None:
@@ -984,3 +994,21 @@ def test_invalid_nested_schema(
         status=2,
         prefix=True,
     )
+
+
+def test_check_manifest_bad_table(manifest: Path, repo: Path) -> None:
+    manifest.write_text("kind = 1\n")
+    assert checker.check_manifest(manifest, repo, "go", "public", []) == [
+        f"{manifest}: kind must be a table"
+    ]
+
+
+def test_exception_path_keeps_spaces(manifest: Path, repo: Path) -> None:
+    declare(repo, "[[exception]]\ncheck = 'C4'\npath = ' '\nreason = 'Needed.'\n")
+    manifest.write_text(
+        "[kind.go]\nrequired = [' ']\n[visibility.public]\nrequired = []\n"
+    )
+    assert checker.c4_exception_paths(
+        [{"check": "C4", "path": " ", "reason": "Needed."}]
+    ) == {" "}
+    assert run(manifest, repo) == []

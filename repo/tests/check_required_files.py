@@ -54,7 +54,7 @@ def c4_exception_paths(entries: list[dict[str, object]]) -> set[str] | None:
         reason = entry.get("reason")
         if (
             not isinstance(path, str)
-            or not path.strip()
+            or not path
             or not isinstance(reason, str)
             or not reason.strip()
         ):
