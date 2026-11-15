@@ -46,3 +46,11 @@ trim_trailing_whitespace = false
 [worker-configuration.d.ts]
 trim_trailing_whitespace = false
 indent_style = unset
+
+# Structurizr exports retain the bytes emitted by the pinned tools.
+[{structurizr-*.svg,structurizr-*.png,workspace.json}]
+trim_trailing_whitespace = false
+indent_style = unset
+
+[workspace.json]
+insert_final_newline = unset
