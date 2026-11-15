@@ -18,7 +18,7 @@ where `my_gitleaks` is any repository with a `//:gitleaks` target.
 """
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
-load(":hub.bzl", _EXPORT = "EXPORT", _EXPORT_TREE = "EXPORT_TREE", _tool_hub = "tool_hub")
+load(":hub.bzl", _EXPORT = "EXPORT", _EXPORT_TREE = "EXPORT_TREE", _tool_files_hub = "tool_files_hub", _tool_hub = "tool_hub")
 
 def _tools_impl(mctx):
     # dugite-native is not relocatable on its own (pins/git_wrapper.sh): the
@@ -589,6 +589,115 @@ def _tools_impl(mctx):
             "linux_x86_64": "@tbhb_rules_scc_linux_x86_64//:scc",
             "macos_arm64": "@tbhb_rules_scc_macos_arm64//:scc",
             "windows_x86_64": "@tbhb_rules_scc_windows_x86_64//:scc.exe",
+        },
+    )
+
+    # Structurizr and PlantUML run on the pinned JRE, with no system Java.
+    # These archives stay outside the source tree; their own license notices
+    # travel with their files, like the other downloaded tools.
+    # Liberation Sans 2.1.5 is SIL-OFL-1.1 (archive LICENSE, Google/Red Hat).
+    # Keep all four styles and the upstream notice together.
+    http_archive(
+        name = "tbhb_rules_liberation_fonts_archive",
+        build_file_content = "filegroup(name = \"fonts\", srcs = glob([\"LiberationSans-*.ttf\"]) + [\"LICENSE\"], visibility = [\"//visibility:public\"])",
+        sha256 = "7191c669bf38899f73a2094ed00f7b800553364f90e2637010a69c0e268f25d0",
+        strip_prefix = "liberation-fonts-ttf-2.1.5",
+        url = "https://github.com/liberationfonts/liberation-fonts/files/7261482/liberation-fonts-ttf-2.1.5.tar.gz",
+    )
+
+    _tool_files_hub(
+        name = "tbhb_rules_liberation_fonts",
+        tool = "fonts",
+        files = {
+            "linux_arm64": "@tbhb_rules_liberation_fonts_archive//:fonts",
+            "linux_x86_64": "@tbhb_rules_liberation_fonts_archive//:fonts",
+            "macos_arm64": "@tbhb_rules_liberation_fonts_archive//:fonts",
+            "macos_x86_64": "@tbhb_rules_liberation_fonts_archive//:fonts",
+        },
+    )
+
+    http_archive(
+        name = "tbhb_rules_structurizr_cli_archive",
+        build_file_content = "filegroup(name = \"cli\", srcs = glob([\"lib/*.jar\"]), visibility = [\"//visibility:public\"])",
+        sha256 = "f5365a463fc44d539ed19bec00c48ba1e1ecda0ccfd1ba40d2e7472d264eb79a",
+        url = "https://github.com/structurizr/cli/releases/download/v2025.11.09/structurizr-cli.zip",
+    )
+
+    http_file(
+        name = "tbhb_rules_plantuml_jar",
+        downloaded_file_path = "plantuml.jar",
+        sha256 = "30a66b81a16127fd3ec560992f31964fe9ae3f1233c614ef4558a4558a21489e",
+        url = "https://github.com/plantuml/plantuml/releases/download/v1.2026.10/plantuml-mit-1.2026.10.jar",
+    )
+
+    http_archive(
+        name = "tbhb_rules_jre_linux_x86_64",
+        build_file_content = _EXPORT_TREE.format("bin/java"),
+        sha256 = "a535a1df9c6284d9618872984e026ae0352d1f7e9e0605425c0e6114f47351dd",
+        strip_prefix = "jdk-21.0.13+9-jre",
+        url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jre_x64_linux_hotspot_21.0.13_9.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_jre_linux_arm64",
+        build_file_content = _EXPORT_TREE.format("bin/java"),
+        sha256 = "b1734db7ade49c3f6acc6ae06233b8c2dd90e3e2f00f67000ae1c972aaa64d8c",
+        strip_prefix = "jdk-21.0.13+9-jre",
+        url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jre_aarch64_linux_hotspot_21.0.13_9.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_jre_macos_x86_64",
+        build_file_content = _EXPORT_TREE.format("bin/java"),
+        sha256 = "c909674b1c10c261b9a3fb7e9c0efebd303e33f88a4fe84be7135b5e2d711f89",
+        strip_prefix = "jdk-21.0.13+9-jre/Contents/Home",
+        url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jre_x64_mac_hotspot_21.0.13_9.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_jre_macos_arm64",
+        build_file_content = _EXPORT_TREE.format("bin/java"),
+        sha256 = "225bab0a09491ef06835488cd942f5d2befa9a0410a2484f0c8bbcf7506ec09a",
+        strip_prefix = "jdk-21.0.13+9-jre/Contents/Home",
+        url = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.13%2B9/OpenJDK21U-jre_aarch64_mac_hotspot_21.0.13_9.tar.gz",
+    )
+
+    _tool_hub(
+        name = "tbhb_rules_jre",
+        tool = "java",
+        binaries = {
+            "linux_arm64": "@tbhb_rules_jre_linux_arm64//:bin/java",
+            "linux_x86_64": "@tbhb_rules_jre_linux_x86_64//:bin/java",
+            "macos_arm64": "@tbhb_rules_jre_macos_arm64//:bin/java",
+            "macos_x86_64": "@tbhb_rules_jre_macos_x86_64//:bin/java",
+        },
+        data = {
+            "linux_arm64": "@tbhb_rules_jre_linux_arm64//:tree",
+            "linux_x86_64": "@tbhb_rules_jre_linux_x86_64//:tree",
+            "macos_arm64": "@tbhb_rules_jre_macos_arm64//:tree",
+            "macos_x86_64": "@tbhb_rules_jre_macos_x86_64//:tree",
+        },
+    )
+
+    _tool_files_hub(
+        name = "tbhb_rules_structurizr_cli",
+        tool = "structurizr",
+        files = {
+            "linux_arm64": "@tbhb_rules_structurizr_cli_archive//:cli",
+            "linux_x86_64": "@tbhb_rules_structurizr_cli_archive//:cli",
+            "macos_arm64": "@tbhb_rules_structurizr_cli_archive//:cli",
+            "macos_x86_64": "@tbhb_rules_structurizr_cli_archive//:cli",
+        },
+    )
+
+    _tool_files_hub(
+        name = "tbhb_rules_plantuml",
+        tool = "plantuml",
+        files = {
+            "linux_arm64": "@tbhb_rules_plantuml_jar//file:plantuml.jar",
+            "linux_x86_64": "@tbhb_rules_plantuml_jar//file:plantuml.jar",
+            "macos_arm64": "@tbhb_rules_plantuml_jar//file:plantuml.jar",
+            "macos_x86_64": "@tbhb_rules_plantuml_jar//file:plantuml.jar",
         },
     )
 

@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+sh_binary(
+    name = "runner",
+    srcs = ["workspace.sh"],
+    visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "structurizr_workspace",
+    srcs = ["structurizr_workspace.bzl"],
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@bazel_skylib//lib:shell",
+        "@tbhb_rules//shell:defs",
+    ],
+)

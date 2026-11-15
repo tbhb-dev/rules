@@ -39,12 +39,14 @@ rules_js
 rules_multitool
 shellcheck
 (?i)style
+Structurizr
 subcommand
 subpackages?
 subtree
 tbhb
 tbhb_rules
 (?i)test
+Temurin
 tombi
 toolchains
 uv

@@ -38,15 +38,17 @@ job_block() {
   ' "$workflow"
 }
 
-# Evaluate each OS expression for both events before combining it with the
-# plan's nonempty workspace matrix. Python's operators match this expression.
-for job in cache-warm bazel; do
-  os=$(job_block "$job" | awk '
+# Evaluate the cache OS expression for both events. The Bazel job uses the
+# plan's expanded matrix, checked below.
+bazel_job=$(job_block bazel)
+grep -qxF "        include: \${{ fromJSON(needs.plan.outputs.workspaces) }}" <<<"$bazel_job"
+job=cache-warm
+os=$(job_block "$job" | awk '
     /^        os: / { sub(/^        os: /, ""); print; found = 1; next }
     found && /^          / { print; next }
     found { exit }
   ')
-  python3 - "$job" "$os" <<'PY'
+python3 - "$job" "$os" <<'PY'
 import json
 import sys
 
@@ -70,7 +72,6 @@ for event in ("pull_request", "push"):
         failures += 1
 sys.exit(bool(failures))
 PY
-done
 
 # Windows and macOS run on pushes and schedules, not on pull requests, so
 # no job tolerates a failure: a failed row must fail `conclusion`.
@@ -165,37 +166,51 @@ for platform in apple swift; do
 done
 
 failures=0
-for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/private/simulator/tbhb_rules_swift_simulator/test_simulator_runtime.py; do
-  printf '%s\n' "$path" >"$dir/changed"
-  result=$(WORKSPACES="$workspaces" bash -euo pipefail -c "$plan" -- "$dir/changed" 2>&1) || {
-    echo "FAIL: $path: $result" >&2
-    exit 1
-  }
-  summary=$(jq -cr '"matrix=\(.matrix) apple=\(.apple) swift=\(.swift)"' <<<"$result")
-  echo "$path: $summary"
-  case $path in
-  apple/e2e/smoke/BUILD.bazel)
-    assertion='.matrix == [{id: "root", dir: "."}] and .apple == true and .swift == false'
-    ;;
-  README.md)
-    # A root file must retain every workspace in the shared matrix.
-    assertion='.matrix == (.selected | map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke"))) and (.matrix | length > 1)'
-    ;;
-  e2e/smoke/README.md)
-    assertion='.matrix == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false'
-    ;;
-  swift/defs.bzl)
-    assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
-    ;;
-  swift/e2e/smoke/BUILD.bazel | swift/private/simulator/tbhb_rules_swift_simulator/test_simulator_runtime.py)
-    assertion='.matrix == [{id: "root", dir: "."}] and .apple == false and .swift == true'
-    ;;
-  *) assertion='true' ;;
-  esac
-  if ! jq -e "(.matrix | length > 0) and ($assertion)" <<<"$result" >/dev/null; then
-    echo "FAIL: $path: unexpected matrix or smoke selection" >&2
-    failures=$((failures + 1))
+for event in pull_request push; do
+  platforms='["ubuntu-26.04", "ubuntu-26.04-arm"]'
+  if [[ $event == push ]]; then
+    platforms='["macos-26", "ubuntu-26.04", "ubuntu-26.04-arm", "windows-2025"]'
   fi
+  for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/private/simulator/tbhb_rules_swift_simulator/test_simulator_runtime.py diagrams/structurizr/defs.bzl; do
+    printf '%s\n' "$path" >"$dir/changed"
+    result=$(EVENT="$event" WORKSPACES="$workspaces" bash -euo pipefail -c "$plan" -- "$dir/changed" 2>&1) || {
+      echo "FAIL: $path: $result" >&2
+      exit 1
+    }
+    summary=$(jq -cr '"matrix=\(.matrix) apple=\(.apple) swift=\(.swift)"' <<<"$result")
+    echo "$event $path: $summary"
+    case $path in
+    apple/e2e/smoke/BUILD.bazel)
+      assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == true and .swift == false'
+      ;;
+    README.md)
+      # A root file must retain every workspace in the shared matrix.
+      assertion='(.matrix | map(.workspace) | unique) == (.selected | map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke") | {id, dir}) | unique) and (.matrix | length > 1)'
+      ;;
+    e2e/smoke/README.md)
+      assertion='(.matrix | map(.workspace) | unique) == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false'
+      ;;
+    swift/defs.bzl)
+      assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == false and .swift == true'
+      ;;
+    swift/e2e/smoke/BUILD.bazel | swift/private/simulator/tbhb_rules_swift_simulator/test_simulator_runtime.py)
+      assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == false and .swift == true'
+      ;;
+    diagrams/structurizr/defs.bzl)
+      # shellcheck disable=SC2016 # jq expands platforms.
+      assertion='(.matrix | map(.workspace) | unique) == [{id: "structurizr", dir: "diagrams/structurizr"}] and (.matrix | map(.os) | sort) == ($platforms - ["windows-2025"])'
+      ;;
+    *) assertion='true' ;;
+    esac
+    # cspell:ignore argjson
+    if ! jq -e --argjson platforms "$platforms" --arg event "$event" "(.matrix | length > 0) and ($assertion)
+      and ([.matrix[] | select(.workspace.id == \"structurizr\" and .os == \"windows-2025\")] | length == 0)
+      and (\$event != \"pull_request\" or ([.matrix[] | select(.os == \"macos-26\" or .os == \"windows-2025\")] | length == 0))
+      and ([.matrix[] | select(.workspace.id == \"root\")] | if length == 0 then true else map(.os) | sort == \$platforms end)" <<<"$result" >/dev/null; then
+      echo "FAIL: $path: unexpected matrix or smoke selection" >&2
+      failures=$((failures + 1))
+    fi
+  done
 done
 ((failures == 0)) || exit 1
-echo 'PASS: Apple and Swift changes keep a root matrix and select their smoke; root changes keep the shared matrix; all matrices are nonempty'
+echo 'PASS: Apple and Swift changes keep a root matrix and select their smoke; root changes keep the shared matrix; all matrices are nonempty; Structurizr excludes Windows'

@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules//repo:defs.bzl", "repo_files")
+load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
+load("//:defs.bzl", "structurizr_workspace")
+
+repo_files()
+
+structurizr_workspace(
+    name = "workspace",
+    data = glob([
+        "testdata/documentation/**",
+        "testdata/decisions/**",
+    ]),
+    diagrams_dir = "testdata/diagrams",
+    dsl = "testdata/workspace.dsl",
+    tags = ["manual"],
+    workspace_json = "testdata/workspace.json",
+)
+
+expect_failure_test(
+    name = "rejects_validate",
+    exit_status = 1,
+    first_line = True,
+    pattern = "^validate: workspace failed validation$",
+    test = ":workspace_lint_test",
+)
+
+expect_failure_test(
+    name = "rejects_validate_syntax",
+    exit_status = 1,
+    pattern = "^Unexpected tokens .* at line 2 of .*workspace\\.dsl: invalid$",
+    test = ":workspace_lint_test",
+)

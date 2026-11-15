@@ -43,3 +43,8 @@ mise.lock export-ignore
 
 lint/gitleaks/base.toml linguist-generated whitespace=-blank-at-eof
 lint/gitleaks/upstream.toml linguist-vendored whitespace=-blank-at-eof
+
+# Structurizr exports are compared byte for byte.
+structurizr-*.svg -text linguist-generated
+structurizr-*.png binary linguist-generated
+workspace.json -text linguist-generated
