@@ -154,16 +154,24 @@ def structurizr_workspace(name, dsl, workspace_json, diagrams_dir, data = [], **
     IGNORE do not. Any command error fails. Inspection output also fails
     when the violation count wraps the process exit status to zero.
 
-    JSON and SVG comparisons are byte for byte. Missing SVGs or PNGs and
-    orphan files fail on every supported platform. PNG byte comparisons
-    run only on macOS arm64, where repeated JVM runs were measured to be
-    identical. Linux, macOS x64 and Windows have no measured PNG stability.
-    Windows has no JRE pin and is unsupported by this module.
+    JSON and SVG comparisons use bytes on every supported platform (Linux and
+    macOS on x64 and arm64). Linux x86_64 CI proved SVG and JSON byte-identical
+    to committed files generated on macOS arm64. PNG byte comparisons run only
+    on macOS arm64. Missing SVGs or PNGs and orphan files fail on all supported
+    platforms. JVM settings use UTC and en_US.UTF-8. The CI plan selects Linux
+    x86_64, Linux arm64 and macOS arm64, excluding Windows (no JRE pin).
+    The observed CI run at 37704af1 ran Structurizr only on Linux x86_64;
+    Linux arm64, macOS and Windows renders remain unmeasured by CI, including
+    SVG metrics on those platforms.
 
     The exporter produces a main diagram and a legend (`-key`) for each
     view. Both are rendered with `!pragma layout smetana`, headless, using
     the pinned JRE, MIT PlantUML and SIL-OFL-1.1 Liberation Sans 2.1.5.
-    Graphviz is unnecessary. Java HTTP(S) requests use an unreachable proxy; PlantUML uses its sandbox profile.
+    Graphviz is unnecessary. Fontconfig sees only pinned fonts; the renderer
+    verifies the JVM opened the pinned TTF and SVGs specify Liberation Sans.
+    Linux requires host libfontconfig and libfreetype. Java HTTP(S) requests
+    use an unreachable proxy; PlantUML uses its sandbox profile. DSL is trusted
+    input: scripts, plugins and absolute includes can access the host.
 
     Paths are relative to this package. Keep committed renders byte for
     byte in Git and exclude them from whitespace and line-ending fixers.
@@ -175,15 +183,22 @@ def structurizr_workspace(name, dsl, workspace_json, diagrams_dir, data = [], **
 
     Args:
         name: Update target name; tests are grouped as `<name>_test`.
-        dsl: Local workspace DSL source.
+        dsl: Local workspace DSL source with basename workspace.dsl.
         workspace_json: Committed JSON path, including its filename.
         diagrams_dir: Directory of committed SVG and PNG files.
         data: Local inputs read by the workspace, relative to the DSL.
         **kwargs: Common target attributes, including tags and visibility.
     """
+    if str(dsl).split(":")[-1].split("/")[-1] != "workspace.dsl":
+        fail("dsl basename must be workspace.dsl")
+    if diagrams_dir.startswith("/"):
+        fail("export paths must be package-relative paths without parent traversal")
+    diagrams_dir = "/".join([part for part in diagrams_dir.split("/") if part and part != "."])
     for path in [workspace_json, diagrams_dir]:
         if path.startswith("/") or ".." in path.split("/") or "\t" in path or "\n" in path:
             fail("export paths must be package-relative paths without parent traversal")
+    if not diagrams_dir:
+        fail("diagrams_dir must name a directory")
     committed = native.glob([workspace_json, diagrams_dir + "/*.svg", diagrams_dir + "/*.png"], allow_empty = True)
     _renders(name = name + ".renders", dsl = dsl, data = data, **kwargs)
     _lint_test(name = name + "_lint_test", dsl = dsl, data = data, **kwargs)
@@ -193,7 +208,11 @@ def structurizr_workspace(name, dsl, workspace_json, diagrams_dir, data = [], **
     _exports_test(
         name = name + "_png_test",
         mode = "png",
-        target_compatible_with = ["@platforms//os:macos", "@platforms//cpu:arm64"],
-        **(common | kwargs)
+        **(common | kwargs | {"target_compatible_with": kwargs.get("target_compatible_with", []) + ["@platforms//os:macos", "@platforms//cpu:arm64"]})
     )
-    native.test_suite(name = name + "_test", tests = [":" + name + suffix for suffix in ["_lint_test", "_freshness_test", "_png_test"]], **kwargs)
+    native.test_suite(
+        name = name + "_test",
+        tests = [":" + name + suffix for suffix in ["_lint_test", "_freshness_test", "_png_test"]],
+        tags = [tag for tag in kwargs.get("tags", []) if tag == "manual"],
+        **{key: value for key, value in kwargs.items() if key in ["visibility", "testonly"]}
+    )
