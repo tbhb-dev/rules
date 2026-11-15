@@ -144,6 +144,7 @@ ADVISORY_PROOFS = {
 [
     expect_failure_test(
         name = "proof_advisory_" + name + "_fails",
+        exit_status = 1,
         pattern = pattern,
         test = ":proof_advisory_" + name,
     )
@@ -201,6 +202,7 @@ PROOF_REASONS = {
 [
     expect_failure_test(
         name = proof + "_fails",
+        exit_status = 1,
         pattern = pattern,
         test = ":" + proof,
     )
