@@ -19,7 +19,7 @@ Run it after `checkout`. It runs these steps in order:
 4. On Linux under a container CPU quota, size the workers to it. The step exports the quota (rounded up, from `cpu.max` or cgroup v1) as `PYTEST_XDIST_AUTO_NUM_WORKERS`, for `-n auto` in a `pytest_test`, and adds `build --local_resources=cpu=N` to `~/.bazelrc`, because Bazel counts the host's CPUs. `mutmut_test` reads the quota itself. Without a quota the step does nothing.
 5. On Linux arm64, download a pinned Rust toolchain and zig, check both against pinned hashes, and put them on `PATH` for the source build of complexipy, with `cc`, `c++` and `ar` running zig. A runner image without Rust or a C compiler works too.
 6. Shorten Bazel's output root and enable long paths, on Windows only.
-7. Read `fetch-targets.txt` beside the action and fetch `//...`, the Bazel subcommand tools (including `buildozer` for `bazel mod tidy`), and each run-only target that the workspace declares. The list covers `gitleaks`, `zizmor`, `gazelle`, `pip-audit`, `pnpm audit`, `govulncheck`, and the tools that scan the title and body of a pull request. Workspaces that expose `tbhb_rules_go` also fetch the Go SDK checksum tool. `@tbhb_rules//lint:zizmor` resolves `@tbhb_rules_zizmor//:zizmor` through the rules module's repository mapping, including from nested workspaces. Retry with pauses that start at 30 seconds and double. When the next pause would pass `retry-budget-minutes`, the step fails and prints the last URL from the output.
+7. Read `fetch-targets.txt` beside the action and fetch `//...`, the Bazel subcommand tools (including `buildozer` for `bazel mod tidy`), and each run-only target that the workspace declares. The list covers `gitleaks`, `zizmor`, `gazelle`, `pip-audit`, `pnpm audit`, `govulncheck`, `codeowners_errors`, and the tools that scan the title and body of a pull request. Workspaces that expose `tbhb_rules_go` also fetch the Go SDK checksum tool. `@tbhb_rules//lint:zizmor` resolves `@tbhb_rules_zizmor//:zizmor` through the rules module's repository mapping, including from nested workspaces. Retry with pauses that start at 30 seconds and double. When the next pause would pass `retry-budget-minutes`, the step fails and prints the last URL from the output.
 
 | Input               | Default  | Meaning                                                                                                 |
 |---------------------|----------|---------------------------------------------------------------------------------------------------------|
@@ -52,7 +52,7 @@ Keep a job named `conclusion` in your own `ci.yml` and call this action from it.
 
 ## `repo-checks.yml`
 
-The `repo` job clones the full history and makes these checks in order. An empty input skips its check, except for gitleaks, zizmor, and CODEOWNERS, which always run.
+The `repo` job clones the full history and makes these checks in order. An empty input skips its check, except for gitleaks, zizmor, and CODEOWNERS. The CODEOWNERS check skips when the caller's checkout has no `.github/CODEOWNERS`, `CODEOWNERS`, or `docs/CODEOWNERS` file.
 
 1. `bazel run //:gazelle -- -mode=diff` in each of `gazelle-dirs`.
 2. `bazel mod tidy` in each of `module-dirs`, then `git diff --exit-code` on their `MODULE.bazel`.
@@ -62,7 +62,7 @@ The `repo` job clones the full history and makes these checks in order. An empty
 6. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
 7. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
 8. zizmor, with the online audits, and the pedantic persona.
-9. The CODEOWNERS owner and syntax check through the GitHub API, with `curl` and `jq`.
+9. `bazelisk run @tbhb_rules//lint:codeowners_errors` checks CODEOWNERS owners and syntax through the GitHub API, with `curl` and `jq`. API failures fail the check when a CODEOWNERS file exists.
 
 On a pull request and on a push alike, the history scan covers only the tested commit's history, so a finding on another open pull request's branch, which the full clone also holds, fails only that pull request. The title and body get the same rules as the history, the private ones included, because a squash merge makes them the commit message.
 
