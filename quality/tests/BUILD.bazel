@@ -21,6 +21,21 @@ mutation_gate_test(
     ],
 )
 
+mutation_gate_test(
+    name = "skipped_some_test",
+    reports = ["testdata/skipped_some.txt"],
+)
+
+# Deliberately passes: all-skipped reports can accompany checked mutants,
+# because the gate checks the sum across all reports.
+mutation_gate_test(
+    name = "all_skipped_beside_killed_test",
+    reports = [
+        "testdata/all_skipped.txt",
+        "testdata/all_killed.txt",
+    ],
+)
+
 # Diff-scoped reports: a pass, an empty diff with no changed units (alone
 # and beside a full report), and a full report with explicit scope.
 mutation_gate_test(
@@ -103,6 +118,7 @@ expect_failure_test(
 )
 
 ADVISORY_PROOFS = {
+    "all_skipped": ("all_skipped", "FAIL: all 5 mutant\\(s\\) were skipped; nothing was checked$", "any"),
     "double_count": ("double_count", "counts add up to 11, above total 10", "any"),
     "empty": ("empty", "FAIL: no mutants were generated", "any"),
     "errored": ("advisory_errored", "FAIL: 1 errored$", "any"),
@@ -128,6 +144,7 @@ ADVISORY_PROOFS = {
 [
     expect_failure_test(
         name = "proof_advisory_" + name + "_fails",
+        exit_status = 1,
         pattern = pattern,
         test = ":proof_advisory_" + name,
     )
@@ -145,7 +162,9 @@ gate_command_error_test(
 # Each case must fail for the stated reason. The wrapped gates are manual so
 # `bazel test //...` runs them only through expect_failure_test.
 PROOF_REASONS = {
+    "proof_all_skipped": "FAIL: all 5 mutant\\(s\\) were skipped; nothing was checked$",
     "proof_count_over_limit": "total is '1000000001', above the 1000000000 limit",
+    "proof_diff_all_skipped": "FAIL: all 2 mutant\\(s\\) were skipped; nothing was checked$",
     "proof_diff_bad_scope": "unknown scope=partial",
     "proof_diff_no_selected": "lacks selected",
     "proof_diff_selected_mismatch": "selected is 3, total 2",
@@ -154,6 +173,7 @@ PROOF_REASONS = {
     "proof_double_count": "testdata/double_count.txt: counts add up to 11, above total 10",
     "proof_duplicate_key": "sets killed more than once",
     "proof_empty": "FAIL: no mutants were generated",
+    "proof_go_all_suppressed": "FAIL: all 3 mutant\\(s\\) were skipped; nothing was checked$",
     "proof_go_keys_fail": "FAIL: 1 lived, 1 not_covered, 1 errored$",
     "proof_huge_value": "timeout is '4611686018427387904', above the 1000000000 limit",
     "proof_huge_wrap": "killed is '9223372036854775807', above the 1000000000 limit",
@@ -182,6 +202,7 @@ PROOF_REASONS = {
 [
     expect_failure_test(
         name = proof + "_fails",
+        exit_status = 1,
         pattern = pattern,
         test = ":" + proof,
     )
