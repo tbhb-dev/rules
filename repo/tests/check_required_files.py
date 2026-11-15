@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import TypeIs
 
 from jsonschema import Draft202012Validator, SchemaError
+from referencing import Registry
+from referencing.exceptions import Unresolvable
 
 CHECK = "C4"
 # Status 1 means the check found problems; 2 means an input is unusable.
@@ -74,7 +76,7 @@ def check(manifest: Path, schema: Path, repo: Path) -> list[str]:
         raise SchemaError(msg) from error
     Draft202012Validator.check_schema(schema_data)
     validate_schema_contract(schema_data)
-    validator = Draft202012Validator(schema_data)
+    validator = Draft202012Validator(schema_data, registry=Registry())
     try:
         rules = tomllib.loads(manifest_text)
     except tomllib.TOMLDecodeError as error:
@@ -86,10 +88,13 @@ def check(manifest: Path, schema: Path, repo: Path) -> list[str]:
         declaration = tomllib.loads(declaration_path.read_bytes().decode())
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as error:
         return [f"{declaration_path}: invalid TOML: {error}"]
-    problems = sorted(
-        f"{declaration_path}: {error.json_path}: {error.message}"
-        for error in validator.iter_errors(declaration)
-    )
+    try:
+        problems = sorted(
+            f"{declaration_path}: {error.json_path}: {error.message}"
+            for error in validator.iter_errors(declaration)
+        )
+    except Unresolvable as error:
+        raise SchemaError(str(error)) from error
     if problems:
         return problems
     return check_rules(
