@@ -132,7 +132,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-26.04, ubuntu-26.04-arm, macos-26, windows-2025]
+        os: ${{ fromJSON(github.event_name == 'pull_request'
+          && '["ubuntu-26.04","ubuntu-26.04-arm","windows-2025"]'
+          || '["ubuntu-26.04","ubuntu-26.04-arm","macos-26","windows-2025"]') }}
     defaults:
       run:
         shell: bash
@@ -221,7 +223,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-26.04, ubuntu-26.04-arm, macos-26, windows-2025]
+        os: ${{ fromJSON(github.event_name == 'pull_request'
+          && '["ubuntu-26.04","ubuntu-26.04-arm","windows-2025"]'
+          || '["ubuntu-26.04","ubuntu-26.04-arm","macos-26","windows-2025"]') }}
         workspace: ${{ fromJSON(needs.plan.outputs.workspaces) }}
     defaults:
       run:

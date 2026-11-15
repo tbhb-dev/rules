@@ -4,7 +4,7 @@
 
 # Run the plan's actual jq selection and filters, without the GitHub API.
 # Accept a workflow path so the same test can check an earlier revision.
-# Run with bash repo/tests/ci_plan_test.sh [workflow], with jq on PATH.
+# Run with bash repo/tests/ci_plan_test.sh [workflow], with jq and python3 on PATH.
 set -euo pipefail
 workflow=${1:-${TEST_SRCDIR:-.}/${WORKFLOW_RLOCATIONPATH:-.github/workflows/ci.yml}}
 dir=$(mktemp -d "${TMPDIR:-/tmp}/ci-plan-test.XXXXXX")
@@ -37,6 +37,41 @@ job_block() {
     found { print }
   ' "$workflow"
 }
+
+# Evaluate each OS expression for both events before combining it with the
+# plan's nonempty workspace matrix. Python's operators match this expression.
+for job in cache-warm bazel; do
+  os=$(job_block "$job" | awk '
+    /^        os: / { sub(/^        os: /, ""); print; found = 1; next }
+    found && /^          / { print; next }
+    found { exit }
+  ')
+  python3 - "$job" "$os" <<'PY'
+import json
+import sys
+
+job, expression = sys.argv[1:]
+expression = " ".join(expression.split())
+failures = 0
+for event in ("pull_request", "push"):
+    if expression.startswith("${{"):
+        source = expression[3:-2].strip()
+        source = source.replace("github.event_name", "event")
+        source = source.replace("&&", "and").replace("||", "or")
+        os_list = eval(source, {"__builtins__": {}, "fromJSON": json.loads, "event": event})
+    else:
+        os_list = [os.strip() for os in expression.strip("[]").split(",")]
+    expected = ["ubuntu-26.04", "ubuntu-26.04-arm", "windows-2025"]
+    if event == "push":
+        expected.insert(2, "macos-26")
+    print(f"{job} {event}: {json.dumps(os_list)}", flush=True)
+    if os_list != expected:
+        print(f"FAIL: {job} {event}: expected {json.dumps(expected)}", file=sys.stderr)
+        failures += 1
+sys.exit(bool(failures))
+PY
+done
+
 plan_job=$(job_block plan)
 outputs=$(awk '
   /^    outputs:$/ { found = 1; next }
