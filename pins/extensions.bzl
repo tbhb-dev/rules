@@ -108,24 +108,24 @@ def _tools_impl(mctx):
         name = "tbhb_rules_git_macos_arm64",
         build_file_content = _EXPORT_TREE.format("bin/git-wrapper"),
         patch_cmds = git_patch_cmds,
-        sha256 = "1110de343de11cc6f469b782b60f36217b9199b5e06875dd65baa26dd60563c7",
-        url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-macOS-arm64.tar.gz",
+        sha256 = "a882ec6882416b57d212a22bac845ae27944f96cf73453a864f6a12c17863a79",
+        url = "https://github.com/desktop/dugite-native/releases/download/v2.56.1/dugite-native-v2.56.1-238326e-macOS-arm64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_git_linux_x86_64",
         build_file_content = _EXPORT_TREE.format("bin/git-wrapper"),
         patch_cmds = git_patch_cmds,
-        sha256 = "1efd8ce0516b670b6b6d0f49ecaf395ceb8cf7fff3f5857259763d97a1238df9",
-        url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-ubuntu-x64.tar.gz",
+        sha256 = "e5bc3e8e80b57a5bcd8da18d59b23f5b39533d19019ac1d50b0bd34f051d111d",
+        url = "https://github.com/desktop/dugite-native/releases/download/v2.56.1/dugite-native-v2.56.1-238326e-ubuntu-x64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_git_linux_arm64",
         build_file_content = _EXPORT_TREE.format("bin/git-wrapper"),
         patch_cmds = git_patch_cmds,
-        sha256 = "d5ce120515bf3013a014e6a918aa87ec0f7a6f5f9687c48d50127e637cb9b6c2",
-        url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-ubuntu-arm64.tar.gz",
+        sha256 = "8626f036e1235f5b209d8331c368d85a9790988fb21a443e5f61662a178abcb6",
+        url = "https://github.com/desktop/dugite-native/releases/download/v2.56.1/dugite-native-v2.56.1-238326e-ubuntu-arm64.tar.gz",
     )
 
     http_archive(
@@ -330,8 +330,8 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_git_windows_x86_64",
         build_file_content = _EXPORT_TREE.format("cmd/git.exe"),
-        sha256 = "f1e17876337d7be143e5d51976da36643d65528125cfbc14d57f171de0fd5f14",
-        url = "https://github.com/desktop/dugite-native/releases/download/v2.56.0-2/dugite-native-v2.56.0-a44aeca-windows-x64.tar.gz",
+        sha256 = "e9fa2c78952aa2c2154c26dbd4999f93269896e9fc902fa9fe840412d4ffdb04",
+        url = "https://github.com/desktop/dugite-native/releases/download/v2.56.1/dugite-native-v2.56.1-238326e-windows-x64.tar.gz",
     )
 
     http_archive(
