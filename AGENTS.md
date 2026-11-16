@@ -4,7 +4,7 @@ Before choosing a model for a subagent or peer run, read models/README.md in tbh
 
 ## Tests that run a subprocess
 
-Windows legs run only on pushes to main, so a failure there reaches main after the merge. Give every new test that runs a subprocess the Windows exclusion in the same pull request, unless the test targets Windows:
+Windows legs run only on pushes to main. A failure there shows only after the merge, on main. Give every new test that runs a subprocess the Windows exclusion in the same pull request, unless the test targets Windows:
 
 ```starlark
 target_compatible_with = select({
@@ -13,4 +13,4 @@ target_compatible_with = select({
 }),
 ```
 
-Add a tech-debt comment above it, and a tracker row. A reviewer checks for the exclusion on any new test that shells out, and reports a missing one as a BLOCK.
+Add a tech-debt comment on the line before it, and a tracker row. A reviewer checks for the exclusion on any new test that shells out, and reports a missing one as blocking.
