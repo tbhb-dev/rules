@@ -14,10 +14,14 @@ def test_workflow_checks_consumer_mapping() -> None:
     assert "bazelisk run @tbhb_rules//lint:gitleaks_guard" in workflow
 
 
-def test_empty_effective_config_fails(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "base_text",
+    ["", "[[allowlists]]\npaths = ['''(^|/)\\.gitleaks\\.toml$''']\n"],
+)
+def test_empty_effective_config_fails(tmp_path: Path, base_text: str) -> None:
     base = tmp_path / "base.toml"
     local = tmp_path / "local.toml"
-    base.write_text("")
+    base.write_text(base_text)
     local.write_text("")
     result = subprocess.run(
         [

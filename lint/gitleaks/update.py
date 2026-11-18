@@ -14,6 +14,12 @@ import urllib.request
 from pathlib import Path
 
 BASE = "lint/gitleaks/base.toml"
+OWN_CONFIG_PATH = r"(^|/)\.gitleaks\.toml$"
+OWN_CONFIG_ALLOWLIST = (
+    "[[allowlists]]\n"
+    'description = "Own Gitleaks configuration"\n'
+    f"paths = [\n    '''{OWN_CONFIG_PATH}''',\n]\n\n"
+)
 
 
 def fail(message: str) -> None:
@@ -44,14 +50,19 @@ def tracked_configs(root: Path) -> list[Path]:
 
 
 def generate(source: str, version: str, license_text: str) -> str:
-    """Remove only the top-level allowlist, keeping every rule byte for byte."""
+    """Replace the top-level allowlist with the own-config path exclusion."""
     start = source.index("# TODO: change to [[allowlists]]")
     end = source.index("[[rules]]")
-    result = source[:start] + source[end:]
+    result = source[:start] + OWN_CONFIG_ALLOWLIST + source[end:]
     original = tomllib.loads(source)
     parsed = tomllib.loads(result)
-    if parsed.get("allowlist") or parsed.get("allowlists"):
-        fail("generated base still has a global allowlist")
+    if parsed.get("allowlist") or parsed.get("allowlists") != [
+        {
+            "description": "Own Gitleaks configuration",
+            "paths": [OWN_CONFIG_PATH],
+        }
+    ]:
+        fail("generated base has an unexpected global allowlist")
     if original["rules"] != parsed["rules"]:
         fail("generation changed default rules")
     return (
