@@ -24,4 +24,4 @@ dependencies = [
 exclude-newer = "5 days"
 package = false
 # The uv that runtime/private/versions.bzl pins; Renovate moves both.
-required-version = "==0.13.7"
+required-version = "==0.13.8"
