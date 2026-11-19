@@ -151,7 +151,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # KEY-FORMAT setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3
+      # KEY-FORMAT setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab
       # Recheck config.js, index.js, and post.js when this pin changes.
       # cache_contract_test pairs this implementation with that exact pin.
       - name: Compute the repository cache key

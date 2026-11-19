@@ -59,7 +59,7 @@ jobs:
       # after a pause. Attempts that follow a success are skipped.
       - name: Set up Bazel
         id: setup_bazel_1
-        uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
+        uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab  # 0.19.2
         continue-on-error: true
         with:
           # Self-hosted runners have no bazelisk; with a version set, the
@@ -80,7 +80,7 @@ jobs:
       - name: Set up Bazel (attempt 2)
         id: setup_bazel_2
         if: steps.setup_bazel_1.outcome == 'failure'
-        uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
+        uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab  # 0.19.2
         continue-on-error: true
         with:
           # Self-hosted runners have no bazelisk; with a version set, the
@@ -100,7 +100,7 @@ jobs:
 
       - name: Set up Bazel (attempt 3)
         if: steps.setup_bazel_2.outcome == 'failure'
-        uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3  # 0.19.1
+        uses: bazel-contrib/setup-bazel@f34d6a05eae3c24acab7fa54587492daeaeffdab  # 0.19.2
         with:
           # Self-hosted runners have no bazelisk; with a version set, the
           # action downloads it when it's missing, as `bazel`.

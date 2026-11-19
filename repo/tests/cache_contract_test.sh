@@ -18,7 +18,7 @@ workflows=(.github/workflows/repo-checks.yml .github/workflows/pr-text.yml)
 
 # This literal records the source review of config.js, index.js, and post.js.
 # A setup-bazel bump must revisit the key computation and this assertion.
-reviewed=104e3eea9447cdaa4b00d0fb46191a3985d26ab3
+reviewed=f34d6a05eae3c24acab7fa54587492daeaeffdab
 for file in "$action" "${workflows[@]}"; do
   pins=$(sed -n 's/.*uses: bazel-contrib\/setup-bazel@\([^ ]*\).*/\1/p' "$file")
   unique_pins=$(sort -u <<<"$pins")
