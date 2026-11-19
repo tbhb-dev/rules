@@ -152,22 +152,22 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_rumdl_macos_arm64",
         build_file_content = _EXPORT.format("rumdl"),
-        sha256 = "8c60fbfc8064acda1e40856bfdbc7cc5f51a477920de1bae9426482d08916424",
-        url = "https://github.com/rvben/rumdl/releases/download/v0.3.3/rumdl-v0.3.3-aarch64-apple-darwin.tar.gz",
+        sha256 = "51f7bce0d56ea632ed65e7e42a99effb7ce7a23923fe0738ecda0e1d11bcb788",
+        url = "https://github.com/rvben/rumdl/releases/download/v0.3.4/rumdl-v0.3.4-aarch64-apple-darwin.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_rumdl_linux_x86_64",
         build_file_content = _EXPORT.format("rumdl"),
-        sha256 = "2e82399d566b4663625405bad6c36427477a81c7ff726a4986c4d9947e3a51ef",
-        url = "https://github.com/rvben/rumdl/releases/download/v0.3.3/rumdl-v0.3.3-x86_64-unknown-linux-gnu.tar.gz",
+        sha256 = "36f1524f0cfaf33f5dfe68ac19220e1bd57ded1f0f9205931f6ee1de32f4a040",
+        url = "https://github.com/rvben/rumdl/releases/download/v0.3.4/rumdl-v0.3.4-x86_64-unknown-linux-gnu.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_rumdl_linux_arm64",
         build_file_content = _EXPORT.format("rumdl"),
-        sha256 = "c9233ea9233f9cf23dc9b063363d32fb55d28f9b0bdcf472288fc29c305c5bc2",
-        url = "https://github.com/rvben/rumdl/releases/download/v0.3.3/rumdl-v0.3.3-aarch64-unknown-linux-gnu.tar.gz",
+        sha256 = "d51bfff8c4aacebb786f701918389b3b568129cb9c16aee12567ede6869a61ad",
+        url = "https://github.com/rvben/rumdl/releases/download/v0.3.4/rumdl-v0.3.4-aarch64-unknown-linux-gnu.tar.gz",
     )
 
     http_archive(
@@ -344,8 +344,8 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_rumdl_windows_x86_64",
         build_file_content = _EXPORT.format("rumdl.exe"),
-        sha256 = "75c080c3ee3456ac1d2a59cce194f46122f85b0e47c025ec66f3fbbd1e8181fa",
-        url = "https://github.com/rvben/rumdl/releases/download/v0.3.3/rumdl-v0.3.3-x86_64-pc-windows-msvc.zip",
+        sha256 = "d059ae097c7d23ac627abb92a4496eb25aecc513f901a8e907662de98df0e875",
+        url = "https://github.com/rvben/rumdl/releases/download/v0.3.4/rumdl-v0.3.4-x86_64-pc-windows-msvc.zip",
     )
 
     http_archive(
