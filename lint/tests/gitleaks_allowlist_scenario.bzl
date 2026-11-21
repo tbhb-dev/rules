@@ -64,10 +64,46 @@ regex = '"'''/home/[a-z]+/\\.codex/auth\\.json'''"'
     git -C "$work" commit -qm removed
     BUILD_WORKSPACE_DIRECTORY="$work" "$subject" --log-opts=HEAD >"$work/out" 2>&1 || status=$?
     ;;
+  own_config_tree)
+    rm "$work/creds.txt" "$work/nuget.config"
+    printf '[[rules]]\\nid = "credential-absolute-path"\\ndescription = "Credential path"\\nregex = '"'''/home/[a-z]+/\\.codex/auth\\.json'''"'\\n# /home/x/.codex/auth.json\\n' >"$work/.gitleaks.toml"
+    echo hello >"$work/a.txt"
+    (cd "$work" && "$subject" dir --no-banner --redact --verbose --config .gitleaks.toml .) >"$work/out" 2>&1 || status=$?
+    cat "$work/out"
+    [[ $status == 0 ]]
+    grep -q 'no leaks found' "$work/out"
+    mkdir -p "$work/docs"
+    printf '/home/x/.codex/auth.json\\n' >"$work/docs/x.md"
+    (cd "$work" && "$subject" dir --no-banner --redact --verbose --config .gitleaks.toml .) >"$work/out" 2>&1 || status=$?
+    ;;
+  own_config_history)
+    rm "$work/creds.txt" "$work/nuget.config"
+    printf '[[rules]]\\nid = "credential-absolute-path"\\ndescription = "Credential path"\\nregex = '"'''/home/[a-z]+/\\.codex/auth\\.json'''"'\\n# /home/x/.codex/auth.json\\n' >"$work/.gitleaks.toml"
+    echo hello >"$work/a.txt"
+    git -C "$work" init -q
+    git -C "$work" config user.email test@example.invalid
+    git -C "$work" config user.name test
+    git -C "$work" add .gitleaks.toml a.txt
+    git -C "$work" commit -qm own_config
+    BUILD_WORKSPACE_DIRECTORY="$work" "$subject" --log-opts=HEAD >"$work/out" 2>&1 || status=$?
+    cat "$work/out"
+    [[ $status == 0 ]]
+    grep -q 'no leaks found' "$work/out"
+    mkdir -p "$work/docs"
+    printf '/home/x/.codex/auth.json\\n' >"$work/docs/x.md"
+    git -C "$work" add docs/x.md
+    git -C "$work" commit -qm other_path
+    BUILD_WORKSPACE_DIRECTORY="$work" "$subject" --log-opts=HEAD >"$work/out" 2>&1 || status=$?
+    ;;
 esac
 cat "$work/out"
 if [[ {scenario} == defaults ]]; then
   [[ $status == 0 ]] && grep -q 'no leaks found' "$work/out"
+elif [[ {scenario} == own_config_* ]]; then
+  [[ $status == 1 ]]
+  grep -Eq 'RuleID: +credential-absolute-path' "$work/out"
+  grep -Eq 'File: +docs/x\\.md' "$work/out"
+  ! grep -Eq 'File: +\\.gitleaks\\.toml' "$work/out"
 else
   [[ $status == 1 ]] && grep -Eq 'RuleID: +generic-api-key' "$work/out"
   if [[ {scenario} == private ]]; then
@@ -105,7 +141,7 @@ gitleaks_allowlist_scenario_test = rule(
     attrs = SHELL_ATTRS | {
         "config": attr.label(default = "//:.gitleaks.toml", allow_single_file = True),
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["defaults", "history", "private", "staged", "text", "tree"]),
+        "scenario": attr.string(mandatory = True, values = ["defaults", "history", "own_config_history", "own_config_tree", "private", "staged", "text", "tree"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )
