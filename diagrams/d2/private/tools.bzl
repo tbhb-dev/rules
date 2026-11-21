@@ -63,29 +63,29 @@ def _tools_impl(module_ctx):
     http_archive(
         name = "tbhb_rules_resvg_macos_arm64",
         build_file_content = EXPORT.format("resvg"),
-        sha256 = "847acb5210c7c6244b5e8f07dd62fa1ce596108cce8193628ebfd5750504b259",
-        url = "https://github.com/linebender/resvg/releases/download/v0.49.0/resvg-macos-aarch64.zip",
+        sha256 = "8155b569f2b93723ba3645b53536eead3b591c8faf62bdaafd3033ba37838837",
+        url = "https://github.com/linebender/resvg/releases/download/v0.50.0/resvg-macos-aarch64.zip",
     )
 
     http_archive(
         name = "tbhb_rules_resvg_linux_x86_64",
         build_file_content = EXPORT.format("resvg"),
-        sha256 = "216637e75e909e53e3098b0875cd5f7da2fdc8b4359771b4a29b539afff9d3f5",
-        url = "https://github.com/linebender/resvg/releases/download/v0.49.0/resvg-linux-x86_64.tar.gz",
+        sha256 = "5d1c9ffd43c82fb802d92cef8100055c612cd3e248d5a787c20079293a456e21",
+        url = "https://github.com/linebender/resvg/releases/download/v0.50.0/resvg-linux-x86_64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_resvg_linux_arm64",
         build_file_content = EXPORT.format("resvg"),
-        sha256 = "00356cb6984836d7638fe10597a01ec4776b0c356e164538f165eca067f0d982",
-        url = "https://github.com/linebender/resvg/releases/download/v0.49.0/resvg-linux-aarch64.tar.gz",
+        sha256 = "b197bf704c9da5d572ae565c799727da3067dffacaf32a2476c8143af90e2f9c",
+        url = "https://github.com/linebender/resvg/releases/download/v0.50.0/resvg-linux-aarch64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_resvg_windows_x86_64",
         build_file_content = EXPORT.format("resvg.exe"),
-        sha256 = "38af9631b37e61118a32a5ef31e6be6af083eda63b4c17ffc4fdc63e449277df",
-        url = "https://github.com/linebender/resvg/releases/download/v0.49.0/resvg-win-x86_64.zip",
+        sha256 = "e4817e40ac63d3eb5c9e5762526cf6cc91f0cc108de38cd09dd60be765184efd",
+        url = "https://github.com/linebender/resvg/releases/download/v0.50.0/resvg-win-x86_64.zip",
     )
 
     http_archive(
