@@ -42,6 +42,8 @@ def add_own_config_allowlist(
     if allowlists is None:
         allowlists = tomlkit.aot()
         policy["allowlists"] = allowlists
+    if "allowlist" in policy:
+        allowlists.append(policy.pop("allowlist"))
     allowlists.append(allowlist)
 
 
