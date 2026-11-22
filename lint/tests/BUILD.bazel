@@ -747,5 +747,6 @@ gitleaks_history(
     for scenario, subject in [
         ("own_config_tree", "//lint:gitleaks"),
         ("own_config_history", ":allowlist_history_subject"),
+        ("singular_allowlist", "//lint:gitleaks"),
     ]
 ]

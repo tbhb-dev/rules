@@ -64,6 +64,14 @@ regex = '"'''/home/[a-z]+/\\.codex/auth\\.json'''"'
     git -C "$work" commit -qm removed
     BUILD_WORKSPACE_DIRECTORY="$work" "$subject" --log-opts=HEAD >"$work/out" 2>&1 || status=$?
     ;;
+  singular_allowlist)
+    rm "$work/creds.txt" "$work/nuget.config"
+    printf '[[rules]]\\nid = "credential-absolute-path"\\ndescription = "Credential path"\\nregex = '"'''/home/[a-z]+/\\.codex/auth\\.json'''"'\\n\\n[allowlist]\\ndescription = "Existing exceptions"\\npaths = ['"'''^ignored/'''"']\\n' >"$work/.gitleaks.toml"
+    mkdir -p "$work/docs" "$work/ignored"
+    printf '/home/x/.codex/auth.json\\n' >"$work/docs/x.md"
+    printf '/home/x/.codex/auth.json\\n' >"$work/ignored/x.md"
+    (cd "$work" && "$subject" dir --no-banner --redact --verbose --config .gitleaks.toml .) >"$work/out" 2>&1 || status=$?
+    ;;
   own_config_tree)
     rm "$work/creds.txt" "$work/nuget.config"
     printf '[[rules]]\\nid = "credential-absolute-path"\\ndescription = "Credential path"\\nregex = '"'''/home/[a-z]+/\\.codex/auth\\.json'''"'\\n# /home/x/.codex/auth.json\\n' >"$work/.gitleaks.toml"
@@ -103,6 +111,11 @@ esac
 cat "$work/out"
 if [[ {scenario} == defaults ]]; then
   [[ $status == 0 ]] && grep -q 'no leaks found' "$work/out"
+elif [[ {scenario} == singular_allowlist ]]; then
+  [[ $status == 1 ]]
+  grep -Eq 'RuleID: +credential-absolute-path' "$work/out"
+  grep -Eq 'File: +docs/x\\.md' "$work/out"
+  ! grep -Eq 'File: +ignored/' "$work/out"
 elif [[ {scenario} == own_config_* ]]; then
   [[ $status == 1 ]]
   grep -Eq 'RuleID: +credential-absolute-path' "$work/out"
@@ -148,7 +161,7 @@ gitleaks_allowlist_scenario_test = rule(
     attrs = SHELL_ATTRS | {
         "config": attr.label(default = "//:.gitleaks.toml", allow_single_file = True),
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["defaults", "history", "own_config_history", "own_config_tree", "private", "staged", "text", "tree"]),
+        "scenario": attr.string(mandatory = True, values = ["defaults", "history", "own_config_history", "own_config_tree", "private", "singular_allowlist", "staged", "text", "tree"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )
