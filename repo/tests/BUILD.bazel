@@ -211,6 +211,33 @@ sh_test(
     for line in range(4, 8)
 ]
 
+# pins/tools.json mirrors the pinned archives in pins/extensions.bzl for
+# installers outside Bazel; the two must agree.
+python_tool(
+    name = "check_tool_pins",
+    testonly = True,
+    main = "check_tool_pins.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    tags = ["manual"],
+)
+
+# Tech debt: `python_tool` is a .bat on Windows and `sh_test` fails analysis
+# there, so this test is excluded; `pytest_test` covers the logic. Track it
+# with the mise_keys_test row.
+sh_test(
+    name = "tool_pins_test",
+    srcs = [":check_tool_pins"],
+    args = [
+        "pins/tools.json",
+        "pins/extensions.bzl",
+    ],
+    data = ["//pins:repo_files"],
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
 # The key names of mise.toml must equal the baseline's. The script runs as a
 # test through the locked Python environment.
 python_tool(
