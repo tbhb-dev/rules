@@ -8,6 +8,7 @@ load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":commit_identity_crlf.bzl", "commit_identity_crlf_test")
 load(":commit_identity_scenario.bzl", "commit_identity_scenario_test")
+load(":commit_messages_scenario.bzl", "commit_messages_scenario_test")
 load(":cspell_tests.bzl", "cspell_parent_config_test", "cspell_test_suite")
 load(":gitleaks_allowlist_scenario.bzl", "GITLEAKS_ALLOWLIST_FIXTURE", "GITLEAKS_PATH_FIXTURE", "gitleaks_allowlist_scenario_test", "gitleaks_configs_test")
 load(":gitleaks_history_scenario.bzl", "gitleaks_history_scenario_test")
@@ -123,6 +124,25 @@ PROOF_TAGS = ["manual"]
 # commit_identity against throwaway repositories.
 
 commit_identity_crlf_test(name = "commit_identity_crlf_test")
+
+# commit_messages against throwaway repositories.
+[
+    commit_messages_scenario_test(
+        name = "commit_messages_" + scenario + "_test",
+        scenario = scenario,
+        subject = "//lint:commit_messages",
+        # Tech debt: not yet run on windows-2025; run it there and remove this.
+        target_compatible_with = select({
+            "@platforms//os:windows": ["@platforms//:incompatible"],
+            "//conditions:default": [],
+        }),
+    )
+    for scenario in [
+        "good",
+        "bad",
+        "merge_skipped",
+    ]
+]
 
 [
     commit_identity_scenario_test(

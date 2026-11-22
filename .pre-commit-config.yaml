@@ -65,6 +65,12 @@ repos:
         entry: tools/.bazel_env/bin/cog verify --ignore-merge-commits --file
         stages: [commit-msg]
         always_run: true
+      - id: commit-subject
+        name: Commit subject
+        language: system
+        entry: bash -c 'python3 lint/private/commit_messages/check_subject.py "$1"' --
+        stages: [commit-msg]
+        always_run: true
       - id: ruff-format
         name: ruff format
         language: system

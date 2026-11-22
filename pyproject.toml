@@ -362,6 +362,7 @@ max-complexity = 15
 "lint/private/gitleaks_config.py" = ["INP001"]
 "lint/private/okf_docs/*.py" = ["T201", "INP001"]
 "lint/private/commit_identity/*.py" = ["T201", "INP001"]
+"lint/private/commit_messages/*.py" = ["T201", "INP001"]
 "lint/private/content/*.py" = ["T201", "INP001"]
 "lint/private/decision_records/*.py" = ["T201", "INP001"]
 
