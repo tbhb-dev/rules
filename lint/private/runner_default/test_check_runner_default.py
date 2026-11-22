@@ -26,7 +26,7 @@ def resolve(inp: str, private: bool, label: str) -> str:
         .replace("github.event.repository.private", "private")
         .replace("vars.PRIVATE_RUNNER_LABEL", "label")
     )
-    return eval(python, {}, {"inp": inp, "private": private, "label": label})  # noqa: S307
+    return str(eval(python, {}, {"inp": inp, "private": private, "label": label}))  # noqa: S307
 
 
 @pytest.mark.parametrize(
