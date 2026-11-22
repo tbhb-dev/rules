@@ -322,9 +322,11 @@ def stryker_test(name, srcs, config = None, node_modules = [], workers = False, 
     Stryker reads its config (`stryker.config.mjs` and the other names it
     looks for) at the tree root, or `config`. Set `testRunner: "vitest"`,
     `plugins: ["@stryker-mutator/vitest-runner"]` (Stryker's default plugin
-    scan looks beside its own install, which holds only its core) and a
-    `thresholds.break` score; a mutation score below it fails the check, and
-    so does a run that made no mutant. Set `concurrency` to the CPUs the
+    scan looks beside its own install, which holds only its core) and
+    `thresholds.break: null`, which reports the score without failing the
+    check. A numeric `thresholds.break` fails the check on a lower score, so
+    leave it out of main CI, where mutation never blocks. A run that made no
+    mutant fails either way. Set `concurrency` to the CPUs the
     test may use, and tag the test `cpu:N` to match. This module links its
     pinned Stryker, Vitest runner, Vitest and TypeScript into the tree.
 
