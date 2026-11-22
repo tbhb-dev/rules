@@ -249,6 +249,12 @@ tree_check_test(
 )
 
 tree_check_test(
+    name = "runner_default_test",
+    srcs = [":repo_files"],
+    tool = "//lint:runner_default",
+)
+
+tree_check_test(
     name = "gitleaks_guard_test",
     srcs = [":repo_files"],
     tool = "//lint:gitleaks_guard",

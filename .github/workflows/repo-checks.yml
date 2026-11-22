@@ -36,9 +36,10 @@ on:
   workflow_call:
     inputs:
       runs-on:
-        description: The runner label.
+        description: >-
+          The runner label. Unset, a private caller uses the org's private
+          runner label and a public caller uses the hosted one.
         type: string
-        default: ubuntu-26.04
       timeout-minutes:
         description: The job's timeout.
         type: number
@@ -117,7 +118,7 @@ permissions: {}
 jobs:
   repo:
     name: repo
-    runs-on: ${{ inputs.runs-on }}
+    runs-on: ${{ inputs.runs-on || (github.event.repository.private && vars.PRIVATE_RUNNER_LABEL || 'ubuntu-26.04') }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     permissions:
       contents: read  # checkout, and the CODEOWNERS errors API
@@ -309,6 +310,9 @@ jobs:
 
       - name: Check workflow job timeouts
         run: bazelisk run @tbhb_rules//lint:job_timeouts
+
+      - name: Check the reusable workflow runner default
+        run: bazelisk run @tbhb_rules//lint:runner_default
 
       - name: Check the gitleaks tool mapping
         run: bazelisk run @tbhb_rules//lint:gitleaks_guard

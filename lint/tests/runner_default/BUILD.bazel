@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+pytest_test(
+    name = "pytest_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/private/runner_default"],
+    coverage = ["lint/private/runner_default"],
+)
