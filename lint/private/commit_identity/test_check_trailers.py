@@ -485,3 +485,16 @@ def test_cli_bad_committer_date(
     assert result.returncode == 1
     assert result.stdout == f"{problem}\n"
     assert result.stderr == ""
+
+
+def test_check_pair_warns_on_stderr_in_process(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert ai.check_pair("color=red") is None
+    captured = capsys.readouterr()
+    assert captured.err == "::warning::unknown attribute color\n"
+    assert captured.out == ""
+    assert ai.check_pair("effort=max") is None
+    assert capsys.readouterr().err == ""
+    assert ai.check_pair("model=a=b") is None
+    assert capsys.readouterr().err == ""
