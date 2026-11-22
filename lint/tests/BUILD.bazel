@@ -3,6 +3,7 @@
 
 load("//lint:defs.bzl", "cspell_test", "gitleaks_history", "gitleaks_test", "rumdl_test", "shellcheck_test", "shfmt_test", "vale_test", "workflow_lint_test")
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
+load("//lint/private:review_policy.bzl", "review_policy_test")
 load("//repo:defs.bzl", "repo_files")
 load("//testing:defs.bzl", "expect_failure_test")
 load(":commit_identity_crlf.bzl", "commit_identity_crlf_test")
@@ -682,6 +683,52 @@ expect_failure_test(
     pattern = "c/bad\\.md:1:2: \\[MD018\\]",
     test = ":proof_rumdl_exclude_replaces_config",
 )
+
+# review_policy_test on a review config the floor's schema rejects (schema must
+# be 1), which is a finding, and with the path set to that file, which the
+# check cannot load as a directory. The config is generated, so this
+# repository's own TOML lint doesn't see it.
+genrule(
+    name = "review_policy_invalid_tree",
+    outs = ["review_policy/.github/pull_request_review.toml"],
+    cmd = "printf 'schema = 2\\n' > $@",
+)
+
+[
+    review_policy_test(
+        name = "proof_review_policy_" + case,
+        srcs = [":review_policy_invalid_tree"],
+        path = path,
+        strip_prefix = "lint/tests/review_policy",
+        tags = PROOF_TAGS,
+        # Tech debt: not run on windows-2025 yet (AGENTS.md exclusion); make the test run on Windows and remove this.
+        target_compatible_with = select({
+            "@platforms//os:windows": ["@platforms//:incompatible"],
+            "//conditions:default": [],
+        }),
+    )
+    for case, path in {
+        "finding": ".",
+        "not_a_directory": ".github/pull_request_review.toml",
+    }.items()
+]
+
+[
+    expect_failure_test(
+        name = "review_policy_{}_fails_test".format(case),
+        pattern = pattern,
+        # Tech debt: not run on windows-2025 yet (AGENTS.md exclusion); make the test run on Windows and remove this.
+        target_compatible_with = select({
+            "@platforms//os:windows": ["@platforms//:incompatible"],
+            "//conditions:default": [],
+        }),
+        test = ":proof_review_policy_" + case,
+    )
+    for case, pattern in {
+        "finding": "\\.github[/\\\\]pull_request_review\\.toml: config-schema: schema: 1 was expected",
+        "not_a_directory": "\\.github[/\\\\]pull_request_review\\.toml is not a directory",
+    }.items()
+]
 
 # This policy check reads all tracked configs, including ignored Bazel modules.
 # It runs locally without a sandbox so Git sees the checkout and new modules.

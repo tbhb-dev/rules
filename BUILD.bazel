@@ -225,6 +225,23 @@ workflow_lint_test(
     srcs = [":repo_files"],
 )
 
+# The review policy files a repository has; //lint:review_policy_test checks
+# them. None exists yet, so CODEOWNERS (which the check ignores) keeps the
+# copy non-empty, as tree_check requires, and the glob matches no more until
+# the first one lands.
+filegroup(
+    name = "review_policy_files",
+    srcs = [".github/CODEOWNERS"] + glob(
+        [
+            ".github/PULL_REQUEST_REVIEW_*.md",
+            ".github/pull_request_review.*",
+            ".github/schemas/pull-request-review-draft.*",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//lint:__pkg__"],
+)
+
 tree_check_test(
     name = "job_timeouts_test",
     srcs = [":repo_files"],

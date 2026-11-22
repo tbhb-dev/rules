@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+pytest_test(
+    name = "pytest_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/private/review_policy"],
+    coverage = ["lint/private/review_policy"],
+    # Tech debt: not run on windows-2025 yet (AGENTS.md exclusion); make the test run on Windows and remove this.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
