@@ -45,12 +45,6 @@ title = "gitleaks config"
 # config-enabled features are guaranteed to work.
 minVersion = "v8.25.0"
 
-[[allowlists]]
-description = "Own Gitleaks configuration"
-paths = [
-    '''(^|/)\.gitleaks\.toml$''',
-]
-
 [[rules]]
 id = "1password-secret-key"
 description = "Uncovered a possible 1Password secret key, potentially compromising access to secrets in vaults."

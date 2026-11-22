@@ -4,6 +4,7 @@
 import os
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -16,7 +17,7 @@ def test_workflow_checks_consumer_mapping() -> None:
 
 @pytest.mark.parametrize(
     "base_text",
-    ["", "[[allowlists]]\npaths = ['''(^|/)\\.gitleaks\\.toml$''']\n"],
+    ["", "[[allowlists]]\npaths = ['''^\\.gitleaks\\.toml$''']\n"],
 )
 def test_empty_effective_config_fails(tmp_path: Path, base_text: str) -> None:
     base = tmp_path / "base.toml"
@@ -109,3 +110,46 @@ def test_wrapper_refuses_empty_rules(tmp_path: Path, local: bool) -> None:
     assert (
         "gitleaks_tool: FAIL: effective gitleaks config has zero rules" in result.stderr
     )
+
+
+@pytest.mark.parametrize("with_private", [False, True])
+def test_own_config_allowlist_anchored_and_scoped(
+    tmp_path: Path, with_private: bool
+) -> None:
+    base = tmp_path / "base.toml"
+    local = tmp_path / "local.toml"
+    base.write_text('[[rules]]\nid = "base-rule"\nregex = "base"\n')
+    local.write_text(
+        '[[rules]]\nid = "base-rule"\n[[rules]]\nid = "custom-rule"\nregex = "custom"\n'
+    )
+    if with_private:
+        (tmp_path / "private.toml").write_text(
+            '[extend]\npath = ".gitleaks.toml"\n'
+            '[[rules]]\nid = "tbhb-private-canary"\nregex = "canary"\n'
+        )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "lint/private/gitleaks_config.py",
+            str(base),
+            str(local),
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    top = tmp_path / ("private.toml" if with_private else "effective.toml")
+    parsed = tomllib.loads(top.read_text())
+    assert parsed["allowlists"] == [
+        {
+            "description": "Own Gitleaks configuration",
+            "targetRules": ["custom-rule"],
+            "paths": [r"^\.gitleaks\.toml$"],
+        }
+    ]
+    if with_private:
+        assert "allowlists" not in tomllib.loads(
+            (tmp_path / "effective.toml").read_text()
+        )
