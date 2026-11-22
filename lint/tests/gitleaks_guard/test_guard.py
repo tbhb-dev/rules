@@ -113,8 +113,9 @@ def test_wrapper_refuses_empty_rules(tmp_path: Path, local: bool) -> None:
 
 
 @pytest.mark.parametrize("with_private", [False, True])
+@pytest.mark.parametrize("with_singular_allowlist", [False, True])
 def test_own_config_allowlist_anchored_and_scoped(
-    tmp_path: Path, with_private: bool
+    tmp_path: Path, with_private: bool, with_singular_allowlist: bool
 ) -> None:
     base = tmp_path / "base.toml"
     local = tmp_path / "local.toml"
@@ -127,6 +128,18 @@ def test_own_config_allowlist_anchored_and_scoped(
             '[extend]\npath = ".gitleaks.toml"\n'
             '[[rules]]\nid = "tbhb-private-canary"\nregex = "canary"\n'
         )
+    existing_allowlist = {
+        "description": "Existing exceptions",
+        "paths": [r"^ignored/"],
+        "regexes": ["ignored-value"],
+    }
+    if with_singular_allowlist:
+        source = tmp_path / "private.toml" if with_private else local
+        with source.open("a") as config:
+            config.write(
+                '\n[allowlist]\ndescription = "Existing exceptions"\n'
+                "paths = ['^ignored/']\nregexes = ['ignored-value']\n"
+            )
     result = subprocess.run(
         [
             sys.executable,
@@ -142,12 +155,15 @@ def test_own_config_allowlist_anchored_and_scoped(
     assert result.returncode == 0, result.stderr
     top = tmp_path / ("private.toml" if with_private else "effective.toml")
     parsed = tomllib.loads(top.read_text())
+    assert "allowlist" not in parsed
+    expected = [existing_allowlist] if with_singular_allowlist else []
     assert parsed["allowlists"] == [
+        *expected,
         {
             "description": "Own Gitleaks configuration",
             "targetRules": ["custom-rule"],
             "paths": [r"^\.gitleaks\.toml$"],
-        }
+        },
     ]
     if with_private:
         assert "allowlists" not in tomllib.loads(
