@@ -84,6 +84,27 @@ def _tools_impl(mctx):
     )
 
     http_archive(
+        name = "tbhb_rules_cue_macos_arm64",
+        build_file_content = _EXPORT.format("cue"),
+        sha256 = "64921403f012a97f89494c03605db2fbf7d9daa77dc2631819ac4406cb2e8074",
+        url = "https://github.com/cue-lang/cue/releases/download/v0.17.1/cue_v0.17.1_darwin_arm64.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_cue_linux_x86_64",
+        build_file_content = _EXPORT.format("cue"),
+        sha256 = "a39b0c97695069d95d276d99be0f5dbabb081d801bfdc9ba49b76efaf94e2369",
+        url = "https://github.com/cue-lang/cue/releases/download/v0.17.1/cue_v0.17.1_linux_amd64.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_cue_linux_arm64",
+        build_file_content = _EXPORT.format("cue"),
+        sha256 = "0d729be30d52c952ca38fc9dcb692caa09d8463fa0b64df5781312779183fbcd",
+        url = "https://github.com/cue-lang/cue/releases/download/v0.17.1/cue_v0.17.1_linux_arm64.tar.gz",
+    )
+
+    http_archive(
         name = "tbhb_rules_editorconfig_checker_macos_arm64",
         build_file_content = _EXPORT.format("editorconfig-checker"),
         sha256 = "ff59f57717d95fc62b8e372c8051dbbb766f7d660942409a85d027b0feb2422c",
@@ -321,6 +342,13 @@ def _tools_impl(mctx):
     )
 
     http_archive(
+        name = "tbhb_rules_cue_windows_x86_64",
+        build_file_content = _EXPORT.format("cue.exe"),
+        sha256 = "9f15378dc52b9a1bb6fa1755adc0410c9f17f330a621b784a5b31fdbc91c6d7a",
+        url = "https://github.com/cue-lang/cue/releases/download/v0.17.1/cue_v0.17.1_windows_amd64.zip",
+    )
+
+    http_archive(
         name = "tbhb_rules_editorconfig_checker_windows_x86_64",
         build_file_content = _EXPORT.format("editorconfig-checker.exe"),
         sha256 = "857f8f74dfc259d73dac93573e37cf3ce01150787d7b139bf839549cc6b5beb9",
@@ -462,6 +490,17 @@ def _tools_impl(mctx):
             "linux_x86_64": "@tbhb_rules_cog_linux_x86_64//:cog",
             "macos_arm64": "@tbhb_rules_cog_macos_arm64//:cog",
             "windows_x86_64": "@tbhb_rules_cog_windows_x86_64//:cog.exe",
+        },
+    )
+
+    _tool_hub(
+        name = "tbhb_rules_cue",
+        tool = "cue",
+        binaries = {
+            "linux_arm64": "@tbhb_rules_cue_linux_arm64//:cue",
+            "linux_x86_64": "@tbhb_rules_cue_linux_x86_64//:cue",
+            "macos_arm64": "@tbhb_rules_cue_macos_arm64//:cue",
+            "windows_x86_64": "@tbhb_rules_cue_windows_x86_64//:cue.exe",
         },
     )
 
