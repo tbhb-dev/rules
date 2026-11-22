@@ -92,6 +92,15 @@ case {scenario} in
     exit 0
     ;;
   empty) ;;
+  merge_commit)
+    commit "$agent" "$agent"
+    git -C "$repo" checkout -q -b side
+    commit "$agent" "$agent"
+    git -C "$repo" checkout -q -
+    commit "$agent" "$agent"
+    GIT_AUTHOR_NAME=GitHub GIT_AUTHOR_EMAIL=noreply@github.com GIT_COMMITTER_NAME=GitHub GIT_COMMITTER_EMAIL=noreply@github.com \\
+      git -C "$repo" merge -q --no-ff -m 'Merge pull request' side
+    ;;
   noreply_author)
     commit "$agent" "$agent"
     commit 'tbhb-agent <334376894+tbhb-agent@users.noreply.github.com>' "$agent"
@@ -127,7 +136,7 @@ commit_identity_scenario_test = rule(
     toolchains = SHELL_TOOLCHAINS,
     attrs = SHELL_ATTRS | {
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["allowed", "empty", "noreply_author", "wrong_committer", "trailers"]),
+        "scenario": attr.string(mandatory = True, values = ["allowed", "empty", "merge_commit", "noreply_author", "wrong_committer", "trailers"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )

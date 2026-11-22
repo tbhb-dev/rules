@@ -3,7 +3,9 @@
 # Copyright Tony Burns
 
 # Checks the author and committer of each commit in BASE..HEAD against the
-# allowed pairs. Generated from commit_identity.sh.tpl; the @@NAME@@ markers
+# allowed pairs. Merge commits are skipped: GitHub writes them (a PR merge, a
+# main-into-branch update, a merge queue) under its own identity, and the
+# commits they bring in are checked on their own. Generated from commit_identity.sh.tpl; the @@NAME@@ markers
 # are filled in at analysis time. Run with `bazel run <target> -- BASE HEAD`.
 
 set -euo pipefail
@@ -35,7 +37,7 @@ done
 
 log=$(mktemp "${TMPDIR:-/tmp}/commit-identity.XXXXXX")
 trap 'rm -f "$log"' EXIT
-git log --format='%H%x09%an <%ae> -> %cn <%ce>' "$base..$head" >"$log"
+git log --no-merges --format='%H%x09%an <%ae> -> %cn <%ce>' "$base..$head" >"$log"
 
 checked=0
 failed=0
