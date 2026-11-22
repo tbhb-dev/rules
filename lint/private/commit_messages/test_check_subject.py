@@ -38,7 +38,7 @@ def test_accepts(subject: str) -> None:
         ("WIP: feat: x", "WIP subjects are not allowed"),
         ("feat: [wip] parser", "WIP subjects are not allowed"),
         ("feat: WIP, add x", "WIP subjects are not allowed"),
-        ("feat: x " + "y" * 70, "the limit is 72"),
+        ("feat: x " + "y" * 70, "subject is 78 characters; the limit is 72"),
         ("feat: " + "y" * 67, "subject is 73 characters; the limit is 72"),
         ("update the thing", "subject must have the form type(scope): summary"),
         ("feat(): x", "subject must have the form type(scope): summary"),
