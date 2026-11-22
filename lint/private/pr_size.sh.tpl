@@ -21,6 +21,17 @@ if [[ ${PR_AUTHOR:-} == 'tbhb-dev-renovate[bot]' ]]; then
   exit 0
 fi
 base=$1 head=$2
+# A repository's baseline PR, opened against the single root commit that
+# `tbhbdev repo bootstrap` creates, is exempt. Only that commit qualifies: it
+# is the whole history of the base and carries the bootstrap trailer.
+base_commit=$("$git" rev-parse --verify --quiet "$base^{commit}") || base_commit=
+if [[ -n $base_commit && $("$git" rev-list --count "$base_commit") == 1 ]]; then
+  trailers=$("$git" log -1 --format=%B "$base_commit" | "$git" interpret-trailers --parse)
+  if [[ $trailers =~ (^|$'\n')Repo-bootstrap:\ tbhbdev\ [^[:space:]]+($|$'\n') ]]; then
+    echo '{"code_lines": 0, "code_limit": 400, "raw_lines": 0, "raw_limit": 1500, "failed": null}'
+    exit 0
+  fi
+fi
 work=$(mktemp -d "${TMPDIR:-/tmp}/pr-size.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/full" "$work/added"

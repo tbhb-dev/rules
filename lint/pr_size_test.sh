@@ -90,4 +90,39 @@ for path in BUILD BUILD.bazel MODULE.bazel tool.bzl; do
   check 1 401 401
 done
 PR_AUTHOR='tbhb-dev-renovate[bot]' check 0 0 0
-printf 'PASS: both limits, boundaries, free lines, exemptions, Bazel and Renovate\n'
+bootstrap_repo() {
+  mkdir "$scratch/$1"
+  cd "$scratch/$1"
+  "$git" init -q
+  "$git" -c user.name=test -c user.email=test@example.invalid commit -qm 'chore: bootstrap' -m "$2" --allow-empty
+  base=$("$git" rev-parse HEAD)
+}
+# An initial PR on a bootstrap-only main is skipped, however large.
+bootstrap_repo initial_pr 'Repo-bootstrap: tbhbdev 1.2.3'
+lines 3000 'x = 1' >source.py
+commit
+check 0 0 0
+count_json 0 0 null
+# A second PR is checked: its base holds more than the bootstrap commit.
+commit_base() { base=$("$git" rev-parse HEAD); }
+commit_base
+lines 401 'x = 1' >second.py
+commit
+check 1 401 401
+# A trailer on a later commit never qualifies, and neither does a root commit
+# without the trailer or one with a malformed trailer.
+new_repo late_trailer
+"$git" -c user.name=test -c user.email=test@example.invalid commit -qm bootstrap -m 'Repo-bootstrap: tbhbdev 1.2.3' --allow-empty
+base=$("$git" rev-parse HEAD)
+lines 401 'x = 1' >source.py
+commit
+check 1 401 401
+bootstrap_repo malformed_trailer 'Repo-bootstrap: someone-else 1.2.3'
+lines 401 'x = 1' >source.py
+commit
+check 1 401 401
+bootstrap_repo prose_mention 'The Repo-bootstrap: tbhbdev 1.2.3 text is prose, not a trailer.'
+lines 401 'x = 1' >source.py
+commit
+check 1 401 401
+printf 'PASS: both limits, boundaries, free lines, exemptions, Bazel, Renovate and the bootstrap baseline\n'
