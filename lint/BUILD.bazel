@@ -6,6 +6,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//lint/private:commit_identity.bzl", "commit_identity")
+load("//lint/private:commit_messages.bzl", "commit_messages")
 load("//lint/private:gitleaks_text.bzl", "gitleaks_text")
 load("//lint/private:pr_size.bzl", "pr_size", "pr_size_count")
 load("//lint/private:review_policy.bzl", "review_policy_test")
@@ -74,6 +75,15 @@ gitleaks_text(
 # repo-checks.yml runs it on a pull request's commits.
 commit_identity(
     name = "commit_identity",
+    visibility = ["//visibility:public"],
+)
+
+# Checks the subject of each non-merge commit in a range: conventional form,
+# at most 72 characters, no fixup!/squash!/amend!/WIP, no bare generic word:
+# `bazel run @tbhb_rules//lint:commit_messages -- BASE HEAD`.
+# repo-checks.yml runs it on a pull request's commits.
+commit_messages(
+    name = "commit_messages",
     visibility = ["//visibility:public"],
 )
 

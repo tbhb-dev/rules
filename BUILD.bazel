@@ -277,6 +277,7 @@ SHELL_SCRIPTS = [
     "lint/private/cspell.sh.tpl",
     "lint/private/content/index.sh.tpl",
     "lint/private/commit_identity.sh.tpl",
+    "lint/private/commit_messages.sh.tpl",
     "lint/private/gitleaks_history.sh.tpl",
     "lint/private/gitleaks_text.sh.tpl",
     "lint/private/shell_select.sh",

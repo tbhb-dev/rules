@@ -59,7 +59,7 @@ The `repo` job clones the full history and makes these checks in order. An empty
 3. `bazel mod tidy` in each of `module-dirs`, then `git diff --exit-code` on their `MODULE.bazel`.
 4. `//:gitleaks_history`.
 5. On a pull request, `@tbhb_rules//lint:gitleaks_text` on its title and body.
-6. On a pull request, `@tbhb_rules//lint:commit_identity` and `@tbhb_rules//lint:pr_size`.
+6. On a pull request, `@tbhb_rules//lint:commit_identity`, `@tbhb_rules//lint:commit_messages`, and `@tbhb_rules//lint:pr_size`.
 7. `pip-audit-target`. Failures are non-blocking on pull requests. On pushes and schedules they fail the job.
 8. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
 9. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
