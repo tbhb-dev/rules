@@ -15,7 +15,11 @@ MAX_LENGTH = 72
 TYPES = "build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test"
 CONVENTIONAL = re.compile(rf"^(?:{TYPES})(?:\([^()\s][^()]*\))?!?: (?P<summary>\S.*)$")
 REWRITE_PREFIXES = ("fixup!", "squash!", "amend!")
-WIP = re.compile(r"(?:^|[\s\[(:])wip(?:$|[\s\])!:])", re.IGNORECASE)
+WIP = re.compile(r"(?<![a-z0-9])wip(?![a-z0-9])", re.IGNORECASE)
+# `git revert` writes `Revert "<original subject>"`, which stays as written.
+REVERT = re.compile(r'^Revert ".+"$')
+# Renovate's dependency-update subjects name the package, so they can run long.
+DEPENDENCY_UPDATE = re.compile(r"^(?:chore|fix)\(deps(?:-dev)?\): update ")
 GENERIC = frozenset(
     {
         "address feedback",
@@ -42,12 +46,14 @@ def _normalize(text: str) -> str:
 
 def problems(subject: str) -> list[str]:
     """Return what is wrong with `subject`, empty when it is acceptable."""
+    if REVERT.match(subject):
+        return []
     found = []
     if subject.startswith(REWRITE_PREFIXES):
         found.append("fixup!, squash! and amend! subjects must be reworded")
     if WIP.search(subject):
         found.append("WIP subjects are not allowed")
-    if len(subject) > MAX_LENGTH:
+    if len(subject) > MAX_LENGTH and not DEPENDENCY_UPDATE.match(subject):
         found.append(f"subject is {len(subject)} characters; the limit is {MAX_LENGTH}")
     match = CONVENTIONAL.match(subject)
     if match is None:

@@ -68,7 +68,9 @@ repos:
       - id: commit-subject
         name: Commit subject
         language: system
-        entry: bash -c 'python3 lint/private/commit_messages/check_subject.py "$1"' --
+        entry: >-
+          bash -c '[ -f "$(git rev-parse --git-path MERGE_HEAD)" ] ||
+          python3 lint/private/commit_messages/check_subject.py "$1"' --
         stages: [commit-msg]
         always_run: true
       - id: ruff-format

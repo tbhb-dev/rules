@@ -202,6 +202,7 @@ pytest_test(
     args = [
         "lint/private/claude_settings",
         "lint/private/commit_identity",
+        "lint/private/commit_messages",
         "lint/private/content",
         "lint/private/decision_records",
         "lint/private/mutation_oses",
@@ -211,6 +212,7 @@ pytest_test(
     coverage = [
         "lint/private/claude_settings",
         "lint/private/commit_identity",
+        "lint/private/commit_messages",
         "lint/private/content",
         "lint/private/decision_records",
         "lint/private/mutation_oses",

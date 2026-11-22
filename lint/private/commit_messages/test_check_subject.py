@@ -20,6 +20,9 @@ if TYPE_CHECKING:
         "chore(deps): update uv to v0.13.9",
         "refactor(api)!: drop the old route",
         "docs: " + "y" * 66,
+        'Revert "feat(x): y"',
+        "chore(deps): update dependency @opentelemetry/instrumentation-http to v0.57.0",
+        "feat: wipe the cache",
     ],
 )
 def test_accepts(subject: str) -> None:
@@ -34,6 +37,8 @@ def test_accepts(subject: str) -> None:
         ("amend! feat: x", "fixup!, squash! and amend! subjects must be reworded"),
         ("WIP: feat: x", "WIP subjects are not allowed"),
         ("feat: [wip] parser", "WIP subjects are not allowed"),
+        ("feat: WIP, add x", "WIP subjects are not allowed"),
+        ("feat: x " + "y" * 70, "the limit is 72"),
         ("feat: " + "y" * 67, "subject is 73 characters; the limit is 72"),
         ("update the thing", "subject must have the form type(scope): summary"),
         ("feat(): x", "subject must have the form type(scope): summary"),
