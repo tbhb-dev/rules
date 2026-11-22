@@ -424,7 +424,6 @@ jobs:
     name: repo
     permissions:
       contents: read
-      pull-requests: read  # the lowest open PR, for the baseline size exemption
     uses: ./.github/workflows/repo-checks.yml
     with:
       gazelle-dirs: go go/e2e/smoke

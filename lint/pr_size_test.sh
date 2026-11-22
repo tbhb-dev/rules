@@ -98,14 +98,13 @@ bootstrap_repo() {
   base=$("$git" rev-parse HEAD)
 }
 # The baseline PR is skipped only while main's live tip is its single root
-# commit, this PR is the lowest open one, and its base is that commit. The root
-# carries no trailer.
+# commit and its base is that commit. The root carries no trailer.
 big() {
   lines 401 'x = 1' >source.py
   commit
 }
 skip() { (
-  export MAIN_TIP=${MAIN_TIP-$base} PR_NUMBER=${PR_NUMBER-1} LOWEST_OPEN_PR=${LOWEST_OPEN_PR-1}
+  export MAIN_TIP=${MAIN_TIP-$base}
   "$@"
 ); }
 bootstrap_repo initial_pr
@@ -113,17 +112,12 @@ lines 3000 'x = 1' >source.py
 commit
 skip check 0 0 0
 skip count_json 0 0 null
-# Missing or mismatched live inputs leave the limit on.
+# A missing or mismatched live tip leaves the limit on.
 bootstrap_repo no_inputs
 big
 check 1 401 401
-PR_NUMBER=2 skip check 1 401 401
 MAIN_TIP=0000000000000000000000000000000000000000 skip check 1 401 401
-LOWEST_OPEN_PR='' skip check 1 401 401
-# A second PR on the unchanged base is not the lowest open one.
-bootstrap_repo second_pr
-big
-PR_NUMBER=2 skip check 1 401 401
+MAIN_TIP='' skip check 1 401 401
 # Once main moves past the root, the tip no longer matches the base.
 bootstrap_repo moved
 tip=$base
@@ -133,6 +127,26 @@ base=$("$git" rev-parse HEAD)
 lines 401 'x = 1' >second.py
 commit
 MAIN_TIP=$tip skip check 1 401 401
+# A stale root base never qualifies once main has a newer tip, even though the
+# base is still a single root commit.
+bootstrap_repo stale_base
+root=$base
+echo first >first.txt
+commit
+tip=$("$git" rev-parse HEAD)
+base=$root
+big
+MAIN_TIP=$tip skip check 1 401 401
+# A shallow clone can't prove the base is the only commit: here the base is a
+# shallow boundary that looks like a root.
+bootstrap_repo shallow_base
+echo first >first.txt
+commit
+base=$("$git" rev-parse HEAD)
+big
+"$git" clone -q --depth 2 "file://$PWD" "$scratch/shallow_clone"
+cd "$scratch/shallow_clone"
+skip check 1 401 401
 # A base that is not the single root commit never qualifies, even when it is
 # main's tip.
 bootstrap_repo two_commits

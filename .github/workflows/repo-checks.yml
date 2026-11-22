@@ -121,7 +121,6 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     permissions:
       contents: read  # checkout, and the CODEOWNERS errors API
-      pull-requests: read  # the lowest open PR, for the baseline size exemption
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
@@ -419,17 +418,14 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
         run: |
           git cat-file -e "${BASE_SHA}^{commit}" || git fetch origin "${BASE_SHA}"
-          # Live reads for the baseline exemption; a failed read leaves them
+          # A live read for the baseline exemption; a failed read leaves it
           # empty and the exemption off.
           MAIN_TIP=$(gh api "repos/${REPO}/branches/main" --jq .commit.sha 2>/dev/null) || MAIN_TIP=
-          open_prs="repos/${REPO}/pulls?state=open&base=main&sort=created&direction=asc&per_page=1"
-          LOWEST_OPEN_PR=$(gh api "${open_prs}" --jq '.[0].number' 2>/dev/null) || LOWEST_OPEN_PR=
-          export MAIN_TIP LOWEST_OPEN_PR
+          export MAIN_TIP
           bazelisk run @tbhb_rules//lint:pr_size -- "${BASE_SHA}" "${HEAD_SHA}"
 
       # Advisories change without any input changing, so the audit is never
