@@ -131,6 +131,16 @@ for (const [secret, variable] of Object.entries(settings.secrets)) {
   }
   secrets[secret] = value;
 }
+for (const [secret, variable] of Object.entries(settings.optional_secrets)) {
+  const value = process.env[variable];
+  if (!value) {
+    console.warn(
+      `${variable}, the value of the Worker secret ${secret}, is unset; keeping the Worker's existing secret`,
+    );
+    continue;
+  }
+  secrets[secret] = value;
+}
 
 // Variables no child sees. wrangler prefers a global API key
 // (CLOUDFLARE_API_KEY with CLOUDFLARE_EMAIL, or their CF_ names) over
@@ -151,6 +161,7 @@ const CREDENTIALS = [
   "CLOUDFLARE_ACCOUNT_ID",
   "CLOUDFLARE_API_TOKEN",
   ...Object.values(settings.secrets),
+  ...Object.values(settings.optional_secrets),
 ];
 
 function without(env, names) {

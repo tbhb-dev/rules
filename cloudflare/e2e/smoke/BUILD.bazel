@@ -56,6 +56,7 @@ worker_deploy(
     config = "wrangler.jsonc",
     env = "stg",
     node_modules = ":node_modules",
+    optional_secrets = {"EXTRA_TOKEN": "SMOKE_EXTRA_TOKEN"},
     pass_env = ["SMOKE_READ_TOKENS"],
     post_deploy = ["//deploy:check"],
     pre_deploy = ["//deploy:check"],
