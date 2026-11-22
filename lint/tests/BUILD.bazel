@@ -140,6 +140,7 @@ commit_identity_crlf_test(name = "commit_identity_crlf_test")
     for scenario in [
         "good",
         "bad",
+        "revert_chain",
         "merge_skipped",
     ]
 ]

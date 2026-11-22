@@ -34,6 +34,16 @@ case {scenario} in
     [[ "$out" == *'subject is too generic; say what changed'* ]] || {{ echo "$out" >&2; exit 1; }}
     [[ "$out" == *'commit_messages: 2 of 3 commits failed.'* ]] || {{ echo "$out" >&2; exit 1; }}
     ;;
+  revert_chain)
+    echo x > "$repo/f"
+    git -C "$repo" add f
+    commit 'feat(lint): check each commit message'
+    git -C "$repo" revert --no-edit HEAD >/dev/null
+    git -C "$repo" revert --no-edit HEAD >/dev/null
+    git -C "$repo" log -1 --format=%s | grep -q '^Reapply "' || {{ echo "git wrote no Reapply subject" >&2; exit 1; }}
+    out=$(run 2>&1)
+    [[ "$out" == 'commit_messages: 3 commits checked' ]] || {{ echo "$out" >&2; exit 1; }}
+    ;;
   merge_skipped)
     commit 'feat(lint): check each commit message'
     git -C "$repo" checkout -q -b side
@@ -70,7 +80,7 @@ commit_messages_scenario_test = rule(
     toolchains = SHELL_TOOLCHAINS,
     attrs = SHELL_ATTRS | {
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["good", "bad", "merge_skipped"]),
+        "scenario": attr.string(mandatory = True, values = ["good", "bad", "revert_chain", "merge_skipped"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )

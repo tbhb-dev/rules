@@ -21,7 +21,11 @@ if TYPE_CHECKING:
         "refactor(api)!: drop the old route",
         "docs: " + "y" * 66,
         'Revert "feat(x): y"',
+        'Reapply "feat(x): y"',
         "chore(deps): update dependency @opentelemetry/instrumentation-http to v0.57.0",
+        "chore(deps): pin dependency @opentelemetry/instrumentation-http to v0.57.0",
+        "chore(deps): pin ghcr.io/home-assistant/home-assistant docker tag to 1234567",
+        "chore(deps): pin docker.io/library/node docker tag to sha256:" + "a" * 64,
         "feat: wipe the cache",
     ],
 )

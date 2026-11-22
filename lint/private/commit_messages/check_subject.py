@@ -16,10 +16,12 @@ TYPES = "build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test"
 CONVENTIONAL = re.compile(rf"^(?:{TYPES})(?:\([^()\s][^()]*\))?!?: (?P<summary>\S.*)$")
 REWRITE_PREFIXES = ("fixup!", "squash!", "amend!")
 WIP = re.compile(r"(?<![a-z0-9])wip(?![a-z0-9])", re.IGNORECASE)
-# `git revert` writes `Revert "<original subject>"`, which stays as written.
-REVERT = re.compile(r'^Revert ".+"$')
-# Renovate's dependency-update subjects name the package, so they can run long.
-DEPENDENCY_UPDATE = re.compile(r"^(?:chore|fix)\(deps(?:-dev)?\): update ")
+# `git revert` writes `Revert "<original subject>"`, and reverting a revert
+# writes `Reapply "<original subject>"`. Both stay as written.
+REVERT = re.compile(r'^(?:Revert|Reapply) ".+"$')
+# Renovate's dependency subjects (`update` and `pin`) name the package, so they
+# can run long.
+DEPENDENCY_UPDATE = re.compile(r"^(?:chore|fix)\(deps(?:-dev)?\): (?:update|pin) ")
 GENERIC = frozenset(
     {
         "address feedback",
