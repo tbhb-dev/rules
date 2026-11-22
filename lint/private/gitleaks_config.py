@@ -6,6 +6,7 @@
 import sys
 import tomllib
 from pathlib import Path
+from typing import cast
 
 import tomlkit
 
@@ -43,7 +44,8 @@ def add_own_config_allowlist(
         allowlists = tomlkit.aot()
         policy["allowlists"] = allowlists
     if "allowlist" in policy:
-        allowlists.append(policy.pop("allowlist"))
+        singular = cast("dict[str, object]", policy.pop("allowlist"))
+        allowlists.append(singular)
     allowlists.append(allowlist)
 
 
