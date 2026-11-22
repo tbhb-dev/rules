@@ -97,32 +97,70 @@ bootstrap_repo() {
   "$git" -c user.name=test -c user.email=test@example.invalid commit -qm 'chore: bootstrap' -m "$2" --allow-empty
   base=$("$git" rev-parse HEAD)
 }
-# An initial PR on a bootstrap-only main is skipped, however large.
-bootstrap_repo initial_pr 'Repo-bootstrap: tbhbdev 1.2.3'
+# The baseline PR is skipped only while main's live tip is the bootstrap root,
+# this PR is the lowest open one, and the root carries the exact trailer.
+big() {
+  lines 401 'x = 1' >source.py
+  commit
+}
+skip() { (
+  export MAIN_TIP=${MAIN_TIP-$base} PR_NUMBER=${PR_NUMBER-1} LOWEST_OPEN_PR=${LOWEST_OPEN_PR-1}
+  "$@"
+); }
+trailer='Repo-bootstrap: tbhbdev 1.2.3'
+bootstrap_repo initial_pr "$trailer"
 lines 3000 'x = 1' >source.py
 commit
-check 0 0 0
-count_json 0 0 null
-# A second PR is checked: its base holds more than the bootstrap commit.
-commit_base() { base=$("$git" rev-parse HEAD); }
-commit_base
+skip check 0 0 0
+skip count_json 0 0 null
+# Missing or mismatched live inputs leave the limit on.
+bootstrap_repo no_inputs "$trailer"
+big
+check 1 401 401
+PR_NUMBER=2 skip check 1 401 401
+MAIN_TIP=0000000000000000000000000000000000000000 skip check 1 401 401
+LOWEST_OPEN_PR='' skip check 1 401 401
+# A second PR on the unchanged base is not the lowest open one.
+bootstrap_repo second_pr "$trailer"
+big
+PR_NUMBER=2 skip check 1 401 401
+# Once main moves past the root, the tip no longer matches the base.
+bootstrap_repo moved "$trailer"
+tip=$base
+echo first >first.txt
+commit
+base=$("$git" rev-parse HEAD)
 lines 401 'x = 1' >second.py
 commit
-check 1 401 401
-# A trailer on a later commit never qualifies, and neither does a root commit
-# without the trailer or one with a malformed trailer.
+MAIN_TIP=$tip skip check 1 401 401
+# A trailer on a later commit never qualifies.
 new_repo late_trailer
-"$git" -c user.name=test -c user.email=test@example.invalid commit -qm bootstrap -m 'Repo-bootstrap: tbhbdev 1.2.3' --allow-empty
+"$git" -c user.name=test -c user.email=test@example.invalid commit -qm bootstrap -m "$trailer" --allow-empty
 base=$("$git" rev-parse HEAD)
-lines 401 'x = 1' >source.py
-commit
-check 1 401 401
-bootstrap_repo malformed_trailer 'Repo-bootstrap: someone-else 1.2.3'
-lines 401 'x = 1' >source.py
-commit
-check 1 401 401
-bootstrap_repo prose_mention 'The Repo-bootstrap: tbhbdev 1.2.3 text is prose, not a trailer.'
-lines 401 'x = 1' >source.py
-commit
-check 1 401 401
+big
+skip check 1 401 401
+# Malformed, near-miss, folded and prose trailers never qualify.
+n=0
+for message in 'Repo-bootstrap: someone-else 1.2.3' \
+  'Repo-bootstrap:  tbhbdev 1.2.3' \
+  'Repo-bootstrap : tbhbdev 1.2.3' \
+  'Repo-bootstrap:tbhbdev 1.2.3' \
+  "$trailer
+  folded" \
+  "The $trailer text is prose, not a trailer."; do
+  n=$((n + 1))
+  bootstrap_repo "near_miss_$n" "$message"
+  big
+  skip check 1 401 401
+done
+# A trailing space survives only with verbatim cleanup.
+mkdir "$scratch/trailing_space"
+cd "$scratch/trailing_space"
+"$git" init -q
+"$git" -c user.name=test -c user.email=test@example.invalid commit -q --cleanup=verbatim --allow-empty -m "chore: bootstrap
+
+$trailer "
+base=$("$git" rev-parse HEAD)
+big
+skip check 1 401 401
 printf 'PASS: both limits, boundaries, free lines, exemptions, Bazel, Renovate and the bootstrap baseline\n'
