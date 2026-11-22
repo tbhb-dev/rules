@@ -9,7 +9,7 @@ _GIT = """#!/usr/bin/env bash
 set -euo pipefail
 case "$*" in
   'rev-parse --verify --quiet '*) exit 0 ;;
-  'log --format='*)
+  'log --no-merges --format='*)
     printf '%s\\t%s%s\\n' abc123 'tbhb.dev Agent <agent@tonyburns.net> -> tbhb.dev Agent <agent@tonyburns.net>' "$ENDING"
     ;;
   'log -1 --format=%ae%n%ce abc123')

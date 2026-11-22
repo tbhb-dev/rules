@@ -388,9 +388,9 @@ jobs:
           SCAN_MODE: ${{ github.event_name == 'pull_request' && '--merge-range' || '--log-opts=HEAD' }}
         run: bazelisk run //:gitleaks_history -- "$SCAN_MODE"
 
-      # A pull request's title and body become the squash commit's message,
-      # so they get the same rules as the history. pr-text.yml scans them
-      # again after an edit.
+      # A pull request's title becomes the merge commit's title and its body
+      # is public with it, so both get the same rules as the history.
+      # pr-text.yml scans them again after an edit.
       - name: Scan the pull request's title and body for secrets
         if: github.event_name == 'pull_request'
         env:
@@ -408,7 +408,7 @@ jobs:
 
       # A pull request's own commits, base to head, must each carry an
       # allowed (author, committer) pair; the list is in tbhb_rules. The
-      # squash commit a merge writes is not in the range.
+      # merge commit a merge writes is not in the range.
       - name: Check the pull request's commit identities
         if: github.event_name == 'pull_request'
         env:

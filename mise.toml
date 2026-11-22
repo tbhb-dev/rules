@@ -49,7 +49,7 @@ run = "tbhbdev alpha pr"
 
 # Usage: mise run merge -- PR [--dry-run].
 [tasks.merge]
-description = "Squash-merge an approved PR with a plain-text commit message (tbhbdev alpha)"
+description = "Merge an approved PR with a merge commit titled from the PR (tbhbdev alpha)"
 run = "tbhbdev alpha merge"
 
 # The Bazel suites CI runs, in the same order, for one local or peer run

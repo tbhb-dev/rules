@@ -6,12 +6,12 @@ tags: [design, content]
 status: stable
 generated:
   - role: generated
-    harness: codex:0.166.0
-    model: openai:gpt-6.1-sol
-    effort: high
-    surface: exec
-    session: sha-256-64:59fe70e1ae90cafb
-    at: "2026-11-15T14:56:36Z"
+    harness: claude-code:2.1.330
+    model: anthropic:claude-sonnet-5-5
+    effort: medium
+    surface: cli
+    session: sha-256-64:debb814921f029ad
+    at: "2026-11-22T21:23:46Z"
 ---
 
 # Design review checklist
@@ -65,4 +65,4 @@ Non-blocking:
 Checked: <decision-record search terms and sources spot-checked>
 ```
 
-The verdict covers that commit alone. A later commit needs a fresh review of the diff and every checklist item it could affect. The mechanical checks supplement this review. They can't establish the substance of a proposal.
+The verdict covers that commit alone. A force-pushed head is a new head, so it needs a fresh review too. A later commit needs a fresh review of the diff and every checklist item it could affect. The mechanical checks supplement this review. They can't establish the substance of a proposal.
