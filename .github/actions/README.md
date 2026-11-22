@@ -114,7 +114,7 @@ jobs:
       GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
 ```
 
-It takes one input, `runs-on`, with the default `ubuntu-26.04`. It reads the same fetch list from the pinned Bazel module and restores caches without saving them.
+It takes one input, `runs-on`, with no default: a private caller uses the org's private runner label and a public caller uses `ubuntu-26.04`. It reads the same fetch list from the pinned Bazel module and restores caches without saving them.
 
 ## In a consumer's `ci.yml`
 
