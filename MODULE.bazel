@@ -27,6 +27,7 @@ use_repo(
     "tbhb_rules_bats",
     "tbhb_rules_buildifier",
     "tbhb_rules_cog",
+    "tbhb_rules_cue",
     "tbhb_rules_editorconfig_checker",
     "tbhb_rules_git",
     "tbhb_rules_gitleaks",
