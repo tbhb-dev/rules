@@ -22,26 +22,21 @@ if [[ ${PR_AUTHOR:-} == 'tbhb-dev-renovate[bot]' ]]; then
 fi
 base=$1 head=$2
 # A repository's baseline PR is exempt. It is the lowest-numbered open PR into
-# main while main's live tip is still the single root commit that
-# `tbhbdev repo bootstrap` creates, and that commit carries the bootstrap
-# trailer as a full line, both in the raw message and in the parsed trailers.
+# main while main's live tip is still its single root commit, and this PR's base
+# is that commit. The root needs no trailer: admin-vm creates repositories with
+# auto_init, so no root commit carries one.
 # MAIN_TIP and LOWEST_OPEN_PR are live API reads the workflow passes in. Any
 # missing input (no tip, no PR numbers, a shallow clone) means no
 # exemption. PR numbers only grow, so the lowest open PR cannot be displaced,
 # and a PR checked while not lowest gets the limit. A run after main moves
 # sees a different tip and applies the limit.
-bootstrap_line='^Repo-bootstrap: tbhbdev [^[:space:]]+$'
 base_commit=$("$git" rev-parse --verify --quiet "$base^{commit}") || base_commit=
 if [[ -n $base_commit && -n ${PR_NUMBER:-} && ${PR_NUMBER:-} == "${LOWEST_OPEN_PR:-}" &&
   $("$git" rev-parse --is-shallow-repository) == false &&
   $("$git" rev-list --count "$base_commit") == 1 &&
   ${MAIN_TIP:-} == "$base_commit" ]]; then
-  message=$("$git" log -1 --format=%B "$base_commit")
-  trailers=$("$git" interpret-trailers --parse <<<"$message")
-  if grep -Eqx -- "$bootstrap_line" <<<"$message" && grep -Eqx -- "$bootstrap_line" <<<"$trailers"; then
-    echo '{"code_lines": 0, "code_limit": 400, "raw_lines": 0, "raw_limit": 1500, "failed": null}'
-    exit 0
-  fi
+  echo '{"code_lines": 0, "code_limit": 400, "raw_lines": 0, "raw_limit": 1500, "failed": null}'
+  exit 0
 fi
 work=$(mktemp -d "${TMPDIR:-/tmp}/pr-size.XXXXXX")
 trap 'rm -rf "$work"' EXIT
