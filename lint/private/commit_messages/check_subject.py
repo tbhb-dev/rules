@@ -14,7 +14,7 @@ from pathlib import Path
 MAX_LENGTH = 72
 TYPES = "build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test"
 CONVENTIONAL = re.compile(rf"^(?:{TYPES})(?:\([^()\s][^()]*\))?!?: (?P<summary>\S.*)$")
-AUTOSQUASH = ("fixup!", "squash!", "amend!")
+REWRITE_PREFIXES = ("fixup!", "squash!", "amend!")
 WIP = re.compile(r"(?:^|[\s\[(:])wip(?:$|[\s\])!:])", re.IGNORECASE)
 GENERIC = frozenset(
     {
@@ -43,7 +43,7 @@ def _normalize(text: str) -> str:
 def problems(subject: str) -> list[str]:
     """Return what is wrong with `subject`, empty when it is acceptable."""
     found = []
-    if subject.startswith(AUTOSQUASH):
+    if subject.startswith(REWRITE_PREFIXES):
         found.append("fixup!, squash! and amend! subjects must be reworded")
     if WIP.search(subject):
         found.append("WIP subjects are not allowed")
