@@ -56,7 +56,7 @@ package = false
 # finds, and a resolver from another minor line rewrites uv.lock in ways
 # `uv lock --check` then reports as drift. This range is uv refusing to run
 # rather than the lockfile churning. Move it with the mise pin.
-required-version = "==0.13.8"
+required-version = "==0.13.9"
 
 [tool.complexipy]
 paths = ["repo/baseline", "repo/tests", "lint/private/claude_settings", "lint/private/commit_identity", "lint/private/content", "lint/private/decision_records", "lint/private/mutation_oses", "lint/private/okf_docs", "runtime/private"]
