@@ -109,11 +109,16 @@ pr_size_count(
     visibility = ["//visibility:public"],
 )
 
-# The org floor for the review policy files, checked by the tbhbdev release
-# MODULE.bazel pins. See //lint/private:review_policy.bzl.
+# The org floor for the review policy files, checked by the tbhbdev commit
+# archive that MODULE.bazel pins. See //lint/private:review_policy.bzl.
 review_policy_test(
     name = "review_policy_test",
     srcs = ["//:review_policy_files"],
+    # Tech debt: not run on windows-2025 yet (AGENTS.md exclusion); make the test run on Windows and remove this.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )
 
 sh_test(
