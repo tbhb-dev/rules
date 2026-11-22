@@ -126,6 +126,7 @@ nosystem
 NTFS
 numstat
 oklch
+onepasswordconnectsdk
 owenlamont
 oxipng
 perfsprint

@@ -153,6 +153,18 @@ bzl_library(
 )
 
 bzl_library(
+    name = "review_policy",
+    srcs = ["review_policy.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        ":tree_check",
+        "//runtime:defs",
+        "//shell:defs",
+        "@bazel_skylib//lib:shell",
+    ],
+)
+
+bzl_library(
     name = "reuse",
     srcs = ["reuse.bzl"],
     visibility = ["//lint:__subpackages__"],

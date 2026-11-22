@@ -8,6 +8,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//lint/private:commit_identity.bzl", "commit_identity")
 load("//lint/private:gitleaks_text.bzl", "gitleaks_text")
 load("//lint/private:pr_size.bzl", "pr_size", "pr_size_count")
+load("//lint/private:review_policy.bzl", "review_policy_test")
 load("//repo:defs.bzl", "repo_files")
 load("//runtime:defs.bzl", "python_tool")
 
@@ -106,6 +107,13 @@ pr_size(
 pr_size_count(
     name = "pr_size_count",
     visibility = ["//visibility:public"],
+)
+
+# The org floor for the review policy files, checked by the tbhbdev release
+# MODULE.bazel pins. See //lint/private:review_policy.bzl.
+review_policy_test(
+    name = "review_policy_test",
+    srcs = ["//:review_policy_files"],
 )
 
 sh_test(

@@ -47,8 +47,10 @@ use_repo(
 # The pinned Python that reuse_test and okf_docs_test run on: uv (pinned per
 # platform in runtime/private/versions.bzl) installs the interpreter and
 # syncs runtime/tools/uv.lock, every package hash-checked. No rules_python.
+# runtime/review_policy is a second, separate project of the same kind, for
+# the tbhbdev review policy check.
 runtime = use_extension("//runtime:extensions.bzl", "runtime")
-use_repo(runtime, "tbhb_rules_python_runtime")
+use_repo(runtime, "tbhb_rules_python_runtime", "tbhb_rules_review_policy_runtime")
 
 # cspell ships only on npm, so rules_js installs it from a committed pnpm
 # lock, with every package pinned by integrity hash and no lifecycle script
@@ -141,6 +143,27 @@ http_archive(
     sha256 = "ec800fc5dbfcaeb7033f1ca75a4efcb631e22a4e03803cd9866c8400270f3ac4",
     strip_prefix = "schemastore-f0e072bb85076fcae82bebf058cf86520d4ea450",
     url = "https://github.com/SchemaStore/schemastore/archive/f0e072bb85076fcae82bebf058cf86520d4ea450.tar.gz",
+)
+
+# tbhbdev's source at one commit, for //lint:review_policy_test, which runs
+# its `alpha review policy check`. The check reads the org floor from the
+# package's own data, so the source tree is what it needs; the dependencies
+# come from runtime/review_policy/uv.lock. Renovate moves the commit.
+http_archive(
+    name = "tbhb_rules_tbhbdev_src",
+    build_file_content = """exports_files(
+    ["src/tbhbdev/__init__.py"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "src",
+    srcs = glob(["src/**"]),
+    visibility = ["//visibility:public"],
+)""",
+    sha256 = "046d22cf414e63a778bc52c76e8754fb92f1a55840eae53bc4a8ab30550ec0d5",
+    strip_prefix = "tools-1315242b4c37b8f3b151bdfebaeef08c480855c1",
+    url = "https://github.com/tbhb-dev/tools/archive/1315242b4c37b8f3b151bdfebaeef08c480855c1.tar.gz",
 )
 
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
