@@ -272,6 +272,27 @@ test("deploys at 0%, tests, moves to 100%, tests again", () => {
   );
 });
 
+test("an unset optional secret warns and is left out of the upload", () => {
+  const r = deploy("deploy_stg");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(
+    r.stderr,
+    /SMOKE_EXTRA_TOKEN, the value of the Worker secret EXTRA_TOKEN, is unset; keeping/,
+  );
+  assert.ok(!("EXTRA_TOKEN" in r.calls[1].secrets));
+});
+
+test("a set optional secret is uploaded with the others", () => {
+  const r = deploy("deploy_stg", { SMOKE_EXTRA_TOKEN: "extra-1c9e" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(r.calls[1].secrets, {
+    READ_TOKENS: READ,
+    MAIN_TOKEN: MAIN,
+    EXTRA_TOKEN: "extra-1c9e",
+  });
+  assert.ok(!r.stderr.includes("extra-1c9e"));
+});
+
 test("a failed pre-deploy test leaves the previous version serving", () => {
   const r = deploy("deploy_stg", { FAKE_FAIL: "pre" });
   assert.equal(r.status, 1);

@@ -131,6 +131,7 @@ def worker_deploy(
         config = "wrangler.jsonc",
         node_modules = None,
         secrets = {},
+        optional_secrets = {},
         pre_deploy = [],
         post_deploy = [],
         pass_env = [],
@@ -212,6 +213,9 @@ def worker_deploy(
         node_modules: The consumer's `npm_link_all_packages` target, when the
             Worker imports packages.
         secrets: Worker secret name to the environment variable holding its value.
+            The deploy stops when a variable is unset.
+        optional_secrets: Like `secrets`, but a variable that is unset only warns,
+            and the Worker keeps the secret it already has.
         pre_deploy: Executables to run against the new version at 0%.
         post_deploy: Executables to run against the live URL after the move.
         pass_env: Variables the tests may see although they hold credentials
@@ -237,6 +241,7 @@ def worker_deploy(
         "config": "$(rootpath {})".format(config),
         "env": env,
         "message": message,
+        "optional_secrets": optional_secrets,
         "pass_env": pass_env,
         "post_deploy": ["$(rootpath {})".format(t) for t in post_deploy],
         "pre_deploy": ["$(rootpath {})".format(t) for t in pre_deploy],
