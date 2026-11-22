@@ -65,6 +65,7 @@ The `repo` job clones the full history and makes these checks in order. An empty
 9. `govulncheck-target`, in `govulncheck-working-directory`, and keep the report as an artifact.
 10. zizmor, with the online audits, and the pedantic persona.
 11. `bazelisk run @tbhb_rules//lint:codeowners_errors` checks CODEOWNERS owners and syntax through the GitHub API, with `curl` and `jq`. API failures fail the check when a CODEOWNERS file exists.
+12. `@tbhb_rules//lint:runner_default` requires every job in a reusable workflow with a `runs-on` input to use the shared default expression. An explicit input wins. A private caller then reads the org variable `PRIVATE_RUNNER_LABEL`, and a public caller, an unset variable and an invisible variable all resolve to `ubuntu-26.04`. The check also rejects an input default and any other job that reads the variable outside that expression.
 
 The size check fails when a pull request adds more than 400 `scc` Code lines in programming languages or 1,500 raw lines, including config. It uses the three-dot base/head diff. Deletions are free. Blanks and comments are free under the Code limit and count under the raw limit. Tests and Bazel files count as code. Renovate (`tbhb-dev-renovate[bot]`) is exempt. Other events skip the step. Failures feed the caller's `conclusion` job.
 
@@ -76,7 +77,7 @@ On a pull request and on a push alike, the history scan covers only the tested c
 
 | Input                           | Default             | Meaning                                                            |
 |---------------------------------|---------------------|--------------------------------------------------------------------|
-| `runs-on`                       | `ubuntu-26.04`      | The runner label.                                                  |
+| `runs-on`                       | none                | The runner label. Unset, a private caller uses `vars.PRIVATE_RUNNER_LABEL` and a public one `ubuntu-26.04`. |
 | `timeout-minutes`               | `15`                | The job's timeout.                                                 |
 | `retry-budget-minutes`          | `8`                 | Whole minutes the gazelle build and `bazel mod tidy` retries may spend, all directories together, counted from the end of the Bazel setup. |
 | `pip-audit-target`              | `//tools:pip_audit` | The Python audit target.                                           |
@@ -113,7 +114,7 @@ jobs:
       GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
 ```
 
-It takes one input, `runs-on`, with the default `ubuntu-26.04`. It reads the same fetch list from the pinned Bazel module and restores caches without saving them.
+It takes one input, `runs-on`, with no default: a private caller uses the org's private runner label and a public caller uses `ubuntu-26.04`. It reads the same fetch list from the pinned Bazel module and restores caches without saving them.
 
 ## In a consumer's `ci.yml`
 

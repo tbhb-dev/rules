@@ -36,6 +36,13 @@ python_tool(
 )
 
 python_tool(
+    name = "runner_default",
+    main = "//lint/private/runner_default:check_runner_default.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
+
+python_tool(
     name = "gitleaks_guard",
     main = "//lint/private:gitleaks_guard.py",
     python_env = "@tbhb_rules_python_runtime//:env",
