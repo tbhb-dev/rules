@@ -72,8 +72,10 @@ regex = '"'''/home/[a-z]+/\\.codex/auth\\.json'''"'
     cat "$work/out"
     [[ $status == 0 ]]
     grep -q 'no leaks found' "$work/out"
-    mkdir -p "$work/docs"
+    mkdir -p "$work/docs" "$work/sub"
     printf '/home/x/.codex/auth.json\\n' >"$work/docs/x.md"
+    printf '/home/x/.codex/auth.json\\n' >"$work/sub/.gitleaks.toml"
+    (printf '# '; {fixture}) >>"$work/.gitleaks.toml"
     (cd "$work" && "$subject" dir --no-banner --redact --verbose --config .gitleaks.toml .) >"$work/out" 2>&1 || status=$?
     ;;
   own_config_history)
@@ -89,9 +91,11 @@ regex = '"'''/home/[a-z]+/\\.codex/auth\\.json'''"'
     cat "$work/out"
     [[ $status == 0 ]]
     grep -q 'no leaks found' "$work/out"
-    mkdir -p "$work/docs"
+    mkdir -p "$work/docs" "$work/sub"
     printf '/home/x/.codex/auth.json\\n' >"$work/docs/x.md"
-    git -C "$work" add docs/x.md
+    printf '/home/x/.codex/auth.json\\n' >"$work/sub/.gitleaks.toml"
+    (printf '# '; {fixture}) >>"$work/.gitleaks.toml"
+    git -C "$work" add docs/x.md sub/.gitleaks.toml .gitleaks.toml
     git -C "$work" commit -qm other_path
     BUILD_WORKSPACE_DIRECTORY="$work" "$subject" --log-opts=HEAD >"$work/out" 2>&1 || status=$?
     ;;
@@ -103,7 +107,10 @@ elif [[ {scenario} == own_config_* ]]; then
   [[ $status == 1 ]]
   grep -Eq 'RuleID: +credential-absolute-path' "$work/out"
   grep -Eq 'File: +docs/x\\.md' "$work/out"
-  ! grep -Eq 'File: +\\.gitleaks\\.toml' "$work/out"
+  grep -Eq 'File: +sub/\\.gitleaks\\.toml' "$work/out"
+  grep -Eq 'RuleID: +generic-api-key' "$work/out"
+  grep -Eq 'Fingerprint: +([0-9a-f]+:)?\\.gitleaks\\.toml:generic-api-key:' "$work/out"
+  ! grep -Eq 'Fingerprint: +([0-9a-f]+:)?\\.gitleaks\\.toml:credential-absolute-path:' "$work/out"
 else
   [[ $status == 1 ]] && grep -Eq 'RuleID: +generic-api-key' "$work/out"
   if [[ {scenario} == private ]]; then
