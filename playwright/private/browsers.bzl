@@ -20,9 +20,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # The playwright-core release these browsers belong to, and its
 # browsers.json entries for chromium-headless-shell.
-PLAYWRIGHT_VERSION = "1.65.0"
-CHROMIUM_HEADLESS_SHELL_REVISION = "1254"
-CHROMIUM_HEADLESS_SHELL_VERSION = "158.0.8127.18"
+PLAYWRIGHT_VERSION = "1.65.1"
+CHROMIUM_HEADLESS_SHELL_REVISION = "1255"
+CHROMIUM_HEADLESS_SHELL_VERSION = "159.0.8154.6"
 
 _PREFIX = "chromium_headless_shell-" + CHROMIUM_HEADLESS_SHELL_REVISION
 
@@ -38,32 +38,32 @@ def _browsers_impl(mctx):
         name = "tbhb_rules_playwright_chromium_headless_shell_linux_arm64",
         add_prefix = _PREFIX,
         build_file_content = _BUILD,
-        sha256 = "b136462898353d94c7fab50f9cdaa6d8f0d4c190153916936aa0a03353a26bf2",
-        url = "https://cdn.playwright.dev/builds/cft/158.0.8127.18/linux-arm64/chrome-headless-shell-linux-arm64.zip",
+        sha256 = "e1262e9f4f244c441dcb54aa0e9abe4cf7b266ab02dc666fd975bd55aba9b3dc",
+        url = "https://cdn.playwright.dev/builds/cft/159.0.8154.6/linux-arm64/chrome-headless-shell-linux-arm64.zip",
     )
 
     http_archive(
         name = "tbhb_rules_playwright_chromium_headless_shell_linux_x86_64",
         add_prefix = _PREFIX,
         build_file_content = _BUILD,
-        sha256 = "18352d22cb0cdf520cbff2ad8c41391f0e02a72886cb53b0fde4bdfc4bd075d6",
-        url = "https://cdn.playwright.dev/builds/cft/158.0.8127.18/linux64/chrome-headless-shell-linux64.zip",
+        sha256 = "77a6442fd3c8acd3bef9e1067fc26f5ef464277d22f0e8cb58dc3e4077a3e458",
+        url = "https://cdn.playwright.dev/builds/cft/159.0.8154.6/linux64/chrome-headless-shell-linux64.zip",
     )
 
     http_archive(
         name = "tbhb_rules_playwright_chromium_headless_shell_macos_arm64",
         add_prefix = _PREFIX,
         build_file_content = _BUILD,
-        sha256 = "f34261d2aad94fb71b336597acabf20166ee5a2f14926c731f33d04c5da6cd3f",
-        url = "https://cdn.playwright.dev/builds/cft/158.0.8127.18/mac-arm64/chrome-headless-shell-mac-arm64.zip",
+        sha256 = "b08e7beaf02a19e2ee5ed6955f9c3853ab9176cd5bb57ba87afbb82e9f81cc29",
+        url = "https://cdn.playwright.dev/builds/cft/159.0.8154.6/mac-arm64/chrome-headless-shell-mac-arm64.zip",
     )
 
     http_archive(
         name = "tbhb_rules_playwright_chromium_headless_shell_windows_x86_64",
         add_prefix = _PREFIX,
         build_file_content = _BUILD,
-        sha256 = "fdd3721ad0299ddd419d170ce8ab89aecf8631d157b85215474b4a70c8dcd061",
-        url = "https://cdn.playwright.dev/builds/cft/158.0.8127.18/win64/chrome-headless-shell-win64.zip",
+        sha256 = "5db6a6948e6d1299ea3bc87c420d467bf343feae186a316921c930ce02056af5",
+        url = "https://cdn.playwright.dev/builds/cft/159.0.8154.6/win64/chrome-headless-shell-win64.zip",
     )
 
     return mctx.extension_metadata(reproducible = True)
