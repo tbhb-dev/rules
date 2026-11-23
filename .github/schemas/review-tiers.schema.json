@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/tbhb-dev/rules/main/.github/schemas/review-tiers.schema.json",
+  "title": "Review tiers",
+  "description": "Review requirements declared in .github/review-tiers.toml.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "exact_head", "tiers"],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "exact_head": {
+      "description": "A verdict counts only for the pull request head commit the reviewer judged.",
+      "const": true
+    },
+    "tiers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["1", "2", "3"],
+      "properties": {
+        "1": {
+          "description": "Additive, low-risk changes.",
+          "$ref": "#/$defs/review_requirement"
+        },
+        "2": {
+          "description": "Behavior changes.",
+          "$ref": "#/$defs/review_requirement"
+        },
+        "3": {
+          "description": "Changes to security, schemas, rulesets, or merge authority.",
+          "$ref": "#/$defs/review_requirement"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "review_requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewer_count", "reviewer_class"],
+      "properties": {
+        "reviewer_count": {
+          "description": "Minimum number of reviewers from the required class.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "reviewer_class": {
+          "description": "Class of reviewer whose verdict can count toward the requirement.",
+          "type": "string",
+          "pattern": "\\S"
+        }
+      }
+    }
+  }
+}
