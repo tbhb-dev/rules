@@ -1481,6 +1481,342 @@
         "status": "draft",
         "id": "docs-2/R-123456"
       }
+    },
+    {
+      "name": "type Threat Model",
+      "frontmatter": {
+        "type": "Threat Model",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Component Design",
+      "frontmatter": {
+        "type": "Component Design",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Note",
+      "frontmatter": {
+        "type": "Note",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Domain Model",
+      "frontmatter": {
+        "type": "Domain Model",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Report",
+      "frontmatter": {
+        "type": "Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Design Note",
+      "frontmatter": {
+        "type": "Design Note",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Design Brainstorm",
+      "frontmatter": {
+        "type": "Design Brainstorm",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Analysis",
+      "frontmatter": {
+        "type": "Analysis",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Host Notes",
+      "frontmatter": {
+        "type": "Host Notes",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Validation Report",
+      "frontmatter": {
+        "type": "Validation Report",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Checklist",
+      "frontmatter": {
+        "type": "Checklist",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Security Design",
+      "frontmatter": {
+        "type": "Security Design",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Plan",
+      "frontmatter": {
+        "type": "Plan",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Data Model",
+      "frontmatter": {
+        "type": "Data Model",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Evidence",
+      "frontmatter": {
+        "type": "Evidence",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Design Inventory",
+      "frontmatter": {
+        "type": "Design Inventory",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Spike Candidates",
+      "frontmatter": {
+        "type": "Spike Candidates",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Changelog",
+      "frontmatter": {
+        "type": "Changelog",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Specification",
+      "frontmatter": {
+        "type": "Specification",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type API Reference",
+      "frontmatter": {
+        "type": "API Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Build Reference",
+      "frontmatter": {
+        "type": "Build Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Backlog",
+      "frontmatter": {
+        "type": "Backlog",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Index",
+      "frontmatter": {
+        "type": "Index",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type CLI Reference",
+      "frontmatter": {
+        "type": "CLI Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Component Reference",
+      "frontmatter": {
+        "type": "Component Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Glossary",
+      "frontmatter": {
+        "type": "Glossary",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Architecture",
+      "frontmatter": {
+        "type": "Architecture",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
+    },
+    {
+      "name": "type Design Review Template",
+      "frontmatter": {
+        "type": "Design Review Template",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft"
+      }
     }
   ],
   "invalid": [
@@ -1520,6 +1856,72 @@
       ]
     },
     {
+      "name": "implementation is an additional property",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "implementation": "pending"
+      },
+      "errors": [
+        "$: Additional properties are not allowed ('implementation' was unexpected)"
+      ]
+    },
+    {
+      "name": "graduates_to is an additional property",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "graduates_to": "design.md"
+      },
+      "errors": [
+        "$: Additional properties are not allowed ('graduates_to' was unexpected)"
+      ]
+    },
+    {
+      "name": "repos is an additional property",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "repos": [
+          "rules"
+        ]
+      },
+      "errors": [
+        "$: Additional properties are not allowed ('repos' was unexpected)"
+      ]
+    },
+    {
+      "name": "okf_version is an additional property",
+      "frontmatter": {
+        "type": "Reference",
+        "title": "T",
+        "description": "D",
+        "tags": [
+          "docs"
+        ],
+        "status": "draft",
+        "okf_version": "0.2"
+      },
+      "errors": [
+        "$: Additional properties are not allowed ('okf_version' was unexpected)"
+      ]
+    },
+    {
       "name": "unknown type",
       "frontmatter": {
         "type": "Notes",
@@ -1539,7 +1941,7 @@
         ]
       },
       "errors": [
-        "$.type: 'Notes' is not one of ['Readme', 'Agent Instructions', 'Overview', 'Architecture Overview', 'Reference', 'How-to', 'Design Draft', 'Design Appendix', 'Spike', 'Research Report', 'Runbook', 'Incident Report', 'Brief', 'Review Packet', 'Writing Checklist', 'Review Checklist', 'Content Template', 'Decision Record', 'Policy']"
+        "$.type: 'Notes' is not one of ['Readme', 'Agent Instructions', 'Overview', 'Architecture Overview', 'Reference', 'How-to', 'Design Draft', 'Design Appendix', 'Spike', 'Research Report', 'Runbook', 'Incident Report', 'Brief', 'Review Packet', 'Writing Checklist', 'Review Checklist', 'Content Template', 'Decision Record', 'Policy', 'Threat Model', 'Component Design', 'Note', 'Domain Model', 'Report', 'Design Note', 'Design Brainstorm', 'Analysis', 'Host Notes', 'Validation Report', 'Checklist', 'Security Design', 'Plan', 'Data Model', 'Evidence', 'Design Inventory', 'Spike Candidates', 'Changelog', 'Specification', 'API Reference', 'Build Reference', 'Backlog', 'Index', 'CLI Reference', 'Component Reference', 'Glossary', 'Architecture', 'Design Review Template']"
       ]
     },
     {
