@@ -10,11 +10,6 @@ from pathlib import Path
 import pytest
 
 
-def test_workflow_checks_consumer_mapping() -> None:
-    workflow = Path(".github/workflows/repo-checks.yml").read_text()
-    assert "bazelisk run @tbhb_rules//lint:gitleaks_guard" in workflow
-
-
 @pytest.mark.parametrize(
     "base_text",
     ["", "[[allowlists]]\npaths = ['''^\\.gitleaks\\.toml$''']\n"],

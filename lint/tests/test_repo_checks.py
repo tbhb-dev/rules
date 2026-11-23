@@ -17,38 +17,92 @@ ROOT = Path(__file__).absolute().parents[2]
 RUN = re.compile(rf"\bbazelisk\s+run\s+['\"]?({TARGET.pattern})")
 
 
-def test_workflow_drift() -> None:
+def _workflow_runs(runner: str) -> tuple[list[tuple[str | None, str]], list[str]]:
     workflow = yaml.safe_load((ROOT / ".github/workflows/repo-checks.yml").read_text())
-    known = set((ROOT / "repo_check_targets.txt").read_text().splitlines())
-    known.update((ROOT / "lint/repo_check_targets.txt").read_text().splitlines())
-    checks = read_checks(ROOT / "lint/repo_checks.toml")
-    configured = {check.target for check in checks}
-    workflow_targets = set()
+    runner_steps = []
+    workflow_targets = []
     for job in workflow["jobs"].values():
         for step in job.get("steps", []):
             run = step.get("run", "").replace("\\\n", " ")
             for line in run.splitlines():
                 if not line.lstrip().startswith("#"):
-                    workflow_targets.update(RUN.findall(line))
+                    targets = RUN.findall(line)
+                    workflow_targets.extend(targets)
+                    if runner in targets:
+                        assert not step.get("continue-on-error", False)
+                        runner_steps.append((step.get("if"), line.strip()))
+    return runner_steps, workflow_targets
+
+
+def test_workflow_drift() -> None:
+    known = set((ROOT / "repo_check_targets.txt").read_text().splitlines())
+    known.update((ROOT / "lint/repo_check_targets.txt").read_text().splitlines())
+    checks = read_checks(ROOT / "lint/repo_checks.toml")
+    configured = {check.target for check in checks}
+    runner = "@tbhb_rules//lint:repo_checks"
+    runner_steps, workflow_targets = _workflow_runs(runner)
+    assert runner_steps == [
+        ("github.event_name != 'pull_request'", f"bazelisk run {runner} -- --no-range"),
+        (
+            "github.event_name == 'pull_request'",
+            (
+                f"bazelisk run {runner} -- --base-branch "
+                '"${BASE_REF}" "${HEAD_SHA}" "${HEAD_BRANCH}"'
+            ),
+        ),
+    ]
+    direct_targets = set(workflow_targets) - {runner}
+    local_targets = {check.target for check in checks if check.runs_locally}
+    duplicated = direct_targets & local_targets
+    assert not duplicated, sorted(duplicated)
 
     # The workflow also calls root targets that each consumer defines.
-    missing = {t for t in workflow_targets if t.startswith("@") or t in known}
+    missing = {t for t in direct_targets if t.startswith("@") or t in known}
     assert not (missing - configured), sorted(missing - configured)
     unknown = {target.removeprefix("@tbhb_rules") for target in configured} - known
     assert not unknown, sorted(unknown)
 
 
+def _assert_no_range_output(calls: Path, stdout: str, status: int) -> None:
+    assert calls.read_text().splitlines() == [
+        "run @tbhb_rules//lint:job_timeouts",
+        "run @tbhb_rules//lint:runner_default",
+        "run @tbhb_rules//lint:gitleaks_guard",
+    ]
+    assert stdout.splitlines() == [
+        "output from @tbhb_rules//lint:job_timeouts",
+        "PASS job_timeouts",
+        "output from @tbhb_rules//lint:runner_default",
+        "FAIL runner_default" if status else "PASS runner_default",
+        "output from @tbhb_rules//lint:gitleaks_guard",
+        "PASS gitleaks_guard",
+        "repo_checks: 2 passed, 1 failed (runner_default)"
+        if status
+        else "repo_checks: 3 passed, 0 failed",
+    ]
+
+
 @pytest.mark.parametrize(
-    ("scenario", "status"), [("pass", 0), ("fail", 1), ("bad-config", 2)]
+    ("scenario", "status"),
+    [
+        ("pass", 0),
+        ("pull-request", 0),
+        ("fail", 1),
+        ("bad-config", 2),
+        ("no-range", 0),
+        ("no-range-fail", 1),
+    ],
 )
 def test_runner(tmp_path: Path, scenario: str, status: int) -> None:
     runner = tmp_path / "repo_checks.py"
     shutil.copyfile(ROOT / "lint/repo_checks.py", runner)
+    no_range = scenario in {"no-range", "no-range-fail"}
     config = ""
     for name, args in [
         ("first", "none"),
         ("second", "base-head"),
         ("third", "base-head-branch"),
+        ("pr_size", "pr-base-head"),
     ]:
         config += f"""\n[[checks]]
 name = "{name}"
@@ -58,28 +112,53 @@ runs_locally = true
 """
     if scenario == "bad-config":
         config = config.replace('args = "none"', 'args = "unknown"')
+    if no_range:
+        config = (ROOT / "lint/repo_checks.toml").read_text()
     runner.with_suffix(".toml").write_text(config)
     bazelisk = tmp_path / "bazelisk"
     bazelisk.write_text("""#!/usr/bin/env bash
 printf '%s\\n' "$*" >> "$CALLS"
-if [[ ${4:-} == --ref ]]; then
+if [[ $2 == @tbhb_rules//lint:pr_merge_base ]]; then
   echo merged
 else
   echo "output from $2"
+fi
+if [[ $2 == @tbhb_rules//lint:pr_size ]]; then
+  printf '%s\\n' "${MAIN_TIP-}" "${PR_AUTHOR-}" "${GH_TOKEN-}" "${REPO-}" > "$SIZE_ENV"
 fi
 [[ $2 != "$FAIL_TARGET" ]]
 """)
     bazelisk.chmod(0o755)
     calls = tmp_path / "calls"
+    size_env = tmp_path / "size_env"
     env = os.environ | {
         "BUILD_WORKSPACE_DIRECTORY": str(tmp_path),
         "CALLS": str(calls),
         "FAIL_TARGET": "@tbhb_rules//lint:second" if scenario == "fail" else "",
         "PATH": f"{tmp_path}{os.pathsep}{os.environ['PATH']}",
+        "SIZE_ENV": str(size_env),
     }
-    branch = ["agent/example"] if scenario == "fail" else []
+    env.pop("PR_BASE_SHA", None)
+    if scenario == "no-range-fail":
+        env["FAIL_TARGET"] = "@tbhb_rules//lint:runner_default"
+    base_args = ["origin/main"]
+    helper_args = "--ref origin/main"
+    size_base = "merged"
+    if scenario == "pull-request":
+        base_args = ["--base-branch", "main"]
+        helper_args = "main"
+        size_base = "event-base-sha"
+        env.update(
+            PR_BASE_SHA=size_base,
+            MAIN_TIP="live-main-tip",
+            PR_AUTHOR="pull-request-author",
+            GH_TOKEN=tmp_path.name,
+            REPO="owner/repo",
+        )
+    branch = ["agent/example"] if scenario in {"fail", "pull-request"} else []
+    runner_args = ["--no-range"] if no_range else [*base_args, "HEAD", *branch]
     result = subprocess.run(
-        [sys.executable, str(runner), "origin/main", "HEAD", *branch],
+        [sys.executable, str(runner), *runner_args],
         env=env,
         capture_output=True,
         text=True,
@@ -90,13 +169,24 @@ fi
         assert "unsupported args" in result.stderr
         assert not calls.exists()
         return
+    if no_range:
+        _assert_no_range_output(calls, result.stdout, status)
+        return
 
     assert calls.read_text().splitlines() == [
-        "run @tbhb_rules//lint:pr_merge_base -- --ref origin/main HEAD",
+        f"run @tbhb_rules//lint:pr_merge_base -- {helper_args} HEAD",
         "run @tbhb_rules//lint:first",
         "run @tbhb_rules//lint:second -- merged HEAD",
         " ".join(["run @tbhb_rules//lint:third -- merged HEAD", *branch]),
+        f"run @tbhb_rules//lint:pr_size -- {size_base} HEAD",
     ]
+    if scenario == "pull-request":
+        assert size_env.read_text().splitlines() == [
+            "live-main-tip",
+            "pull-request-author",
+            tmp_path.name,
+            "owner/repo",
+        ]
     assert result.stdout.splitlines() == [
         "output from @tbhb_rules//lint:first",
         "PASS first",
@@ -104,7 +194,9 @@ fi
         "FAIL second" if status else "PASS second",
         "output from @tbhb_rules//lint:third",
         "PASS third",
-        "repo_checks: 2 passed, 1 failed (second)"
+        "output from @tbhb_rules//lint:pr_size",
+        "PASS pr_size",
+        "repo_checks: 3 passed, 1 failed (second)"
         if status
-        else "repo_checks: 3 passed, 0 failed",
+        else "repo_checks: 4 passed, 0 failed",
     ]

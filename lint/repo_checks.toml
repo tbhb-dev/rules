@@ -55,7 +55,7 @@ runs_locally = true
 [[checks]]
 name = "pr_size"
 target = "@tbhb_rules//lint:pr_size"
-args = "base-head"
+args = "pr-base-head"
 runs_locally = true
 
 [[checks]]

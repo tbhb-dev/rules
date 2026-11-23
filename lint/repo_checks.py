@@ -2,7 +2,7 @@
 # Copyright Tony Burns
 
 # ruff: noqa: INP001
-"""Run the local pull request checks from a Bazel workspace."""
+"""Run the local repository checks from a Bazel workspace."""
 
 import argparse
 import os
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import cast
 
 TARGET = re.compile(r"(?:@tbhb_rules//lint:|//:)[\w./+-]+")
-LOCAL_ARGS = {"none", "base-head", "base-head-branch"}
+LOCAL_ARGS = {"none", "base-head", "base-head-branch", "pr-base-head"}
 ARG_FORMS = LOCAL_ARGS | {"scan-mode", "stdin", "workflow-path"}
 
 
@@ -88,12 +88,13 @@ def bazel_run(
     )
 
 
-def run_checks(workspace: Path, base: str, head: str, branch: str | None) -> int:
-    checks = read_checks(Path(__file__).with_name("repo_checks.toml"))
+def range_arguments(
+    workspace: Path, base: str, head: str, branch: str | None, *, base_is_branch: bool
+) -> dict[str, list[str]]:
     merge_base = bazel_run(
         workspace,
         "@tbhb_rules//lint:pr_merge_base",
-        ["--ref", base, head],
+        [base, head] if base_is_branch else ["--ref", base, head],
         capture=True,
     )
     if merge_base.returncode or not merge_base.stdout.strip():
@@ -101,17 +102,23 @@ def run_checks(workspace: Path, base: str, head: str, branch: str | None) -> int
         raise ValueError(msg)
 
     revision_range = [merge_base.stdout.strip(), head]
-    arguments = {
+    return {
         "none": [],
         "base-head": revision_range,
+        "pr-base-head": [os.environ.get("PR_BASE_SHA", revision_range[0]), head],
         "base-head-branch": revision_range
         if branch is None
         else [*revision_range, branch],
     }
+
+
+def run_checks(
+    workspace: Path, checks: list[Check], arguments: dict[str, list[str]]
+) -> int:
     failures = []
     passed = 0
     for check in checks:
-        if not check.runs_locally:
+        if not check.runs_locally or check.args not in arguments:
             continue
         result = bazel_run(workspace, check.target, arguments[check.args])
         if result.returncode:
@@ -131,15 +138,36 @@ def run_checks(workspace: Path, base: str, head: str, branch: str | None) -> int
 
 def main() -> int:
     parser = argparse.ArgumentParser(prog="repo_checks", description=__doc__)
-    parser.add_argument("base")
-    parser.add_argument("head")
+    parser.add_argument(
+        "--base-branch", action="store_true", help="resolve the base branch on origin"
+    )
+    parser.add_argument(
+        "--no-range", action="store_true", help="run only checks that take no arguments"
+    )
+    parser.add_argument("base", nargs="?")
+    parser.add_argument("head", nargs="?")
     parser.add_argument("head_branch", nargs="?")
     args = parser.parse_args()
+    if args.no_range and (args.base_branch or args.base is not None):
+        parser.error("--no-range cannot be combined with revision arguments")
+    if not args.no_range and args.head is None:
+        parser.error("provide base and head revisions or use --no-range")
     workspace = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
     if not workspace:
         parser.error("run this target with bazelisk run")
     try:
-        return run_checks(Path(workspace), args.base, args.head, args.head_branch)
+        workspace_path = Path(workspace)
+        checks = read_checks(Path(__file__).with_name("repo_checks.toml"))
+        arguments: dict[str, list[str]] = {"none": []}
+        if not args.no_range:
+            arguments = range_arguments(
+                workspace_path,
+                args.base,
+                args.head,
+                args.head_branch,
+                base_is_branch=args.base_branch,
+            )
+        return run_checks(workspace_path, checks, arguments)
     except (OSError, ValueError) as error:
         sys.stderr.write(f"repo_checks: {error}\n")
         return 2
