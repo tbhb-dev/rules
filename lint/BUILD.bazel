@@ -87,6 +87,32 @@ commit_messages(
     visibility = ["//visibility:public"],
 )
 
+# Checks new and changed text blobs with `bazel run //lint:trailing_newline -- BASE HEAD`.
+python_tool(
+    name = "trailing_newline",
+    main = "//lint/private:check_trailing_newline.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "trailing_newline_test",
+    srcs = ["trailing_newline_test.sh"],
+    data = [
+        ":trailing_newline",
+        "@tbhb_rules_git//:git",
+    ],
+    env = {
+        "CHECKER_RLOCATIONPATH": "$(rlocationpath :trailing_newline)",
+        "GIT_RLOCATIONPATH": "$(rlocationpath @tbhb_rules_git//:git)",
+    },
+    # Tech debt: enable this Git subprocess test on Windows and remove the exclusion.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
 bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],

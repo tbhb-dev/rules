@@ -8,7 +8,10 @@ load(":gitleaks_tool.bzl", "gitleaks_tool")
 
 repo_files()
 
-exports_files(["gitleaks_guard.py"])
+exports_files([
+    "check_trailing_newline.py",
+    "gitleaks_guard.py",
+])
 
 exports_files([
     "codeowners.sh",
