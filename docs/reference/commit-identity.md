@@ -6,34 +6,43 @@ title: Commit identity
 type: Reference
 generated:
   - role: generated
-    harness: codex:0.166.0
-    model: openai:gpt-6.1-sol
+    harness: codex:0.171.0
+    model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:71d8d9019fd0e66b
-    at: "2026-11-15T06:17:01Z"
+    session: sha-256-64:c0a516d1180b196d
+    at: "2026-11-23T03:46:53Z"
 ---
 
 # Commit identity
 
-Run `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD` from a consumer workspace. It checks every commit in `BASE..HEAD` against `ALLOWED_PAIRS` in `lint/private/commit_identity.bzl`. The author and committer together must match an allowed pair. `repo-checks.yml` runs the target on a pull request's base and head.
+Run `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD` from a consumer workspace. It skips merge commits and checks the rest of `BASE..HEAD` against `ALLOWED_PAIRS` in `lint/private/commit_identity.bzl`. The author and committer together must match an allowed pair. `repo-checks.yml` passes the base and head of each pull request to the target.
 
 ## Agent messages
 
 Either email can trigger trailer validation: `agent@tonyburns.net` as author or committer.
 
-The full message must contain at least one `Generated-by:` or `Assisted-by:` line. These keys are case sensitive and start at the beginning of a line. Every matched value must follow the grammar below, and every `Generated-by` line must precede every `Assisted-by` line. The checker accepts repeated lines with the same key. Agent commits also forbid `Signed-off-by` and `Co-authored-by` lines, regardless of case. Their keys can have spaces or tabs before the colon.
+| Trailer | Agent's contribution |
+| --- | --- |
+| `Generated-by` | Wrote the content. |
+| `Assisted-by` | Took part without writing the content. |
+| `Merged-by` | Performed the merge. |
+
+An agent message must contain at least one `Generated-by` or `Assisted-by` line. All three keys are case sensitive and start at the beginning of a line. Every `Generated-by` line must precede every `Assisted-by` line. `Merged-by` is valid only on merge commits and must follow every `Generated-by` and `Assisted-by` line. The checker accepts repeated lines with the same key. Agent commits also forbid `Signed-off-by` and `Co-authored-by` lines, regardless of case. Their keys can have spaces or tabs before the colon.
 
 Other identities receive only the allowed-pair check.
+
+An agent merge message can end with these trailers.
 
 ```text
 Generated-by: LLM effort=high;harness=codex;model=openai:m;session=sha-256-64:0123456789abcdef;surface=cli
 Assisted-by: LLM harness=claude-code:2.1;model=anthropic:m
+Merged-by: LLM harness=codex;model=openai:m
 ```
 
 ## Value grammar
 
-A value starts with the literal token `LLM` and contains exactly one whitespace-delimited attribute blob containing `=`. Other tokens may contain prose. Semicolons separate attributes within the blob, with no whitespace. An attribute splits at its first `=`. Its value must be nonempty and contain no whitespace, semicolon, or comma. Values can contain more equals signs.
+The same value grammar applies to `Generated-by`, `Assisted-by`, and `Merged-by`. A value starts with the literal token `LLM` and contains exactly one whitespace-delimited attribute blob containing `=`. Other tokens may contain prose. Semicolons separate attributes within the blob, with no whitespace. An attribute splits at its first `=`. Its value must be nonempty and contain no whitespace, semicolon, or comma. Values can contain more equals signs.
 
 Attributes appear once each, in the order below. Unknown attributes fail. Model and surface have no constraints beyond the attribute syntax.
 

@@ -15,6 +15,7 @@ H = "sha-256-64:"
 ROOT = H + "a" * 16
 CHILD = H + "c" * 16
 GOOD = f"harness=claude-code:2.1;model=anthropic:m;session={ROOT}"
+MERGED = "Merged-by: LLM harness=codex;model=openai:m"
 
 
 @pytest.mark.parametrize(
@@ -100,6 +101,49 @@ def test_check_message_orders_and_signoff() -> None:
     assert ai.check_message("Generated-by:LLM harness=codex;model=m\n") == []
     assert ai.check_message("  Generated-by: nope\n") == []
     assert ai.check_message("") == []
+
+
+def test_agent_merge_accepts_optional_and_repeated_merged_by() -> None:
+    message = f"Merge topic\n\nGenerated-by: LLM {GOOD}\nAssisted-by: LLM {GOOD}"
+    for trailers in ("", f"\n{MERGED}", f"\n{MERGED}\nMerged-by: LLM {GOOD}"):
+        assert ai.check_agent_message(message + trailers, merge=True) == []
+
+
+def test_merged_by_does_not_supply_agent_authorship() -> None:
+    assert ai.check_agent_message(MERGED, merge=True) == [
+        "missing Generated-by or Assisted-by trailer"
+    ]
+
+
+@pytest.mark.parametrize("key", ["Generated-by", "Assisted-by"])
+def test_merged_by_must_follow_authorship(key: str) -> None:
+    line = f"{key}: LLM {GOOD}"
+    assert ai.check_message(f"{MERGED}\n{line}", merge=True) == [
+        f"{line}: Merged-by must come after Generated-by and Assisted-by"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("value", "problem"),
+    [
+        ("tool harness=codex;model=m", "must start with literal LLM"),
+        ("LLM model=m;harness=codex", "attributes out of order or duplicated"),
+        (
+            "LLM harness=codex;model=m;started_at=2025-01-01T00:05:01Z",
+            "started_at is more than 300 seconds after the committer date",
+        ),
+    ],
+)
+def test_merged_by_checks_each_value(value: str, problem: str) -> None:
+    line = f"Merged-by: {value}"
+    assert ai.check_message(f"{MERGED}\n{line}", 1735689600, merge=True) == [
+        f"{line}: {problem}"
+    ]
+
+
+@pytest.mark.parametrize("key", ["merged-by", "Merge-by"])
+def test_merged_by_key_is_exact(key: str) -> None:
+    assert ai.check_message(f"{key}: nope") == []
 
 
 @given(
@@ -230,6 +274,27 @@ def test_main(
 ) -> None:
     monkeypatch.setattr(ai.sys, "stdin", StringIO(text))
     assert ai.main() == status
+    assert capsys.readouterr() == (output, "")
+
+
+@pytest.mark.parametrize(
+    ("args", "status", "output"),
+    [
+        ([], 1, f"{MERGED}: Merged-by is valid only on merge commits\n"),
+        (["--merge"], 0, ""),
+        (["1735689600", "--merge"], 0, ""),
+    ],
+)
+def test_cli_merge(
+    args: list[str],
+    status: int,
+    output: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    message = f"Generated-by: LLM {GOOD}\n{MERGED}"
+    monkeypatch.setattr(ai.sys, "stdin", StringIO(message))
+    assert ai.cli(args) == status
     assert capsys.readouterr() == (output, "")
 
 

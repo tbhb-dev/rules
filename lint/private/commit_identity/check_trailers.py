@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 KEY_GEN = "Generated-by"
 KEY_ASSIST = "Assisted-by"
+KEY_MERGE = "Merged-by"
 CLAUDE = "claude"
 CODEX = "codex"
 ANTIGRAVITY = "antigravity"
@@ -26,7 +27,7 @@ ATTR_ORDER = [
 ]
 REQUIRED = ("harness", "model")
 HASH_RE = re.compile(r"sha-256-64:[0-9a-f]{16}")
-LINE = re.compile(r"^(Generated-by|Assisted-by):\s*(.*)$")
+LINE = re.compile(rf"^({KEY_GEN}|{KEY_ASSIST}|{KEY_MERGE}):\s*(.*)$")
 SIGNOFF = re.compile(
     r"^(?:Signed-off-by|Co-authored-by)[ \t]*:", re.IGNORECASE | re.MULTILINE
 )
@@ -95,26 +96,41 @@ def check_value(value: str, committer_time: int | None = None) -> str | None:
     return check_blob(blobs[0], committer_time)
 
 
-def check_message(text: str, committer_time: int | None = None) -> list[str]:
+def check_message(
+    text: str, committer_time: int | None = None, *, merge: bool = False
+) -> list[str]:
     """Every problem in a commit message's LLM trailers."""
     errs: list[str] = []
-    keys_seen: list[str] = []
+    keys_seen: set[str] = set()
     for line in text.splitlines():
         match = LINE.match(line)
-        if match:
-            problem = check_value(match.group(2), committer_time)
-            if problem:
-                errs.append(f"{line}: {problem}")
-            if match.group(1) == KEY_GEN and KEY_ASSIST in keys_seen:
-                errs.append(f"{line}: Generated-by must come before Assisted-by")
-            keys_seen.append(match.group(1))
+        if not match:
+            continue
+        key, value = match.groups()
+        problem = check_value(value, committer_time)
+        if problem:
+            errs.append(f"{line}: {problem}")
+        if key == KEY_GEN and KEY_ASSIST in keys_seen:
+            errs.append(f"{line}: Generated-by must come before Assisted-by")
+        if key == KEY_MERGE and not merge:
+            errs.append(f"{line}: Merged-by is valid only on merge commits")
+        if key in (KEY_GEN, KEY_ASSIST) and KEY_MERGE in keys_seen:
+            errs.append(
+                f"{line}: Merged-by must come after Generated-by and Assisted-by"
+            )
+        keys_seen.add(key)
     return errs
 
 
-def check_agent_message(text: str, committer_time: int | None = None) -> list[str]:
+def check_agent_message(
+    text: str, committer_time: int | None = None, *, merge: bool = False
+) -> list[str]:
     """Every trailer problem for a commit with an agent author or committer."""
-    problems = check_message(text, committer_time)
-    if not any(LINE.match(line) for line in text.splitlines()):
+    problems = check_message(text, committer_time, merge=merge)
+    if not any(
+        (match := LINE.match(line)) and match[1] in (KEY_GEN, KEY_ASSIST)
+        for line in text.splitlines()
+    ):
         problems.append("missing Generated-by or Assisted-by trailer")
     for match in SIGNOFF.finditer(text):
         line = text[match.start() :].splitlines()[0]
@@ -124,16 +140,20 @@ def check_agent_message(text: str, committer_time: int | None = None) -> list[st
     return problems
 
 
-def main(committer_time: int | None = None) -> int:
+def main(committer_time: int | None = None, *, merge: bool = False) -> int:
     """Print one problem per line for the message on stdin."""
-    problems = check_agent_message(sys.stdin.read(), committer_time)
+    problems = check_agent_message(sys.stdin.read(), committer_time, merge=merge)
     for problem in problems:
         print(problem)
     return int(bool(problems))
 
 
 def cli(args: list[str]) -> int:
-    """Validate the optional committer date argument before reading stdin."""
+    """Read the optional merge flag and committer date before reading stdin."""
+    merge = "--merge" in args
+    if merge:
+        args = args.copy()
+        args.remove("--merge")
     if len(args) > 1:
         print("expected at most one committer date argument")
         return 1
@@ -144,7 +164,7 @@ def cli(args: list[str]) -> int:
         except ValueError:
             print(f"bad committer date argument: {args[0]!r}")
             return 1
-    return main(committer_time)
+    return main(committer_time, merge=merge)
 
 
 if __name__ == "__main__":
