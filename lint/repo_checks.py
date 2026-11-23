@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import cast
 
 TARGET = re.compile(r"(?:@tbhb_rules//lint:|//:)[\w./+-]+")
-LOCAL_ARGS = {"none", "base-head", "base-head-branch"}
+LOCAL_ARGS = {"none", "base-head", "base-head-branch", "pr-base-head"}
 ARG_FORMS = LOCAL_ARGS | {"scan-mode", "stdin", "workflow-path"}
 
 
@@ -88,12 +88,14 @@ def bazel_run(
     )
 
 
-def run_checks(workspace: Path, base: str, head: str, branch: str | None) -> int:
+def run_checks(
+    workspace: Path, base: str, head: str, branch: str | None, *, base_is_branch: bool
+) -> int:
     checks = read_checks(Path(__file__).with_name("repo_checks.toml"))
     merge_base = bazel_run(
         workspace,
         "@tbhb_rules//lint:pr_merge_base",
-        ["--ref", base, head],
+        [base, head] if base_is_branch else ["--ref", base, head],
         capture=True,
     )
     if merge_base.returncode or not merge_base.stdout.strip():
@@ -104,6 +106,7 @@ def run_checks(workspace: Path, base: str, head: str, branch: str | None) -> int
     arguments = {
         "none": [],
         "base-head": revision_range,
+        "pr-base-head": [os.environ.get("PR_BASE_SHA", revision_range[0]), head],
         "base-head-branch": revision_range
         if branch is None
         else [*revision_range, branch],
@@ -131,6 +134,9 @@ def run_checks(workspace: Path, base: str, head: str, branch: str | None) -> int
 
 def main() -> int:
     parser = argparse.ArgumentParser(prog="repo_checks", description=__doc__)
+    parser.add_argument(
+        "--base-branch", action="store_true", help="resolve the base branch on origin"
+    )
     parser.add_argument("base")
     parser.add_argument("head")
     parser.add_argument("head_branch", nargs="?")
@@ -139,7 +145,13 @@ def main() -> int:
     if not workspace:
         parser.error("run this target with bazelisk run")
     try:
-        return run_checks(Path(workspace), args.base, args.head, args.head_branch)
+        return run_checks(
+            Path(workspace),
+            args.base,
+            args.head,
+            args.head_branch,
+            base_is_branch=args.base_branch,
+        )
     except (OSError, ValueError) as error:
         sys.stderr.write(f"repo_checks: {error}\n")
         return 2
