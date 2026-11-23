@@ -87,6 +87,14 @@ commit_messages(
     visibility = ["//visibility:public"],
 )
 
+python_tool(
+    name = "pr_body",
+    data = ["//repo/baseline:definition-of-done.schema.json"],
+    main = "//lint/private/pr_body:check_pr_body.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
+
 bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],

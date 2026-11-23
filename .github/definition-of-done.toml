@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+schema_version = 1
+review_at_head = true
+# This check must succeed at the exact pull request head.
+conclusion_check = "conclusion"
+require_pr_sections = true
+no_ci_restatement = true

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Definition of done, version 1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "review_at_head",
+    "conclusion_check",
+    "require_pr_sections",
+    "no_ci_restatement"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "review_at_head": { "const": true },
+    "conclusion_check": { "const": "conclusion" },
+    "require_pr_sections": { "const": true },
+    "no_ci_restatement": { "const": true }
+  }
+}

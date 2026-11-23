@@ -6,17 +6,17 @@ tags: [repository, baseline]
 status: stable
 generated:
   - role: generated
-    harness: codex:0.164.0
-    model: openai:gpt-6.1-sol
+    harness: codex:0.171.0
+    model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:8f49f11fc6113551
-    at: "2026-11-12T01:49:56Z"
+    session: sha-256-64:bb9b21e5f53f20d1
+    at: "2026-11-23T03:48:16Z"
 ---
 
 # Repository baseline
 
-Read any file at any commit with `git show <sha>:repo/baseline/<path>`. The baseline stores plain files that you can read without Bazel. The manifest and both schemas use `schema_version = 1` and JSON Schema 2020-12.
+Read any file at any commit with `git show <sha>:repo/baseline/<path>`. The baseline stores plain files that you can read without Bazel. The manifest, repository declaration, and definition of done use `schema_version = 1` and JSON Schema 2020-12.
 
 `manifest.toml` maps each repository path to a source relative to this directory. It also records the mode and visibility. An omitted `kinds` applies to every declared kind. An omitted visibility means `all`. Each path has at most one source for each visibility and kind, including the overlap between `all` and a specific visibility.
 
@@ -65,4 +65,8 @@ Bootstrap seeds start with a small Bazel workspace and a secrets check. They cal
 
 Renovate ignores `repo/baseline/**`, so it never bumps the baseline copies. Renovate bumps the source repositories' own pins. The baseline follows them only through a reviewed sync pull request that recopies files from a newer source commit. No automation does that resync yet.
 
-`//repo/baseline:manifest_test` validates this manifest, its source files, keys, kinds, placeholders, and destination uniqueness. It also tests invalid manifests and both schemas. Consumer checks C1 to C5, C7, and C8 belong to later changes.
+`.github/definition-of-done.toml` requires review and a successful `conclusion` check on the exact pull request head. It also requires the headings marked as required in `.github/pull-request-sections.toml`. Verification lists only checks CI does not show. Repositories can add their own keys to the definition of done.
+
+Run `bazelisk run @tbhb_rules//lint:pr_body -- body < body.md` with the pull request body on standard input. Pass `--check-name NAME` for each additional check GitHub displays. To evaluate the entire definition of done, use `done --head SHA --reviewed-head SHA --conclusion conclusion SHA success` with the body on standard input. Supply the review and check evidence from the pull request. The tool compares that evidence with the head SHA and returns a finding if either is missing or stale.
+
+`//repo/baseline:manifest_test` validates this manifest, its source files, keys, kinds, placeholders, and destination uniqueness. `//lint/private/pr_body:pytest_test` validates the definition of done against its schema and tests the pull request checks. Consumer checks C1 to C5, C7, and C8 belong to later changes.

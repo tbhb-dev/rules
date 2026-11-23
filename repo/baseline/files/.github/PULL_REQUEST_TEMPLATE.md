@@ -47,8 +47,8 @@ flags, rollback, and anything irreversible. -->
 ## Verification
 
 <!-- Required, at most 150 words of prose plus any commands. Literal commands
-with their results, or output from the command log. Leave out what CI already
-reports. -->
+with their results, or output from the command log. List only checks CI does
+not show. -->
 
 ## Human steering
 
