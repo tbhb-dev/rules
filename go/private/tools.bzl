@@ -52,29 +52,29 @@ def _tools_impl(module_ctx):
     http_archive(
         name = "tbhb_rules_go_arch_lint_macos_arm64",
         build_file_content = EXPORT.format("go-arch-lint"),
-        sha256 = "e2e9e80594afe21c2e2aedddcfce8df77eca19b055cfce0a1be11e85d06c9e49",
-        url = "https://github.com/fe3dback/go-arch-lint/releases/download/v1.19.1/go-arch-lint_1.19.1_darwin_arm64.tar.gz",
+        sha256 = "b5a63ead2d0b04b2e70ea4ac51d4bdab65c47d1d7c0907009ff3741c590a4251",
+        url = "https://github.com/fe3dback/go-arch-lint/releases/download/v1.19.2/go-arch-lint_1.19.2_darwin_arm64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_go_arch_lint_linux_x86_64",
         build_file_content = EXPORT.format("go-arch-lint"),
-        sha256 = "26730d19b6acd20f3e922f71f5a7ec1c4e873894666fa9ad7bf03496ac17b06e",
-        url = "https://github.com/fe3dback/go-arch-lint/releases/download/v1.19.1/go-arch-lint_1.19.1_linux_amd64.tar.gz",
+        sha256 = "09bbdb8f2e8a578806e20e1dd28dba04b47026e21ae520cdb3157f95d9b2e23b",
+        url = "https://github.com/fe3dback/go-arch-lint/releases/download/v1.19.2/go-arch-lint_1.19.2_linux_amd64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_go_arch_lint_linux_arm64",
         build_file_content = EXPORT.format("go-arch-lint"),
-        sha256 = "57a7b08c375db614a3504df421dbff60209a5f5e444298a26b316889666b5484",
-        url = "https://github.com/fe3dback/go-arch-lint/releases/download/v1.19.1/go-arch-lint_1.19.1_linux_arm64.tar.gz",
+        sha256 = "41f6dea32cfe0cc03ffe5fd1cf7cfb4137f1fe8f183ae0a9139bf96d1bd1a6bf",
+        url = "https://github.com/fe3dback/go-arch-lint/releases/download/v1.19.2/go-arch-lint_1.19.2_linux_arm64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_go_arch_lint_windows_x86_64",
         build_file_content = EXPORT.format("go-arch-lint.exe"),
-        sha256 = "15f1ad56d89edc5290e0a15f398975d92bc71a397ac5093676964d6ebc8af6e8",
-        url = "https://github.com/fe3dback/go-arch-lint/releases/download/v1.19.1/go-arch-lint_1.19.1_windows_amd64.zip",
+        sha256 = "2e074e849b847c6700aff4d8f38a288d4cfa4809f36c50ccf6128691e21a819e",
+        url = "https://github.com/fe3dback/go-arch-lint/releases/download/v1.19.2/go-arch-lint_1.19.2_windows_amd64.zip",
     )
 
     tool_hub(
