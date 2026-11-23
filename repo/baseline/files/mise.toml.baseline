@@ -27,7 +27,8 @@ locked = true
 # which is expected in non-interactive agent shells, and prints a direnv
 # warning that doesn't matter here. The shims are built when `test -x
 # .bazel_env/bin/gitleaks` succeeds. Run commands through `mise exec` or
-# `mise run` to get the directory on PATH.
+# `mise run` to get the directory on PATH. Without the shim, the Git hooks
+# require gitleaks at the pinned version on PATH.
 _.path = [".bazel_env/bin"]
 
 [tools]

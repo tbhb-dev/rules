@@ -125,6 +125,12 @@ visibility = "all"
 keys = ["extend.useDefault"]
 
 [[file]]
+path = ".github/gitleaks-hook.sh"
+source = "files/.github/gitleaks-hook.sh"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
 path = ".rumdl.toml"
 source = "files/rumdl.toml.baseline"
 mode = "keys"
