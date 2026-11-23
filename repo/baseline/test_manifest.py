@@ -2,6 +2,7 @@
 # Copyright Tony Burns
 
 import json
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,20 @@ ROOT = Path(__file__).parent
 
 def test_baseline() -> None:
     check_manifest(ROOT)
+
+
+def test_commit_msg_hooks_match_seed_configs() -> None:
+    manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
+    for kind in manifest["kinds"]:
+        seed = ROOT / "seed" / kind / "pre-commit-config.yaml"
+        config = yaml.safe_load(seed.read_text())
+        hooks = {
+            hook["id"]
+            for repo in config["repos"]
+            for hook in repo["hooks"]
+            if "commit-msg" in hook.get("stages", [])
+        }
+        assert hooks == set(manifest["kind"][kind]["hooks"]["commit-msg"]), kind
 
 
 @pytest.mark.parametrize("kind", ["chezmoi", "docs", "go", "python"])

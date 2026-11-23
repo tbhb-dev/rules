@@ -626,7 +626,7 @@ required = [".bazelignore", ".bazelrc", ".bazelversion", ".claude/settings.json"
 
 [kind.go.hooks]
 pre-commit = ["check-case-conflict", "check-executables-have-shebangs", "check-merge-conflict", "check-symlinks", "end-of-file-fixer", "fix-byte-order-marker", "mixed-line-ending", "trailing-whitespace", "gitleaks", "shfmt", "shellcheck", "buildifier", "tombi-format", "ryl", "rumdl", "actionlint", "editorconfig-checker", "agent-identity-stamp-docs"]
-commit-msg = ["gitleaks-commit-msg", "conventional-commits"]
+commit-msg = ["gitleaks-commit-msg", "conventional-commits", "commit-subject"]
 pre-push = ["spelling-and-prose"]
 
 [kind.python]
@@ -634,7 +634,7 @@ required = [".bazelignore", ".bazelrc", ".bazelversion", ".claude/settings.json"
 
 [kind.python.hooks]
 pre-commit = ["check-case-conflict", "check-executables-have-shebangs", "check-merge-conflict", "check-symlinks", "end-of-file-fixer", "fix-byte-order-marker", "mixed-line-ending", "trailing-whitespace", "gitleaks", "ruff-format", "ruff-check", "shfmt", "shellcheck", "buildifier", "tombi-format", "ryl", "rumdl", "actionlint", "editorconfig-checker", "size-check"]
-commit-msg = ["gitleaks-commit-msg", "conventional-commits"]
+commit-msg = ["gitleaks-commit-msg", "conventional-commits", "commit-subject"]
 pre-push = ["spelling-and-prose"]
 
 [kind.docs]
@@ -642,7 +642,7 @@ required = [".bazelignore", ".bazelrc", ".bazelversion", ".claude/settings.json"
 
 [kind.docs.hooks]
 pre-commit = ["check-case-conflict", "check-executables-have-shebangs", "check-merge-conflict", "check-symlinks", "end-of-file-fixer", "fix-byte-order-marker", "mixed-line-ending", "trailing-whitespace", "gitleaks", "shfmt", "shellcheck", "buildifier", "tombi-format", "ryl", "rumdl", "actionlint", "editorconfig-checker", "size-check"]
-commit-msg = ["gitleaks-commit-msg", "conventional-commits"]
+commit-msg = ["gitleaks-commit-msg", "conventional-commits", "commit-subject"]
 pre-push = []
 
 [kind.chezmoi]
@@ -650,7 +650,7 @@ required = [".bazelignore", ".bazelrc", ".bazelversion", ".claude/settings.json"
 
 [kind.chezmoi.hooks]
 pre-commit = ["check-case-conflict", "check-executables-have-shebangs", "check-merge-conflict", "check-symlinks", "end-of-file-fixer", "fix-byte-order-marker", "mixed-line-ending", "trailing-whitespace", "gitleaks", "shfmt", "shellcheck", "buildifier", "tombi-format", "ryl", "rumdl", "actionlint", "editorconfig-checker", "size-check"]
-commit-msg = ["gitleaks-commit-msg", "conventional-commits"]
+commit-msg = ["gitleaks-commit-msg", "conventional-commits", "commit-subject"]
 pre-push = []
 
 # Visibility requirements extend each kind.
