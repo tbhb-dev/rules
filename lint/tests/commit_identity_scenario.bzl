@@ -5,23 +5,32 @@
 
 load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "path_dir", "shell_executable")
 
-_TRAILER_CASES = """
-# Compare the complete combined output and status, both for each commit and
-# for the mixed range. Git log visits these linear commits newest first.
+_CHECK_OUTPUT = """
 subject="$PWD/@@SUBJECT@@"
 human='Tony Burns <tony@tonyburns.net>'
 summary='The allowed pairs are ALLOWED_PAIRS in @tbhb_rules//lint/private:commit_identity.bzl; use an allowed identity pair and valid agent identity trailers.'
-expected_range=
-failures=0
-count=0
-check_output() {
-  local from=$1 expected_status=$2 expected=$3 status=0 actual
-  actual=$(BUILD_WORKSPACE_DIRECTORY="$repo" "$subject" "$from" HEAD 2>&1) || status=$?
+check_run() {
+  local expected_status=$1 expected=$2 status=0 actual
+  shift 2
+  actual=$(BUILD_WORKSPACE_DIRECTORY="$repo" "$subject" "$@" 2>&1) || status=$?
   if [[ "$status" != "$expected_status" || "$actual" != "$expected" ]]; then
     printf 'status: %s (expected %s)\\nactual:\\n%s\\nexpected:\\n%s\\n' "$status" "$expected_status" "$actual" "$expected" >&2
     exit 1
   fi
 }
+check_output() {
+  local from=$1 expected_status=$2 expected=$3
+  shift 3
+  check_run "$expected_status" "$expected" "$from" HEAD "$@"
+}
+"""
+
+_TRAILER_CASES = """
+# Compare the complete combined output and status, both for each commit and
+# for the mixed range. Git log visits these linear commits newest first.
+expected_range=
+failures=0
+count=0
 check_commit() {
   local author=$1 committer=$2 message=$3 problems=${4-} sha lines= problem
   commit "$author" "$committer" "$message"
@@ -65,6 +74,40 @@ expected_range="$warning"$'\\n'"$expected_range"
 check_output "$base" 1 "${expected_range}commit_identity: $failures of $count commits failed. $summary"
 """
 
+_HEAD_BRANCH_CASES = """
+usage='usage: commit_identity BASE HEAD [HEAD_BRANCH]'
+check_run 2 "$usage" "$base"
+check_run 2 "$usage" "$base" HEAD agent/topic extra
+check_output "$base" 0 'commit_identity: 0 commits checked' topic
+commit "$human" "$human" "$valid"
+check_output "$base" 0 'commit_identity: 1 commits checked' topic
+commit "$agent" "$agent"
+sha=$(git -C "$repo" rev-parse HEAD)
+problem='agent commits require a pull request head branch starting with agent/'
+commit "$human" "$human" change
+check_output "$base" 0 'commit_identity: 3 commits checked'
+check_output "$base" 0 'commit_identity: 3 commits checked' agent/topic
+check_output "$base" 0 'commit_identity: 3 commits checked' agent/team/topic
+expected="commit_identity: FAIL: $sha $problem"$'\\n'"commit_identity: 1 of 3 commits failed. $summary"
+check_output "$base" 1 "$expected" my-agent/topic
+check_output "$base" 1 "$expected" ""
+
+# Either email identifies an agent commit, even when the pair fails.
+for pair in 'author' 'committer'; do
+  if [[ $pair == author ]]; then
+    commit "$agent" "$human"
+    author=$agent committer=$human
+  else
+    commit "$human" "$agent"
+    author=$human committer=$agent
+  fi
+  sha=$(git -C "$repo" rev-parse HEAD)
+  expected="commit_identity: FAIL: $sha author and committer are not an allowed pair: $author (author) -> $committer (committer)"$'\\n'
+  expected+="commit_identity: FAIL: $sha $problem"$'\\n'"commit_identity: 1 of 1 commits failed. $summary"
+  check_output HEAD~1 1 "$expected" topic
+done
+"""
+
 _DRIVER = """#!/usr/bin/env bash
 set -euo pipefail
 export PATH="$PWD/{git_dir}:$PATH" GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_TEMPLATE_DIR=
@@ -92,7 +135,13 @@ case {scenario} in
     commit 'tbhb-dev-renovate[bot] <289255489+tbhb-dev-renovate[bot]@users.noreply.github.com>' 'GitHub <noreply@github.com>'
     ;;
   trailers)
+{check_output}
 {trailer_cases}
+    exit 0
+    ;;
+  head_branch)
+{check_output}
+{head_branch_cases}
     exit 0
     ;;
   empty) ;;
@@ -121,10 +170,12 @@ def _commit_identity_scenario_test_impl(ctx):
     ctx.actions.write(
         output = driver,
         content = _DRIVER.format(
-            trailer_cases = _TRAILER_CASES.replace("@@SUBJECT@@", ctx.executable.subject.short_path),
+            check_output = _CHECK_OUTPUT.replace("@@SUBJECT@@", ctx.executable.subject.short_path),
             git_dir = path_dir(ctx.attr.git),
+            head_branch_cases = _HEAD_BRANCH_CASES,
             scenario = ctx.attr.scenario,
             subject = ctx.executable.subject.short_path,
+            trailer_cases = _TRAILER_CASES,
         ),
         is_executable = True,
     )
@@ -140,7 +191,7 @@ commit_identity_scenario_test = rule(
     toolchains = SHELL_TOOLCHAINS,
     attrs = SHELL_ATTRS | {
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["allowed", "empty", "merge_commit", "noreply_author", "wrong_committer", "trailers"]),
+        "scenario": attr.string(mandatory = True, values = ["allowed", "empty", "head_branch", "merge_commit", "noreply_author", "wrong_committer", "trailers"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )

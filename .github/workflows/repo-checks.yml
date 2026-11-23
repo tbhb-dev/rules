@@ -406,15 +406,15 @@ jobs:
           printf '%s\n\n%s\n' "${PR_TITLE}" "${PR_BODY}" >"${text}"
           bazelisk run @tbhb_rules//lint:gitleaks_text <"${text}"
 
-      # A pull request's own commits, base to head, must each carry an
-      # allowed (author, committer) pair; the list is in tbhb_rules. The
-      # merge commit a merge writes is not in the range.
-      - name: Check the pull request's commit identities
+      # A pull request's own non-merge commits need allowed identity pairs.
+      # Commits with an agent identity also require an agent/ head branch.
+      - name: Check the pull request's commit identities and head branch
         if: github.event_name == 'pull_request'
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: bazelisk run @tbhb_rules//lint:commit_identity -- "${BASE_SHA}" "${HEAD_SHA}"
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: bazelisk run @tbhb_rules//lint:commit_identity -- "${BASE_SHA}" "${HEAD_SHA}" "${HEAD_BRANCH}"
 
       # Every commit on the branch lands on main, so each subject must read
       # well on its own. Merge commits are skipped.

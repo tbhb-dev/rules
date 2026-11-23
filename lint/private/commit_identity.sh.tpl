@@ -6,7 +6,7 @@
 # allowed pairs. Merge commits are skipped: GitHub writes them (a PR merge, a
 # main-into-branch update, a merge queue) under its own identity, and the
 # commits they bring in are checked on their own. Generated from commit_identity.sh.tpl; the @@NAME@@ markers
-# are filled in at analysis time. Run with `bazel run <target> -- BASE HEAD`.
+# are filled in at analysis time. Run with `bazel run <target> -- BASE HEAD [HEAD_BRANCH]`.
 
 set -euo pipefail
 
@@ -19,8 +19,8 @@ export PATH="$git_dir:$PATH"
 export GIT_CONFIG_NOSYSTEM=1
 export GIT_CONFIG_GLOBAL=/dev/null
 
-if (($# != 2)); then
-  echo "usage: commit_identity BASE HEAD" >&2
+if (($# < 2 || $# > 3)); then
+  echo "usage: commit_identity BASE HEAD [HEAD_BRANCH]" >&2
   exit 2
 fi
 base=$1
@@ -52,6 +52,10 @@ while IFS=$'\t' read -r sha pair; do
   emails=$(git log -1 --format='%ae%n%ce' "$sha")
   emails=${emails//$'\r'/}
   if grep -Fxq -- agent@tonyburns.net <<<"$emails"; then
+    if (($# == 3)) && [[ $3 != agent/* ]]; then
+      commit_failed=1
+      echo "commit_identity: FAIL: $sha agent commits require a pull request head branch starting with agent/" >&2
+    fi
     message=$(git log -1 --format=%B "$sha")
     committer_time=$(git log -1 --format=%ct "$sha")
     if ! problems=$(printf '%s' "$message" | "$trailers" "$committer_time"); then

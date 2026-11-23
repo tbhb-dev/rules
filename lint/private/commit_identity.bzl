@@ -43,11 +43,12 @@ _commit_identity = rule(
     implementation = _commit_identity_impl,
     executable = True,
     toolchains = SHELL_TOOLCHAINS,
-    doc = """Checks each commit in `BASE..HEAD` against `ALLOWED_PAIRS`; run it with `bazel run <target> -- BASE HEAD`.
+    doc = """Checks each non-merge commit in `BASE..HEAD`; run it with `bazel run <target> -- BASE HEAD [HEAD_BRANCH]`.
 
 Fails on any commit whose author and committer, together, are not one of
 the allowed pairs, and names the commit and both identities. Agent authors or
-committers also require valid identity trailers without sign-off or co-author lines.""",
+committers also require valid identity trailers without sign-off or co-author lines.
+If supplied, the head branch must start with `agent/` for those commits.""",
     attrs = SHELL_ATTRS | {
         "git": attr.label(
             default = "@tbhb_rules_git//:git",

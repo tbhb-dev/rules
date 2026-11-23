@@ -10,17 +10,17 @@ generated:
     model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:c0a516d1180b196d
-    at: "2026-11-23T03:46:53Z"
+    session: sha-256-64:995addf15ca68883
+    at: "2026-11-23T05:22:43Z"
 ---
 
 # Commit identity
 
-Run `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD` from a consumer workspace. It skips merge commits and checks the rest of `BASE..HEAD` against `ALLOWED_PAIRS` in `lint/private/commit_identity.bzl`. The author and committer together must match an allowed pair. `repo-checks.yml` passes the base and head of each pull request to the target.
+Run `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD [HEAD_BRANCH]` from a consumer workspace. It skips merge commits and checks the rest of `BASE..HEAD` against `ALLOWED_PAIRS` in `lint/private/commit_identity.bzl`. The author and committer together must match an allowed pair. `repo-checks.yml` passes the base and head commits and the head branch of each pull request to the target.
 
 ## Agent messages
 
-Either email can trigger trailer validation: `agent@tonyburns.net` as author or committer.
+A commit with `agent@tonyburns.net` as author or committer requires agent trailers. If the caller supplies a head branch, the same commit also requires the branch to start with `agent/`.
 
 | Trailer | Agent's contribution |
 | --- | --- |
@@ -65,4 +65,4 @@ The committer date comes from `git log --format=%ct`, which the committing agent
 
 Each problem prints `commit_identity: FAIL: <full sha> <problem>`. The summary counts failing commits, even when a commit has more than one problem. The target exits with status 1 if any commit fails, or prints the number checked and exits with status 0 when all pass.
 
-Both revisions must name commits available in the clone. Invocation without exactly two revisions exits with status 2.
+Both revisions must name commits available in the clone. The command accepts two or three arguments and exits with status 2 for other argument counts.
