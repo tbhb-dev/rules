@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+[[checks]]
+name = "job_timeouts"
+target = "@tbhb_rules//lint:job_timeouts"
+args = "none"
+runs_locally = true
+
+[[checks]]
+name = "runner_default"
+target = "@tbhb_rules//lint:runner_default"
+args = "none"
+runs_locally = true
+
+[[checks]]
+name = "gitleaks_guard"
+target = "@tbhb_rules//lint:gitleaks_guard"
+args = "none"
+runs_locally = true
+
+[[checks]]
+name = "gitleaks_history"
+target = "//:gitleaks_history"
+args = "scan-mode"
+runs_locally = false
+reason = "The PR history scan uses GitHub's test merge commit and expected SHA."
+
+[[checks]]
+name = "gitleaks_text"
+target = "@tbhb_rules//lint:gitleaks_text"
+args = "stdin"
+runs_locally = false
+reason = "The scan needs the pull request title and body."
+
+[[checks]]
+name = "pr_merge_base"
+target = "@tbhb_rules//lint:pr_merge_base"
+args = "base-head"
+runs_locally = false
+reason = "The runner calls this helper once to prepare the range for the checks."
+
+[[checks]]
+name = "commit_identity"
+target = "@tbhb_rules//lint:commit_identity"
+args = "base-head-branch"
+runs_locally = true
+
+[[checks]]
+name = "commit_messages"
+target = "@tbhb_rules//lint:commit_messages"
+args = "base-head"
+runs_locally = true
+
+[[checks]]
+name = "pr_size"
+target = "@tbhb_rules//lint:pr_size"
+args = "base-head"
+runs_locally = true
+
+[[checks]]
+name = "trailing_newline"
+target = "@tbhb_rules//lint:trailing_newline"
+args = "base-head"
+runs_locally = true
+
+[[checks]]
+name = "zizmor"
+target = "@tbhb_rules//lint:zizmor"
+args = "workflow-path"
+runs_locally = false
+reason = "The online audits need a GitHub token and network access."
+
+[[checks]]
+name = "codeowners_errors"
+target = "@tbhb_rules//lint:codeowners_errors"
+args = "none"
+runs_locally = false
+reason = "The check needs a GitHub token and the CODEOWNERS errors API."
