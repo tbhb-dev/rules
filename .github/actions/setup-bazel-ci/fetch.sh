@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
+# cspell:ignore endgroup
 
 # The list includes optional local targets from several workspaces. Query
 # the local graph first, then fetch every listed target that it declares.
@@ -26,9 +27,50 @@ download_pattern+='|connect timed out'     # Connection could not be established
 download_pattern+='|Read timed out'        # Transfer stalled while reading.
 download_pattern+='|Unknown host'          # DNS lookup failed.
 
+workspace_diagnostic() {
+  local bazel_command=${1:-} module=missing repo=missing git_checkout cause
+  if [[ -f MODULE.bazel ]]; then
+    module=present
+  fi
+  if [[ -e REPO.bazel ]]; then
+    repo=present
+  fi
+  if [[ -z $bazel_command || $module == missing ]]; then
+    cause="no MODULE.bazel in $workspace: the checkout is empty, stale or in the wrong directory"
+  else
+    cause="Bazel $bazel_command could not find a workspace from $workspace (MODULE.bazel exists)"
+  fi
+  {
+    printf '%s\n' '::group::Bazel workspace diagnostic' "workspace: $workspace"
+    printf 'pwd: '
+    pwd || true
+    printf '%s\n' "MODULE.bazel: $module" "REPO.bazel: $repo"
+    printf 'Bazel command: %s\n' "${bazel_command:-none (workspace check failed before Bazel ran)}"
+    printf '%s\n' 'ls -la:'
+    # shellcheck disable=SC2012
+    ls -la -- "$workspace" | head -40 || true
+    if git_checkout=$(git rev-parse --is-inside-work-tree 2>/dev/null) && [[ $git_checkout == true ]]; then
+      printf '%s\n' 'git rev-parse HEAD:'
+      git rev-parse HEAD || true
+      printf '%s\n' 'git status --short:'
+      git status --short | head -20 || true
+    fi
+    printf '%s\n' '::endgroup::'
+
+    cause=${cause//%/%25}
+    cause=${cause//$'\r'/%0D}
+    cause=${cause//$'\n'/%0A}
+    printf '::error::%s\n' "$cause"
+  } >&2
+}
+
 retry() {
   local delay=${RETRY_DELAY:-30} now url downloads error
   until "$@" 2>&1 | tee "$out"; do
+    if grep -qF 'must be invoked from within a workspace' "$out"; then
+      workspace_diagnostic "$2"
+      return 1
+    fi
     if ! downloads=$(grep -E "$download_pattern" "$out"); then
       # Repository rule failures put the cause after a Starlark traceback.
       # Keep it with the first error, including Bazel's timestamped form.
@@ -68,6 +110,10 @@ for workspace in "${workspaces[@]}"; do
   visited+="$workspace"$'\n'
   (
     cd "$workspace"
+    if [[ ! -f MODULE.bazel ]]; then
+      workspace_diagnostic
+      exit 1
+    fi
     if [[ $TARGETS == @default ]]; then
       retry bazelisk mod dump_repo_mapping ''
       mapping=$(cat "$out")

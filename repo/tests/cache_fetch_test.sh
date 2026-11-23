@@ -10,6 +10,7 @@ if command -v cygpath >/dev/null; then
   scratch=$(cygpath -u "$scratch")
 fi
 mkdir -p "$scratch/bin" "$scratch/root/go" "$scratch/root/typescript"
+touch "$scratch/root/MODULE.bazel" "$scratch/root/go/MODULE.bazel" "$scratch/root/typescript/MODULE.bazel"
 cat >"$scratch/bin/bazelisk" <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail

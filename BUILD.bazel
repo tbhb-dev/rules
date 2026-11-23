@@ -295,6 +295,7 @@ SHELL_SCRIPTS = [
     "repo/tests/codeowners_errors_test.sh",
     "repo/tests/mktemp_test.sh",
     "repo/tests/cpu_quota_test.sh",
+    "repo/tests/fetch_workspace_test.sh",
     "repo/tests/mutation_nightly_test.sh",
     "repo/tests/retry_budget_test.sh",
     "testing/private/expect_failure.sh.tpl",
