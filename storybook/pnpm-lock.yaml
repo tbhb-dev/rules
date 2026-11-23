@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@storybook-astro/framework':
-        specifier: 1.16.0
-        version: 1.16.0(@storybook/react@10.6.7(storybook@10.6.7)(typescript@7.0.2))(storybook@10.6.7)(typescript@7.0.2)(vite@8.3.8(esbuild@0.28.2))(vitest@5.1.0)
+        specifier: 1.17.0
+        version: 1.17.0(@storybook/react@10.6.7(storybook@10.6.7)(typescript@7.0.2))(storybook@10.6.7)(typescript@7.0.2)(vite@8.3.8(esbuild@0.28.2))(vitest@5.1.0)
       '@storybook/addon-a11y':
         specifier: 10.6.7
         version: 10.6.7(storybook@10.6.7)
@@ -692,8 +692,8 @@ packages:
       rollup:
         optional: true
 
-  '@storybook-astro/framework@1.16.0':
-    resolution: {integrity: sha512-YUEVT9fW1Y5DNEOe5N+xA+HsYH4vutFTvQLOrnK+Hw5RNrOaL9jv5nse9Kq7WkZENg3eefoxiIqSU9Wk+kbEKQ==}
+  '@storybook-astro/framework@1.17.0':
+    resolution: {integrity: sha512-7MGNI/Eu61jPcHh9k2G957LDkxlbE+EvfCAuwQbBQYXFk7NMLgZlH3gU3Yg4X9o1Vii2GhGK2UPh2gexQIMZtA==}
     engines: {node: '>=20.16.0 || >=22.19.0 || >=24.0.0'}
     peerDependencies:
       '@astrojs/alpinejs': ^0.4.5 || ^0.5.0 || ^1.0.0
@@ -752,8 +752,8 @@ packages:
       vitest:
         optional: true
 
-  '@storybook-astro/renderer@1.16.0':
-    resolution: {integrity: sha512-fPQNrfwdxSQ4/MvSWVe+QSiyDtCfxQ3a2qe5UY3c4nPdSkBzsjuYr2+IQ7JXrU0+vuKUa0ZmKRSPOLMtpWooMw==}
+  '@storybook-astro/renderer@1.17.0':
+    resolution: {integrity: sha512-txxVYl0B8r4U+LVY+t58aRT3u0Wp+uv9kqiW3ySLrK5c0VojuIggYCt09OlclRQgtomV7VzvPIBjPm65JXwE5g==}
     engines: {node: '>=20.16.0 || >=22.19.0 || >=24.0.0'}
     peerDependencies:
       '@storybook/react': ^10.0.0 || ^11.0.0-beta.0
@@ -2251,9 +2251,9 @@ snapshots:
       estree-walker: 2.0.2
       picomatch: 4.0.7
 
-  '@storybook-astro/framework@1.16.0(@storybook/react@10.6.7(storybook@10.6.7)(typescript@7.0.2))(storybook@10.6.7)(typescript@7.0.2)(vite@8.3.8(esbuild@0.28.2))(vitest@5.1.0)':
+  '@storybook-astro/framework@1.17.0(@storybook/react@10.6.7(storybook@10.6.7)(typescript@7.0.2))(storybook@10.6.7)(typescript@7.0.2)(vite@8.3.8(esbuild@0.28.2))(vitest@5.1.0)':
     dependencies:
-      '@storybook-astro/renderer': 1.16.0(@storybook/react@10.6.7(storybook@10.6.7)(typescript@7.0.2))(storybook@10.6.7)
+      '@storybook-astro/renderer': 1.17.0(@storybook/react@10.6.7(storybook@10.6.7)(typescript@7.0.2))(storybook@10.6.7)
       get-tsconfig: 5.0.0-beta.4
       hono: 4.13.16
       sanitize-html: 2.18.1
@@ -2264,7 +2264,7 @@ snapshots:
       typescript: 7.0.2
       vitest: 5.1.0(@vitest/browser-playwright@5.1.0)(@vitest/ui@5.1.0)(vite@8.3.8(esbuild@0.28.2))
 
-  '@storybook-astro/renderer@1.16.0(@storybook/react@10.6.7(storybook@10.6.7)(typescript@7.0.2))(storybook@10.6.7)':
+  '@storybook-astro/renderer@1.17.0(@storybook/react@10.6.7(storybook@10.6.7)(typescript@7.0.2))(storybook@10.6.7)':
     dependencies:
       '@types/node': 20.19.43
       storybook: 10.6.7
