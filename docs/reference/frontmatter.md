@@ -2,12 +2,12 @@
 description: The frontmatter fields of a Markdown file, their values, and how they map to commit trailers.
 generated:
   - role: generated
-    harness: codex:0.164.0
-    model: openai:gpt-6.1-sol
+    harness: codex:0.171.0
+    model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:536a70d26bf7bfc1
-    at: "2026-11-11T18:34:12Z"
+    session: sha-256-64:c081808e8ec1014b
+    at: "2026-11-23T03:02:00Z"
 status: stable
 tags: [docs, frontmatter, schema]
 title: Frontmatter reference
@@ -38,7 +38,9 @@ Each Markdown file in the repository starts with a YAML frontmatter block, excep
 | `generated` | no | A non-empty list of contributor entries. |
 | `verified` | no | A human sign-off. Only a human adds it. |
 
-Accepted `type` values are `Readme`, `Agent Instructions`, `Overview`, `Architecture Overview`, `Reference`, `How-to`, `Design Draft`, `Design Appendix`, `Spike`, `Research Report`, `Runbook`, `Incident Report`, `Brief`, `Review Packet`, `Writing Checklist`, `Review Checklist`, `Content Template`, `Decision Record`, and `Policy`. The schema doesn't accept other values. A design's main document uses `Design Draft`. Supporting documents use `Design Appendix` and reference the main document in `parent`.
+The allowed `type` values are `API Reference`, `Agent Instructions`, `Analysis`, `Architecture`, `Architecture Overview`, `Backlog`, `Brief`, `Build Reference`, `CLI Reference`, `Changelog`, `Checklist`, `Component Design`, `Component Reference`, `Content Template`, `Data Model`, `Decision Record`, `Design Appendix`, `Design Brainstorm`, `Design Draft`, `Design Inventory`, `Design Note`, `Design Review Template`, `Domain Model`, `Evidence`, `Glossary`, `Host Notes`, `How-to`, `Incident Report`, `Index`, `Note`, `Overview`, `Plan`, `Policy`, `Readme`, `Reference`, `Report`, `Research Report`, `Review Checklist`, `Review Packet`, `Runbook`, `Security Design`, `Specification`, `Spike`, `Spike Candidates`, `Threat Model`, `Validation Report`, and `Writing Checklist`.
+
+A design's main document uses `Design Draft`. Supporting documents use `Design Appendix` and reference the main document in `parent`.
 
 Choose a value for the required `status` field from the document's type:
 
