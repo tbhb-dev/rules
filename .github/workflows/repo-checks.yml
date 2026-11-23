@@ -445,6 +445,15 @@ jobs:
           export MAIN_TIP
           bazelisk run @tbhb_rules//lint:pr_size -- "${BASE_SHA}" "${HEAD_SHA}"
 
+      - name: Check trailing newlines in changed files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          base=$(bazelisk run @tbhb_rules//lint:pr_merge_base -- "${BASE_REF}" "${HEAD_SHA}")
+          bazelisk run @tbhb_rules//lint:trailing_newline -- "${base}" "${HEAD_SHA}"
+
       # Advisories change without any input changing, so the audit is never
       # a cached test. External index failures must not block pull requests.
       - name: Audit the locked Python dependencies
