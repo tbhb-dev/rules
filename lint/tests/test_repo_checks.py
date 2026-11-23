@@ -17,13 +17,8 @@ ROOT = Path(__file__).absolute().parents[2]
 RUN = re.compile(rf"\bbazelisk\s+run\s+['\"]?({TARGET.pattern})")
 
 
-def test_workflow_drift() -> None:
+def _workflow_runs(runner: str) -> tuple[list[tuple[str | None, str]], list[str]]:
     workflow = yaml.safe_load((ROOT / ".github/workflows/repo-checks.yml").read_text())
-    known = set((ROOT / "repo_check_targets.txt").read_text().splitlines())
-    known.update((ROOT / "lint/repo_check_targets.txt").read_text().splitlines())
-    checks = read_checks(ROOT / "lint/repo_checks.toml")
-    configured = {check.target for check in checks}
-    runner = "@tbhb_rules//lint:repo_checks"
     runner_steps = []
     workflow_targets = []
     for job in workflow["jobs"].values():
@@ -36,7 +31,16 @@ def test_workflow_drift() -> None:
                     if runner in targets:
                         assert not step.get("continue-on-error", False)
                         runner_steps.append((step.get("if"), line.strip()))
+    return runner_steps, workflow_targets
 
+
+def test_workflow_drift() -> None:
+    known = set((ROOT / "repo_check_targets.txt").read_text().splitlines())
+    known.update((ROOT / "lint/repo_check_targets.txt").read_text().splitlines())
+    checks = read_checks(ROOT / "lint/repo_checks.toml")
+    configured = {check.target for check in checks}
+    runner = "@tbhb_rules//lint:repo_checks"
+    runner_steps, workflow_targets = _workflow_runs(runner)
     assert runner_steps == [
         ("github.event_name != 'pull_request'", f"bazelisk run {runner} -- --no-range"),
         (
@@ -57,6 +61,25 @@ def test_workflow_drift() -> None:
     assert not (missing - configured), sorted(missing - configured)
     unknown = {target.removeprefix("@tbhb_rules") for target in configured} - known
     assert not unknown, sorted(unknown)
+
+
+def _assert_no_range_output(calls: Path, stdout: str, status: int) -> None:
+    assert calls.read_text().splitlines() == [
+        "run @tbhb_rules//lint:job_timeouts",
+        "run @tbhb_rules//lint:runner_default",
+        "run @tbhb_rules//lint:gitleaks_guard",
+    ]
+    assert stdout.splitlines() == [
+        "output from @tbhb_rules//lint:job_timeouts",
+        "PASS job_timeouts",
+        "output from @tbhb_rules//lint:runner_default",
+        "FAIL runner_default" if status else "PASS runner_default",
+        "output from @tbhb_rules//lint:gitleaks_guard",
+        "PASS gitleaks_guard",
+        "repo_checks: 2 passed, 1 failed (runner_default)"
+        if status
+        else "repo_checks: 3 passed, 0 failed",
+    ]
 
 
 @pytest.mark.parametrize(
@@ -147,22 +170,7 @@ fi
         assert not calls.exists()
         return
     if no_range:
-        assert calls.read_text().splitlines() == [
-            "run @tbhb_rules//lint:job_timeouts",
-            "run @tbhb_rules//lint:runner_default",
-            "run @tbhb_rules//lint:gitleaks_guard",
-        ]
-        assert result.stdout.splitlines() == [
-            "output from @tbhb_rules//lint:job_timeouts",
-            "PASS job_timeouts",
-            "output from @tbhb_rules//lint:runner_default",
-            "FAIL runner_default" if status else "PASS runner_default",
-            "output from @tbhb_rules//lint:gitleaks_guard",
-            "PASS gitleaks_guard",
-            "repo_checks: 2 passed, 1 failed (runner_default)"
-            if status
-            else "repo_checks: 3 passed, 0 failed",
-        ]
+        _assert_no_range_output(calls, result.stdout, status)
         return
 
     assert calls.read_text().splitlines() == [
