@@ -449,6 +449,27 @@ REQUIRED_FILES_PROOFS = {
 ]
 
 pytest_test(
+    name = "baseline_manifest_test",
+    srcs = [
+        "//:pyproject.toml",
+        "//repo/baseline:repo_files",
+    ],
+    args = ["repo/baseline/test_manifest.py"],
+    coverage = ["repo.baseline.check_manifest"],
+    visibility = ["//repo/baseline:__pkg__"],
+)
+
+pytest_test(
+    name = "baseline_drift_test",
+    srcs = [
+        "//:pyproject.toml",
+        "//repo/baseline:repo_files",
+    ],
+    args = ["repo/baseline/test_drift.py"],
+    coverage = ["repo.baseline.baseline_drift"],
+)
+
+pytest_test(
     name = "pytest_test",
     srcs = ["//:repo_files"],
     args = ["repo/tests"],
