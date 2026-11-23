@@ -6,12 +6,26 @@
 
 import argparse
 import os
+import re
 import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
-# Keep these paths in sync with the end-of-file-fixer hook exclusion.
-EXCLUDED = {b"lint/gitleaks/base.toml", b"lint/gitleaks/upstream.toml"}
+# The top-level exclude and the end-of-file-fixer exclude in .pre-commit-config.yaml.
+HOOK_EXCLUDE = re.compile(
+    rb"""(?x)^(
+        \.vale/(Google|write-good|proselint|ai-tells.*)/
+        |\.bazel-.*/|bazel-.*/|tmp/|\.worktrees/
+        |(.*/)?(mutants|testdata)/
+        |.*\.d2\.(svg|png|sha256)$
+        |(.*/)?structurizr-[^/]*\.(svg|png)$
+        |(.*/)?workspace\.json$
+        |(.*/)?worker-configuration\.d\.ts$
+        |lint/gitleaks/(base|upstream)\.toml$
+    )"""
+)
+# The remaining path expression in the Bedrock allowlist in .gitleaks.toml.
+BEDROCK_EXCLUDE = re.compile(rb"(^|/)\.gitleaks-rules\.toml$")
 TEXT_SAMPLE_SIZE = 8192
 
 
@@ -42,7 +56,11 @@ def check(root: Path, base: str, head: str) -> int:
     status = 0
     for metadata, path in zip(records[0::2], records[1::2], strict=True):
         _, mode, _, object_id, _ = metadata.split()
-        if path in EXCLUDED or not mode.startswith(b"100"):
+        if (
+            HOOK_EXCLUDE.match(path)
+            or BEDROCK_EXCLUDE.search(path)
+            or not mode.startswith(b"100")
+        ):
             continue
         blob = _git(root, "cat-file", "blob", object_id.decode("ascii"))
         if blob and b"\0" not in blob[:TEXT_SAMPLE_SIZE] and not blob.endswith(b"\n"):

@@ -69,24 +69,6 @@ gitleaks_text(
     visibility = ["//visibility:public"],
 )
 
-# Checks the commits in a range against the allowed (author, committer)
-# pairs and require valid identity trailers for agent emails:
-# `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD`.
-# repo-checks.yml runs it on a pull request's commits.
-commit_identity(
-    name = "commit_identity",
-    visibility = ["//visibility:public"],
-)
-
-# Checks the subject of each non-merge commit in a range: conventional form,
-# at most 72 characters, no fixup!/squash!/amend!/WIP, no bare generic word:
-# `bazel run @tbhb_rules//lint:commit_messages -- BASE HEAD`.
-# repo-checks.yml runs it on a pull request's commits.
-commit_messages(
-    name = "commit_messages",
-    visibility = ["//visibility:public"],
-)
-
 # Checks new and changed text blobs with `bazel run //lint:trailing_newline -- BASE HEAD`.
 python_tool(
     name = "trailing_newline",
@@ -111,6 +93,30 @@ sh_test(
         "@platforms//os:windows": ["@platforms//:incompatible"],
         "//conditions:default": [],
     }),
+)
+
+# Checks the commits in a range against the allowed (author, committer)
+# pairs and require valid identity trailers for agent emails:
+# `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD`.
+# repo-checks.yml runs it on a pull request's commits.
+commit_identity(
+    name = "commit_identity",
+    visibility = ["//visibility:public"],
+)
+
+# Checks the subject of each non-merge commit in a range: conventional form,
+# at most 72 characters, no fixup!/squash!/amend!/WIP, no bare generic word:
+# `bazel run @tbhb_rules//lint:commit_messages -- BASE HEAD`.
+# repo-checks.yml runs it on a pull request's commits.
+commit_messages(
+    name = "commit_messages",
+    visibility = ["//visibility:public"],
+)
+
+sh_binary(
+    name = "pr_merge_base",
+    srcs = ["pr_merge_base.sh"],
+    visibility = ["//visibility:public"],
 )
 
 bzl_library(
