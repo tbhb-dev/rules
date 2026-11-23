@@ -27,6 +27,34 @@ class Check:
     runs_locally: bool
 
 
+def _read_check(entry: object, index: int, names: set[str], targets: set[str]) -> Check:
+    match entry:
+        case dict(
+            {
+                "name": str(name),
+                "target": str(target),
+                "args": str(args),
+                "runs_locally": bool(runs_locally),
+            }
+        ) if re.fullmatch(r"[\w.-]+", name) and TARGET.fullmatch(target):
+            pass
+        case _:
+            msg = f"check {index} needs a name, Bazel target, args and runs_locally"
+            raise ValueError(msg)
+    if name in names or target in targets:
+        msg = f"duplicate check name or target for {name}"
+        raise ValueError(msg)
+    if args not in ARG_FORMS or (runs_locally and args not in LOCAL_ARGS):
+        msg = f"{name} has unsupported args {args!r}"
+        raise ValueError(msg)
+    if not runs_locally:
+        reason: object = entry.get("reason")
+        if not isinstance(reason, str) or not reason.strip():
+            msg = f"{name} needs a reason for skipping local runs"
+            raise ValueError(msg)
+    return Check(name, target, args, runs_locally)
+
+
 def read_checks(path: Path) -> list[Check]:
     with path.open("rb") as source:
         entries = tomllib.load(source).get("checks")
@@ -38,33 +66,10 @@ def read_checks(path: Path) -> list[Check]:
     names: set[str] = set()
     targets: set[str] = set()
     for index, entry in enumerate(cast("list[object]", entries), 1):
-        match entry:
-            case dict(
-                {
-                    "name": str(name),
-                    "target": str(target),
-                    "args": str(args),
-                    "runs_locally": bool(runs_locally),
-                }
-            ) if re.fullmatch(r"[\w.-]+", name) and TARGET.fullmatch(target):
-                pass
-            case _:
-                msg = f"check {index} needs a name, Bazel target, args and runs_locally"
-                raise ValueError(msg)
-        if name in names or target in targets:
-            msg = f"duplicate check name or target for {name}"
-            raise ValueError(msg)
-        if args not in ARG_FORMS or (runs_locally and args not in LOCAL_ARGS):
-            msg = f"{name} has unsupported args {args!r}"
-            raise ValueError(msg)
-        if not runs_locally:
-            reason: object = entry.get("reason")
-            if not isinstance(reason, str) or not reason.strip():
-                msg = f"{name} needs a reason for skipping local runs"
-                raise ValueError(msg)
-        checks.append(Check(name, target, args, runs_locally))
-        names.add(name)
-        targets.add(target)
+        check = _read_check(entry, index, names, targets)
+        checks.append(check)
+        names.add(check.name)
+        targets.add(check.target)
     return checks
 
 
