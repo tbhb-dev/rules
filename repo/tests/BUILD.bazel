@@ -175,6 +175,21 @@ sh_test(
     env = {"SCRIPT_RLOCATIONPATH": "$(rlocationpath //:.github/actions/setup-bazel-ci/fetch.sh)"},
 )
 
+sh_test(
+    name = "fetch_workspace_test",
+    srcs = ["fetch_workspace_test.sh"],
+    data = [
+        "//:.github/actions/setup-bazel-ci/fetch.sh",
+        "//:.github/actions/setup-bazel-ci/fetch-targets.txt",
+    ],
+    env = {"SCRIPT_RLOCATIONPATH": "$(rlocationpath //:.github/actions/setup-bazel-ci/fetch.sh)"},
+    # Tech debt (AGENTS.md): validate the Bash subprocess on windows-2025 and remove the exclusion.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
 # Git supplies the complete source list, including the nested Bazel modules.
 sh_test(
     name = "mktemp_test",
