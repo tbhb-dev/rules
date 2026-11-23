@@ -3,6 +3,7 @@
 
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@gazelle//:def.bzl", "gazelle")
+load("@rules_go//go:def.bzl", "nogo")
 load("@tbhb_rules//format:defs.bzl", "format_test")
 load("@tbhb_rules//repo:defs.bzl", "repo_files")
 load("@tbhb_rules//testing:defs.bzl", "expect_failure_test")
@@ -27,6 +28,12 @@ load("//tools/mutation:defs.bzl", "gomutants_test")
 gazelle(name = "gazelle")
 
 repo_files()
+
+# Compile the rules_go nogo driver against the shared x/tools version.
+nogo(
+    name = "nogo_smoke",
+    deps = ["@tbhb_rules_go//tests:nogo_inspect"],
+)
 
 exports_files([
     ".golangci.yml",
