@@ -6,6 +6,7 @@
 
 import argparse
 import json
+import re
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -15,6 +16,13 @@ from typing import NotRequired, TypedDict, cast
 from jsonschema import Draft202012Validator, ValidationError
 
 BASELINE = Path(__file__).parent
+TEMPLATE = re.compile(rb"(?<!\$){{([a-z][a-z0-9_]*)}}")
+RENOVATE_PIN = re.compile(
+    rb"(?m)^ *uses: +tbhb-dev/renovate-config/\.github/workflows/"
+    rb"[a-z0-9-]+\.yaml@([a-fA-F0-9]{40})(?=[ \t\r\n]|$)"
+)
+
+type Json = dict[str, Json] | list[Json] | str | int | float | bool | None
 
 
 class Entry(TypedDict):
@@ -47,10 +55,15 @@ class DeclarationError(ValueError):
     """The consumer declaration or an exception needs correction."""
 
 
+class TemplateInputsError(ValueError):
+    """The consumer file does not supply the values a template needs."""
+
+
 @dataclass(frozen=True)
 class Difference:
     path: str
     status: str
+    detail: str = ""
 
 
 def load_toml(path: Path) -> dict[str, object]:
@@ -99,20 +112,76 @@ def selected_entries(manifest: Manifest, declaration: Declaration) -> list[Entry
     ]
 
 
+def mcp_values(content: bytes) -> dict[str, str]:
+    try:
+        document = cast("Json", json.loads(content))
+    except ValueError:
+        return {}
+
+    match document:
+        case {"mcpServers": {**servers}} if len(servers) == 1:
+            [(server, config)] = servers.items()
+        case _:
+            return {}
+    server_config: Json = config
+    match server_config:
+        case {"args": ["run", str(module), "mcp"], "env": {**env}}:
+            match list(env.items()):
+                case [(str(endpoint_env), str(endpoint)), (str(token_env), str(token))]:
+                    # The template orders the endpoint before the token file.
+                    return {
+                        "mcp_server": server,
+                        "mcp_module": module,
+                        "mcp_endpoint_env": endpoint_env,
+                        "mcp_endpoint": endpoint,
+                        "mcp_token_file_env": token_env,
+                        "mcp_token_file": token,
+                    }
+                case _:
+                    return {}
+        case _:
+            return {}
+
+
+def render(path: str, template: bytes, current: bytes) -> bytes:
+    tokens = {token.decode() for token in TEMPLATE.findall(template)}
+    if path == ".mcp.json":
+        inputs = mcp_values(current)
+    else:
+        pins = set(RENOVATE_PIN.findall(current))
+        inputs = {"renovate_config_sha": pins.pop().decode()} if len(pins) == 1 else {}
+    missing = tokens - inputs.keys()
+    if missing:
+        msg = f"template values needed for {', '.join(sorted(missing))}"
+        raise TemplateInputsError(msg)
+    if path.endswith(".json"):
+        inputs = {
+            key: json.dumps(inputs[key], ensure_ascii=False)[1:-1] for key in tokens
+        }
+
+    def substitute(match: re.Match[bytes]) -> bytes:
+        # cspell:ignore backslashreplace
+        return inputs[match[1].decode()].encode(errors="backslashreplace")
+
+    return TEMPLATE.sub(substitute, template)
+
+
 def difference(repo: Path, baseline: Path, entry: Entry) -> Difference | None:
     path = entry["path"]
-    if entry.get("template", False):
-        sys.stdout.write(f"C2 note: skipped {path} (requires substitution)\n")
-        return None
-
     expected = (baseline / entry["source"]).read_bytes()
     try:
         current = (repo / path).read_bytes()
     except FileNotFoundError:
-        return Difference(path, "missing")
+        current = None
+    status = "missing" if current is None else "differs"
+    if entry.get("template", False):
+        try:
+            expected = render(path, expected, current or b"")
+        except TemplateInputsError as error:
+            return Difference(path, status, str(error))
     if current == expected:
         return None
-    return Difference(path, "differs")
+    return Difference(path, status)
 
 
 def pending_changes(repo: Path, baseline: Path, manifest: Manifest) -> list[Difference]:
@@ -155,7 +224,8 @@ def main(argv: list[str] | None = None, *, baseline: Path = BASELINE) -> int:
     warns: bool = args.mode == "warn"
     for diff in changes:
         level = "warning" if warns else "error"
-        sys.stdout.write(f"C2 {level}: {diff.path} {diff.status}\n")
+        detail = f" ({diff.detail})" if diff.detail else ""
+        sys.stdout.write(f"C2 {level}: {diff.path} {diff.status}{detail}\n")
     return 1 if changes and not warns else 0
 
 

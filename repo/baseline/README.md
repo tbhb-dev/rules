@@ -10,8 +10,8 @@ generated:
     model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:b0f3b235208e0deb
-    at: "2026-11-23T04:11:15Z"
+    session: sha-256-64:012714d6cd664abe
+    at: "2026-11-23T05:15:56Z"
 ---
 
 # Repository baseline
@@ -82,6 +82,8 @@ baseline_drift_test(
 )
 ```
 
-C2 uses the declared kind and visibility to select `bytes`-mode files. It prints a note for each selected file that requires substitution and skips the comparison. The default `warn` mode reports missing or changed files and passes. Set `mode = "required"` to fail on drift. Run with `--test_output=all` to see messages from passing tests.
+C2 uses the declared kind and visibility to select `bytes`-mode files. Before comparing bytes, it substitutes the commit pin from each existing Renovate workflow and the server settings from the existing `.mcp.json`. It expects one distinct 40-digit hexadecimal pin per workflow and one MCP server with the endpoint and token file environment entries in that order.
 
-Add a `[[exception]]` entry to `.tbhb-repo.toml` with `check = "C2"` and a written `reason` to accept a missing or changed file that C2 compares. The test prints each exception it honors. Duplicate, stale, or invalid exceptions fail the test in either mode.
+The default `warn` mode reports missing or changed files and passes. A missing template file or a file whose values C2 can't infer also counts as drift. Set `mode = "required"` to fail on drift. Run with `--test_output=all` to see messages from passing tests.
+
+Add a `[[exception]]` entry to `.tbhb-repo.toml` with `check = "C2"` and a written `reason` to accept drift in a selected file, including a template. The test prints each exception it honors. An exception becomes stale when its path falls outside the selection or the file matches after comparison. Duplicate, stale, or invalid exceptions fail the test in either mode.
