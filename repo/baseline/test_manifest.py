@@ -32,6 +32,19 @@ def test_commit_msg_hooks_match_seed_configs() -> None:
         assert hooks == set(manifest["kind"][kind]["hooks"]["commit-msg"]), kind
 
 
+@pytest.mark.parametrize("kind", ["chezmoi", "docs", "go", "python"])
+def test_seed_ci_runs_on_merge_group(kind: str) -> None:
+    path = ROOT / "seed" / kind / ".github" / "workflows" / "ci.yml"
+    # Read the key before YAML can coerce `on` to a boolean.
+    workflow: object = yaml.compose(
+        path.read_text(encoding="utf-8"), Loader=yaml.SafeLoader
+    )
+    assert isinstance(workflow, yaml.MappingNode)
+    events = next(value for key, value in workflow.value if key.value == "on")
+    assert isinstance(events, yaml.MappingNode)
+    assert any(key.value == "merge_group" for key, _ in events.value)
+
+
 @pytest.mark.parametrize(
     "name", [".pre-commit-config.yaml", ".pre-commit-config.yml", "prek.toml"]
 )
