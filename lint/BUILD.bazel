@@ -113,6 +113,14 @@ commit_messages(
     visibility = ["//visibility:public"],
 )
 
+# Checks a commit message file before Git records the commit.
+python_tool(
+    name = "commit_subject",
+    main = "//lint/private:commit_messages/check_subject.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
+
 sh_binary(
     name = "pr_merge_base",
     srcs = ["pr_merge_base.sh"],

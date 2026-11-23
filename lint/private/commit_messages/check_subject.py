@@ -7,6 +7,7 @@ one problem per line. Exits 1 when there is at least one. Every commit on a
 pull request branch lands on main, so the subject has to read well on its own.
 """
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -69,7 +70,9 @@ def problems(subject: str) -> list[str]:
 
 def main(argv: list[str]) -> int:
     if len(argv) > 1:
-        text = Path(argv[1]).read_text(encoding="utf-8")
+        # Bazel runs from the runfiles tree, so resolve paths from the caller.
+        path = Path(os.environ.get("BUILD_WORKING_DIRECTORY", ".")) / argv[1]
+        text = path.read_text(encoding="utf-8")
     else:
         text = sys.stdin.read()
     subject = text.split("\n", 1)[0].rstrip("\r")

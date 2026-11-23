@@ -43,7 +43,7 @@ repos:
         language: system
         entry: .bazel_env/bin/gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml
         pass_filenames: false
-      # The commit message: secrets, then the Conventional Commits header.
+      # Check the commit message for secrets, then check its header and subject.
       - id: gitleaks-commit-msg
         name: gitleaks (commit message)
         language: system
@@ -54,6 +54,14 @@ repos:
         name: Conventional Commits
         language: system
         entry: .bazel_env/bin/cog verify --file
+        stages: [commit-msg]
+        always_run: true
+      - id: commit-subject
+        name: Commit subject
+        language: system
+        entry: >-
+          bash -c '[ -f "$(git rev-parse --git-path MERGE_HEAD)" ] ||
+          bazelisk run @tbhb_rules//lint:commit_subject -- "$1"' --
         stages: [commit-msg]
         always_run: true
       - id: shfmt

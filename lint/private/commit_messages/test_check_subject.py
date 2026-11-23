@@ -73,3 +73,11 @@ def test_main_reads_file_and_passes(
     f.write_text("feat(lint): add a check\n\nbody")
     assert cs.main(["check_subject", str(f)]) == 0
     assert capsys.readouterr().out == ""
+
+
+def test_main_resolves_relative_path_from_bazel_working_directory(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    (tmp_path / "commit message").write_text("feat(lint): add a check\n")
+    monkeypatch.setenv("BUILD_WORKING_DIRECTORY", str(tmp_path))
+    assert cs.main(["check_subject", "commit message"]) == 0
