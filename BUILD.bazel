@@ -24,6 +24,7 @@ load(
     "workflow_lint_test",
     "zizmor_test",
 )
+load("//lint/private:repo_check_targets.bzl", "repo_check_targets")
 load("//repo:defs.bzl", "repo_files", "repo_layout_test")
 
 # The lint configs, so the nested modules can prove their own copies match
@@ -43,10 +44,12 @@ exports_files(
     visibility = ["//repo/tests:__pkg__"],
 )
 
-# For //repo/tests:retry_budget_test.
 exports_files(
     [".github/workflows/repo-checks.yml"],
-    visibility = ["//repo/tests:__pkg__"],
+    visibility = [
+        "//lint/tests/repo_checks:__pkg__",
+        "//repo/tests:__pkg__",
+    ],
 )
 
 # For //repo/tests:cpu_quota_test.
@@ -518,3 +521,5 @@ test_suite(
         "//repo/tests:mktemp_test",
     ] + ["//repo/tests:mktemp_line_{}_fails_test".format(line) for line in range(4, 8)],
 )
+
+repo_check_targets(repo = "")

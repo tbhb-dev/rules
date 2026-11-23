@@ -1,0 +1,80 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# Local execution follows this order. The merge-base helper supplies commit
+# inputs to the range checks.
+[[check]]
+name = "pr_merge_base"
+target = "@tbhb_rules//lint:pr_merge_base"
+argument_form = "merge-base"
+runs_locally = true
+
+[[check]]
+name = "job_timeouts"
+target = "@tbhb_rules//lint:job_timeouts"
+argument_form = "none"
+runs_locally = true
+
+[[check]]
+name = "runner_default"
+target = "@tbhb_rules//lint:runner_default"
+argument_form = "none"
+runs_locally = true
+
+[[check]]
+name = "gitleaks_guard"
+target = "@tbhb_rules//lint:gitleaks_guard"
+argument_form = "none"
+runs_locally = true
+
+[[check]]
+name = "gitleaks_history"
+target = "//:gitleaks_history"
+argument_form = "scan-mode"
+runs_locally = false
+reason = "The PR scan needs GitHub's test merge commit and may need a workflow secret."
+
+[[check]]
+name = "gitleaks_text"
+target = "@tbhb_rules//lint:gitleaks_text"
+argument_form = "stdin"
+runs_locally = false
+reason = "The workflow supplies the PR title and body and may supply a secret."
+
+[[check]]
+name = "commit_identity"
+target = "@tbhb_rules//lint:commit_identity"
+argument_form = "base-head-branch"
+runs_locally = true
+
+[[check]]
+name = "commit_messages"
+target = "@tbhb_rules//lint:commit_messages"
+argument_form = "base-head"
+runs_locally = true
+
+[[check]]
+name = "pr_size"
+target = "@tbhb_rules//lint:pr_size"
+argument_form = "base-head"
+runs_locally = true
+
+[[check]]
+name = "trailing_newline"
+target = "@tbhb_rules//lint:trailing_newline"
+argument_form = "base-head"
+runs_locally = true
+
+[[check]]
+name = "zizmor"
+target = "@tbhb_rules//lint:zizmor"
+argument_form = "online-workflow-audit"
+runs_locally = false
+reason = "Online audits need network access and a GitHub token."
+
+[[check]]
+name = "codeowners_errors"
+target = "@tbhb_rules//lint:codeowners_errors"
+argument_form = "none"
+runs_locally = false
+reason = "The GitHub API needs the repository, the head SHA, and a token."

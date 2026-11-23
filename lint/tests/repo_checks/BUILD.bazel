@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+pytest_test(
+    name = "drift_test",
+    srcs = [
+        "test_drift.py",
+        "//:.github/workflows/repo-checks.yml",
+        "//:repo_check_targets.txt",
+        "//lint:repo_check_targets.txt",
+        "//lint:repo_checks.py",
+        "//lint:repo_checks.toml",
+    ],
+    args = [
+        "-o",
+        "pythonpath=.",
+        "lint/tests/repo_checks/test_drift.py",
+    ],
+    coverage = None,
+)
+
+pytest_test(
+    name = "runner_test",
+    srcs = [
+        "test_runner.py",
+        "//lint:repo_checks.py",
+    ],
+    args = ["lint/tests/repo_checks/test_runner.py"],
+    coverage = None,
+    # Tech debt (AGENTS.md): run this shell subprocess fixture on Windows and remove the exclusion.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
