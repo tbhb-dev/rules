@@ -131,6 +131,25 @@ pytest_test(
 )
 
 pytest_test(
+    name = "gitleaks_hook_pin_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/tests/test_gitleaks_hook.py::test_hook_pin"],
+    coverage = None,
+)
+
+pytest_test(
+    name = "gitleaks_hook_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/tests/test_gitleaks_hook.py::test_hook"],
+    coverage = None,
+    # Tech debt (AGENTS.md): validate the Bash hook fixture on Windows.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
+pytest_test(
     name = "repo_checks_drift_test",
     srcs = ["//:repo_files"],
     args = ["lint/tests/test_repo_checks.py::test_workflow_drift"],
