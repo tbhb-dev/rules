@@ -225,13 +225,10 @@ workflow_lint_test(
     srcs = [":repo_files"],
 )
 
-# The review policy files a repository has; //lint:review_policy_test checks
-# them. None exists yet, so CODEOWNERS (which the check ignores) keeps the
-# copy non-empty, as tree_check requires, and the glob matches no more until
-# the first one lands.
+# //lint:review_policy_test checks these files against the org floor.
 filegroup(
     name = "review_policy_files",
-    srcs = [".github/CODEOWNERS"] + glob(
+    srcs = glob(
         [
             ".github/PULL_REQUEST_REVIEW_*.md",
             ".github/pull_request_review.*",

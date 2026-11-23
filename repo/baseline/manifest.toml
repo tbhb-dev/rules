@@ -72,6 +72,31 @@ mode = "bytes"
 visibility = "all"
 
 [[file]]
+path = ".github/pull_request_review.toml"
+source = "files/.github/pull_request_review.toml"
+mode = "keys"
+visibility = "all"
+keys = ["schema"]
+
+[[file]]
+path = ".github/PULL_REQUEST_REVIEW_TEMPLATE.md"
+source = "files/.github/PULL_REQUEST_REVIEW_TEMPLATE.md"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
+path = ".github/PULL_REQUEST_REVIEW_CHECKLIST.md"
+source = "seed/go/.github/PULL_REQUEST_REVIEW_CHECKLIST.md"
+mode = "seed"
+visibility = "all"
+
+[[file]]
+path = ".github/schemas/pull-request-review-draft.schema.json"
+source = "files/.github/schemas/pull-request-review-draft.schema.json"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
 path = ".github/pull-request-sections.toml"
 source = "files/.github/pull-request-sections.toml"
 mode = "bytes"
