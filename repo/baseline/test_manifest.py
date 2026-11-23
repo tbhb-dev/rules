@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+import yaml
 from jsonschema import Draft202012Validator, ValidationError
 
 from repo.baseline.check_manifest import check_manifest
@@ -14,6 +15,19 @@ ROOT = Path(__file__).parent
 
 def test_baseline() -> None:
     check_manifest(ROOT)
+
+
+@pytest.mark.parametrize("kind", ["chezmoi", "docs", "go", "python"])
+def test_seed_ci_runs_on_merge_group(kind: str) -> None:
+    path = ROOT / "seed" / kind / ".github" / "workflows" / "ci.yml"
+    # Read the key before YAML can coerce `on` to a boolean.
+    workflow: object = yaml.compose(
+        path.read_text(encoding="utf-8"), Loader=yaml.SafeLoader
+    )
+    assert isinstance(workflow, yaml.MappingNode)
+    events = next(value for key, value in workflow.value if key.value == "on")
+    assert isinstance(events, yaml.MappingNode)
+    assert any(key.value == "merge_group" for key, _ in events.value)
 
 
 @pytest.mark.parametrize(
