@@ -69,7 +69,7 @@ exports_files(
     ],
     visibility = [
         "//lint/private/claude_settings:__pkg__",
-        "//repo/baseline:__pkg__",
+        "//repo/tests:__pkg__",
         "//tools:__pkg__",
     ],
 )
@@ -486,6 +486,7 @@ test_suite(
     tests = [
         ":claude_settings",
         "//repo/baseline:manifest_test",
+        "//repo/tests:baseline_drift_test",
         "//repo/tests:markdown_links_clean_test",
         "//repo/tests:markdown_links_test",
         "//repo/tests:mise_keys_clean_test",

@@ -6,7 +6,17 @@ load("//repo:defs.bzl", "repo_files")
 
 repo_files()
 
-exports_files(["repo_layout.sh.tpl"])
+exports_files([
+    "baseline_drift.sh",
+    "repo_layout.sh.tpl",
+])
+
+bzl_library(
+    name = "baseline_drift",
+    srcs = ["baseline_drift.bzl"],
+    visibility = ["//repo:__subpackages__"],
+    deps = ["@rules_shell//shell:rules_bzl"],
+)
 
 bzl_library(
     name = "repo_files_bzl",

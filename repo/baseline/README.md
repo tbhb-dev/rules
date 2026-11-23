@@ -6,12 +6,12 @@ tags: [repository, baseline]
 status: stable
 generated:
   - role: generated
-    harness: codex:0.164.0
-    model: openai:gpt-6.1-sol
+    harness: codex:0.171.0
+    model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:8f49f11fc6113551
-    at: "2026-11-12T01:49:56Z"
+    session: sha-256-64:f528a7f5939783c6
+    at: "2026-11-23T03:00:52Z"
 ---
 
 # Repository baseline
@@ -59,10 +59,35 @@ path = ".bazelversion"
 reason = "A version upgrade needs a separate migration."
 ```
 
-Unknown schema versions, unknown kinds, and blank exception reasons fail validation. Each exception must still describe a difference. An exception whose file no longer differs fails. Public repositories have an Apache-2.0 `LICENSE`. Private repositories have `LICENSES/LicenseRef-Proprietary.txt` and no Apache `LICENSE`. Future consumer checks cross-check those files against `private`.
+Validation rejects unknown schema versions and kinds. An exception needs a written reason and must still describe a difference. Public repositories have an Apache-2.0 `LICENSE`. Private repositories have `LICENSES/LicenseRef-Proprietary.txt` and no Apache `LICENSE`. Future consumer checks cross-check those files against `private`.
 
 Bootstrap seeds start with a small Bazel workspace and a secrets check. They call the shared repository workflow and give branch protection one `conclusion` job that needs every other job. Application-specific build targets and dependency checks come next as the repository adds code. The first build creates the repository-owned module lock.
 
 Renovate ignores `repo/baseline/**`, so it never bumps the baseline copies. Renovate bumps the source repositories' own pins. The baseline follows them only through a reviewed sync pull request that recopies files from a newer source commit. No automation does that resync yet.
 
-`//repo/baseline:manifest_test` validates this manifest, its source files, keys, kinds, placeholders, and destination uniqueness. It also tests invalid manifests and both schemas. Consumer checks C1 to C5, C7, and C8 belong to later changes.
+`//repo/baseline:manifest_test` validates this manifest, its source files, keys, kinds, placeholders, and destination uniqueness. It also tests invalid manifests and both schemas.
+
+## Bytes-mode drift
+
+Add the C2 test to the consumer's root BUILD file, with the consumer files and declaration in the test's source set.
+
+```starlark
+load("@tbhb_rules//repo:defs.bzl", "baseline_drift_test", "repo_files")
+
+repo_files()
+
+baseline_drift_test(
+    name = "baseline_drift",
+    srcs = [":repo_files"],
+)
+```
+
+C2 uses the declared kind and visibility to select files in `bytes` mode. In the default `warn` mode, the test reports missing or changed files and passes. Set `mode = "required"` to fail on drift. Run with `--test_output=all` to see warnings and honored exceptions from passing tests.
+
+Run the sync command from the consumer workspace. Use the absolute path to its root.
+
+```sh
+bazel run @tbhb_rules//repo/baseline:baseline_sync -- "$PWD" --dry-run
+```
+
+Remove `--dry-run` to apply the listed changes. Sync skips files with valid C2 exceptions. The check and sync substitute the existing Renovate workflow pins and MCP values before comparing bytes. Supply missing template values with repeatable `--value NAME VALUE` arguments. Exit status 0 means the command completed. Status 1 means the declaration or exceptions need correction. Status 2 means a read, render, or write failed, or the arguments are invalid.
