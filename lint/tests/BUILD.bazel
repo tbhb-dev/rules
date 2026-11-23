@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
 
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//lint:defs.bzl", "cspell_test", "gitleaks_history", "gitleaks_test", "rumdl_test", "shellcheck_test", "shfmt_test", "vale_test", "workflow_lint_test")
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//lint/private:review_policy.bzl", "review_policy_test")
@@ -120,6 +121,28 @@ gitleaks_tool(name = "gitleaks_optional")
 ]
 
 PROOF_TAGS = ["manual"]
+
+sh_test(
+    name = "pr_merge_base_test",
+    srcs = ["pr_merge_base_test.sh"],
+    data = [
+        "//lint:commit_identity",
+        "//lint:commit_messages",
+        "//lint:pr_merge_base",
+        "@tbhb_rules_git//:git",
+    ],
+    env = {
+        "GIT_RLOCATIONPATH": "$(rlocationpath @tbhb_rules_git//:git)",
+        "IDENTITY_RLOCATIONPATH": "$(rlocationpath //lint:commit_identity)",
+        "MERGE_BASE_RLOCATIONPATH": "$(rlocationpath //lint:pr_merge_base)",
+        "MESSAGES_RLOCATIONPATH": "$(rlocationpath //lint:commit_messages)",
+    },
+    # Tech debt (AGENTS.md): run this Git fixture on windows-2025 and remove the exclusion.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
 
 # commit_identity against throwaway repositories.
 
