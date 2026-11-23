@@ -12,6 +12,7 @@ load("//lint/private:pr_size.bzl", "pr_size", "pr_size_count")
 load("//lint/private:review_policy.bzl", "review_policy_test")
 load("//repo:defs.bzl", "repo_files")
 load("//runtime:defs.bzl", "python_tool")
+load(":repo_check_targets.bzl", "repo_check_targets")
 
 repo_files()
 
@@ -127,6 +128,14 @@ sh_binary(
     visibility = ["//visibility:public"],
 )
 
+python_tool(
+    name = "repo_checks",
+    data = ["repo_checks.toml"],
+    main = "repo_checks.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
+
 bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],
@@ -197,3 +206,5 @@ sh_test(
         "//conditions:default": [],
     }),
 )
+
+repo_check_targets(visibility = ["//lint/tests:__pkg__"])

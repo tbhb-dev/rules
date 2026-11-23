@@ -54,7 +54,7 @@ def _python_tool_impl(ctx):
         is_executable = True,
     )
     runfiles = ctx.runfiles(
-        files = [ctx.file._launch, ctx.file._sitecustomize] + ([ctx.file.main] if ctx.file.main else []),
+        files = [ctx.file._launch, ctx.file._sitecustomize] + ([ctx.file.main] if ctx.file.main else []) + ctx.files.data,
         transitive_files = env.files,
     )
     executable, runfiles = shell_executable(ctx, script, runfiles)
@@ -73,6 +73,7 @@ source roots (relative to the current directory) importable.""",
     attrs = SHELL_ATTRS | {
         "allow_empty": attr.bool(doc = "With `select` or `filter`, finding no Python file is not an error."),
         "chdir": attr.string(doc = "Directory, relative to the current one, to run the tool from."),
+        "data": attr.label_list(allow_files = True, doc = "Files the tool reads from runfiles."),
         "exclude": attr.string_list(doc = "fnmatch patterns of relative paths `select` skips."),
         "extra_source_roots": attr.string_list(doc = "More directories, relative to the current one, to put on the path."),
         "filter": attr.bool(doc = "Drop each argument that names a file other than a Python one (by suffix or shebang), as a formatter offered every file needs."),

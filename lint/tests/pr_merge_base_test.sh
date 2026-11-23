@@ -61,6 +61,10 @@ as_agent_on_github merge -q --no-ff -m 'Merge topic for CI' topic
 
 base=$("$merge_base" main "$head")
 [[ $base == "$merged_main" ]]
+local_base=$("$merge_base" --ref origin/main "$head")
+[[ $local_base == "$base" ]]
+local_base=$("$merge_base" --ref "$merged_main" "$head")
+[[ $local_base == "$base" ]]
 identity_output=$("$identity" "$base" "$head")
 messages_output=$("$messages" "$base" "$head")
 [[ $identity_output == 'commit_identity: 1 commits checked' ]]

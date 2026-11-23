@@ -2,6 +2,7 @@
 # Copyright Tony Burns
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
 load("//lint:defs.bzl", "cspell_test", "gitleaks_history", "gitleaks_test", "rumdl_test", "shellcheck_test", "shfmt_test", "vale_test", "workflow_lint_test")
 load("//lint/private:gitleaks_tool.bzl", "gitleaks_tool")
 load("//lint/private:review_policy.bzl", "review_policy_test")
@@ -121,6 +122,29 @@ gitleaks_tool(name = "gitleaks_optional")
 ]
 
 PROOF_TAGS = ["manual"]
+
+pytest_test(
+    name = "repo_checks_drift_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/tests/test_repo_checks.py::test_workflow_drift"],
+    coverage = None,
+    data = [
+        "//:repo_check_targets",
+        "//lint:repo_check_targets",
+    ],
+)
+
+pytest_test(
+    name = "repo_checks_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/tests/test_repo_checks.py::test_runner"],
+    coverage = None,
+    # Tech debt (AGENTS.md): port the runner's subprocess fixture to Windows.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
 
 sh_test(
     name = "pr_merge_base_test",
