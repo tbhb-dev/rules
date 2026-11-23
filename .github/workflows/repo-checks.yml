@@ -308,6 +308,10 @@ jobs:
           manifest=${location%%:[0-9]*}
           bash "$(dirname "$manifest")/fetch.sh"
 
+      - name: Run repository checks without a commit range
+        if: github.event_name != 'pull_request'
+        run: bazelisk run @tbhb_rules//lint:repo_checks -- --no-range
+
       # The Go workspaces' BUILD files, as gazelle would write them.
       - name: Check that gazelle has nothing to change
         if: inputs.gazelle-dirs != ''

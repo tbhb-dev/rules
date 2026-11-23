@@ -23,16 +23,30 @@ def test_workflow_drift() -> None:
     known.update((ROOT / "lint/repo_check_targets.txt").read_text().splitlines())
     checks = read_checks(ROOT / "lint/repo_checks.toml")
     configured = {check.target for check in checks}
+    runner = "@tbhb_rules//lint:repo_checks"
+    runner_steps = []
     workflow_targets = []
     for job in workflow["jobs"].values():
         for step in job.get("steps", []):
             run = step.get("run", "").replace("\\\n", " ")
             for line in run.splitlines():
                 if not line.lstrip().startswith("#"):
-                    workflow_targets.extend(RUN.findall(line))
+                    targets = RUN.findall(line)
+                    workflow_targets.extend(targets)
+                    if runner in targets:
+                        assert not step.get("continue-on-error", False)
+                        runner_steps.append((step.get("if"), line.strip()))
 
-    runner = "@tbhb_rules//lint:repo_checks"
-    assert workflow_targets.count(runner) == 1
+    assert runner_steps == [
+        ("github.event_name != 'pull_request'", f"bazelisk run {runner} -- --no-range"),
+        (
+            "github.event_name == 'pull_request'",
+            (
+                f"bazelisk run {runner} -- --base-branch "
+                '"${BASE_REF}" "${HEAD_SHA}" "${HEAD_BRANCH}"'
+            ),
+        ),
+    ]
     direct_targets = set(workflow_targets) - {runner}
     local_targets = {check.target for check in checks if check.runs_locally}
     duplicated = direct_targets & local_targets
@@ -47,11 +61,19 @@ def test_workflow_drift() -> None:
 
 @pytest.mark.parametrize(
     ("scenario", "status"),
-    [("pass", 0), ("pull-request", 0), ("fail", 1), ("bad-config", 2)],
+    [
+        ("pass", 0),
+        ("pull-request", 0),
+        ("fail", 1),
+        ("bad-config", 2),
+        ("no-range", 0),
+        ("no-range-fail", 1),
+    ],
 )
 def test_runner(tmp_path: Path, scenario: str, status: int) -> None:
     runner = tmp_path / "repo_checks.py"
     shutil.copyfile(ROOT / "lint/repo_checks.py", runner)
+    no_range = scenario in {"no-range", "no-range-fail"}
     config = ""
     for name, args in [
         ("first", "none"),
@@ -67,6 +89,8 @@ runs_locally = true
 """
     if scenario == "bad-config":
         config = config.replace('args = "none"', 'args = "unknown"')
+    if no_range:
+        config = (ROOT / "lint/repo_checks.toml").read_text()
     runner.with_suffix(".toml").write_text(config)
     bazelisk = tmp_path / "bazelisk"
     bazelisk.write_text("""#!/usr/bin/env bash
@@ -92,6 +116,8 @@ fi
         "SIZE_ENV": str(size_env),
     }
     env.pop("PR_BASE_SHA", None)
+    if scenario == "no-range-fail":
+        env["FAIL_TARGET"] = "@tbhb_rules//lint:runner_default"
     base_args = ["origin/main"]
     helper_args = "--ref origin/main"
     size_base = "merged"
@@ -107,8 +133,9 @@ fi
             REPO="owner/repo",
         )
     branch = ["agent/example"] if scenario in {"fail", "pull-request"} else []
+    runner_args = ["--no-range"] if no_range else [*base_args, "HEAD", *branch]
     result = subprocess.run(
-        [sys.executable, str(runner), *base_args, "HEAD", *branch],
+        [sys.executable, str(runner), *runner_args],
         env=env,
         capture_output=True,
         text=True,
@@ -118,6 +145,24 @@ fi
     if status == 2:
         assert "unsupported args" in result.stderr
         assert not calls.exists()
+        return
+    if no_range:
+        assert calls.read_text().splitlines() == [
+            "run @tbhb_rules//lint:job_timeouts",
+            "run @tbhb_rules//lint:runner_default",
+            "run @tbhb_rules//lint:gitleaks_guard",
+        ]
+        assert result.stdout.splitlines() == [
+            "output from @tbhb_rules//lint:job_timeouts",
+            "PASS job_timeouts",
+            "output from @tbhb_rules//lint:runner_default",
+            "FAIL runner_default" if status else "PASS runner_default",
+            "output from @tbhb_rules//lint:gitleaks_guard",
+            "PASS gitleaks_guard",
+            "repo_checks: 2 passed, 1 failed (runner_default)"
+            if status
+            else "repo_checks: 3 passed, 0 failed",
+        ]
         return
 
     assert calls.read_text().splitlines() == [
