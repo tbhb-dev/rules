@@ -1,0 +1,35 @@
+{
+  "name": "branch-prefixes",
+  "target": "branch",
+  "enforcement": "disabled",
+  "conditions": {
+    "ref_name": {
+      "exclude": [
+        "~DEFAULT_BRANCH",
+        "refs/heads/agent/**/*",
+        "refs/heads/renovate/**/*"
+      ],
+      "include": [
+        "~ALL"
+      ]
+    }
+  },
+  "bypass_actors": [
+    {
+      "actor_id": "REPLACE_WITH_TBHB_USER_ID",
+      "actor_type": "User",
+      "bypass_mode": "always"
+    }
+  ],
+  "rules": [
+    {
+      "type": "creation"
+    },
+    {
+      "type": "update"
+    },
+    {
+      "type": "deletion"
+    }
+  ]
+}

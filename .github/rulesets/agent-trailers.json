@@ -1,0 +1,23 @@
+{
+  "name": "agent-trailers",
+  "target": "branch",
+  "enforcement": "disabled",
+  "conditions": {
+    "ref_name": {
+      "exclude": [],
+      "include": [
+        "refs/heads/agent/**/*"
+      ]
+    }
+  },
+  "bypass_actors": [],
+  "rules": [
+    {
+      "type": "commit_message_pattern",
+      "parameters": {
+        "operator": "regex",
+        "pattern": "(?m)^(Generated-by|Assisted-by|Merged-by): LLM "
+      }
+    }
+  ]
+}
