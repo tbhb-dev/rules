@@ -48,15 +48,21 @@ repos:
       - id: gitleaks
         name: gitleaks (staged changes)
         language: system
-        entry: tools/.bazel_env/bin/gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml
+        entry: >-
+          bash repo/baseline/files/.github/gitleaks-hook.sh tools/.bazel_env/bin/gitleaks .gitleaks.toml
+          --base lint/gitleaks/base.toml git --pre-commit --staged --redact --no-banner
         pass_filenames: false
+        always_run: true
       # The commit message: secrets, then the Conventional Commits header.
       # These run from the alpha plain commit-msg hook, which chains prek's
       # commit-msg stage after the identity check.
       - id: gitleaks-commit-msg
         name: gitleaks (commit message)
         language: system
-        entry: bash -c 'tools/.bazel_env/bin/gitleaks stdin --redact --no-banner --config .gitleaks.toml < "$1"' --
+        entry: >-
+          bash -c 'exec bash repo/baseline/files/.github/gitleaks-hook.sh
+          tools/.bazel_env/bin/gitleaks .gitleaks.toml
+          --base lint/gitleaks/base.toml stdin --redact --no-banner < "$1"' --
         stages: [commit-msg]
         always_run: true
       - id: conventional-commits

@@ -34,15 +34,20 @@ repos:
       - id: gitleaks
         name: gitleaks (staged changes)
         language: system
-        entry: .bazel_env/bin/gitleaks git --pre-commit --staged --redact --no-banner --config .gitleaks.toml
+        entry: >-
+          bash .github/gitleaks-hook.sh .bazel_env/bin/gitleaks .gitleaks.toml
+          git --pre-commit --staged --redact --no-banner
         pass_filenames: false
+        always_run: true
       # Check the commit message for secrets, then check its header and subject.
       # These run from tbhbdev alpha's plain commit-msg hook, which chains prek's
       # commit-msg stage after the identity check.
       - id: gitleaks-commit-msg
         name: gitleaks (commit message)
         language: system
-        entry: bash -c '.bazel_env/bin/gitleaks stdin --redact --no-banner --config .gitleaks.toml < "$1"' --
+        entry: >-
+          bash -c 'exec bash .github/gitleaks-hook.sh .bazel_env/bin/gitleaks .gitleaks.toml
+          stdin --redact --no-banner < "$1"' --
         stages: [commit-msg]
         always_run: true
       - id: conventional-commits
