@@ -40,6 +40,10 @@ check_commit() {
 }
 check_commit "$agent" "$agent" "$valid"
 check_commit "$agent" "$agent" change 'missing Generated-by or Assisted-by trailer'
+merged='Merged-by: LLM harness=codex;model=openai:m'
+merge_only="$merged: Merged-by is valid only on merge commits"
+check_commit "$agent" "$agent" "$valid"$'\\n'"$merged" "$merge_only"
+check_commit "$agent" "$agent" $'change\\n\\n'"$merged" "$merge_only"$'\\nmissing Generated-by or Assisted-by trailer'
 check_commit "$agent" "$agent" $'change\\n\\nGenerated-by: nope' 'Generated-by: nope: must start with literal LLM'
 check_commit "$agent" "$agent" $'change\\n\\nAssisted-by: LLM harness=codex;model=m\\nGenerated-by: LLM harness=codex;model=m' 'Generated-by: LLM harness=codex;model=m: Generated-by must come before Assisted-by'
 check_commit "$agent" "$agent" "$valid"$'\\nSigned-off-by: H <h@example.invalid>' 'Signed-off-by: H <h@example.invalid>: Signed-off-by and Co-authored-by are forbidden for agent commits'
