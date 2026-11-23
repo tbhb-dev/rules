@@ -12,6 +12,7 @@ import sys
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 TARGET = re.compile(r"(?:@tbhb_rules//lint:|//:)[\w./+-]+")
 LOCAL_ARGS = {"none", "base-head", "base-head-branch"}
@@ -36,14 +37,16 @@ def read_checks(path: Path) -> list[Check]:
     checks: list[Check] = []
     names: set[str] = set()
     targets: set[str] = set()
-    for index, entry in enumerate(entries, 1):
+    for index, entry in enumerate(cast("list[object]", entries), 1):
         match entry:
-            case {
-                "name": str(name),
-                "target": str(target),
-                "args": str(args),
-                "runs_locally": bool(runs_locally),
-            } if re.fullmatch(r"[\w.-]+", name) and TARGET.fullmatch(target):
+            case dict(
+                {
+                    "name": str(name),
+                    "target": str(target),
+                    "args": str(args),
+                    "runs_locally": bool(runs_locally),
+                }
+            ) if re.fullmatch(r"[\w.-]+", name) and TARGET.fullmatch(target):
                 pass
             case _:
                 msg = f"check {index} needs a name, Bazel target, args and runs_locally"
@@ -55,7 +58,7 @@ def read_checks(path: Path) -> list[Check]:
             msg = f"{name} has unsupported args {args!r}"
             raise ValueError(msg)
         if not runs_locally:
-            reason = entry.get("reason")
+            reason: object = entry.get("reason")
             if not isinstance(reason, str) or not reason.strip():
                 msg = f"{name} needs a reason for skipping local runs"
                 raise ValueError(msg)
