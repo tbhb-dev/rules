@@ -87,6 +87,12 @@ commit_messages(
     visibility = ["//visibility:public"],
 )
 
+sh_binary(
+    name = "pr_merge_base",
+    srcs = ["pr_merge_base.sh"],
+    visibility = ["//visibility:public"],
+)
+
 bzl_library(
     name = "defs",
     srcs = ["defs.bzl"],
