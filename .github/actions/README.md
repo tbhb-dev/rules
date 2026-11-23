@@ -58,7 +58,7 @@ The `repo` job clones the full history and makes these checks in order. An empty
 2. `bazel run //:gazelle -- -mode=diff` in each of `gazelle-dirs`.
 3. `bazel mod tidy` in each of `module-dirs`, then `git diff --exit-code` on their `MODULE.bazel`.
 4. `//:gitleaks_history`.
-5. On a pull request, `@tbhb_rules//lint:gitleaks_text` on its title and body.
+5. On a pull request, `@tbhb_rules//lint:gitleaks_text` and `@tbhb_rules//lint:qualified_references` on its title and body. The reference checker also checks Markdown.
 6. On a pull request, `@tbhb_rules//lint:commit_identity`, `@tbhb_rules//lint:commit_messages`, and `@tbhb_rules//lint:pr_size`.
 7. `pip-audit-target`. Failures are non-blocking on pull requests. On pushes and schedules they fail the job.
 8. `bazel run //:pnpm_audit -- --dir <dir>` in `pnpm-audit-workspace`, for each of `pnpm-audit-dirs`.
@@ -96,9 +96,17 @@ This workflow sets up Bazel inline and doesn't call `setup-bazel-ci`. A `./` pat
 
 Both reusable workflows set `cache-save: false` and use the same key family as `cache-warm`. After setup, `bazel query --output=location` locates `fetch-targets.txt` in the `tbhb_rules` module that the caller pins in `MODULE.bazel`. The script beside that file fetches the declared run-only tools. The source archive includes both files under `.github/actions/`. The caller's checkout needs only its own sources. Keep the workflow, action, and Bazel module pins on the same rules revision when Renovate updates them.
 
+### Qualified Issue and Pull Request References
+
+Use `owner/repo#N` for every issue or pull request reference, even within the same repository. The reference check skips Markdown headings, code, link destinations, URL fragments, and hex colors. A number that also forms a hex color needs an issue cue such as `See` or `Closes` for the check to find it.
+
+The commit identity check looks at non-merge commits in the pull request range where either email belongs to the agent. Merge commits fall outside that range check. The checker also skips the GitHub merge title and strips the GitHub squash suffix from a commit's title before checking the title and body.
+
+On a pull request, the check fails on bare references in its title, body, and tracked Markdown files that the pull request adds or changes. For an inventory of existing Markdown, run `bazelisk run @tbhb_rules//lint:qualified_references -- docs`. Inventory mode lists findings and exits zero by default. Pass `--mode fail` to enforce the rule across the inventory. The shared CI workflow runs the inventory on pushes to the default branch.
+
 ## `pr-text.yml`
 
-An edit to a pull request's title or body doesn't start a CI run, so `repo-checks.yml` doesn't see it. This workflow runs `@tbhb_rules//lint:gitleaks_text` on the edited text, and because the ruleset doesn't require its check, a red one only marks the edit until the next push scans the text again under `conclusion`. Call it from a workflow of its own:
+This workflow checks edited pull request text for secrets and qualified references. Its check reports on the edit. The required `conclusion` check includes both checks on the next push. Call it from a workflow of its own.
 
 ```yaml
 on:

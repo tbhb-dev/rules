@@ -39,6 +39,9 @@ check_commit() {
   fi
 }
 check_commit "$agent" "$agent" "$valid"
+check_commit "$agent" "$agent" "$valid"$'\\n\\nSee #42' 'fail: body:3: qualify #42 as owner/repo#42'
+check_commit "$agent" "$agent" "$valid"$'\\n\\nSee owner/repo#42'
+check_commit "$human" "$human" 'see #42'
 check_commit "$agent" "$agent" change 'missing Generated-by or Assisted-by trailer'
 merged='Merged-by: LLM harness=codex;model=openai:m'
 merge_only="$merged: Merged-by is valid only on merge commits"
@@ -103,7 +106,7 @@ case {scenario} in
     git -C "$repo" checkout -q -
     commit "$agent" "$agent"
     GIT_AUTHOR_NAME=GitHub GIT_AUTHOR_EMAIL=noreply@github.com GIT_COMMITTER_NAME=GitHub GIT_COMMITTER_EMAIL=noreply@github.com \\
-      git -C "$repo" merge -q --no-ff -m 'Merge pull request' side
+      git -C "$repo" merge -q --no-ff -m 'Merge pull request #42 from owner/side' side
     ;;
   noreply_author)
     commit "$agent" "$agent"

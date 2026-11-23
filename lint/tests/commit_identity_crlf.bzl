@@ -50,6 +50,8 @@ def _commit_identity_crlf_test_impl(ctx):
     ctx.actions.write(git, _GIT, is_executable = True)
     trailers = ctx.actions.declare_file(ctx.label.name + "/trailers")
     ctx.actions.write(trailers, _TRAILERS, is_executable = True)
+    references = ctx.actions.declare_file(ctx.label.name + "/references")
+    ctx.actions.write(references, "#!/usr/bin/env bash\ncat >/dev/null\n", is_executable = True)
     allowed = ctx.actions.declare_file(ctx.label.name + "/allowed")
     ctx.actions.write(allowed, "tbhb.dev Agent <agent@tonyburns.net> -> tbhb.dev Agent <agent@tonyburns.net>\n")
     subject = ctx.actions.declare_file(ctx.label.name + "/subject.sh")
@@ -59,12 +61,13 @@ def _commit_identity_crlf_test_impl(ctx):
         substitutions = {
             "@@ALLOWED@@": allowed.short_path,
             "@@GIT_DIR@@": git.short_path.rpartition("/")[0],
+            "@@REFERENCES@@": references.short_path,
             "@@TRAILERS@@": trailers.short_path,
         },
     )
     driver = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(driver, _DRIVER.format(subject = subject.short_path), is_executable = True)
-    executable, runfiles = shell_executable(ctx, driver, ctx.runfiles(files = [git, trailers, allowed, subject]))
+    executable, runfiles = shell_executable(ctx, driver, ctx.runfiles(files = [git, trailers, references, allowed, subject]))
     return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
 commit_identity_crlf_test = rule(

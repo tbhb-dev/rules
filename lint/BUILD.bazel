@@ -69,6 +69,13 @@ gitleaks_text(
     visibility = ["//visibility:public"],
 )
 
+python_tool(
+    name = "qualified_references",
+    main = "//lint/private/qualified_references:check_references.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
+
 # Checks the commits in a range against the allowed (author, committer)
 # pairs and require valid identity trailers for agent emails:
 # `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD`.

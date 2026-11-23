@@ -396,6 +396,12 @@ visibility = "private"
 kinds = ["go"]
 
 [[file]]
+path = ".github/workflows/pr-text.yml"
+source = "seed/shared/.github/workflows/pr-text.yml"
+mode = "seed"
+template = true
+
+[[file]]
 path = ".github/workflows/ci.yml"
 source = "seed/go/.github/workflows/ci.yml"
 mode = "seed"

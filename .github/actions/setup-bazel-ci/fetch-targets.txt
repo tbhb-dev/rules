@@ -2,6 +2,7 @@
 @bazel_tools//tools:tools_for_bazel_subcommands
 @tbhb_rules//lint:zizmor
 @tbhb_rules//lint:gitleaks_text
+@tbhb_rules//lint:qualified_references
 @tbhb_rules//lint:commit_identity
 @tbhb_rules//lint:commit_messages
 @tbhb_rules//lint:codeowners_errors

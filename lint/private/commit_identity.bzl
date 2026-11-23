@@ -29,13 +29,15 @@ def _commit_identity_impl(ctx):
         substitutions = {
             "@@ALLOWED@@": allowed.short_path,
             "@@GIT_DIR@@": path_dir(ctx.attr.git),
+            "@@REFERENCES@@": ctx.executable.references.short_path,
             "@@TRAILERS@@": ctx.executable.trailers.short_path,
         },
         is_executable = True,
     )
-    runfiles = ctx.runfiles(files = [allowed, ctx.executable.git, ctx.executable.trailers])
+    runfiles = ctx.runfiles(files = [allowed, ctx.executable.git, ctx.executable.trailers, ctx.executable.references])
     runfiles = runfiles.merge(ctx.attr.git[DefaultInfo].default_runfiles)
     runfiles = runfiles.merge(ctx.attr.trailers[DefaultInfo].default_runfiles)
+    runfiles = runfiles.merge(ctx.attr.references[DefaultInfo].default_runfiles)
     executable, runfiles = shell_executable(ctx, script, runfiles)
     return [DefaultInfo(executable = executable, runfiles = runfiles)]
 
@@ -47,7 +49,8 @@ _commit_identity = rule(
 
 Fails on any commit whose author and committer, together, are not one of
 the allowed pairs, and names the commit and both identities. Agent authors or
-committers also require valid identity trailers without sign-off or co-author lines.""",
+committers also require qualified issue references and valid identity trailers
+without sign-off or co-author lines.""",
     attrs = SHELL_ATTRS | {
         "git": attr.label(
             default = "@tbhb_rules_git//:git",
@@ -55,6 +58,11 @@ committers also require valid identity trailers without sign-off or co-author li
             cfg = "target",
             allow_files = True,
             doc = "The git that reads the history.",
+        ),
+        "references": attr.label(
+            default = Label("//lint:qualified_references"),
+            executable = True,
+            cfg = "target",
         ),
         "trailers": attr.label(executable = True, cfg = "target", mandatory = True),
         "_runner": attr.label(

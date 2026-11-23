@@ -14,6 +14,8 @@ Name files in lowercase kebab-case, apart from the conventional `AGENTS.md`, `CL
 
 ## Writing
 
+Use `owner/repo#N` for every issue or pull request reference, including references to this repository.
+
 Describe what the system is and does. Leave history and decision rationale to decision records. State facts that constrain behavior as constraints. Don't coin terms: use ordinary words or terms from the code or a standard. Write each paragraph on one line without hard wrapping. Use Mermaid for diagrams.
 
 ## Authorship fields

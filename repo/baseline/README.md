@@ -6,12 +6,12 @@ tags: [repository, baseline]
 status: stable
 generated:
   - role: generated
-    harness: codex:0.164.0
-    model: openai:gpt-6.1-sol
+    harness: codex:0.171.0
+    model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:8f49f11fc6113551
-    at: "2026-11-12T01:49:56Z"
+    session: sha-256-64:065a5a7017db1fc0
+    at: "2026-11-23T05:52:11Z"
 ---
 
 # Repository baseline
@@ -62,6 +62,8 @@ reason = "A version upgrade needs a separate migration."
 Unknown schema versions, unknown kinds, and blank exception reasons fail validation. Each exception must still describe a difference. An exception whose file no longer differs fails. Public repositories have an Apache-2.0 `LICENSE`. Private repositories have `LICENSES/LicenseRef-Proprietary.txt` and no Apache `LICENSE`. Future consumer checks cross-check those files against `private`.
 
 Bootstrap seeds start with a small Bazel workspace and a secrets check. They call the shared repository workflow and give branch protection one `conclusion` job that needs every other job. Application-specific build targets and dependency checks come next as the repository adds code. The first build creates the repository-owned module lock.
+
+The shared repository workflow checks qualified issue and pull request references. The pull request text seed repeats the title and body checks after edits. See [shared CI workflows](../../.github/actions/README.md).
 
 Renovate ignores `repo/baseline/**`, so it never bumps the baseline copies. Renovate bumps the source repositories' own pins. The baseline follows them only through a reviewed sync pull request that recopies files from a newer source commit. No automation does that resync yet.
 

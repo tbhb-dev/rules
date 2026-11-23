@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@tbhb_rules_python//:defs.bzl", "pytest_test")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+exports_files(
+    ["check_references.py"],
+    visibility = ["//lint:__pkg__"],
+)
+
+pytest_test(
+    name = "pytest_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/private/qualified_references"],
+    coverage = ["lint.private.qualified_references.check_references"],
+    # Tech debt: run the Git subprocess tests on Windows and remove the exclusion.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)

@@ -6,12 +6,12 @@ tags: [design, content]
 status: stable
 generated:
   - role: generated
-    harness: codex:0.166.0
-    model: openai:gpt-6.1-sol
+    harness: codex:0.171.0
+    model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:59fe70e1ae90cafb
-    at: "2026-11-15T14:56:36Z"
+    session: sha-256-64:065a5a7017db1fc0
+    at: "2026-11-23T05:52:11Z"
 ---
 
 # Design writing checklist
@@ -30,4 +30,5 @@ Start with [the template](TEMPLATE.md). Complete these checks across the README 
 - [ ] Check the operator's standing rules and preserve credential, spending, authority, stop, and review controls. Explicitly identify decisions that would change a rule.
 - [ ] Remove private host names, paths, repository names, network details, and other private information from public designs. Paraphrase tbhb instead of quoting verbatim.
 - [ ] Use paragraphs of at most three sentences, bullets for lists of three or more items, plain words, and paths in backticks. Define each term at first use and use its name consistently.
+- [ ] Use `owner/repo#N` for every issue or pull request reference, including references to this repository.
 - [ ] Ask an independent reviewer to read every file and check primary sources at the current commit. Resolve blocking findings before presenting the design to tbhb.

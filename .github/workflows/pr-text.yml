@@ -2,8 +2,8 @@
 # Copyright Tony Burns
 
 ---
-# Scans a pull request's title and body for secrets after an edit. The
-# `repo` job of repo-checks.yml scans them on every push, under the required
+# Checks a pull request's title and body for secrets and bare issue references.
+# The `repo` job of repo-checks.yml checks them on pushes, under the required
 # `conclusion` check; an edit alone starts no CI run, so this workflow scans
 # the edited text. Its check isn't required. A repository calls it from its
 # own workflow on `pull_request` with `types: [edited]`, and this repository
@@ -166,7 +166,7 @@ jobs:
             delay=$((delay * 2))
           done
 
-      - name: Scan the pull request's title and body for secrets
+      - name: Check the pull request title and body
         env:
           GITLEAKS_CONFIG_TOML: ${{ secrets.GITLEAKS_CONFIG_TOML }}
           PR_BODY: ${{ github.event.pull_request.body }}
@@ -179,3 +179,4 @@ jobs:
           text="${RUNNER_TEMP}/pr-text.txt"
           printf '%s\n\n%s\n' "${PR_TITLE}" "${PR_BODY}" >"${text}"
           bazelisk run @tbhb_rules//lint:gitleaks_text <"${text}"
+          bazelisk run @tbhb_rules//lint:qualified_references -- pr-text <"${text}"

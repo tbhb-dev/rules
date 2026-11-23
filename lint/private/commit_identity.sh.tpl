@@ -14,6 +14,7 @@ runfiles=$PWD
 allowed="$runfiles/@@ALLOWED@@"
 git_dir="$runfiles/@@GIT_DIR@@"
 trailers="$runfiles/@@TRAILERS@@"
+references="$runfiles/@@REFERENCES@@"
 
 export PATH="$git_dir:$PATH"
 export GIT_CONFIG_NOSYSTEM=1
@@ -59,6 +60,12 @@ while IFS=$'\t' read -r sha pair; do
       while IFS= read -r problem; do
         problem=${problem%$'\r'}
         echo "commit_identity: FAIL: $sha $problem" >&2
+      done <<<"$problems"
+    fi
+    if ! problems=$(printf '%s' "$message" | "$references" commit); then
+      commit_failed=1
+      while IFS= read -r problem; do
+        echo "commit_identity: FAIL: $sha ${problem%$'\r'}" >&2
       done <<<"$problems"
     fi
   fi

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+name: pr-text
+
+on:
+  pull_request:
+    types: [edited]
+
+permissions: {}
+
+jobs:
+  pr-text:
+    permissions:
+      contents: read
+    uses: tbhb-dev/rules/.github/workflows/pr-text.yml@{{rules_sha}}  # main
