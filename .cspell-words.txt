@@ -7,6 +7,7 @@ ascm
 astrojs
 autouse
 awrel
+backslashreplace
 bazelignore
 bazelignored
 bazelisk
@@ -73,6 +74,7 @@ govet
 govulncheck
 gpgsign
 gsub
+hardbreak
 hardwrap
 heapdump
 heredocs
@@ -89,6 +91,7 @@ libexec
 libfontconfig
 libfreetype
 lightningcss
+linkify
 listy
 LLMX
 localmodule
@@ -168,6 +171,7 @@ shfmt
 sitecustomize
 skylib
 sloglint
+softbreak
 softwaresystem
 srcs
 stampable
