@@ -35,7 +35,9 @@ exit 37
 @pytest.fixture
 def pinned_version() -> str:
     pins = (ROOT / "pins/extensions.bzl").read_text()
-    versions = set(re.findall(r"/gitleaks/releases/download/v([^/]+)/gitleaks_", pins))
+    versions: set[str] = set(
+        re.findall(r"/gitleaks/releases/download/v([^/]+)/gitleaks_", pins)
+    )
     assert len(versions) == 1, versions
     return versions.pop()
 
@@ -116,7 +118,7 @@ def test_hook(
         for hook in repo["hooks"]
     }
     common = ["--redact", "--no-banner", "--config"]
-    for hook_id, extra, scan_args, scanned_input in [
+    invocations: list[tuple[str, list[str], list[str], list[str]]] = [
         ("gitleaks", [], ["git", "--pre-commit", "--staged", *common], []),
         (
             "gitleaks-commit-msg",
@@ -124,7 +126,8 @@ def test_hook(
             ["stdin", *common],
             ["test commit message"],
         ),
-    ]:
+    ]
+    for hook_id, extra, scan_args, scanned_input in invocations:
         hook = hooks[hook_id]
         assert hook["always_run"]
         captured_config = tmp_path / f"{hook_id}.toml"
@@ -148,19 +151,20 @@ def test_hook(
             assert str(shim) in result.stderr
             assert f"gitleaks {pinned_version} on PATH" in result.stderr
             assert failure in result.stderr
+            continue
+
+        binary = shim if shim_mode == 0o755 else path_binary
+        assert result.returncode == 37, result
+        assert not result.stderr
+        launched, *output = result.stdout.splitlines()
+        assert (tmp_path / launched).resolve() == (tmp_path / binary).resolve()
+        config_arg = output[len(scan_args)]
+        assert output == [*scan_args, config_arg, *scanned_input]
+        expected_config = tomllib.loads((tmp_path / ".gitleaks.toml").read_text())
+        if config == ROOT_CONFIG and binary == path_binary:
+            assert Path(config_arg).parent == tmp_path
+            assert not Path(config_arg).exists()
+            expected_config["extend"] = {"path": "lint/gitleaks/base.toml"}
         else:
-            binary = shim if shim_mode == 0o755 else path_binary
-            assert result.returncode == 37, result
-            assert not result.stderr
-            launched, *output = result.stdout.splitlines()
-            assert (tmp_path / launched).resolve() == (tmp_path / binary).resolve()
-            config_arg = output[len(scan_args)]
-            assert output == [*scan_args, config_arg, *scanned_input]
-            expected_config = tomllib.loads((tmp_path / ".gitleaks.toml").read_text())
-            if config == ROOT_CONFIG and binary == path_binary:
-                assert Path(config_arg).parent == tmp_path
-                assert not Path(config_arg).exists()
-                expected_config["extend"] = {"path": "lint/gitleaks/base.toml"}
-            else:
-                assert config_arg == ".gitleaks.toml"
-            assert tomllib.loads(captured_config.read_text()) == expected_config
+            assert config_arg == ".gitleaks.toml"
+        assert tomllib.loads(captured_config.read_text()) == expected_config
