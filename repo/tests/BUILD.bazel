@@ -12,6 +12,17 @@ repo_files()
 
 repo_layout_test_suite(name = "repo_layout_tests")
 
+pytest_test(
+    name = "manifest_test",
+    srcs = [
+        "//:pyproject.toml",
+        "//repo/baseline:repo_files",
+    ],
+    args = ["repo/baseline/test_manifest.py"],
+    coverage = ["repo.baseline.check_manifest"],
+    visibility = ["//visibility:public"],
+)
+
 scripts_layout_test(
     name = "good_test",
     fixture = "good",

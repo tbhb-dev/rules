@@ -6,6 +6,7 @@
 
 import os
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import yaml
@@ -20,11 +21,18 @@ BASELINE_PATH = (
 def _read_labels(path: Path) -> set[str]:
     with path.open(encoding="utf-8") as source:
         document: object = yaml.safe_load(source)
-    match document:
-        case {"self-hosted-runner": {"labels": list(labels)}}:
-            return {label for label in labels if isinstance(label, str)}
-        case _:
-            return set()
+    if not isinstance(document, Mapping):
+        return set()
+    config: Mapping[object, object] = document
+    runner: object = config.get("self-hosted-runner")
+    if not isinstance(runner, Mapping):
+        return set()
+    runner_config: Mapping[object, object] = runner
+    labels: object = runner_config.get("labels")
+    if not isinstance(labels, list):
+        return set()
+    entries: list[object] = labels
+    return {label for label in entries if isinstance(label, str)}
 
 
 def main() -> int:

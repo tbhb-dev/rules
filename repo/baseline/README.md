@@ -6,12 +6,12 @@ tags: [repository, baseline]
 status: stable
 generated:
   - role: generated
-    harness: codex:0.164.0
-    model: openai:gpt-6.1-sol
+    harness: codex:0.171.0
+    model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:8f49f11fc6113551
-    at: "2026-11-12T01:49:56Z"
+    session: sha-256-64:5d0a52b5d43e52e8
+    at: "2026-11-23T22:17:14Z"
 ---
 
 # Repository baseline
@@ -65,4 +65,4 @@ Bootstrap seeds start with a small Bazel workspace and a secrets check. They cal
 
 Renovate ignores `repo/baseline/**`, so it never bumps the baseline copies. Renovate bumps the source repositories' own pins. The baseline follows them only through a reviewed sync pull request that recopies files from a newer source commit. No automation does that resync yet.
 
-`//repo/baseline:manifest_test` validates this manifest, its source files, keys, kinds, placeholders, and destination uniqueness. It also tests invalid manifests and both schemas. Consumer checks C1 to C5, C7, and C8 belong to later changes.
+`//repo/tests:manifest_test` validates this manifest, its source files, keys, kinds, placeholders, and destination uniqueness. It also tests invalid manifests and both schemas. Consumer checks C1 to C5, C7, and C8 belong to later changes.

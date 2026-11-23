@@ -33,6 +33,7 @@ def config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         (LABELS % "", f"{HOSTED}, {ARM}"),
         (LABELS % ARM, HOSTED),
         (LABELS % f"{HOSTED}, {ARM}, custom-runner, on", ""),
+        ("[]\n", f"{HOSTED}, {ARM}"),
         ("{}\n", f"{HOSTED}, {ARM}"),
         ("self-hosted-runner: {}\n", f"{HOSTED}, {ARM}"),
     ],
