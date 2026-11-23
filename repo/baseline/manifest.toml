@@ -29,6 +29,18 @@ mode = "bytes"
 visibility = "all"
 
 [[file]]
+path = ".github/rulesets/agent-trailers.json"
+source = "files/.github/rulesets/agent-trailers.json"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
+path = ".github/rulesets/branch-prefixes.json"
+source = "files/.github/rulesets/branch-prefixes.json"
+mode = "bytes"
+visibility = "all"
+
+[[file]]
 path = ".editorconfig"
 source = "files/editorconfig"
 mode = "lines"
