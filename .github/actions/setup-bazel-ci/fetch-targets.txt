@@ -11,6 +11,7 @@
 @tbhb_rules_go//tools:go_sdk_checksums
 @tbhb_rules//lint:job_timeouts
 @tbhb_rules//lint:runner_default
+@tbhb_rules//lint:actionlint_labels
 @tbhb_rules//lint:gitleaks_guard
 //:gitleaks_history
 //:gazelle

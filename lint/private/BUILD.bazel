@@ -9,6 +9,7 @@ load(":gitleaks_tool.bzl", "gitleaks_tool")
 repo_files()
 
 exports_files([
+    "check_actionlint_labels.py",
     "check_trailing_newline.py",
     "gitleaks_guard.py",
 ])

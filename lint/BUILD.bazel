@@ -45,6 +45,14 @@ python_tool(
 )
 
 python_tool(
+    name = "actionlint_labels",
+    data = ["//repo/baseline:files/.github/actionlint.yaml"],
+    main = "//lint/private:check_actionlint_labels.py",
+    python_env = "@tbhb_rules_python_runtime//:env",
+    visibility = ["//visibility:public"],
+)
+
+python_tool(
     name = "gitleaks_guard",
     main = "//lint/private:gitleaks_guard.py",
     python_env = "@tbhb_rules_python_runtime//:env",

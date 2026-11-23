@@ -124,6 +124,13 @@ gitleaks_tool(name = "gitleaks_optional")
 PROOF_TAGS = ["manual"]
 
 pytest_test(
+    name = "actionlint_labels_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/tests/test_actionlint_labels.py"],
+    coverage = ["lint.private.check_actionlint_labels"],
+)
+
+pytest_test(
     name = "repo_checks_drift_test",
     srcs = ["//:repo_files"],
     args = ["lint/tests/test_repo_checks.py::test_workflow_drift"],

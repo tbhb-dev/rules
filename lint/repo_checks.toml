@@ -14,6 +14,12 @@ args = "none"
 runs_locally = true
 
 [[checks]]
+name = "actionlint_labels"
+target = "@tbhb_rules//lint:actionlint_labels"
+args = "none"
+runs_locally = true
+
+[[checks]]
 name = "gitleaks_guard"
 target = "@tbhb_rules//lint:gitleaks_guard"
 args = "none"

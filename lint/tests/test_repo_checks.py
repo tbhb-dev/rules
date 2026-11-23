@@ -53,6 +53,9 @@ def test_workflow_drift() -> None:
     ]
     direct_targets = set(workflow_targets) - {runner}
     local_targets = {check.target for check in checks if check.runs_locally}
+    fetch_manifest = ROOT / ".github/actions/setup-bazel-ci/fetch-targets.txt"
+    missing_prefetch = local_targets - set(fetch_manifest.read_text().splitlines())
+    assert not missing_prefetch, sorted(missing_prefetch)
     duplicated = direct_targets & local_targets
     assert not duplicated, sorted(duplicated)
 
@@ -67,18 +70,21 @@ def _assert_no_range_output(calls: Path, stdout: str, status: int) -> None:
     assert calls.read_text().splitlines() == [
         "run @tbhb_rules//lint:job_timeouts",
         "run @tbhb_rules//lint:runner_default",
+        "run @tbhb_rules//lint:actionlint_labels",
         "run @tbhb_rules//lint:gitleaks_guard",
     ]
     assert stdout.splitlines() == [
         "output from @tbhb_rules//lint:job_timeouts",
         "PASS job_timeouts",
         "output from @tbhb_rules//lint:runner_default",
-        "FAIL runner_default" if status else "PASS runner_default",
+        "PASS runner_default",
+        "output from @tbhb_rules//lint:actionlint_labels",
+        "FAIL actionlint_labels" if status else "PASS actionlint_labels",
         "output from @tbhb_rules//lint:gitleaks_guard",
         "PASS gitleaks_guard",
-        "repo_checks: 2 passed, 1 failed (runner_default)"
+        "repo_checks: 3 passed, 1 failed (actionlint_labels)"
         if status
-        else "repo_checks: 3 passed, 0 failed",
+        else "repo_checks: 4 passed, 0 failed",
     ]
 
 
@@ -140,7 +146,7 @@ fi
     }
     env.pop("PR_BASE_SHA", None)
     if scenario == "no-range-fail":
-        env["FAIL_TARGET"] = "@tbhb_rules//lint:runner_default"
+        env["FAIL_TARGET"] = "@tbhb_rules//lint:actionlint_labels"
     base_args = ["origin/main"]
     helper_args = "--ref origin/main"
     size_base = "merged"
