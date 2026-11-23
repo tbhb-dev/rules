@@ -262,6 +262,11 @@ jobs:
           sysctl kern.maxfiles kern.maxfilesperproc 2>&1 || true
           ulimit -a || true
 
+      - name: Build the Go nogo smoke target
+        if: matrix.workspace.id == 'go-smoke'
+        working-directory: ${{ matrix.workspace.dir }}
+        run: bazelisk build --config=ci //:nogo_smoke
+
       - name: Test
         working-directory: ${{ matrix.workspace.dir }}
         run: bash "$GITHUB_WORKSPACE/.github/actions/setup-bazel-ci/test.sh"

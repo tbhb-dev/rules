@@ -60,9 +60,7 @@
       enabled: false,
     },
     {
-      // rules_go 0.65.0 compiles nogo against the shared x/tools.
-      // v0.53.0 changed facts.NewDecoder. Lift this rule once a rules_go
-      // release supports it.
+      // Rule: Lift this cap when rules_go ships nogo support for x/tools 0.53.
       description: "golang.org/x/tools stays below v0.53 until rules_go supports it",
       matchManagers: ["gomod"],
       matchPackageNames: ["golang.org/x/tools"],
