@@ -6,27 +6,27 @@ index ff1a3c57976f72ae5750e5ac3cc950a0f700107d..3bad2fcc160dbccdd0fad95e4023de58
 -      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
 +      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c  # v2.23.0
 diff --git a/.github/actions/setup-bazel-ci/action.yml b/.github/actions/setup-bazel-ci/action.yml
-index d1bd3c48f290da883ce7aa288a907461454fec2a..8914179c119dc93959aeb8ef983416a441130086 100644
+index b3d7b0b0d30f56c7e238365e4e01fb8552399994..83d115f9408c24a88ff6d5c092db907ffe75dd83 100644
 --- a/.github/actions/setup-bazel-ci/action.yml
 +++ b/.github/actions/setup-bazel-ci/action.yml
 @@ -62 +62 @@ runs:
 -      uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
 +      uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c  # v2.23.0
 diff --git a/.github/renovate.json5 b/.github/renovate.json5
-index e30af37769e3a7e5002d00bf079e72708daac5ba..9f9730344bca03ee02e8067e18110cf9ae62ddb1 100644
+index ac2ccb46047c67edd04b97ce3a0310b30d8e8aa7..7f997b0ba2d665737e7ba18cbabe490ffd4b02ed 100644
 --- a/.github/renovate.json5
 +++ b/.github/renovate.json5
 @@ -10,4 +10,4 @@
--    "github>tbhb-dev/renovate-config//default.json5#f6a9a37960aadd608eb72de8b1743a52928c4507", // main
--    "github>tbhb-dev/renovate-config//bazel.json5#f6a9a37960aadd608eb72de8b1743a52928c4507", // main
--    "github>tbhb-dev/renovate-config//go.json5#f6a9a37960aadd608eb72de8b1743a52928c4507", // main
--    "github>tbhb-dev/renovate-config//python.json5#f6a9a37960aadd608eb72de8b1743a52928c4507", // main
-+    "github>tbhb-dev/renovate-config//default.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
-+    "github>tbhb-dev/renovate-config//bazel.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
-+    "github>tbhb-dev/renovate-config//go.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
-+    "github>tbhb-dev/renovate-config//python.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
+-    "github>example-org/renovate-config-fixture//default.json5#f6a9a37960aadd608eb72de8b1743a52928c4507", // main
+-    "github>example-org/renovate-config-fixture//bazel.json5#f6a9a37960aadd608eb72de8b1743a52928c4507", // main
+-    "github>example-org/renovate-config-fixture//go.json5#f6a9a37960aadd608eb72de8b1743a52928c4507", // main
+-    "github>example-org/renovate-config-fixture//python.json5#f6a9a37960aadd608eb72de8b1743a52928c4507", // main
++    "github>example-org/renovate-config-fixture//default.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
++    "github>example-org/renovate-config-fixture//bazel.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
++    "github>example-org/renovate-config-fixture//go.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
++    "github>example-org/renovate-config-fixture//python.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 915b92f14c7e3474214e3c2525757451cd3024df..724f46d3bac46d21239c9893fc22f7508304a86a 100644
+index 9b56c025df89dfec6a95ac6895f6541be75f3d4b..e85d542bbd2d5971107788df91de57085714d066 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
 @@ -42 +42 @@ jobs:
@@ -36,28 +36,28 @@ index 915b92f14c7e3474214e3c2525757451cd3024df..724f46d3bac46d21239c9893fc22f750
 -        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
 +        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c  # v2.23.0
 diff --git a/.github/workflows/pr-text.yml b/.github/workflows/pr-text.yml
-index bbad4d4d99b81dcb908465a36138f6e27a1cf495..c195bf65b7b4aee568c0348f2a377e6f20a1bd09 100644
+index f80bd82eb90d8ece4b79bae3115cb2b572ed65e3..0694ed07d1b4d5e257fe4ba6cdffb4d1ee4d0e3f 100644
 --- a/.github/workflows/pr-text.yml
 +++ b/.github/workflows/pr-text.yml
 @@ -49 +49 @@ jobs:
 -        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a  # v2.22.4
 +        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c  # v2.23.0
 diff --git a/.github/workflows/renovate-config-validator.yaml b/.github/workflows/renovate-config-validator.yaml
-index 9ba4739834ab053097463115cac2a73f01822782..3c59612e9f665c71406cf1510e3d38599006b754 100644
+index 8fd19bd82cdbe88c5ede04cc78d2cc9090c25568..16f60c5507ca2336e987b8638659e1826107f0d3 100644
 --- a/.github/workflows/renovate-config-validator.yaml
 +++ b/.github/workflows/renovate-config-validator.yaml
 @@ -24 +24 @@ jobs:
--    uses: tbhb-dev/renovate-config/.github/workflows/renovate-config-validator.yaml@f6a9a37960aadd608eb72de8b1743a52928c4507  # main
-+    uses: tbhb-dev/renovate-config/.github/workflows/renovate-config-validator.yaml@ad8b77a732a0855deb411341b56296e58c1cc537  # main
+-    uses: example-org/renovate-config-fixture/.github/workflows/renovate-config-validator.yaml@f6a9a37960aadd608eb72de8b1743a52928c4507  # main
++    uses: example-org/renovate-config-fixture/.github/workflows/renovate-config-validator.yaml@ad8b77a732a0855deb411341b56296e58c1cc537  # main
 diff --git a/.github/workflows/renovate.yaml b/.github/workflows/renovate.yaml
-index 3219e56902122086faeb20565362dc8cf84f0b51..25f1e69db7bc4a1497097142dc9fe3d72b80ff51 100644
+index 7e85d6a48d16d89c90a2d8b4015bfb71a0a14f9e..2506b4e6b72333ebbbd1c69863a774a9ca888a4f 100644
 --- a/.github/workflows/renovate.yaml
 +++ b/.github/workflows/renovate.yaml
 @@ -36 +36 @@ jobs:
--    uses: tbhb-dev/renovate-config/.github/workflows/renovate.yaml@f6a9a37960aadd608eb72de8b1743a52928c4507  # main
-+    uses: tbhb-dev/renovate-config/.github/workflows/renovate.yaml@ad8b77a732a0855deb411341b56296e58c1cc537  # main
+-    uses: example-org/renovate-config-fixture/.github/workflows/renovate.yaml@f6a9a37960aadd608eb72de8b1743a52928c4507  # main
++    uses: example-org/renovate-config-fixture/.github/workflows/renovate.yaml@ad8b77a732a0855deb411341b56296e58c1cc537  # main
 diff --git a/.github/workflows/repo-checks.yml b/.github/workflows/repo-checks.yml
-index 7fad87ff7aa65038ac5942f88316fbd533efc7ca..4cb8f84033558abc6914207d18aec942703e7853 100644
+index 468ce146f9b101d20d0d85f5a2bfbf810b3d8f7e..18fae667bae6194ef266ba21d4982cdf824dffd8 100644
 --- a/.github/workflows/repo-checks.yml
 +++ b/.github/workflows/repo-checks.yml
 @@ -127 +127 @@ jobs:

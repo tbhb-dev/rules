@@ -44,6 +44,21 @@ class TestDecide(unittest.TestCase):
                 assert decision.approve == (expected == "ok_pin_only")
                 if decision.findings:
                     assert decision.findings[0].code == expected
+                if directory.name == "first-party-group":
+                    metadata.pop("config")
+                    # Rebuild the real pins in memory to exercise the defaults.
+                    owner = "tbhb-dev"
+                    default_repo = f"{owner}/rules"
+                    fixture_repo = "example-org/rules-fixture"
+                    default_diff = diff.replace(
+                        fixture_repo.encode(), default_repo.encode()
+                    )
+                    default_metadata = json.loads(
+                        json.dumps(metadata)
+                        .replace(fixture_repo, default_repo)
+                        .replace("fixture_rules", "tbhb_rules")
+                    )
+                    assert decide(default_diff, default_metadata, checks) == decision
 
     def test_reason_codes_have_fixtures(self) -> None:
         expected = {

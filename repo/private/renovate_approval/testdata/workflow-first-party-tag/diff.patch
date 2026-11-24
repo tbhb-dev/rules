@@ -1,7 +1,7 @@
 diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
-index 5839f53fc718fc4490677f806edbde56b1e0782b..e83ad542be6cc6b299dbf3b8790b02dcd374d0e8 100644
+index e0fc0349bd3beaf35d7b517b124fec09bb20aad3..521b3e1142ac93070afb411d1e019f45c2a549ce 100644
 --- a/.github/workflows/ci.yml
 +++ b/.github/workflows/ci.yml
 @@ -6 +6 @@
--      - uses: tbhb-dev/rules@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  # v7.0.1
-+      - uses: tbhb-dev/rules@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  # v7.0.2
+-      - uses: example-org/rules-fixture@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  # v7.0.1
++      - uses: example-org/rules-fixture@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  # v7.0.2

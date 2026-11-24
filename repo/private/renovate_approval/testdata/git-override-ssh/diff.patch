@@ -1,5 +1,5 @@
 diff --git a/MODULE.bazel b/MODULE.bazel
-index d863e6b8f5c3d975cc0d4173998b86ad1f4bfcdf..927bbb9ee315dcbd71d3a4df6f66302d98c3a6f2 100644
+index e5c872904b050cc19b902675a61e98a446232ce4..c33538eb1f034a5df5c589e5a8f301d9a5187ded 100644
 --- a/MODULE.bazel
 +++ b/MODULE.bazel
 @@ -4 +4 @@
