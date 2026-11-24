@@ -47,6 +47,12 @@
   // every .bazelversion as one group.
   packageRules: [
     {
+      description: "Temporal CLI archives move together",
+      matchManagers: ["bazel"],
+      matchDepNames: ["tbhb_rules_temporal_*"],
+      groupName: "Temporal CLI",
+    },
+    {
       // This lock records a historical resolution for the clock regression.
       description: "The cooldown regression keeps its historical lock",
       matchFileNames: ["tools/testdata/lock_cooldown/**"],

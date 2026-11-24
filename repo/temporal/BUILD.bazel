@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("//repo:defs.bzl", "repo_files")
+load(":defs.bzl", "temporal_dev_server")
+
+repo_files()
+
+temporal_dev_server(
+    name = "dev_server",
+    visibility = ["//visibility:public"],
+)
