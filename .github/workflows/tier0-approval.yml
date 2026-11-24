@@ -60,9 +60,12 @@ jobs:
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     environment: pins-approver
+    permissions:
+      contents: write  # Merge the checked commit.
+      pull-requests: write  # Enqueue the approved pull request.
     outputs:
       decision: ${{ steps.decide.outputs.decision }}
-      reason: ${{ steps.decide.outputs.reason }}
+      reason: ${{ steps.merge.outputs.reason || steps.decide.outputs.reason }}
       head_sha: ${{ steps.decide.outputs.head_sha }}
     steps:
       - name: Harden the runner
@@ -94,7 +97,7 @@ jobs:
           private-key: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}
           permission-actions: read
           permission-checks: read
-          permission-contents: ${{ inputs.mode == 'enforce' && 'write' || 'read' }}
+          permission-contents: read
           permission-pull-requests: ${{ inputs.mode == 'enforce' && 'write' || 'read' }}
 
       - name: Decide tier-0 approval
@@ -110,6 +113,24 @@ jobs:
           MAX_FILES: ${{ inputs.max_files }}
           MODE: ${{ inputs.mode }}
         run: python3 -I -S rules/repo/private/tier0_approval/__main__.py
+
+      - name: Enqueue or merge the approved pull request
+        id: merge
+        if: inputs.mode == 'enforce' && steps.decide.outputs.decision == 'approve'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ steps.decide.outputs.head_sha }}
+        run: |
+          pr=$(jq -r .pr tier0-decision.json)
+          # gh handles auto-merge and enqueueing when the base requires a queue.
+          if gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --match-head-commit "$HEAD_SHA"; then
+            reason=merge-requested
+          else
+            reason=merge-failed
+          fi
+          jq --arg reason "$reason" '.reason = $reason' tier0-decision.json > tier0-merge.json
+          mv tier0-merge.json tier0-decision.json
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
 
       - name: Upload the decision
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2

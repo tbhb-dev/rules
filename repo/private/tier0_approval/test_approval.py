@@ -178,18 +178,26 @@ def test_evidence(api: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
     assert gate.decide(RUN, ENV)["reason"] == "checks-unsuccessful"
 
 
-def test_enforce(api: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
-    flags = ("--repo", REPO, "--squash", "--match-head-commit")
-    for error in (None, subprocess.CalledProcessError(1, "gh")):
-        api.configure_mock(side_effect=[[[PULL]], PULL, *CLEAR, PULL, {}])
-        command = Mock(side_effect=error)
-        monkeypatch.setattr(gate, "command", command)
-        result = gate.decide(RUN, ENV | {"MODE": "enforce"})
-        assert api.call_args.args[1] == "pulls/5/reviews"
-        assert api.call_args.args[-3:] == (f"commit_id={HEAD}", "-f", "event=APPROVE")
-        command.assert_called_once_with("gh", "pr", "merge", "5", *flags, HEAD)
-        assert result["decision"] == "approve"
-        assert result["reason"] == ("merge-failed" if error else "merge-requested")
+def test_enforce(api: Mock) -> None:
+    api.configure_mock(side_effect=[[[PULL]], PULL, *CLEAR, PULL, {}])
+    result = gate.decide(RUN, ENV | {"MODE": "enforce"})
+    assert api.call_args.args[1] == "pulls/5/reviews"
+    assert api.call_args.args[-3:] == (f"commit_id={HEAD}", "-f", "event=APPROVE")
+    assert (result["decision"], result["head_sha"]) == ("approve", HEAD)
+
+    workflow = Path(".github/workflows/tier0-approval.yml").read_text(encoding="utf-8")
+    steps = yaml.safe_load(workflow)["jobs"]["approval"]["steps"]
+    app, decide, merge = (step for step in steps if "id" in step)
+    assert app["with"]["permission-contents"] == "read"
+    assert decide["env"]["GH_TOKEN"] == "${{ steps.app.outputs.token }}"  # noqa: S105
+    assert merge["env"] == {
+        "GH_TOKEN": "${{ github.token }}",
+        "HEAD_SHA": "${{ steps.decide.outputs.head_sha }}",
+    }
+    assert "gh pr merge" in merge["run"]
+    assert '--match-head-commit "$HEAD_SHA"' in merge["run"]
+    approved = "steps.decide.outputs.decision == 'approve'"
+    assert merge["if"] == f"inputs.mode == 'enforce' && {approved}"
 
 
 def test_artifact(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

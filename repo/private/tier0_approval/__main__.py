@@ -214,30 +214,22 @@ def require_current(pr: Record, head: str, base: str) -> None:
 
 
 def decide(run: Record, env: Mapping[str, str]) -> Record:
-    result: Record = {"decision": "hold", "reason": "", "pr": None}
-    result.update(head_sha="", files=0)
+    result: Record = {"decision": "hold", "pr": None, "head_sha": "", "files": 0}
     repo = env["GITHUB_REPOSITORY"]
     try:
         endpoint, base = evaluate(repo, run, env, result)
-        head = cast("str", result["head_sha"])
-        match env["MODE"]:
-            case "evaluate":
-                result.update(decision="approve", reason="tier0")
-            case "enforce":
-                require_current(record(api(repo, endpoint)), head, base)
-                fields = ("-f", f"commit_id={head}", "-f", "event=APPROVE")
-                api(repo, f"{endpoint}/reviews", "--method", "POST", *fields)
-                result.update(decision="approve", reason="merge-failed")
-                # gh automatically uses auto-merge for a queue-enabled base.
-                merge = ("--repo", repo, "--squash", "--match-head-commit", head)
-                command("gh", "pr", "merge", str(result["pr"]), *merge)
-                result["reason"] = "merge-requested"
-            case _:
-                result["reason"] = "invalid-mode"
+        if env["MODE"] == "enforce":
+            head = cast("str", result["head_sha"])
+            require_current(record(api(repo, endpoint)), head, base)
+            fields = ("-f", f"commit_id={head}", "-f", "event=APPROVE")
+            api(repo, f"{endpoint}/reviews", "--method", "POST", *fields)
+        elif env["MODE"] != "evaluate":
+            return result | {"reason": "invalid-mode"}
+        result.update(decision="approve", reason="tier0")
     except HoldError as error:
         result["reason"] = str(error)
     except KeyError, TypeError, ValueError, OSError, subprocess.CalledProcessError:
-        result["reason"] = result["reason"] or "evidence-or-command-failed"
+        result["reason"] = "evidence-or-command-failed"
     return result
 
 
