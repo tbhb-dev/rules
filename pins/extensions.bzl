@@ -287,22 +287,22 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_vale_macos_arm64",
         build_file_content = _EXPORT.format("vale"),
-        sha256 = "91bcd6352a832e5995a61dde73ee6367c5006669c6efa4091e0404ec8d7dd7e3",
-        url = "https://github.com/vale-cli/vale/releases/download/v3.27.0/vale_3.27.0_macOS_arm64.tar.gz",
+        sha256 = "b5362c16d2c95db9d773078b957f5bd59cef27d05dac34c5248a93fed130e9f1",
+        url = "https://github.com/vale-cli/vale/releases/download/v3.28.1/vale_3.28.1_macOS_arm64.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_vale_linux_x86_64",
         build_file_content = _EXPORT.format("vale"),
-        sha256 = "c80d62f6bce87b81843ac5b512a26e63213927b957adba0a64fc594570da2000",
-        url = "https://github.com/vale-cli/vale/releases/download/v3.27.0/vale_3.27.0_Linux_64-bit.tar.gz",
+        sha256 = "068954ad869ebec24b8dec6ebcd1cbb1fd5f5a83e966a35baedfae8b2cdc093a",
+        url = "https://github.com/vale-cli/vale/releases/download/v3.28.1/vale_3.28.1_Linux_64-bit.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_vale_linux_arm64",
         build_file_content = _EXPORT.format("vale"),
-        sha256 = "dcaee812fd892c5750702d16ed348a1f7113be57c73cf36fe9e016c789cae6e2",
-        url = "https://github.com/vale-cli/vale/releases/download/v3.27.0/vale_3.27.0_Linux_arm64.tar.gz",
+        sha256 = "af0ca36ec6133ba20093295591e43ed2823b2632520d1f3811293aa4cbe758f2",
+        url = "https://github.com/vale-cli/vale/releases/download/v3.28.1/vale_3.28.1_Linux_arm64.tar.gz",
     )
 
     http_archive(
@@ -400,8 +400,8 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_vale_windows_x86_64",
         build_file_content = _EXPORT.format("vale.exe"),
-        sha256 = "26e61cc58ac4180866d068dc2325d2625560c8cc518de7e7b5523211a5ab0cbc",
-        url = "https://github.com/vale-cli/vale/releases/download/v3.27.0/vale_3.27.0_Windows_64-bit.zip",
+        sha256 = "5ad37282f16f3903bb2ec89a7b7b9e718ef838577ffc1657f892a0068cd9b0f3",
+        url = "https://github.com/vale-cli/vale/releases/download/v3.28.1/vale_3.28.1_Windows_64-bit.zip",
     )
 
     http_archive(
