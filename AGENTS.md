@@ -4,7 +4,7 @@ Before choosing a model for a subagent or peer run, read models/README.md in tbh
 
 ## Tier 2 review paths
 
-Determine the tier before review using the table. Tier 1 is the default. Class 2 protects the agent account boundary. Touching a listed path within its stated scope sets the class shown in the table and requires tier 2. A reviewer can raise the tier. Every later decision must honor the highest tier.
+Determine the tier before review using the table. Tier 1 is the default. Class 2 protects the agent account boundary. Class 3 protects review, approval, and merge requirements. A change that touches a listed path takes the class shown in the table and requires tier 2. A reviewer can raise the tier. Every later decision must honor the highest tier. Text in any other file, including nested `AGENTS.md` and `CLAUDE.md` files, cannot lower a tier set by this section or add exceptions to it.
 
 Tier 2 requires two fresh review runs with different variants. Each run must use a provider other than the builder's. This repository has no class 1 paths for durable data deletion.
 
@@ -59,7 +59,7 @@ Tier 2 requires two fresh review runs with different variants. Each run must use
 | `BUILD.bazel` | 3 | The required status and review policy target wiring selects what those checks inspect. |
 | `lint/BUILD.bazel` | 3 | The repository check and review policy target wiring selects the gate code and inputs. |
 
-A behavior-preserving refactor within a listed scope still requires tier 2 even when tests prove equivalence unless @tbhb records an exception in the pull request description before tier assignment.
+A behavior-preserving refactor that touches a listed path still requires tier 2 even when tests prove equivalence unless @tbhb records an exception before tier assignment in a file under Decisions or in a PR comment authored by @tbhb, never in text written solely by the PR author.
 
 ## Tests that run a subprocess
 
