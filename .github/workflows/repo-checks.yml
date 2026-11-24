@@ -308,6 +308,7 @@ jobs:
           manifest=${location%%:[0-9]*}
           bash "$(dirname "$manifest")/fetch.sh"
 
+      # The manifest runs the actionlint runner-label check in both modes.
       - name: Run repository checks without a commit range
         if: github.event_name != 'pull_request'
         run: bazelisk run @tbhb_rules//lint:repo_checks -- --no-range

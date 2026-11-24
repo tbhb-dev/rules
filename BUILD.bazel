@@ -62,7 +62,7 @@ exports_files(
     visibility = ["//lint/tests:__pkg__"],
 )
 
-# For //tools's vale_test and vale_sync, and the settings unit test config.
+# For the Vale tools and the settings and baseline manifest tests.
 exports_files(
     [
         ".vale.ini",
@@ -70,7 +70,7 @@ exports_files(
     ],
     visibility = [
         "//lint/private/claude_settings:__pkg__",
-        "//repo/baseline:__pkg__",
+        "//repo/tests:__pkg__",
         "//tools:__pkg__",
     ],
 )
@@ -487,7 +487,7 @@ test_suite(
     name = "baseline_tests",
     tests = [
         ":claude_settings",
-        "//repo/baseline:manifest_test",
+        "//repo/tests:manifest_test",
         "//repo/tests:markdown_links_clean_test",
         "//repo/tests:markdown_links_test",
         "//repo/tests:mise_keys_clean_test",
