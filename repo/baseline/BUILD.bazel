@@ -11,8 +11,3 @@ filegroup(
     srcs = glob(["**"]),
     visibility = ["//visibility:public"],
 )
-
-test_suite(
-    name = "baseline_tests",
-    tests = ["//repo/tests:manifest_test"],
-)
