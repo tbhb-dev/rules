@@ -309,27 +309,31 @@ def _hunks(lines: list[str]) -> list[Hunk]:
     hunks = []
     cursor = 0
     while cursor < len(lines):
-        match = _HUNK.fullmatch(lines[cursor])
-        if match is None:
-            msg = "parse_doubt"
-            raise RefusalError(msg, "invalid hunk header")
-        old, old_count, new, new_count = (int(part or "1") for part in match.groups())
-        end = cursor + 1 + old_count + new_count
-        body = lines[cursor + 1 : end]
-        _require(old_count + new_count and len(body) == old_count + new_count)
-        _require(all(line.startswith("-") for line in body[:old_count]))
-        _require(all(line.startswith("+") for line in body[old_count:]))
-        _require((old > 0 or not old_count) and (new > 0 or not new_count))
-        hunks.append(
-            Hunk(
-                old,
-                new,
-                tuple(line[1:] for line in body[:old_count]),
-                tuple(line[1:] for line in body[old_count:]),
-            )
-        )
-        cursor = end
+        hunk, cursor = _read_hunk(lines, cursor)
+        hunks.append(hunk)
     return hunks
+
+
+def _read_hunk(lines: list[str], cursor: int) -> tuple[Hunk, int]:
+    match = _HUNK.fullmatch(lines[cursor])
+    if match is None:
+        msg = "parse_doubt"
+        raise RefusalError(msg, "invalid hunk header")
+    old, old_count, new, new_count = (int(part or "1") for part in match.groups())
+    count = old_count + new_count
+    end = cursor + 1 + count
+    body = lines[cursor + 1 : end]
+    _require(count and len(body) == count)
+    removed, added = body[:old_count], body[old_count:]
+    _require(all(line.startswith("-") for line in removed))
+    _require(all(line.startswith("+") for line in added))
+    _require((old > 0 or not old_count) and (new > 0 or not new_count))
+    return Hunk(
+        old,
+        new,
+        tuple(line[1:] for line in removed),
+        tuple(line[1:] for line in added),
+    ), end
 
 
 def _content_lines(text: str) -> list[str]:
@@ -434,6 +438,7 @@ _USES = re.compile(
 _YAML_KEY = re.compile(
     r"""(?:([A-Za-z0-9_.-]+)|"([A-Za-z0-9_.-]+)"|'([A-Za-z0-9_.-]+)'):(?: |$)(.*)"""
 )
+_YAML_FLOW_CLOSING = {"]": "[", "}": "{"}
 
 
 @dataclass
@@ -460,7 +465,6 @@ def _yaml_parent(stack: list[_YamlBlock], indent: int, *, sequence: bool) -> _Ya
 
 def _yaml_flow_end(value: str, stack: list[str]) -> None:
     escaped = False
-    closing = {"]": "[", "}": "{"}
     for i, char in enumerate(value):
         if escaped:
             escaped = False
@@ -473,11 +477,15 @@ def _yaml_flow_end(value: str, stack: list[str]) -> None:
             continue
         if char == "#" and (not i or value[i - 1].isspace()):
             break
-        if char in "{[\"'":
-            stack.append(char)
-        if char in closing:
-            _require(closing[char] == top)
-            stack.pop()
+        _yaml_flow_delimiter(char, top, stack)
+
+
+def _yaml_flow_delimiter(char: str, top: str, stack: list[str]) -> None:
+    if char in "{[\"'":
+        stack.append(char)
+    if char in _YAML_FLOW_CLOSING:
+        _require(_YAML_FLOW_CLOSING[char] == top)
+        stack.pop()
 
 
 class _WorkflowYaml:
@@ -647,9 +655,9 @@ class Call:
     continued: bool
 
 
-def _star_calls(text: str) -> dict[int, Call]:
+def _star_tokens(text: str) -> list[tokenize.TokenInfo]:
     try:
-        tokens = [
+        return [
             token
             for token in tokenize.generate_tokens(io.StringIO(text).readline)
             if token.type not in _STAR_IGNORE
@@ -657,6 +665,10 @@ def _star_calls(text: str) -> dict[int, Call]:
     except (SyntaxError, tokenize.TokenError) as error:
         msg = "parse_doubt"
         raise RefusalError(msg, "invalid Starlark tokens") from error
+
+
+def _star_calls(text: str) -> dict[int, Call]:
+    tokens = _star_tokens(text)
     stack: list[int] = []
     lines = _content_lines(text)
     calls: dict[int, Call] = {}
