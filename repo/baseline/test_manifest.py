@@ -32,6 +32,17 @@ def test_commit_msg_hooks_match_seed_configs() -> None:
         assert hooks == set(manifest["kind"][kind]["hooks"]["commit-msg"]), kind
 
 
+@pytest.mark.parametrize(
+    "directive",
+    ["common --enable_platform_specific_config", "common:windows --enable_runfiles"],
+)
+def test_seed_enables_windows_runfiles(directive: str) -> None:
+    manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
+    for kind in manifest["kinds"]:
+        seed = ROOT / "seed" / kind / "bazelrc"
+        assert directive in seed.read_text().splitlines(), kind
+
+
 @pytest.mark.parametrize("kind", ["chezmoi", "docs", "go", "python"])
 def test_seed_ci_runs_on_merge_group(kind: str) -> None:
     path = ROOT / "seed" / kind / ".github" / "workflows" / "ci.yml"
