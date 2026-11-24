@@ -14,6 +14,7 @@ on:
     branches: [main]
   pull_request:
   merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -23,9 +24,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Bazel 9.x only, the version .bazelversion pins, on Linux (x86_64 and
-  # arm64), macOS (arm64) and Windows (x86_64). The checks that need the
-  # network or GitHub's API run on Linux only; they do not depend on the OS.
+  # Bazel 9.x only, the version .bazelversion pins. Merge groups use Linux
+  # x86_64. Other runs also test Linux arm64, macOS and Windows. Checks that
+  # need the network or GitHub's API run on Linux because they are platform independent.
   bazel:
     name: "bazel (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
@@ -33,7 +34,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-26.04, ubuntu-26.04-arm, macos-26, windows-2025]
+        os: ${{ fromJSON(github.event_name == 'merge_group'
+          && '["ubuntu-26.04"]'
+          || '["ubuntu-26.04","ubuntu-26.04-arm","macos-26","windows-2025"]') }}
     defaults:
       run:
         shell: bash

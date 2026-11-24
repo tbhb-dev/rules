@@ -11,6 +11,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -48,7 +50,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
-          PR: ${{ github.event.pull_request.number }}
+          PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
           WORKSPACES: |
             [
               {"id": "root", "dir": ".", "deps": ["python"]},
@@ -97,20 +99,20 @@ jobs:
           fi
           # The files API lists at most 3000; past that, test everything.
           count="$(wc -l <"${files}")"
-          if [ "${EVENT}" != pull_request ] || [ "${count}" -ge 3000 ]; then
-            printf '.github/workflows/ci.yml\n' >"${files}"
-          fi
-          selected="$(jq -c --rawfile files "${files}" '
+          # cspell:ignore argjson
+          selected="$(jq -c --rawfile files "${files}" --arg event "${EVENT}" --argjson count "${count}" '
             . as $ws
-            | ($files | split("\n") | map(select(length > 0))) as $paths
-            | def owner($p):
-                ([$ws[] | select(.dir as $d | $d != "." and ($p | startswith($d + "/")))]
-                  | max_by(.dir | length) // {id: "root"}) | .id;
-              ($paths | map(owner(.)) | unique) as $owners
-            | [$ws[]
-                | select(.id as $id | .deps as $deps
-                    | $owners | any(. == $id or (. as $o | $deps | index($o) != null)))
-                | {id, dir, os: (.os // ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"])}]
+            | if $event != "pull_request" or $count >= 3000 then $ws
+              else
+                ($files | split("\n") | map(select(length > 0))) as $paths
+                | def owner($p):
+                    ([$ws[] | select(.dir as $d | $d != "." and ($p | startswith($d + "/")))]
+                      | max_by(.dir | length) // {id: "root"}) | .id;
+                  ($paths | map(owner(.)) | unique) as $owners
+                | map(select(.id as $id | .deps as $deps
+                    | $owners | any(. == $id or (. as $o | $deps | index($o) != null))))
+              end
+            | map({id, dir, os: (.os // ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"])})
           ' <<<"${WORKSPACES}")"
           # Apple and Swift workspaces need Xcode, so their smoke consumers have
           # jobs of their own on a GitHub-hosted macOS runner.
@@ -120,7 +122,8 @@ jobs:
             | if length == 0 then [{id: "root", dir: ".",
                 os: ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"]}] else . end
             | [.[] | . as $workspace | .os[] | {os: ., workspace: ($workspace | {id, dir})}]
-            | map(select($event != "pull_request" or (.os != "macos-26" and .os != "windows-2025")))
+            | map(select($event == "push" or .os == "ubuntu-26.04"
+                or ($event == "pull_request" and .os == "ubuntu-26.04-arm")))
           ' <<<"${selected}")"
           apple="$(jq -r 'any(.[]; .id == "apple-smoke")' <<<"${selected}")"
           swift="$(jq -r 'any(.[]; .id == "swift-smoke")' <<<"${selected}")"
@@ -307,9 +310,9 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
 
-  # The Swift and Apple smoke consumer needs Xcode, so pushes run on the
-  # GitHub-hosted xcode-27 image. Pull requests use Linux with all steps
-  # skipped, so macOS queues do not delay `conclusion`. The image's
+  # The Swift and Apple smoke consumers need Xcode, so pushes run on the
+  # GitHub-hosted xcode-27 image. Pull requests and merge groups use Linux
+  # with all steps skipped. The image's
   # default Xcode is 27.1, so the job selects 27.2 (build 27B52) and prints
   # `xcodebuild -version` before the build. The job always runs, so that
   # `conclusion` sees a success when the plan skipped the workspace; its
@@ -317,7 +320,7 @@ jobs:
   apple:
     name: "apple (apple-smoke)"
     needs: [plan]
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-26.04' || 'xcode-27' }}
+    runs-on: ${{ github.event_name == 'push' && 'xcode-27' || 'ubuntu-26.04' }}
     timeout-minutes: 60
     defaults:
       run:
@@ -326,20 +329,20 @@ jobs:
       RUN_APPLE: ${{ needs.plan.outputs.apple }}
     steps:
       - name: Checkout
-        if: github.event_name != 'pull_request' && env.RUN_APPLE == 'true'
+        if: github.event_name == 'push' && env.RUN_APPLE == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
 
       - name: Select Xcode 27.2
-        if: github.event_name != 'pull_request' && env.RUN_APPLE == 'true'
+        if: github.event_name == 'push' && env.RUN_APPLE == 'true'
         run: |
           sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
           xcodebuild -version | tee "${RUNNER_TEMP}/xcodebuild-version"
           grep -qx 'Build version 27B52' "${RUNNER_TEMP}/xcodebuild-version"
 
       - name: Set up Bazel for CI
-        if: github.event_name != 'pull_request' && env.RUN_APPLE == 'true'
+        if: github.event_name == 'push' && env.RUN_APPLE == 'true'
         uses: ./.github/actions/setup-bazel-ci
         with:
           disk-cache: ${{ github.workflow }}-apple-smoke
@@ -349,12 +352,12 @@ jobs:
           working-directory: apple/e2e/smoke
 
       - name: Test
-        if: github.event_name != 'pull_request' && env.RUN_APPLE == 'true'
+        if: github.event_name == 'push' && env.RUN_APPLE == 'true'
         working-directory: apple/e2e/smoke
         run: bazelisk test --config=ci //...
 
       - name: Keep the test logs
-        if: github.event_name != 'pull_request' && failure() && env.RUN_APPLE == 'true'
+        if: github.event_name == 'push' && failure() && env.RUN_APPLE == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: testlogs-apple-smoke
@@ -368,7 +371,7 @@ jobs:
   swift:
     name: "swift (swift-smoke)"
     needs: [plan]
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-26.04' || 'xcode-27' }}
+    runs-on: ${{ github.event_name == 'push' && 'xcode-27' || 'ubuntu-26.04' }}
     timeout-minutes: 60
     defaults:
       run:
@@ -377,20 +380,20 @@ jobs:
       RUN_SWIFT: ${{ needs.plan.outputs.swift }}
     steps:
       - name: Checkout
-        if: github.event_name != 'pull_request' && env.RUN_SWIFT == 'true'
+        if: github.event_name == 'push' && env.RUN_SWIFT == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
 
       - name: Select Xcode 27.2
-        if: github.event_name != 'pull_request' && env.RUN_SWIFT == 'true'
+        if: github.event_name == 'push' && env.RUN_SWIFT == 'true'
         run: |
           sudo xcode-select -s /Applications/Xcode_27.2.app/Contents/Developer
           xcodebuild -version | tee "${RUNNER_TEMP}/xcodebuild-version"
           grep -qx 'Build version 27B52' "${RUNNER_TEMP}/xcodebuild-version"
 
       - name: Set up Bazel for CI
-        if: github.event_name != 'pull_request' && env.RUN_SWIFT == 'true'
+        if: github.event_name == 'push' && env.RUN_SWIFT == 'true'
         uses: ./.github/actions/setup-bazel-ci
         with:
           disk-cache: ${{ github.workflow }}-swift-smoke
@@ -400,12 +403,12 @@ jobs:
           working-directory: swift/e2e/smoke
 
       - name: Test
-        if: github.event_name != 'pull_request' && env.RUN_SWIFT == 'true'
+        if: github.event_name == 'push' && env.RUN_SWIFT == 'true'
         working-directory: swift/e2e/smoke
         run: bazelisk test --config=ci //...
 
       - name: Keep the test logs
-        if: github.event_name != 'pull_request' && failure() && env.RUN_SWIFT == 'true'
+        if: github.event_name == 'push' && failure() && env.RUN_SWIFT == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: testlogs-swift-smoke

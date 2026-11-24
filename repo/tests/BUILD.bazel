@@ -15,6 +15,9 @@ repo_layout_test_suite(name = "repo_layout_tests")
 pytest_test(
     name = "manifest_test",
     srcs = [
+        "//:.github/workflows/ci.yml",
+        "//:.github/workflows/pr-text.yml",
+        "//:.github/workflows/repo-checks.yml",
         "//:pyproject.toml",
         "//repo/baseline:repo_files",
     ],

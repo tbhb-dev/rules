@@ -2,6 +2,7 @@
 # Copyright Tony Burns
 
 import json
+import re
 import tomllib
 from pathlib import Path
 
@@ -12,6 +13,13 @@ from jsonschema import Draft202012Validator, ValidationError
 from repo.baseline.check_manifest import check_manifest
 
 ROOT = Path(__file__).parent
+WORKFLOWS = ROOT.parents[1] / ".github" / "workflows"
+PR_ONLY = "github.event_name == 'pull_request'"
+PR_EXPRESSION = re.compile(r"\$\{\{([^}]*github\.event\.pull_request\.[^}]*)\}\}")
+PR_WITH_FALLBACK = re.compile(
+    r"github\.event\.pull_request\.[\w.]+ \|\| "
+    r"github\.(?:sha|event\.merge_group\.base_sha \|\| github\.event\.before)"
+)
 
 
 def test_baseline() -> None:
@@ -32,17 +40,42 @@ def test_commit_msg_hooks_match_seed_configs() -> None:
         assert hooks == set(manifest["kind"][kind]["hooks"]["commit-msg"]), kind
 
 
-@pytest.mark.parametrize("kind", ["chezmoi", "docs", "go", "python"])
-def test_seed_ci_runs_on_merge_group(kind: str) -> None:
-    path = ROOT / "seed" / kind / ".github" / "workflows" / "ci.yml"
+@pytest.mark.parametrize("kind", ["rules", "chezmoi", "docs", "go", "python"])
+def test_ci_runs_on_merge_group(kind: str) -> None:
+    directory = (
+        WORKFLOWS if kind == "rules" else ROOT / "seed" / kind / ".github" / "workflows"
+    )
     # Read the key before YAML can coerce `on` to a boolean.
     workflow: object = yaml.compose(
-        path.read_text(encoding="utf-8"), Loader=yaml.SafeLoader
+        (directory / "ci.yml").read_text(encoding="utf-8"), Loader=yaml.SafeLoader
     )
     assert isinstance(workflow, yaml.MappingNode)
     events = next(value for key, value in workflow.value if key.value == "on")
     assert isinstance(events, yaml.MappingNode)
-    assert any(key.value == "merge_group" for key, _ in events.value)
+    merge_group = next(
+        value for key, value in events.value if key.value == "merge_group"
+    )
+    assert yaml.safe_load(yaml.serialize(merge_group)) == {
+        "types": ["checks_requested"]
+    }
+
+
+@pytest.mark.parametrize("name", ["ci.yml", "repo-checks.yml", "pr-text.yml"])
+def test_pull_request_context_has_a_guard(name: str) -> None:
+    workflow = yaml.safe_load((WORKFLOWS / name).read_text(encoding="utf-8"))
+    for job in workflow["jobs"].values():
+        if job.get("if") == PR_ONLY:
+            continue
+        steps = job.pop("steps", [])
+        for scope in [job, *steps]:
+            if scope.get("if") == PR_ONLY:
+                continue
+            source = yaml.safe_dump(scope, width=1000)
+            for match in PR_EXPRESSION.findall(source):
+                expression = match.strip()
+                assert expression.startswith(
+                    f"{PR_ONLY} && "
+                ) or PR_WITH_FALLBACK.fullmatch(expression), expression
 
 
 @pytest.mark.parametrize(
