@@ -140,13 +140,19 @@ jobs:
         **/*.md
         docs/**/*.md
         docs/**/*.txt
-        LICENSE*
+        LICENSE
+        LICENSE.md
+        LICENSE.txt
       deny_paths: |
         .github/**
         **/CODEOWNERS
-        **/AGENTS.md
-        **/CLAUDE.md
-        .claude/**
+        **/AGENTS*.md
+        **/CLAUDE*.md
+        **/GEMINI.md
+        **/.claude/**
+        **/.agents/**
+        **/.codex/**
+        **/.cursor/**
     secrets:
       PIN_APPROVER_CLIENT_ID: ${{ secrets.PIN_APPROVER_CLIENT_ID }}
       PIN_APPROVER_PRIVATE_KEY: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}

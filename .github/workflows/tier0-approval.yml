@@ -18,16 +18,22 @@ on:
           **/*.md
           docs/**/*.md
           docs/**/*.txt
-          LICENSE*
+          LICENSE
+          LICENSE.md
+          LICENSE.txt
       deny_paths:
         description: Blocked path globs, one per line.
         type: string
         default: |
           .github/**
           **/CODEOWNERS
-          **/AGENTS.md
-          **/CLAUDE.md
-          .claude/**
+          **/AGENTS*.md
+          **/CLAUDE*.md
+          **/GEMINI.md
+          **/.claude/**
+          **/.agents/**
+          **/.codex/**
+          **/.cursor/**
       design_paths:
         description: Path globs that require a design go SHA, one per line.
         type: string
