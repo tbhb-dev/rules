@@ -1,0 +1,10 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 4081b10c7ff6fb826bfbf69275c303e5d69a8734..f61e93f6a4ac021f19aec504ba118284af564d16 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -4 +4 @@
+-    runs-on: ubuntu-24.04
++    runs-on: ubuntu-26.04
+@@ -6 +6 @@
+-      - uses: actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  # v7.0.1
++      - uses: wrong/checkout@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  # v7.0.2

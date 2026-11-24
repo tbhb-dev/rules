@@ -1,0 +1,9 @@
+diff --git a/pins/tools.bzl b/pins/tools.bzl
+index 76a420306a43bf76fe021095bd3d7d742f82e384..f354bf667f0fc56054d27deedcf2c9c14d71018a 100644
+--- a/pins/tools.bzl
++++ b/pins/tools.bzl
+@@ -4,2 +4,2 @@
+-        url = "https://github.com/example/project/releases/download/v0.7.2/Google.zip",
+-        sha256 = "1111111111111111111111111111111111111111111111111111111111111111",
++        url = "https://github.com/example/project/releases/download/v0.7.3/Google.zip",
++        sha256 = "2222222222222222222222222222222222222222222222222222222222222222",

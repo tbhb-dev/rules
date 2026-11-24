@@ -1,0 +1,7 @@
+diff --git a/mise.toml b/mise.toml
+index 6dfae21487af48beb3bdaa14a5bdde075296c9bf..009a65d422d5fc5f4637476d4f234a111a6d897e 100644
+--- a/mise.toml
++++ b/mise.toml
+@@ -2 +2 @@
+-prek = { version = "0.5.11", install_env = { version = "constant" } }
++prek = { version = "0.5.12", install_env = { version = "constant" } }

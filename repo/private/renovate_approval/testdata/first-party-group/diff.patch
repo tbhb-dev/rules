@@ -1,0 +1,14 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 876b64f08630fafd51e586e9a88fc71cd92f7d62..4c0dd46d80080594671a9b2ec2575a30c3219694 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -6 +6 @@
+-      - uses: tbhb-dev/rules/.github/workflows/task.yml@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  # main
++      - uses: tbhb-dev/rules/.github/workflows/task.yml@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  # main
+diff --git a/MODULE.bazel b/MODULE.bazel
+index ca98c2628b2f68351483681d5161b24962b61840..9d48fa4fe2107e842f0852e9ce015dc31704f4aa 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -4 +4 @@
+-    commit = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
++    commit = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",

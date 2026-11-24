@@ -1,0 +1,7 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index b913843794706fff3574ca1526a39f9693d75092..b23ec462673ea4b78f4cd9e21cd27d9a6f47608d 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -1 +1 @@
+-bazel_dep(name = "a", version = "0.10.0")
++bazel_dep(name = "b", version = "0.10.1")

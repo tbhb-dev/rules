@@ -1,0 +1,7 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 4081b10c7ff6fb826bfbf69275c303e5d69a8734..e3335466507e77bcdae2a1a8b7a49fe3fcd34a8e 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -4 +4 @@
+-    runs-on: ubuntu-24.04
++    runs-on: ubuntu-26.04

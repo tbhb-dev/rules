@@ -1,0 +1,7 @@
+diff --git a/mise.toml b/mise.toml
+index 7f71b841d0fc15e3991b3dd93bd27a080cfd50f9..d3685b239fed796f86cf1b3a5173cbe209bc20b5 100644
+--- a/mise.toml
++++ b/mise.toml
+@@ -2 +2 @@
+-prek = "0.5.11"
++prek = "0.5.12"

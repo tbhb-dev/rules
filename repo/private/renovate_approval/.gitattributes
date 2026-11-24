@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The encoding check needs the fixture's original line endings.
+testdata/crlf/diff.patch -text whitespace=cr-at-eol

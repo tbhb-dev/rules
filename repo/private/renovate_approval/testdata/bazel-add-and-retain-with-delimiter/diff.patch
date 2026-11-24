@@ -1,0 +1,14 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index b90f3083d06de150ee8bb9c3ce4f3580342681e3..586d08e5cc8bb2bee07e45d227f7b64ad5808d95 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -1 +1 @@
+-bazel_dep(name = "bazel_env.bzl", version = "0.10.0")
++bazel_dep(name = "bazel_env.bzl", version = "0.10.1")
+diff --git a/MODULE.bazel.lock b/MODULE.bazel.lock
+index adea21b6d7c87988af6662c01e7867f9dd17df14..5cb9cc7741eff700167ca597e24b3efa62485d67 100644
+--- a/MODULE.bazel.lock
++++ b/MODULE.bazel.lock
+@@ -7,0 +8,2 @@
++    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.1/MODULE.bazel": "1111111111111111111111111111111111111111111111111111111111111111",
++    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.1/source.json": null,

@@ -1,0 +1,18 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 08831514b8be3771d43eef71efefa7a7116cb893..912130d6d4477d13921b0a805f0ce4397887b1e3 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -1,2 +1,2 @@
+-bazel_dep(name = "bazel_env.bzl", version = "0.10.0")
+-http_file(     name = "google",     url = "https://github.com/example/project/releases/download/v0.7.2/Google.zip",     sha256 = "1111111111111111111111111111111111111111111111111111111111111111", )
++bazel_dep(name = "bazel_env.bzl", version = "0.10.1")
++http_file(     name = "google",     url = "https://github.com/example/project/releases/download/v0.7.2/Google.zip",     sha256 = "2222222222222222222222222222222222222222222222222222222222222222", )
+diff --git a/MODULE.bazel.lock b/MODULE.bazel.lock
+index d253b66c2a5f8e38246e327c7452ca0173ec3b2e..1758e6c83b63d709e5e052d9956b713207d41547 100644
+--- a/MODULE.bazel.lock
++++ b/MODULE.bazel.lock
+@@ -4,2 +4,2 @@
+-    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.0/MODULE.bazel": "1111111111111111111111111111111111111111111111111111111111111111",
+-    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.0/source.json": null
++    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.1/MODULE.bazel": "1111111111111111111111111111111111111111111111111111111111111111",
++    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.1/source.json": null

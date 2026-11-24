@@ -1,0 +1,22 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index fb7beee57f7c02f6fde861cc0b28650ff31eac94..2a6da67d4b16bc5d48e37726cc7db232afab1575 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -1,2 +1,2 @@
+-bazel_dep(name = "bazel_env.bzl", version = "0.10.0")
+-bazel_dep(name = "other", version = "0.10.0")
++bazel_dep(name = "bazel_env.bzl", version = "0.10.1")
++bazel_dep(name = "other", version = "0.10.1")
+diff --git a/MODULE.bazel.lock b/MODULE.bazel.lock
+index ef0bc096901e1411c20f441cae0b3e0de2dd94df..ff1fd4c00f00f05d9ae104de80abd473a7543e0f 100644
+--- a/MODULE.bazel.lock
++++ b/MODULE.bazel.lock
+@@ -4,4 +4,4 @@
+-    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.0/MODULE.bazel": "1111111111111111111111111111111111111111111111111111111111111111",
+-    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.0/source.json": null,
+-    "https://bcr.bazel.build/modules/other/0.10.0/MODULE.bazel": "1111111111111111111111111111111111111111111111111111111111111111",
+-    "https://bcr.bazel.build/modules/other/0.10.0/source.json": null
++    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.1/MODULE.bazel": "1111111111111111111111111111111111111111111111111111111111111111",
++    "https://bcr.bazel.build/modules/bazel_env.bzl/0.10.1/source.json": null,
++    "https://bcr.bazel.build/modules/other/0.10.1/MODULE.bazel": "1111111111111111111111111111111111111111111111111111111111111111",
++    "https://bcr.bazel.build/modules/other/0.10.1/source.json": null

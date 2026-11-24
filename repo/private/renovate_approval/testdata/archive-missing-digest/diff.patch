@@ -1,0 +1,7 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 994d9aaa8d56a4d4303eff208b12f3761aea556e..2aa545582c956384ff2973b801e01264485c9d1b 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -3 +3 @@
+-    url = "https://github.com/example/project/releases/download/v0.7.2/Google.zip",
++    url = "https://github.com/example/project/releases/download/v0.7.3/Google.zip",

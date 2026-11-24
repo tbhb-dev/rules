@@ -62,7 +62,7 @@ exports_files(
     visibility = ["//lint/tests:__pkg__"],
 )
 
-# For the Vale tools and the settings and baseline manifest tests.
+# Shared configuration for repository checks.
 exports_files(
     [
         ".vale.ini",
@@ -70,6 +70,7 @@ exports_files(
     ],
     visibility = [
         "//lint/private/claude_settings:__pkg__",
+        "//repo/private/renovate_approval:__pkg__",
         "//repo/tests:__pkg__",
         "//tools:__pkg__",
     ],

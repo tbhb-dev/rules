@@ -1,0 +1,7 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index bf48fd6abd397eadd340e33747ec6941d5915563..e4057c7a7d45bd3c1c9c976d995ac86464f1b68c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -7 +7 @@
+-        with: {}
++        with: {depth: 2}

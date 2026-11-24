@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_python//python:py_test.bzl", "py_test")
+load("@tbhb_rules_python//:defs.bzl", "pyrefly_test", "pytest_test", "ruff_test")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+MODULE = [
+    "__init__.py",
+    "decide.py",
+    "matcher.py",
+    "versions.py",
+]
+
+TESTS = [
+    "test_decide.py",
+    "test_matcher.py",
+    "test_versions.py",
+]
+
+FIXTURES = glob(["testdata/**"])
+
+[
+    py_test(
+        name = test[:-3],
+        srcs = MODULE + TESTS,
+        data = FIXTURES,
+        legacy_create_init = False,
+        main = test,
+    )
+    for test in TESTS
+]
+
+pytest_test(
+    name = "branch_coverage_test",
+    srcs = [
+        ":repo_files",
+        "//:pyproject.toml",
+    ],
+    args = [
+        "-o",
+        "pythonpath=.",
+        "repo/private/renovate_approval",
+    ],
+    coverage = [
+        "repo.private.renovate_approval.decide",
+        "repo.private.renovate_approval.matcher",
+        "repo.private.renovate_approval.versions",
+    ],
+)
+
+ruff_test(
+    name = "ruff_test",
+    srcs = [
+        ":repo_files",
+        "//:pyproject.toml",
+    ],
+)
+
+pyrefly_test(
+    name = "pyrefly_test",
+    srcs = [
+        ":repo_files",
+        "//:pyproject.toml",
+    ],
+    args = ["repo/private/renovate_approval/*.py"],
+)

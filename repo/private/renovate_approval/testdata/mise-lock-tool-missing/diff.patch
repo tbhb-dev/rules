@@ -1,0 +1,25 @@
+diff --git a/mise.toml b/mise.toml
+index b4ad4f2ced3fc7bc1fc62ef634e541c9a0f7f0b9..13a6a30558b419c8f2b9db40e56b8621852e160a 100644
+--- a/mise.toml
++++ b/mise.toml
+@@ -2 +2 @@
+-other = "0.5.11"
++other = "0.5.12"
+diff --git a/mise.lock b/mise.lock
+index 782e97b23ee2392c1004ee2e67651b2f490e0f2f..43664fc057fa7ddf7345e903ac6c3ef20d935431 100644
+--- a/mise.lock
++++ b/mise.lock
+@@ -4 +4 @@
+-version = "0.5.11"
++version = "0.5.12"
+@@ -6 +6 @@
+-specifiers = ["0.5.11"]
++specifiers = ["0.5.12"]
+@@ -9 +9 @@
+-checksum = "sha256:1111111111111111111111111111111111111111111111111111111111111111"
++checksum = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+@@ -11,2 +11,2 @@
+-url = "https://github.com/j178/prek/releases/download/v0.5.11/prek-linux.tar.gz"
+-url_api = "https://api.github.com/repos/j178/prek/releases/assets/12"
++url = "https://github.com/j178/prek/releases/download/v0.5.12/prek-linux.tar.gz"
++url_api = "https://api.github.com/repos/j178/prek/releases/assets/13"

@@ -1,0 +1,9 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 17482511322107a6346ad25386be6e450f7f2d72..20ac989eda2ae499f846727a6b0127b036b254f4 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -3,2 +3,2 @@
+-    url = "https://github.com/other/rules/archive/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.tar.gz",
+-    sha256 = "1111111111111111111111111111111111111111111111111111111111111111",
++    url = "https://github.com/other/rules/archive/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.tar.gz",
++    sha256 = "2222222222222222222222222222222222222222222222222222222222222222",

@@ -1,0 +1,7 @@
+diff --git a/.github/actions/setup/action.yaml b/.github/actions/setup/action.yaml
+index 24d14364aadc2611f5bdb7f28e8d35ab6648f280..c6b63d6c779c8eae2d69e2ace741d32a09c75d47 100644
+--- a/.github/actions/setup/action.yaml
++++ b/.github/actions/setup/action.yaml
+@@ -5 +5 @@
+-    - uses: actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  # v7.0.1
++    - uses: actions/checkout@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb  # v7.0.2

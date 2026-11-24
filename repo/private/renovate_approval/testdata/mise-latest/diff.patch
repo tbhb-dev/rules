@@ -1,0 +1,7 @@
+diff --git a/mise.toml b/mise.toml
+index 31417ae1e81388567d676b9d7dc9a659f8a3f938..d2c1c3ab19d64c701355de043884fafc420d842a 100644
+--- a/mise.toml
++++ b/mise.toml
+@@ -2 +2 @@
+-uv = "0.13.9"
++uv = "latest"

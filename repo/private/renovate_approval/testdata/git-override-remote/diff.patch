@@ -1,0 +1,7 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index ca98c2628b2f68351483681d5161b24962b61840..1783a79abe9778ae2349d3d3225350ad04579b7d 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -3 +3 @@
+-    remote = "https://github.com/tbhb-dev/rules.git",
++    remote = "https://github.com/tbhb-dev/wrong.git",

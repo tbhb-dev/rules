@@ -1,0 +1,7 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index ca98c2628b2f68351483681d5161b24962b61840..9d48fa4fe2107e842f0852e9ce015dc31704f4aa 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -4 +4 @@
+-    commit = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
++    commit = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",

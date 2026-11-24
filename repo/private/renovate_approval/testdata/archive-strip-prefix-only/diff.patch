@@ -1,0 +1,7 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index c905526a83da0e44e19e63ce9b4da813b3ac877d..2624e39c0bd903694d9b589e335972c5aba5d86f 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -5 +5 @@
+-    strip_prefix = "source",
++    strip_prefix = "other",

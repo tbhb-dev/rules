@@ -1,0 +1,9 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 6a8b666f9a5087934b4bcc0fa7d785b6a8360c9d..db78d9bd0aeefce201588552b91a12a8dcf75271 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -3,2 +3,2 @@
+-    url = "https://github.com/tbhb-dev/rules/archive/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.tar.gz",
+-    sha256 = "1111111111111111111111111111111111111111111111111111111111111111",
++    url = "https://github.com/tbhb-dev/rules/archive/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.tar.gz",
++    sha256 = "2222222222222222222222222222222222222222222222222222222222222222",

@@ -1,0 +1,9 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 25ef2075e62c7765a8ba2d4007a2ec3f8945e140..ccebaa970b22698f1c1254c8281ce8025f98286f 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -4,2 +4,2 @@
+-    url = "https://github.com/example/project/releases/download/v0.7.2/Google.zip",
+-    sha256 = "1111111111111111111111111111111111111111111111111111111111111111",
++    url = "https://github.com/example/project/releases/download/v0.7.3/Google.zip",
++    sha256 = "2222222222222222222222222222222222222222222222222222222222222222",

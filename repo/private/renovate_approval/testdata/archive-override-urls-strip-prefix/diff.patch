@@ -1,0 +1,11 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 71f13d79aaa2cef9ff06778bdcb05787081c3955..d08a7ce6de4affbb9374e08471e4947f72286025 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -3,3 +3,3 @@
+-    urls = ["https://github.com/example/project/releases/download/v0.7.2/Google.zip"],
+-    sha256 = "1111111111111111111111111111111111111111111111111111111111111111",
+-    strip_prefix = "project-0.7.2",
++    urls = ["https://github.com/example/project/releases/download/v0.7.3/Google.zip"],
++    sha256 = "2222222222222222222222222222222222222222222222222222222222222222",
++    strip_prefix = "project-0.7.3",
