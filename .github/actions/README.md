@@ -116,6 +116,31 @@ jobs:
 
 It takes one input, `runs-on`, with no default: a private caller uses the org's private runner label and a public caller uses `ubuntu-26.04`. It reads the same fetch list from the pinned Bazel module and restores caches without saving them.
 
+## `tier0-approval.yml`
+
+Call this workflow from the wiki repository after its CI completes. Replace `<sha>` with the rules commit and `12345678` with the wiki's numeric CI workflow ID.
+
+```yaml
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+jobs:
+  approve:
+    uses: tbhb-dev/rules/.github/workflows/tier0-approval.yml@<sha>  # main
+    with:
+      check_workflows: |
+        conclusion:12345678
+    secrets:
+      PIN_APPROVER_CLIENT_ID: ${{ secrets.PIN_APPROVER_CLIENT_ID }}
+      PIN_APPROVER_PRIVATE_KEY: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}
+```
+
+`check_workflows` takes one `context:workflow-id` pair per line. `tier0_paths` defaults to `**/*.md`, `docs/**`, and `LICENSE*`. `deny_paths` defaults to `.github/**` and `**/CODEOWNERS`. Each path input takes one glob per line. `max_files` defaults to 50 and counts both paths in a rename. Set `design_paths` to require the exact head SHA in `design_go_sha` or the caller's `DESIGN_GO_SHA` repository variable.
+
+The default `mode: evaluate` yields the decision artifact and outputs `decision`, `reason`, and `head_sha`. Use `mode: enforce` to approve and merge or queue the checked commit. The caller needs the `pins-approver` environment and an installed App with Actions and Checks read, Pull requests write, and Contents read. Enforcement also requires Contents write and stale approval dismissal in the caller's branch rules.
+
 ## In a consumer's `ci.yml`
 
 Adopt the rules pin update from Renovate, then edit the consumer's `ci.yml`: set `cache-save: false` on every test job and add one `cache-warm` job for pushes to `main`. Copy the `cache-warm` job from [this repository's `ci.yml`](../workflows/ci.yml), replace its local action reference with the same pinned remote reference as the test job, and set `fetch-workspaces` to the consumer's other workspace directories. Keep the four OS entries from the test matrix. The warm job hashes the root workspace files even when it fetches tools from another workspace. Keep `cache-warm` outside the required `conclusion` dependencies, because pull requests skip it.
