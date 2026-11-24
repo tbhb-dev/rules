@@ -25,7 +25,7 @@ def main() -> None:
     assert len(set(ports)) == 4 and min(ports) > 0
     assert not any(key.startswith("TEMPORAL_") for key in os.environ)
     home = Path(os.environ["HOME"])
-    assert home == Path.cwd()
+    assert home.resolve() == Path.cwd().resolve()
     assert os.environ["XDG_CONFIG_HOME"] == str(home)
     state = Path(os.environ["FAKE_STATE"])
     mode = os.environ.get("FAKE_MODE", "ready")
