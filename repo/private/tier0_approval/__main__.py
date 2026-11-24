@@ -2,6 +2,7 @@
 # Copyright Tony Burns
 
 # Hold reasons are stable decision codes.
+# Mutation pragmas on casts omit static type changes. Data lookups stay mutable.
 # ruff: noqa: EM101
 # cspell:ignore textconv
 
@@ -9,6 +10,7 @@ import json
 import os
 import re
 import subprocess  # nosec B404 - Uses argument vectors with Git and GitHub CLI only.
+import sys
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, cast
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
 PAGINATE = ("--paginate", "--slurp")
 APP = "tbhb-dev-auto-reviews"
 BOT = f"{APP}[bot]"
+ARTIFACT = "tier0-decision.json"
 
 
 type Record = dict[str, object]
@@ -44,7 +47,8 @@ def sha(value: str) -> str:
 
 def api(repo: str, path: str, *flags: str, **query: str) -> object:
     endpoint = f"repos/{repo}/{path}?{urlencode(query)}"
-    return cast("object", json.loads(command("gh", "api", endpoint, *flags)))
+    response: object = json.loads(command("gh", "api", endpoint, *flags))
+    return response
 
 
 def context_pass(repo: str, head: str, spec: str) -> bool:
@@ -54,7 +58,8 @@ def context_pass(repo: str, head: str, spec: str) -> bool:
     response = api(
         repo, f"actions/workflows/{workflow}/runs", head_sha=head, per_page="1"
     )
-    runs = cast("dict[str, list[Record]]", response)["workflow_runs"]
+    payload = cast("dict[str, list[Record]]", response)  # pragma: no mutate
+    runs = payload["workflow_runs"]
     if not runs:
         return False
     run = runs[0]
@@ -66,9 +71,10 @@ def context_pass(repo: str, head: str, spec: str) -> bool:
         return False
     suite = run["check_suite_id"]
     response = api(repo, f"check-suites/{suite}/check-runs", *PAGINATE, check_name=name)
+    pages = cast("list[dict[str, list[Record]]]", response)  # pragma: no mutate
     conclusions = [
         check["conclusion"]
-        for page in cast("list[dict[str, list[Record]]]", response)
+        for page in pages
         for check in page["check_runs"]
         if record(check["check_suite"])["id"] == suite
         and (check["name"], check["head_sha"]) == (name, head)
@@ -118,17 +124,19 @@ def matches(path: str, patterns: str) -> bool:
 
 
 def record(value: object) -> Record:
-    return cast("Record", value)
+    return cast("Record", value)  # pragma: no mutate
 
 
 def find_pull(repo: str, run: Record, head: str) -> object:
-    source = cast("str", record(run["head_repository"])["full_name"])
+    full_name = record(run["head_repository"])["full_name"]
+    source = cast("str", full_name)  # pragma: no mutate
     branch = run["head_branch"]
     source_head = f"{source.split('/')[0]}:{branch}"
     pulls = api(repo, "pulls", *PAGINATE, state="open", head=source_head)
+    pages = cast("list[list[Record]]", pulls)  # pragma: no mutate
     candidates = [
         pr["number"]
-        for page in cast("list[list[Record]]", pulls)
+        for page in pages
         for pr in page
         if (ref := record(pr["head"]))["sha"] == head
         and ref["ref"] == branch
@@ -142,7 +150,9 @@ def find_pull(repo: str, run: Record, head: str) -> object:
 def evaluate(
     repo: str, run: Record, env: Mapping[str, str], result: Record
 ) -> tuple[str, str]:
-    head = result["head_sha"] = sha(cast("str", run["head_sha"]))
+    run_head = run["head_sha"]
+    head_sha = cast("str", run_head)  # pragma: no mutate
+    head = result["head_sha"] = sha(head_sha)
     if run["conclusion"] != "success":
         raise HoldError("ci-unsuccessful")
     if env["APP_SLUG"] != APP:
@@ -152,7 +162,10 @@ def evaluate(
     result["pr"] = find_pull(repo, run, head)
     endpoint = f"pulls/{result['pr']}"
     pr = record(api(repo, endpoint))
-    base = sha(cast("str", record(pr["base"])["sha"]))
+    pr_base = record(pr["base"])
+    raw_base = pr_base["sha"]
+    base_sha = cast("str", raw_base)  # pragma: no mutate
+    base = sha(base_sha)
     require_current(pr, head, base)
     commit = record(api(repo, f"commits/{head}"))
     if any(is_approver(user) for user in (commit["author"], commit["committer"])):
@@ -173,12 +186,14 @@ def evaluate(
         and env["DESIGN_GO_SHA"] != head
     ):
         raise HoldError("design-needs-go")
+    result["base_ref"] = pr_base["ref"]
     return endpoint, base
 
 
 def require_no_app_push(repo: str, ref: str) -> None:
     activity = api(repo, "activity", *PAGINATE, ref=ref, actor=BOT)
-    for page in cast("list[list[Record]]", activity):
+    pages = cast("list[list[Record]]", activity)  # pragma: no mutate
+    for page in pages:
         if any(entry["activity_type"] != "branch_deletion" for entry in page):
             raise HoldError("approver-is-pusher")
 
@@ -194,14 +209,19 @@ def tier0_path(path: str, env: Mapping[str, str]) -> bool:
 
 
 def is_approver(user: object) -> bool:
-    return user is not None and cast("str", record(user)["login"]).casefold() == BOT
+    if user is None:
+        return False
+    login = record(user)["login"]
+    name = cast("str", login)  # pragma: no mutate
+    return name.casefold() == BOT
 
 
 def require_current(pr: Record, head: str, base: str) -> None:
     pr_head, pr_base = record(pr["head"]), record(pr["base"])
     if (pr["state"], pr_head["sha"], pr_base["sha"]) != ("open", head, base):
         raise HoldError("pr-changed")
-    labels = cast("list[dict[str, str]]", pr["labels"])
+    raw_labels = pr["labels"]
+    labels = cast("list[dict[str, str]]", raw_labels)  # pragma: no mutate
     if any(label["name"].casefold() == "no-auto-approval" for label in labels):
         raise HoldError("opted-out")
     if (
@@ -219,7 +239,8 @@ def decide(run: Record, env: Mapping[str, str]) -> Record:
     try:
         endpoint, base = evaluate(repo, run, env, result)
         if env["MODE"] == "enforce":
-            head = cast("str", result["head_sha"])
+            head_sha = result["head_sha"]
+            head = cast("str", head_sha)  # pragma: no mutate
             require_current(record(api(repo, endpoint)), head, base)
             fields = ("-f", f"commit_id={head}", "-f", "event=APPROVE")
             api(repo, f"{endpoint}/reviews", "--method", "POST", *fields)
@@ -238,7 +259,7 @@ def main() -> None:
     event = record(json.loads(event_path.read_text(encoding="utf-8")))
     result = decide(record(event["workflow_run"]), os.environ)
     artifact = json.dumps(result)
-    Path("tier0-decision.json").write_text(f"{artifact}\n", encoding="utf-8")
+    Path(ARTIFACT).write_text(f"{artifact}\n", encoding="utf-8")
     with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
         output.writelines(
             f"{key}={result[key]}\n" for key in ("decision", "reason", "head_sha")
@@ -246,5 +267,40 @@ def main() -> None:
     print(artifact)  # noqa: T201
 
 
+def merge() -> None:
+    result = record(json.loads(Path(ARTIFACT).read_text(encoding="utf-8")))
+    repo, pr = os.environ["GITHUB_REPOSITORY"], str(result["pr"])
+    try:
+        current = record(api(repo, f"pulls/{pr}"))
+        if record(current["base"])["ref"] != result["base_ref"]:
+            reason = "base-changed"
+        else:
+            # gh handles enqueueing when the base requires a queue.
+            head_sha = result["head_sha"]
+            head = cast("str", head_sha)  # pragma: no mutate
+            command(
+                "gh",
+                "pr",
+                "merge",
+                pr,
+                "--repo",
+                repo,
+                "--squash",
+                "--match-head-commit",
+                head,
+            )
+            reason = "merge-requested"
+    except KeyError, TypeError, ValueError, OSError, subprocess.CalledProcessError:
+        reason = "merge-failed"
+    result["reason"] = reason
+    pending = Path("tier0-merge.json")
+    pending.write_text(f"{json.dumps(result)}\n", encoding="utf-8")
+    pending.replace(ARTIFACT)
+    with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+        output.write(f"reason={reason}\n")
+    if reason != "merge-requested":
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
-    main()
+    (merge if sys.argv[1:] == ["merge"] else main)()

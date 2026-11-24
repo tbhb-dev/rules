@@ -136,18 +136,33 @@ jobs:
       mode: enforce
       check_workflows: |
         conclusion:12345678
+      tier0_paths: |
+        **/*.md
+        docs/**/*.md
+        docs/**/*.txt
+        LICENSE*
+      deny_paths: |
+        .github/**
+        **/CODEOWNERS
+        **/AGENTS.md
+        **/CLAUDE.md
+        .claude/**
     secrets:
       PIN_APPROVER_CLIENT_ID: ${{ secrets.PIN_APPROVER_CLIENT_ID }}
       PIN_APPROVER_PRIVATE_KEY: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}
 ```
 
-`check_workflows` takes one `context:workflow-id` pair per line. `tier0_paths` defaults to `**/*.md`, `docs/**`, and `LICENSE*`. `deny_paths` defaults to `.github/**` and `**/CODEOWNERS`. Each path input takes one case-insensitive glob per line. `max_files` defaults to 50 and counts both paths in a rename. Set `design_paths` to require the exact head commit in `design_go_sha` or the caller's `DESIGN_GO_SHA` repository variable.
+`check_workflows` takes one `context:workflow-id` pair per line. `tier0_paths` and `deny_paths` use the defaults shown above. Each path input takes one case-insensitive glob per line. `max_files` defaults to 50 and counts both paths in a rename. Set `design_paths` to require the exact head commit in `design_go_sha` or the caller's `DESIGN_GO_SHA` repository variable.
 
-The caller needs the `pins-approver` environment and the installed `tbhb-dev-auto-reviews` GitHub App. The App needs read access to Actions, Checks, and Contents in both modes.
+The caller needs the `pins-approver` environment and the installed `tbhb-dev-auto-reviews` GitHub App. The App needs read access to Actions, Checks, and Contents in both modes. The runner's `python3` must be 3.14 or newer.
 
-The default `mode: evaluate` uses Pull requests read access and yields the decision artifact and outputs `decision`, `reason`, and `head_sha`.
+The calling job must grant `contents: write` and `pull-requests: write` in both modes, including `evaluate`. The reusable workflow requests both permissions at startup and GitHub rejects the call if the caller grants less.
 
-In `mode: enforce`, the App uses Pull requests write access to approve the checked commit. The workflow then uses its `GITHUB_TOKEN` to enqueue or merge that commit. Grant `contents: write` and `pull-requests: write` on the calling job for enforcement. A reusable workflow can't raise the permissions its caller grants. Enforcement requires stale approval dismissal in the caller's branch rules. The workflow rejects drafts, forks, and changes attributed to the approver App. It checks who opened the pull request and who pushed to its branch. It also checks the author and committer on the head commit.
+In the default `mode: evaluate`, the App uses Pull requests read access. The workflow yields the decision artifact and outputs `decision`, `reason`, and `head_sha`.
+
+In `mode: enforce`, the App uses Pull requests write access to approve the checked commit. The workflow then uses `github.token` to enqueue or merge that commit. Enforcement requires stale approval dismissal in the caller's branch rules. The workflow rejects drafts, forks, and changes attributed to the approver App. It checks who opened the pull request and who pushed to its branch. It also checks the author and committer on the head commit.
+
+Events caused by `github.token` don't start new workflow runs. Before enabling `enforce`, confirm the wiki's `push` and `merge_group` workflows still run after an enqueue.
 
 ## In a consumer's `ci.yml`
 

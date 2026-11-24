@@ -16,7 +16,8 @@ on:
         type: string
         default: |
           **/*.md
-          docs/**
+          docs/**/*.md
+          docs/**/*.txt
           LICENSE*
       deny_paths:
         description: Blocked path globs, one per line.
@@ -24,6 +25,9 @@ on:
         default: |
           .github/**
           **/CODEOWNERS
+          **/AGENTS.md
+          **/CLAUDE.md
+          .claude/**
       design_paths:
         description: Path globs that require a design go SHA, one per line.
         type: string
@@ -119,20 +123,10 @@ jobs:
         if: inputs.mode == 'enforce' && steps.decide.outputs.decision == 'approve'
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_SHA: ${{ steps.decide.outputs.head_sha }}
-        run: |
-          pr=$(jq -r .pr tier0-decision.json)
-          # gh handles auto-merge and enqueueing when the base requires a queue.
-          if gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --match-head-commit "$HEAD_SHA"; then
-            reason=merge-requested
-          else
-            reason=merge-failed
-          fi
-          jq --arg reason "$reason" '.reason = $reason' tier0-decision.json > tier0-merge.json
-          mv tier0-merge.json tier0-decision.json
-          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+        run: python3 -I -S rules/repo/private/tier0_approval/__main__.py merge
 
       - name: Upload the decision
+        if: ${{ !cancelled() && steps.decide.outcome == 'success' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: tier0-decision
