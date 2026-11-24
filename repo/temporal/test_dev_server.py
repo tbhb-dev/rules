@@ -71,9 +71,8 @@ while len(list(state.glob('command-*'))) < 2:
     )
     command = [sys.executable, "-c", code]
     with ThreadPoolExecutor(max_workers=2) as executor:
-        first = executor.submit(dev_server.run, CLI, command, 10)
-        second = executor.submit(dev_server.run, CLI, command, 10)
-        assert first.result() == second.result() == 0
+        futures = [executor.submit(dev_server.run, CLI, command, 10) for _ in range(2)]
+        assert [future.result() for future in futures] == [0, 0]
     ports, directories = map(set, zip(*_stopped(state, 2), strict=True))
     assert len(ports) == len(directories) == 2
 
@@ -111,27 +110,30 @@ def test_foreground_server_status(state: Path, monkeypatch: pytest.MonkeyPatch) 
     _stopped(state, 1)
 
 
-def test_interrupt_cleans_up(state: Path) -> None:
+@pytest.mark.parametrize("signal_number", [signal.SIGINT, signal.SIGTERM])
+def test_interrupt_cleans_up(state: Path, signal_number: signal.Signals) -> None:
     code = """
 import signal, sys
 from repo.temporal import dev_server
-signal.signal(signal.SIGTERM, dev_server._interrupt)
-sys.exit(dev_server.run(sys.argv[1:], [], None))
+signal.signal(int(sys.argv[1]), dev_server._interrupt)
+sys.exit(dev_server.run(sys.argv[2:], [], None))
 """
     with subprocess.Popen(
-        [sys.executable, "-c", code, *CLI],
+        [sys.executable, "-c", code, str(signal_number), *CLI],
         stdout=subprocess.PIPE,
         text=True,
     ) as child:
         try:
             assert child.stdout is not None
-            output = child.stdout.readline()
-            assert output.startswith("TEMPORAL_ADDRESS=127.0.0.1:")
-            child.terminate()
-            assert child.wait(timeout=5) == 143
+            assert child.stdout.readline().startswith("TEMPORAL_ADDRESS=127.0.0.1:")
+            child.send_signal(signal_number)
+            assert child.wait(timeout=5) == 128 + signal_number
         finally:
             child.kill()
     _stopped(state, 1)
+    with pytest.raises(SystemExit) as exit_info:
+        dev_server._interrupt(signal_number, None)  # noqa: SLF001
+    assert exit_info.value.code == 128 + signal_number
 
 
 @pytest.mark.parametrize(
@@ -149,22 +151,10 @@ def test_main(
     expected_timeout: float | None,
     status: int,
 ) -> None:
-    def run(cli: list[str], command: list[str], timeout: float | None) -> int:
-        assert cli == ["cli"]
-        assert command == ["test"]
-        assert timeout == expected_timeout
-        if isinstance(result, Exception):
-            raise result
-        return result
-
+    run = Mock(side_effect=[result])
     monkeypatch.setattr(signal, "signal", Mock())
     monkeypatch.setattr(sys, "argv", ["dev_server.py", "cli", "test"])
     monkeypatch.setenv("TEST_TIMEOUT", budget)
     monkeypatch.setattr(dev_server, "run", run)
     assert dev_server.main() == status
-
-
-def test_interrupt_status() -> None:
-    with pytest.raises(SystemExit) as exit_info:
-        dev_server._interrupt(signal.SIGINT, None)  # noqa: SLF001
-    assert exit_info.value.code == 130
+    run.assert_called_once_with(["cli"], ["test"], expected_timeout)

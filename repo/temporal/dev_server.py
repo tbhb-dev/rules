@@ -39,7 +39,7 @@ def _free_ports() -> list[int]:
 
 def _wait_ready(
     server: subprocess.Popen[bytes],
-    address: tuple[str, int],
+    port: int,
     log: BinaryIO,
     deadline: float,
 ) -> bool:
@@ -53,16 +53,14 @@ def _wait_ready(
             announced = any(line.startswith(b"Temporal Server:") for line in log)
         if announced:
             try:
-                with socket.create_connection(address, timeout=0.1):
+                with socket.create_connection((HOST, port), timeout=0.1):
                     return True
             except OSError:
                 pass
         time.sleep(0.05)
     log.seek(0)
     output = log.read().decode(errors="replace")
-    msg = (
-        f"Temporal frontend did not become ready at {address[0]}:{address[1]}\n{output}"
-    )
+    msg = f"Temporal frontend did not become ready at {HOST}:{port}\n{output}"
     raise TimeoutError(msg)
 
 
@@ -97,25 +95,22 @@ def _start(
     # fresh ports if another process wins a port before Temporal binds it.
     for _ in range(3):
         ports = _free_ports()
-        address = (HOST, ports[0])
         args = [*cli, "server", "start-dev", "--ip", HOST, "--headless"]
         for flag, port in zip(PORT_FLAGS, ports, strict=True):
             args.extend((flag, str(port)))
-        with ExitStack() as attempt:
-            with log_path.open("wb") as output:
-                # Bazel supplies the CLI.
-                server = subprocess.Popen(  # nosec B603  # noqa: S603
-                    args,
-                    cwd=directory,
-                    env=env,
-                    stdout=output,
-                    stderr=subprocess.STDOUT,
-                )
-                attempt.callback(_stop, server)
-            with log_path.open("rb") as log:
-                if _wait_ready(server, address, log, deadline):
-                    running.enter_context(attempt.pop_all())
-                    return server, f"{HOST}:{ports[0]}"
+        with log_path.open("wb") as output:
+            # Bazel supplies the CLI.
+            server = subprocess.Popen(  # nosec B603  # noqa: S603
+                args,
+                cwd=directory,
+                env=env,
+                stdout=output,
+                stderr=subprocess.STDOUT,
+            )
+            running.callback(_stop, server)
+        with log_path.open("rb") as log:
+            if _wait_ready(server, ports[0], log, deadline):
+                return server, f"{HOST}:{ports[0]}"
     output = log_path.read_text(encoding="utf-8", errors="replace")
     msg = f"Temporal exited during startup:\n{output}"
     raise RuntimeError(msg)
@@ -157,12 +152,9 @@ def main() -> int:
     timeout = max(1, int(bazel_timeout) - 5) if bazel_timeout else None
     try:
         return run([cli], command, timeout)
-    except subprocess.TimeoutExpired as error:
+    except (subprocess.TimeoutExpired, OSError, RuntimeError) as error:
         sys.stderr.write(f"Temporal dev server: {error}\n")
-        return 124
-    except (OSError, RuntimeError) as error:
-        sys.stderr.write(f"Temporal dev server: {error}\n")
-        return 1
+        return 124 if isinstance(error, subprocess.TimeoutExpired) else 1
 
 
 if __name__ == "__main__":

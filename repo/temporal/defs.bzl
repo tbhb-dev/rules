@@ -19,16 +19,15 @@ def _dev_server_impl(ctx):
         cli_path = cli[ToolDirInfo].dir + "/temporal.exe"
 
     python = ctx.attr._python[PyEnvInfo]
-    runfiles = ctx.runfiles(
-        files = [ctx.file._main] + ctx.files.data,
-        transitive_files = python.files,
-    ).merge(cli[DefaultInfo].default_runfiles)
-    runfiles = runfiles.merge_all([dep[DefaultInfo].default_runfiles for dep in ctx.attr.data])
+    files = [ctx.file._main] + ctx.files.data
+    deps = [cli] + ctx.attr.data
     command = ""
     if ctx.executable.command:
         command = _runfile_arg(ctx, ctx.executable.command.short_path) + " "
-        runfiles = runfiles.merge(ctx.runfiles(files = [ctx.executable.command]))
-        runfiles = runfiles.merge(ctx.attr.command[DefaultInfo].default_runfiles)
+        files.append(ctx.executable.command)
+        deps.append(ctx.attr.command)
+    runfiles = ctx.runfiles(files = files, transitive_files = python.files)
+    runfiles = runfiles.merge_all([dep[DefaultInfo].default_runfiles for dep in deps])
 
     script = ctx.actions.declare_file(ctx.label.name)
     ctx.actions.write(

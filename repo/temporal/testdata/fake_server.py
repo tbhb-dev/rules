@@ -13,15 +13,14 @@ from contextlib import ExitStack
 from pathlib import Path
 
 
-def main() -> int:
+def main() -> None:
     assert sys.argv[1:3] == ["server", "start-dev"]
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ip", required=True)
+    parser.add_argument("--ip", choices=["127.0.0.1"], required=True)
     parser.add_argument("--headless", action="store_true", required=True)
     for flag in ("--port", "--ui-port", "--http-port", "--metrics-port"):
         parser.add_argument(flag, type=int, required=True)
     args = parser.parse_args(sys.argv[3:])
-    assert args.ip == "127.0.0.1"
     ports = (args.port, args.ui_port, args.http_port, args.metrics_port)
     assert len(set(ports)) == 4 and min(ports) > 0
     assert not any(key.startswith("TEMPORAL_") for key in os.environ)
@@ -37,28 +36,25 @@ def main() -> int:
     if mode == "exit" or (mode == "retry" and not retry_marker.exists()):
         retry_marker.touch()
         print("fake bind failure", flush=True)
-        return 1
+        raise SystemExit(1)
     if mode == "ignore-term":
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
     if mode == "probe":
         print(f"Temporal Server: localhost:{args.port}", flush=True)
         time.sleep(0.2)
     with ExitStack() as sockets:
-        listeners = []
-        for port in ports:
-            listener = sockets.enter_context(socket.socket())
+        listeners = [sockets.enter_context(socket.socket()) for _ in ports]
+        for listener, port in zip(listeners, ports, strict=True):
             listener.bind((args.ip, port))
             listener.listen()
-            listeners.append(listener)
         if mode not in {"stall", "probe"}:
             print(f"Temporal Server: localhost:{args.port}", flush=True)
         if mode == "standalone":
             connection, _ = listeners[0].accept()
-            with connection:
-                return 9
+            connection.close()
+            raise SystemExit(9)
         signal.pause()
-    return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
