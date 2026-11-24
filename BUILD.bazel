@@ -482,11 +482,6 @@ exports_files(
     visibility = ["//repo/tests:__pkg__"],
 )
 
-test_suite(
-    name = "tier0_approval_tests",
-    tests = ["//repo/private/tier0_approval:pytest_test"],
-)
-
 # The root wildcard //:all also runs the repository consistency suite.
 test_suite(
     name = "baseline_tests",
@@ -508,6 +503,7 @@ test_suite(
         "//repo/tests:pytest_test",
         "//repo/tests:required_files_docs_test",
         "//repo/tests:required_files_go_test",
+        "//tools:pytest_test",
     ] + ["//repo/tests:proof_required_files_{}_fails".format(case) for case in [
         "bad_exception",
         "missing_dir",

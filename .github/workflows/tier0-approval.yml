@@ -95,7 +95,7 @@ jobs:
           permission-actions: read
           permission-checks: read
           permission-contents: ${{ inputs.mode == 'enforce' && 'write' || 'read' }}
-          permission-pull-requests: write
+          permission-pull-requests: ${{ inputs.mode == 'enforce' && 'write' || 'read' }}
 
       - name: Decide tier-0 approval
         id: decide

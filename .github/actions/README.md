@@ -137,9 +137,9 @@ jobs:
       PIN_APPROVER_PRIVATE_KEY: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}
 ```
 
-`check_workflows` takes one `context:workflow-id` pair per line. `tier0_paths` defaults to `**/*.md`, `docs/**`, and `LICENSE*`. `deny_paths` defaults to `.github/**` and `**/CODEOWNERS`. Each path input takes one glob per line. `max_files` defaults to 50 and counts both paths in a rename. Set `design_paths` to require the exact head SHA in `design_go_sha` or the caller's `DESIGN_GO_SHA` repository variable.
+`check_workflows` takes one `context:workflow-id` pair per line. `tier0_paths` defaults to `**/*.md`, `docs/**`, and `LICENSE*`. `deny_paths` defaults to `.github/**` and `**/CODEOWNERS`. Each path input takes one case-insensitive glob per line. `max_files` defaults to 50 and counts both paths in a rename. Set `design_paths` to require the exact head commit in `design_go_sha` or the caller's `DESIGN_GO_SHA` repository variable.
 
-The default `mode: evaluate` yields the decision artifact and outputs `decision`, `reason`, and `head_sha`. Use `mode: enforce` to approve and merge or queue the checked commit. The caller needs the `pins-approver` environment and an installed App with Actions and Checks read, Pull requests write, and Contents read. Enforcement also requires Contents write and stale approval dismissal in the caller's branch rules.
+The default `mode: evaluate` yields the decision artifact and outputs `decision`, `reason`, and `head_sha`. Use `mode: enforce` to approve and merge or queue the checked commit. The caller needs the `pins-approver` environment and the installed `tbhb-dev-auto-reviews` GitHub App. Evaluation requests read access to Actions, Checks, pull requests, and contents. Enforcement requests write access to pull requests and contents and requires stale approval dismissal in the caller's branch rules. The workflow rejects drafts, forks, and changes attributed to the approver App. It checks the pull request author, the head commit's author and committer, and push activity on the branch.
 
 ## In a consumer's `ci.yml`
 

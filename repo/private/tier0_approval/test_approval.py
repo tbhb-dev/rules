@@ -3,235 +3,209 @@
 
 import json
 import subprocess
-from typing import TYPE_CHECKING
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+import yaml
 
-from repo.private.tier0_approval import __main__ as approval
+from repo.private.tier0_approval import __main__ as gate
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
-type Evidence = tuple[Mock, Mock, Mock]
-
-HEAD = "a" * 40
-BASE = "b" * 40
-REPO = "example/wiki"
-RUN = {
+HEAD, BASE, REPO = "a" * 40, "b" * 40, "example/wiki"
+BOT = {"login": "tbhb-dev-auto-reviews[bot]"}
+WRITER = {"login": "writer"}
+REF = {"sha": HEAD, "ref": "draft", "repo": {"full_name": REPO}}
+RUN: gate.Record = {
     "head_sha": HEAD,
     "conclusion": "success",
     "head_branch": "draft",
-    "head_repository": {"full_name": REPO},
+    "head_repository": REF["repo"],
+    "actor": WRITER,
+    "triggering_actor": WRITER,
 }
 PULL = {
     "number": 5,
     "state": "open",
-    "base": {"sha": BASE},
-    "head": {"sha": HEAD, "ref": "draft", "repo": {"full_name": REPO}},
+    "draft": False,
+    "base": REF | {"sha": BASE},
+    "head": REF,
     "labels": [{"name": "docs"}],
-    "user": {"login": "writer"},
+    "user": WRITER,
 }
+COMMIT = {"author": None, "committer": WRITER}
+CLEAR = (COMMIT, [[{"activity_type": "branch_deletion"}]])
 ENV = {
     "GITHUB_REPOSITORY": REPO,
-    "APP_SLUG": "pins-approver",
-    "CHECK_WORKFLOWS": "CI:123",
-    "MAX_FILES": "50",
-    "TIER0_PATHS": "**/*.md\ndocs/**\nLICENSE*",
-    "DENY_PATHS": " \n.github/**\n**/CODEOWNERS",
-    "DESIGN_PATHS": "",
-    "DESIGN_GO_SHA": "",
+    "APP_SLUG": "tbhb-dev-auto-reviews",
     "MODE": "evaluate",
+    "CHECK_WORKFLOWS": "CI:123",
+    "MAX_FILES": "2",
+    "TIER0_PATHS": "**/*.md\ndocs/**",
+    "DENY_PATHS": ".github/**",
+    "DESIGN_PATHS": "docs/design/**",
+    "DESIGN_GO_SHA": "",
 }
-CHECK = {
-    "head_sha": HEAD,
-    "check_suite": {"id": 123},
-    "name": "CI",
-    "conclusion": "success",
-}
-WORKFLOW = {"head_sha": HEAD, "status": "completed", "check_suite_id": 123}
+WORKFLOW = {"head_sha": HEAD, "workflow_id": 123, "check_suite_id": 321}
+CHECK = {"head_sha": HEAD, "name": "CI", "check_suite": {"id": 321}}
+OUTSIDE = "path-outside-tier0"
 
 
-@pytest.mark.parametrize(
-    ("config", "runs", "updates", "expected"),
-    [
-        ("", [WORKFLOW], {}, False),
-        ("CI", [WORKFLOW], {}, False),
-        ("CI:123", [WORKFLOW | {"status": "in_progress"}], {}, False),
-        ("CI:123", [WORKFLOW], {"head_sha": BASE}, False),
-        ("CI:123", [WORKFLOW], {"check_suite": {"id": 456}}, False),
-        ("CI:123", [WORKFLOW], {"conclusion": "failure"}, False),
-        ("CI:123", [WORKFLOW], {}, True),
-        ("CI:123\nOther:456", [WORKFLOW], {}, False),
-    ],
-)
-def test_contexts(
-    monkeypatch: pytest.MonkeyPatch,
-    config: str,
-    runs: list[dict],
-    updates: dict,
-    expected: bool,
-) -> None:
-    response = [{"workflow_runs": runs}, [{"check_runs": [CHECK | updates]}]]
-    api = Mock(side_effect=response * 2)
-    monkeypatch.setattr(approval, "api", api)
-    assert approval.contexts_pass(REPO, HEAD, config) is expected
+def test_contexts(monkeypatch: pytest.MonkeyPatch) -> None:
+    run, check = WORKFLOW | {"conclusion": "success"}, CHECK | {"conclusion": "success"}
+    api = Mock()
+    monkeypatch.setattr(gate, "api", api)
+    for spec, runs, checks, expected in (
+        ("", [run], [check], False),
+        ("CI", [run], [check], False),
+        ("CI:123", (), [check], False),
+        ("CI:123", [run | {"head_sha": BASE}], [check], False),
+        ("CI:123", [run | {"workflow_id": 124}], [check], False),
+        ("CI:123", [run | {"conclusion": "failure"}], [check], False),
+        ("CI:123", [run], (), False),
+        ("CI:123", [run], [check | {"name": "other"}], False),
+        ("CI:123", [run], [check | {"head_sha": BASE}], False),
+        ("CI:123", [run], [check | {"check_suite": {"id": 456}}], False),
+        ("CI:123", [run], [check | {"conclusion": "failure"}], False),
+        ("CI:123", [run], [check | {"conclusion": "skipped"}], False),
+        ("CI:123", [run], [check | {"conclusion": "cancelled"}], False),
+        (" CI : 123 ", [run], [check], True),
+        ("CI:123\nOther:456", [run], [check], False),
+    ):
+        api.configure_mock(
+            side_effect=[
+                {"workflow_runs": runs},
+                [{"check_runs": checks}],
+                {"workflow_runs": []},
+            ]
+        )
+        assert gate.contexts_pass(REPO, HEAD, spec) is expected, (spec, runs, checks)
 
 
-@pytest.mark.parametrize(
-    ("records", "regular"),
-    [
-        (
-            (
-                ":100644 000000 777 000 D\0old.md\0:000000 100644 000 777 A\0new.md\0"
-                "0\t1\told.md\0"
-                "1\t0\tnew.md\0"
-            ),
-            True,
-        ),
-        (":100644 100644 777 888 M\0old.md\0-\t-\told.md\0", False),
-        (":160000 160000 777 888 M\0old.md\x001\t1\told.md\0", False),
-    ],
-)
-def test_changed_paths(
-    monkeypatch: pytest.MonkeyPatch, records: str, regular: bool
-) -> None:
-    command = Mock(side_effect=["", "", records])
-    monkeypatch.setattr(approval, "command", command)
-    expected = ["old.md", "new.md"] if regular else ["old.md"]
-    assert approval.changed_paths(REPO, BASE, HEAD) == (expected, regular)
-    assert command.call_args_list[1].args[-2:] == (BASE, HEAD)
-    assert command.call_args.args[-4:] == ("--merge-base", BASE, HEAD, "--")
+def test_changed_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    for mode, count, regular in (
+        ("100644", "1", True),
+        ("160000", "1", False),
+        ("100644", "-", False),
+    ):
+        raw = f":{mode} 000000 777 000 D\0old.md\0:000000 100644 000 777 A\0new.md\0"
+        command = Mock(
+            side_effect=["", "", f"{raw}0\t{count}\told.md\x001\t0\tnew.md\0"]
+        )
+        monkeypatch.setattr(gate, "command", command)
+        assert gate.changed_paths(REPO, BASE, HEAD) == (["old.md", "new.md"], regular)
+        assert command.call_args_list[1].args[-2:] == (BASE, HEAD)
+        assert command.call_args.args[-4:] == ("--merge-base", BASE, HEAD, "--")
 
 
 @pytest.fixture
-def evidence(monkeypatch: pytest.MonkeyPatch) -> Evidence:
-    api = Mock(side_effect=[[[PULL]], PULL])
-    checks = Mock(return_value=True)
-    paths = Mock(return_value=(["README.md"], True))
-    monkeypatch.setattr(approval, "api", api)
-    monkeypatch.setattr(approval, "contexts_pass", checks)
-    monkeypatch.setattr(approval, "changed_paths", paths)
-    return api, checks, paths
+def api(monkeypatch: pytest.MonkeyPatch) -> Mock:
+    mock = Mock()
+    monkeypatch.setattr(gate, "api", mock)
+    monkeypatch.setattr(gate, "contexts_pass", Mock(return_value=True))
+    monkeypatch.setattr(gate, "changed_paths", Mock(return_value=(["README.md"], True)))
+    return mock
 
 
-@pytest.mark.parametrize(
-    ("updates", "reason"),
-    [
-        ({"head_sha": "bad"}, "invalid-sha"),
-        ({"conclusion": "failure"}, "ci-unsuccessful"),
-        ({"head_sha": BASE}, "no-unique-open-pr"),
-    ],
-)
-def test_unmatched_run(evidence: Evidence, updates: dict, reason: str) -> None:
-    assert approval.decide(RUN | updates, ENV)["reason"] == reason
-    evidence[1].assert_not_called()
-
-
-@pytest.mark.parametrize(
-    ("paths", "regular", "env", "reason"),
-    [
+def test_policy(api: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    workflow = Path(".github/workflows/tier0-approval.yml").read_text(encoding="utf-8")
+    # PyYAML's safe loader uses the YAML 1.1 boolean key for "on".
+    deny = yaml.safe_load(workflow)[True]["workflow_call"]["inputs"]["deny_paths"]
+    env = ENV | {"DENY_PATHS": f"\n{deny['default']}"}
+    cases: tuple[tuple[list[str], bool, dict[str, str], str], ...] = (
         ([], True, {}, "file-count"),
-        (["a.md", "b.md"], True, {"MAX_FILES": "1"}, "file-count"),
+        (["a.md", "b.md", "c.md"], True, {}, "file-count"),
         (["README.md"], False, {}, "unsupported-file"),
-        (["old.py", "README.md"], True, {}, "path-outside-tier0"),
-        ([".github/file.md"], True, {}, "path-outside-tier0"),
-        (["docs/design.md"], True, {"DESIGN_PATHS": "docs/**"}, "design-needs-go"),
-        (["docs/a"], True, {"DESIGN_PATHS": "docs/**", "DESIGN_GO_SHA": HEAD}, "tier0"),
+        (["old.py", "README.md"], True, {}, OUTSIDE),
+        ([".GitHub/x.md"], True, {}, OUTSIDE),
+        (["docs/Codeowners"], True, {}, OUTSIDE),
+        (["docs/../.github/ci.yml"], True, {}, OUTSIDE),
+        (["docs/./a.md"], True, {}, OUTSIDE),
+        (["/docs/a.md"], True, {}, OUTSIDE),
+        (["docs/a\\b.md"], True, {}, OUTSIDE),
+        (["docs/DESIGN/a.md"], True, {}, "design-needs-go"),
+        (["DOCS/DESIGN/a", "DOCS/b"], True, {"DESIGN_GO_SHA": HEAD}, "tier0"),
         (["README.md"], True, {"MODE": "bogus"}, "invalid-mode"),
-    ],
-)
-def test_policy(
-    evidence: Evidence,
-    paths: list[str],
-    regular: bool,
-    env: dict[str, str],
-    reason: str,
-) -> None:
-    evidence[2].return_value = (paths, regular)
-    result = approval.decide(RUN, ENV | env)
-    assert result["reason"] == reason
-    assert result["files"] == len(paths)
+    )
+    for paths, regular, overrides, reason in cases:
+        api.configure_mock(side_effect=[[[PULL]], PULL, *CLEAR])
+        monkeypatch.setattr(gate, "changed_paths", Mock(return_value=(paths, regular)))
+        result = gate.decide(RUN, env | overrides)
+        assert (result["reason"], result["files"]) == (reason, len(paths))
+        assert result["decision"] == ("approve" if reason == "tier0" else "hold")
 
 
-def test_ambiguous_or_failed_checks(evidence: Evidence) -> None:
-    api, checks, _ = evidence
-    api.side_effect = [[[PULL], [PULL]], [[PULL]], PULL]
-    assert approval.decide(RUN, ENV)["reason"] == "no-unique-open-pr"
-    checks.return_value = False
-    assert approval.decide(RUN, ENV)["reason"] == "checks-unsuccessful"
+def test_run(api: Mock) -> None:
+    for patch, reason in (
+        ({"head_sha": "bad"}, "invalid-sha"),
+        ({"head_sha": BASE}, "no-unique-open-pr"),
+        ({"conclusion": "failure"}, "ci-unsuccessful"),
+        ({"actor": BOT}, "approver-is-pusher"),
+        ({"triggering_actor": BOT}, "approver-is-pusher"),
+    ):
+        api.configure_mock(side_effect=[[[PULL]]])
+        assert gate.decide(RUN | patch, ENV)["reason"] == reason
+    assert (
+        gate.decide(RUN, ENV | {"APP_SLUG": "other"})["reason"] == "unexpected-approver"
+    )
 
 
-@pytest.mark.parametrize(
-    ("updates", "reason"),
-    [
+def test_current(api: Mock) -> None:
+    for patch, reason in (
         ({"state": "closed"}, "pr-changed"),
-        ({"head": {"sha": BASE}}, "pr-changed"),
+        ({"head": REF | {"sha": BASE}}, "pr-changed"),
+        ({"base": REF}, "pr-changed"),
         ({"labels": [{"name": "NO-AUTO-APPROVAL"}]}, "opted-out"),
-        ({"user": {"login": "pins-approver[bot]"}}, "approver-is-author"),
-    ],
-)
-def test_enforce_rechecks_pr(evidence: Evidence, updates: dict, reason: str) -> None:
-    api = evidence[0]
-    api.side_effect = [[[PULL]], PULL, PULL | updates]
-    assert approval.decide(RUN, ENV | {"MODE": "enforce"})["reason"] == reason
-    assert api.call_args.args == (REPO, "pulls/5")
+        ({"user": BOT}, "approver-is-author"),
+        ({"draft": True}, "not-eligible"),
+        ({"head": REF | {"repo": {"full_name": "fork/wiki"}}}, "not-eligible"),
+    ):
+        api.configure_mock(side_effect=[[[PULL]], PULL, *CLEAR, PULL | patch])
+        assert gate.decide(RUN, ENV | {"MODE": "enforce"})["reason"] == reason
+    api.configure_mock(side_effect=[[[PULL]], PULL | {"draft": True}])
+    assert gate.decide(RUN, ENV)["reason"] == "not-eligible"
 
 
-@pytest.mark.parametrize("merge_fails", [True, False])
-def test_enforce_sends_exact_sha(
-    monkeypatch: pytest.MonkeyPatch,
-    evidence: Evidence,
-    *,
-    merge_fails: bool,
-) -> None:
-    api = evidence[0]
-    api.side_effect = [[[PULL]], PULL, PULL, {}]
-    error = subprocess.CalledProcessError(1, "gh") if merge_fails else None
-    command = Mock(side_effect=error)
-    monkeypatch.setattr(approval, "command", command)
-    result = approval.decide(RUN, ENV | {"MODE": "enforce"})
-    assert api.call_args.args[-3:] == (f"commit_id={HEAD}", "-f", "event=APPROVE")
-    command.assert_called_once_with(
-        "gh",
-        "pr",
-        "merge",
-        "5",
-        "--repo",
-        REPO,
-        "--squash",
-        "--match-head-commit",
-        HEAD,
+def test_evidence(api: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    for role in ("author", "committer"):
+        api.configure_mock(side_effect=[[[PULL]], PULL, COMMIT | {role: BOT}])
+        assert gate.decide(RUN, ENV)["reason"] == "approver-is-committer"
+    activity = [[{"activity_type": "push"}]]
+    api.configure_mock(side_effect=[[[PULL]], PULL, COMMIT, activity])
+    assert gate.decide(RUN, ENV)["reason"] == "approver-is-pusher"
+    api.configure_mock(side_effect=[[[PULL], [PULL]], [[PULL]], PULL, *CLEAR])
+    monkeypatch.setattr(gate, "contexts_pass", Mock(return_value=False))
+    assert gate.decide(RUN, ENV)["reason"] == "no-unique-open-pr"
+    assert gate.decide(RUN, ENV)["reason"] == "checks-unsuccessful"
+
+
+def test_enforce(api: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
+    flags = ("--repo", REPO, "--squash", "--match-head-commit")
+    for error in (None, subprocess.CalledProcessError(1, "gh")):
+        api.configure_mock(side_effect=[[[PULL]], PULL, *CLEAR, PULL, {}])
+        command = Mock(side_effect=error)
+        monkeypatch.setattr(gate, "command", command)
+        result = gate.decide(RUN, ENV | {"MODE": "enforce"})
+        assert api.call_args.args[1] == "pulls/5/reviews"
+        assert api.call_args.args[-3:] == (f"commit_id={HEAD}", "-f", "event=APPROVE")
+        command.assert_called_once_with("gh", "pr", "merge", "5", *flags, HEAD)
+        assert result["decision"] == "approve"
+        assert result["reason"] == ("merge-failed" if error else "merge-requested")
+
+
+def test_artifact(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    request = Mock(
+        side_effect=[json.dumps([[PULL]]), subprocess.CalledProcessError(1, "gh")]
     )
-    assert result["decision"] == "approve"
-    assert result["reason"] == ("merge-failed" if merge_fails else "merge-requested")
-
-
-def test_failed_api_artifact(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    error = subprocess.CalledProcessError(1, "gh")
-    response = json.dumps([[PULL]])
-    request = Mock(side_effect=[response, error])
-    monkeypatch.setattr(approval.subprocess, "check_output", request)
+    monkeypatch.setattr(gate.subprocess, "check_output", request)
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GITHUB_EVENT_PATH", "event.json")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", "event")
     monkeypatch.setenv("GITHUB_OUTPUT", "output")
-    monkeypatch.setenv("GITHUB_REPOSITORY", REPO)
-    (tmp_path / "event.json").write_text(
-        json.dumps({"workflow_run": RUN}), encoding="utf-8"
-    )
-    approval.main()
-    args = request.call_args_list[0].args[0]
-    assert args[:2] == ("gh", "api")
-    assert args[2].startswith(f"repos/{REPO}/pulls?state=open&head=")
-    artifact = json.loads(
-        (tmp_path / "tier0-decision.json").read_text(encoding="utf-8")
-    )
-    assert json.loads(capsys.readouterr().out) == artifact
+    for key, value in ENV.items():
+        monkeypatch.setenv(key, value)
+    Path("event").write_text(json.dumps({"workflow_run": RUN}), encoding="utf-8")
+    gate.main()
+    assert request.call_args_list[0].args[0][:2] == ("gh", "api")
+    artifact = json.loads(Path("tier0-decision.json").read_text(encoding="utf-8"))
     assert artifact["reason"] == "evidence-or-command-failed"
-    assert (tmp_path / "output").read_text(encoding="utf-8").splitlines() == [
-        "decision=hold",
-        "reason=evidence-or-command-failed",
-        f"head_sha={HEAD}",
-    ]
+    output = "decision=hold\nreason=evidence-or-command-failed\n"
+    assert Path("output").read_text(encoding="utf-8") == f"{output}head_sha={HEAD}\n"
