@@ -6,6 +6,7 @@ Repositories using `tbhb_rules` would otherwise each copy the same CI. The share
 - `.github/actions/ci-conclusion` decides the `conclusion` check.
 - `.github/workflows/repo-checks.yml` runs the repository-level checks.
 - `.github/workflows/pr-text.yml` scans a pull request's title and body after an edit.
+- `.github/workflows/renovate-auto-approval.yml` evaluates pin-only Renovate pull requests after CI and can approve them in enforce mode.
 
 A consumer keeps its own `ci.yml` with the checkout, the test matrix, and the Bazel commands. The pieces cover the steps that never differ between repositories.
 
@@ -94,7 +95,7 @@ The calling job must grant `contents: read`, because a called workflow's token c
 
 This workflow sets up Bazel inline and doesn't call `setup-bazel-ci`. A `./` path in a called workflow resolves in the caller's checkout. That checkout lacks the action.
 
-Both reusable workflows set `cache-save: false` and use the same key family as `cache-warm`. After setup, `bazel query --output=location` locates `fetch-targets.txt` in the `tbhb_rules` module that the caller pins in `MODULE.bazel`. The script beside that file fetches the declared run-only tools. The source archive includes both files under `.github/actions/`. The caller's checkout needs only its own sources. Keep the workflow, action, and Bazel module pins on the same rules revision when Renovate updates them.
+`repo-checks.yml` and `pr-text.yml` set `cache-save: false` and use the same key family as `cache-warm`. After setup, `bazel query --output=location` locates `fetch-targets.txt` in the `tbhb_rules` module that the caller pins in `MODULE.bazel`. The script beside that file fetches the declared run-only tools. The source archive includes both files under `.github/actions/`. The caller's checkout needs only its own sources. Keep the workflow, action, and Bazel module pins on the same rules revision when Renovate updates them.
 
 ## `pr-text.yml`
 

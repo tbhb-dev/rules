@@ -1,0 +1,183 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+name: Renovate auto-approval
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: Evaluate a decision or enforce it by posting an approval.
+        type: string
+        default: evaluate
+      check_workflows:
+        description: One context and workflow ID per line, separated by a colon.
+        type: string
+        required: true
+      pin_files:
+        description: One kind and path glob per line, separated by a colon.
+        type: string
+        default: |
+          workflow: .github/workflows/*.yml
+          workflow: .github/workflows/*.yaml
+          workflow: .github/actions/*/action.yml
+          workflow: .github/actions/*/action.yaml
+          starlark: MODULE.bazel
+          starlark: pins/*.bzl
+          mise: mise.toml
+          mise_lock: mise.lock
+          bazel_lock: MODULE.bazel.lock
+      allowed_bumps:
+        description: Space-separated version bump levels.
+        type: string
+        default: patch minor digest
+      first_party_owners:
+        description: Space-separated owners whose pins need a source branch check.
+        type: string
+        default: tbhb-dev
+      first_party_modules:
+        description: Module glob for first-party git_override pins.
+        type: string
+        default: tbhb_rules*
+      registry:
+        description: Registry URL prefix for registryFileHashes keys.
+        type: string
+        default: https://bcr.bazel.build/
+      max_files:
+        description: Maximum number of changed files.
+        type: number
+        default: 50
+      max_commits:
+        description: Maximum number of pull request commits.
+        type: number
+        default: 5
+      max_download_mb:
+        description: Maximum size of an artifact download in megabytes.
+        type: number
+        default: 256
+      opt_out_label:
+        description: Label that excludes a pull request from auto-approval.
+        type: string
+        default: no-auto-approval
+      runs-on:
+        description: The runner label. An empty value uses the shared runner default.
+        type: string
+    secrets:
+      PIN_APPROVER_CLIENT_ID:
+        description: Client ID of tbhb-dev-renovate-approver.
+        required: false
+      PIN_APPROVER_PRIVATE_KEY:
+        description: Private key of tbhb-dev-renovate-approver.
+        required: false
+    outputs:
+      decision:
+        description: The approval decision.
+        value: ${{ jobs.approve.outputs.decision }}
+      reason:
+        description: The reason code for the decision.
+        value: ${{ jobs.approve.outputs.reason }}
+      head_sha:
+        description: The pull request head commit evaluated.
+        value: ${{ jobs.approve.outputs.head_sha }}
+
+permissions: {}
+
+jobs:
+  approve:
+    name: Review Renovate pull request
+    runs-on: ${{ inputs.runs-on || (github.event.repository.private && vars.PRIVATE_RUNNER_LABEL || 'ubuntu-26.04') }}
+    permissions: {}
+    environment: pins-approver
+    timeout-minutes: 10
+    concurrency:
+      group: renovate-auto-approval-${{ github.repository }}-${{ github.event.workflow_run.head_branch }}
+      cancel-in-progress: false
+    outputs:
+      decision: ${{ steps.decide.outputs.decision }}
+      reason: ${{ steps.decide.outputs.reason }}
+      head_sha: ${{ steps.decide.outputs.head_sha }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Require reusable workflow provenance
+        id: provenance
+        # actionlint 1.7.12 predates these job context properties.
+        env:
+          RULES_REPOSITORY: ${{ fromJSON(toJSON(job)).workflow_repository }}
+          RULES_SHA: ${{ fromJSON(toJSON(job)).workflow_sha }}
+        run: |
+          : "${RULES_REPOSITORY:?Missing job.workflow_repository}"
+          : "${RULES_SHA:?Missing job.workflow_sha}"
+          printf 'repository=%s\nsha=%s\n' "$RULES_REPOSITORY" "$RULES_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the reusable workflow revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: ${{ steps.provenance.outputs.repository }}
+          ref: ${{ steps.provenance.outputs.sha }}
+          path: rules
+          persist-credentials: false
+
+      - name: Verify the checkout revision
+        env:
+          RULES_SHA: ${{ steps.provenance.outputs.sha }}
+        run: |
+          checkout_sha=$(git -C rules rev-parse HEAD)
+          if [[ $checkout_sha != "$RULES_SHA" ]]; then
+            echo "The rules checkout does not match job.workflow_sha." >&2
+            exit 1
+          fi
+
+      - name: Require the approver credentials
+        env:
+          PIN_APPROVER_CLIENT_ID: ${{ secrets.PIN_APPROVER_CLIENT_ID }}
+          PIN_APPROVER_PRIVATE_KEY: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}
+        run: |
+          : "${PIN_APPROVER_CLIENT_ID:?Missing PIN_APPROVER_CLIENT_ID}"
+          : "${PIN_APPROVER_PRIVATE_KEY:?Missing PIN_APPROVER_PRIVATE_KEY}"
+
+      - name: Mint the approver installation token
+        id: token
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc  # v3.4.0
+        with:
+          client-id: ${{ secrets.PIN_APPROVER_CLIENT_ID }}
+          private-key: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.repository }}
+          permission-contents: read
+          permission-checks: read
+          permission-pull-requests: ${{ inputs.mode == 'enforce' && 'write' || 'read' }}
+
+      - name: Decide whether to approve
+        id: decide
+        env:
+          RA_MODE: ${{ inputs.mode }}
+          RA_CHECK_WORKFLOWS: ${{ inputs.check_workflows }}
+          RA_PIN_FILES: ${{ inputs.pin_files }}
+          RA_ALLOWED_BUMPS: ${{ inputs.allowed_bumps }}
+          RA_FIRST_PARTY_OWNERS: ${{ inputs.first_party_owners }}
+          RA_FIRST_PARTY_MODULES: ${{ inputs.first_party_modules }}
+          RA_REGISTRY: ${{ inputs.registry }}
+          RA_MAX_FILES: ${{ inputs.max_files }}
+          RA_MAX_COMMITS: ${{ inputs.max_commits }}
+          RA_MAX_DOWNLOAD_MB: ${{ inputs.max_download_mb }}
+          RA_OPT_OUT_LABEL: ${{ inputs.opt_out_label }}
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          RULES_CHECKOUT="$GITHUB_WORKSPACE/rules"
+          RA_OUTPUT_DIR=$(mktemp -d "$RUNNER_TEMP/renovate-approval.XXXXXXXX")
+          export RA_OUTPUT_DIR
+          python3 -I -S "$RULES_CHECKOUT/repo/private/renovate_approval/__main__.py"
+          decision_file="$RA_OUTPUT_DIR/decision.json"
+          pr_number=$(jq -r '.pull_request | if type == "number" and . > 0 then . else "unknown" end' "$decision_file")
+          printf 'decision_file=%s\npr_number=%s\n' "$decision_file" "$pr_number" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the decision
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: renovate-auto-approval-${{ steps.decide.outputs.pr_number }}-${{ github.run_attempt }}
+          path: ${{ steps.decide.outputs.decision_file }}
+          if-no-files-found: error
+          retention-days: 90
