@@ -1,0 +1,136 @@
+{
+  "group": "approve",
+  "reason": "head_moved_after_approval",
+  "mode": "enforce",
+  "reads": 3,
+  "posts": 1,
+  "dismissals": 1,
+  "overrides": {
+    "pull": [
+      {
+        "body": {
+          "number": 42,
+          "head": {
+            "sha": "cccccccccccccccccccccccccccccccccccccccc",
+            "ref": "renovate/checkout",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "base": {
+            "sha": "dddddddddddddddddddddddddddddddddddddddd",
+            "ref": "main",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "state": "open",
+          "draft": false,
+          "labels": [],
+          "changed_files": 1,
+          "commits": 1,
+          "user": {
+            "id": 289255489,
+            "login": "tbhb-dev-renovate[bot]",
+            "type": "Bot"
+          }
+        }
+      },
+      {
+        "body": {
+          "number": 42,
+          "head": {
+            "sha": "cccccccccccccccccccccccccccccccccccccccc",
+            "ref": "renovate/checkout",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "base": {
+            "sha": "dddddddddddddddddddddddddddddddddddddddd",
+            "ref": "main",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "state": "open",
+          "draft": false,
+          "labels": [],
+          "changed_files": 1,
+          "commits": 1,
+          "user": {
+            "id": 289255489,
+            "login": "tbhb-dev-renovate[bot]",
+            "type": "Bot"
+          }
+        }
+      },
+      {
+        "body": {
+          "number": 42,
+          "head": {
+            "sha": "ffffffffffffffffffffffffffffffffffffffff",
+            "ref": "renovate/checkout",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "base": {
+            "sha": "dddddddddddddddddddddddddddddddddddddddd",
+            "ref": "main",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "state": "open",
+          "draft": false,
+          "labels": [],
+          "changed_files": 1,
+          "commits": 1,
+          "user": {
+            "id": 289255489,
+            "login": "tbhb-dev-renovate[bot]",
+            "type": "Bot"
+          }
+        }
+      }
+    ],
+    "post": [
+      {
+        "error": 503
+      }
+    ],
+    "reviews": [
+      {
+        "body": []
+      },
+      {
+        "body": [
+          {
+            "id": 100,
+            "commit_id": "cccccccccccccccccccccccccccccccccccccccc",
+            "state": "APPROVED",
+            "user": {
+              "id": 1337,
+              "login": "tbhb-dev-pin-approver[bot]",
+              "type": "Bot"
+            },
+            "body": "Renovate pin approval snapshot v1\n{\"base\": {\"merge_base\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\", \"ref\": \"main\", \"repository_id\": 17}, \"head\": \"cccccccccccccccccccccccccccccccccccccccc\"}"
+          }
+        ]
+      }
+    ]
+  }
+}

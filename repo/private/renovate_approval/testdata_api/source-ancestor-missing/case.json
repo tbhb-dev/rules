@@ -1,0 +1,59 @@
+{
+  "group": "gather",
+  "reason": "fact_missing",
+  "reads": 1,
+  "patch": "workflow-main",
+  "download": null,
+  "overrides": {
+    "pull": [
+      {
+        "body": {
+          "number": 42,
+          "head": {
+            "sha": "cccccccccccccccccccccccccccccccccccccccc",
+            "ref": "renovate/checkout",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "base": {
+            "sha": "dddddddddddddddddddddddddddddddddddddddd",
+            "ref": "main",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "state": "open",
+          "draft": false,
+          "labels": [],
+          "changed_files": 1,
+          "commits": 1,
+          "user": {
+            "id": 289255489,
+            "login": "tbhb-dev-renovate[bot]",
+            "type": "Bot"
+          }
+        }
+      }
+    ],
+    "files": [
+      {
+        "body": [
+          {
+            "filename": ".github/workflows/ci.yml"
+          }
+        ]
+      }
+    ],
+    "source_contains": [
+      {
+        "error": 404
+      }
+    ]
+  },
+  "extra": {}
+}

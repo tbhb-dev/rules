@@ -1,0 +1,24 @@
+{
+  "group": "gather",
+  "reason": "check_missing",
+  "overrides": {
+    "check": [
+      {
+        "body": {
+          "id": 415,
+          "name": "conclusion",
+          "app": {
+            "id": 15368
+          },
+          "check_suite": {
+            "id": 18
+          },
+          "head_sha": "ffffffffffffffffffffffffffffffffffffffff",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      }
+    ]
+  },
+  "reads": 1
+}

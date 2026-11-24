@@ -9,18 +9,27 @@ repo_files()
 
 MODULE = [
     "__init__.py",
+    "__main__.py",
+    "approve.py",
     "decide.py",
+    "gather.py",
     "matcher.py",
     "versions.py",
 ]
 
 TESTS = [
+    "test_approve.py",
     "test_decide.py",
+    "test_gather.py",
+    "test_main.py",
     "test_matcher.py",
     "test_versions.py",
 ]
 
-FIXTURES = glob(["testdata/**"])
+FIXTURES = glob([
+    "testdata/**",
+    "testdata_api/**",
+])
 
 [
     py_test(
@@ -45,7 +54,10 @@ pytest_test(
         "repo/private/renovate_approval",
     ],
     coverage = [
+        "repo.private.renovate_approval.__main__",
+        "repo.private.renovate_approval.approve",
         "repo.private.renovate_approval.decide",
+        "repo.private.renovate_approval.gather",
         "repo.private.renovate_approval.matcher",
         "repo.private.renovate_approval.versions",
     ],

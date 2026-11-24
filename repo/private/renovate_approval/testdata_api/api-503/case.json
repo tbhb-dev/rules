@@ -1,0 +1,22 @@
+{
+  "group": "gather",
+  "reason": "api_error",
+  "overrides": {
+    "associated": [
+      {
+        "error": 503
+      },
+      {
+        "error": 503
+      },
+      {
+        "error": 503
+      }
+    ]
+  },
+  "waits": [
+    1,
+    2
+  ],
+  "reads": 0
+}

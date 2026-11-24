@@ -1,0 +1,26 @@
+{
+  "group": "approve",
+  "reason": "ok_pin_only",
+  "mode": "enforce",
+  "reads": 3,
+  "posts": 1,
+  "dismissals": 0,
+  "overrides": {
+    "reviews": [
+      {
+        "body": [
+          {
+            "id": 99,
+            "commit_id": "cccccccccccccccccccccccccccccccccccccccc",
+            "state": "APPROVED",
+            "user": {
+              "login": "human",
+              "type": "User"
+            },
+            "body": "Renovate pin approval snapshot v1\n{\"base\": {\"merge_base\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\", \"ref\": \"main\", \"repository_id\": 17}, \"head\": \"cccccccccccccccccccccccccccccccccccccccc\"}"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "group": "gather",
+  "reason": "fact_missing",
+  "overrides": {
+    "tag": [
+      {
+        "error": 404
+      }
+    ]
+  },
+  "reads": 1
+}

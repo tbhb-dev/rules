@@ -1,0 +1,39 @@
+{
+  "group": "gather",
+  "reason": "multiple_required_workflows",
+  "env": {
+    "RA_CHECK_WORKFLOWS": "conclusion: 93\nother: 94"
+  },
+  "overrides": {
+    "rules": [
+      {
+        "body": [
+          {
+            "type": "required_status_checks",
+            "parameters": {
+              "required_status_checks": [
+                {
+                  "context": "conclusion",
+                  "integration_id": 15368
+                },
+                {
+                  "context": "other",
+                  "integration_id": 15368
+                }
+              ]
+            }
+          },
+          {
+            "type": "pull_request",
+            "parameters": {
+              "required_approving_review_count": 1,
+              "dismiss_stale_reviews_on_push": true,
+              "require_last_push_approval": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "reads": 1
+}

@@ -1,0 +1,16 @@
+{
+  "group": "gather",
+  "reason": "author_app_mismatch",
+  "overrides": {
+    "issue": [
+      {
+        "body": {
+          "performed_via_github_app": {
+            "id": 4
+          }
+        }
+      }
+    ]
+  },
+  "reads": 1
+}

@@ -1,0 +1,12 @@
+{
+  "group": "gather",
+  "reason": "api_error",
+  "reads": 0,
+  "overrides": {
+    "associated": [
+      {
+        "bad_json": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "group": "gather",
+  "reason": "api_error",
+  "overrides": {
+    "associated": [
+      {
+        "timeout": true
+      },
+      {
+        "timeout": true
+      },
+      {
+        "timeout": true
+      }
+    ]
+  },
+  "waits": [
+    1,
+    2
+  ],
+  "reads": 0
+}

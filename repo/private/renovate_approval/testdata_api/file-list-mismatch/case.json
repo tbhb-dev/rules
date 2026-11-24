@@ -1,0 +1,16 @@
+{
+  "group": "gather",
+  "reason": "file_list_mismatch",
+  "overrides": {
+    "files": [
+      {
+        "body": [
+          {
+            "filename": "not-the-git-path"
+          }
+        ]
+      }
+    ]
+  },
+  "reads": 1
+}

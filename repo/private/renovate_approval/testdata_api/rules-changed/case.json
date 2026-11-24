@@ -1,0 +1,58 @@
+{
+  "group": "approve",
+  "reason": "stale_dismissal_off",
+  "mode": "enforce",
+  "reads": 1,
+  "posts": 0,
+  "dismissals": 0,
+  "overrides": {
+    "rules": [
+      {
+        "body": [
+          {
+            "type": "required_status_checks",
+            "parameters": {
+              "required_status_checks": [
+                {
+                  "context": "conclusion",
+                  "integration_id": 15368
+                }
+              ]
+            }
+          },
+          {
+            "type": "pull_request",
+            "parameters": {
+              "required_approving_review_count": 1,
+              "dismiss_stale_reviews_on_push": true,
+              "require_last_push_approval": true
+            }
+          }
+        ]
+      },
+      {
+        "body": [
+          {
+            "type": "required_status_checks",
+            "parameters": {
+              "required_status_checks": [
+                {
+                  "context": "conclusion",
+                  "integration_id": 15368
+                }
+              ]
+            }
+          },
+          {
+            "type": "pull_request",
+            "parameters": {
+              "required_approving_review_count": 1,
+              "dismiss_stale_reviews_on_push": true,
+              "require_last_push_approval": false
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

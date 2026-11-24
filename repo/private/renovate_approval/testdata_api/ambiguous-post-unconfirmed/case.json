@@ -1,0 +1,15 @@
+{
+  "group": "approve",
+  "reason": "approval_failed",
+  "mode": "enforce",
+  "reads": 2,
+  "posts": 1,
+  "dismissals": 0,
+  "overrides": {
+    "post": [
+      {
+        "timeout": true
+      }
+    ]
+  }
+}

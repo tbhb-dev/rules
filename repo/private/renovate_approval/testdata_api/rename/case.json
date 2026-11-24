@@ -1,0 +1,18 @@
+{
+  "group": "gather",
+  "reason": "rename",
+  "reads": 1,
+  "patch": "rename",
+  "git": "rename",
+  "overrides": {
+    "files": [
+      {
+        "body": [
+          {
+            "filename": ".github/workflows/ci.yaml"
+          }
+        ]
+      }
+    ]
+  }
+}

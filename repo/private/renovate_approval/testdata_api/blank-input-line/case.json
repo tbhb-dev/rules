@@ -1,0 +1,8 @@
+{
+  "group": "main",
+  "reason": "ok_pin_only",
+  "reads": 2,
+  "env": {
+    "RA_CHECK_WORKFLOWS": "\nconclusion: 93\n  "
+  }
+}

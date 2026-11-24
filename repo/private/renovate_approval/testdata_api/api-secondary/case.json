@@ -1,0 +1,16 @@
+{
+  "group": "gather",
+  "reason": "rate_limited",
+  "overrides": {
+    "associated": [
+      {
+        "error": 403,
+        "headers": {
+          "Retry-After": "12"
+        }
+      }
+    ]
+  },
+  "waits": [],
+  "reads": 0
+}

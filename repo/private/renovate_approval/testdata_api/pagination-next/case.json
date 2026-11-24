@@ -1,0 +1,355 @@
+{
+  "group": "gather",
+  "reason": "ok_pin_only",
+  "overrides": {
+    "associated": [
+      {
+        "body": [
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          },
+          {
+            "state": "closed"
+          }
+        ],
+        "headers": {
+          "Link": "<https://api.github.com/repositories/17/commits/cccccccccccccccccccccccccccccccccccccccc/pulls?page=2&per_page=100>; rel=\"next\""
+        }
+      }
+    ]
+  },
+  "extra": {
+    "/repos/example/project/commits/cccccccccccccccccccccccccccccccccccccccc/pulls?per_page=100&page=2": [
+      {
+        "body": [
+          {
+            "number": 42,
+            "head": {
+              "sha": "cccccccccccccccccccccccccccccccccccccccc",
+              "ref": "renovate/checkout",
+              "repo": {
+                "id": 17,
+                "full_name": "example/project",
+                "default_branch": "main"
+              }
+            },
+            "base": {
+              "sha": "dddddddddddddddddddddddddddddddddddddddd",
+              "ref": "main",
+              "repo": {
+                "id": 17,
+                "full_name": "example/project",
+                "default_branch": "main"
+              }
+            },
+            "state": "open",
+            "draft": false,
+            "labels": [],
+            "changed_files": 1,
+            "commits": 1,
+            "user": {
+              "id": 289255489,
+              "login": "tbhb-dev-renovate[bot]",
+              "type": "Bot"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "reads": 2
+}

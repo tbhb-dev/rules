@@ -1,0 +1,30 @@
+{
+  "group": "gather",
+  "reason": "signature_unverified",
+  "overrides": {
+    "pinned": [
+      {
+        "body": {
+          "total_commits": 1,
+          "commits": [
+            {
+              "sha": "cccccccccccccccccccccccccccccccccccccccc",
+              "author": {
+                "id": 289255489
+              },
+              "committer": {
+                "login": "web-flow"
+              },
+              "commit": {
+                "verification": {
+                  "verified": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reads": 1
+}

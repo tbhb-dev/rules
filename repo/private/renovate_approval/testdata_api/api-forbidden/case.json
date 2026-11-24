@@ -1,0 +1,13 @@
+{
+  "group": "gather",
+  "reason": "api_error",
+  "overrides": {
+    "associated": [
+      {
+        "error": 403
+      }
+    ]
+  },
+  "waits": [],
+  "reads": 0
+}

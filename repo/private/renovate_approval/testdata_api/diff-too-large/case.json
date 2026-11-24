@@ -1,0 +1,6 @@
+{
+  "group": "gather",
+  "reason": "diff_too_large",
+  "git": "patch_limit",
+  "reads": 1
+}

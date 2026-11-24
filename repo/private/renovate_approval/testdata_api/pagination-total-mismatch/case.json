@@ -1,0 +1,24 @@
+{
+  "group": "gather",
+  "reason": "pagination_truncated",
+  "overrides": {
+    "jobs": [
+      {
+        "body": {
+          "total_count": 2,
+          "jobs": [
+            {
+              "id": 22,
+              "name": "conclusion",
+              "run_id": 21,
+              "run_attempt": 2,
+              "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+              "check_run_url": "https://api.github.com/repos/example/project/check-runs/415"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reads": 1
+}

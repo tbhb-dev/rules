@@ -1,0 +1,388 @@
+{
+  "routes": {
+    "associated": [
+      "/repos/example/project/commits/cccccccccccccccccccccccccccccccccccccccc/pulls?per_page=100&page=1",
+      {
+        "body": [
+          {
+            "number": 42,
+            "head": {
+              "sha": "cccccccccccccccccccccccccccccccccccccccc",
+              "ref": "renovate/checkout",
+              "repo": {
+                "id": 17,
+                "full_name": "example/project",
+                "default_branch": "main"
+              }
+            },
+            "state": "open"
+          }
+        ]
+      }
+    ],
+    "pull": [
+      "/repos/example/project/pulls/42",
+      {
+        "body": {
+          "number": 42,
+          "head": {
+            "sha": "cccccccccccccccccccccccccccccccccccccccc",
+            "ref": "renovate/checkout",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "base": {
+            "sha": "dddddddddddddddddddddddddddddddddddddddd",
+            "ref": "main",
+            "repo": {
+              "id": 17,
+              "full_name": "example/project",
+              "default_branch": "main"
+            }
+          },
+          "state": "open",
+          "draft": false,
+          "labels": [],
+          "changed_files": 1,
+          "commits": 1,
+          "user": {
+            "id": 289255489,
+            "login": "tbhb-dev-renovate[bot]",
+            "type": "Bot"
+          }
+        }
+      }
+    ],
+    "compare": [
+      "/repos/example/project/compare/dddddddddddddddddddddddddddddddddddddddd...cccccccccccccccccccccccccccccccccccccccc",
+      {
+        "body": {
+          "merge_base_commit": {
+            "sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        }
+      }
+    ],
+    "compare_next": [
+      "/repos/example/project/compare/ffffffffffffffffffffffffffffffffffffffff...cccccccccccccccccccccccccccccccccccccccc",
+      {
+        "body": {
+          "merge_base_commit": {
+            "sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        }
+      }
+    ],
+    "issue": [
+      "/repos/example/project/issues/42",
+      {
+        "body": {
+          "performed_via_github_app": {
+            "id": 3915812
+          }
+        }
+      }
+    ],
+    "commits": [
+      "/repos/example/project/pulls/42/commits?per_page=100&page=1",
+      {
+        "body": [
+          {
+            "sha": "cccccccccccccccccccccccccccccccccccccccc",
+            "author": {
+              "id": 289255489
+            },
+            "committer": {
+              "login": "web-flow"
+            },
+            "commit": {
+              "verification": {
+                "verified": true
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "pinned": [
+      "/repos/example/project/compare/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee...cccccccccccccccccccccccccccccccccccccccc?per_page=100&page=1",
+      {
+        "body": {
+          "total_commits": 1,
+          "commits": [
+            {
+              "sha": "cccccccccccccccccccccccccccccccccccccccc",
+              "author": {
+                "id": 289255489
+              },
+              "committer": {
+                "login": "web-flow"
+              },
+              "commit": {
+                "verification": {
+                  "verified": true
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "files": [
+      "/repos/example/project/pulls/42/files?per_page=100&page=1",
+      {
+        "body": [
+          {
+            "filename": ".github/workflows/ci.yml",
+            "patch": "ignored"
+          }
+        ]
+      }
+    ],
+    "rules": [
+      "/repos/example/project/rules/branches/main?per_page=100&page=1",
+      {
+        "body": [
+          {
+            "type": "required_status_checks",
+            "parameters": {
+              "required_status_checks": [
+                {
+                  "context": "conclusion",
+                  "integration_id": 15368
+                }
+              ]
+            }
+          },
+          {
+            "type": "pull_request",
+            "parameters": {
+              "required_approving_review_count": 1,
+              "dismiss_stale_reviews_on_push": true,
+              "require_last_push_approval": true
+            }
+          }
+        ]
+      }
+    ],
+    "run": [
+      "/repos/example/project/actions/runs/21",
+      {
+        "body": {
+          "id": 21,
+          "run_attempt": 2,
+          "workflow_id": 93,
+          "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+          "head_repository": {
+            "id": 17,
+            "full_name": "example/project",
+            "default_branch": "main"
+          },
+          "event": "pull_request",
+          "check_suite_id": 18,
+          "pull_requests": [
+            {
+              "number": 42,
+              "head": {
+                "sha": "cccccccccccccccccccccccccccccccccccccccc",
+                "ref": "renovate/checkout",
+                "repo": {
+                  "id": 17,
+                  "full_name": "example/project",
+                  "default_branch": "main"
+                }
+              },
+              "base": {
+                "sha": "dddddddddddddddddddddddddddddddddddddddd",
+                "ref": "main",
+                "repo": {
+                  "id": 17,
+                  "full_name": "example/project",
+                  "default_branch": "main"
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "suite": [
+      "/repos/example/project/check-suites/18",
+      {
+        "body": {
+          "id": 18,
+          "head_sha": "cccccccccccccccccccccccccccccccccccccccc"
+        }
+      }
+    ],
+    "jobs": [
+      "/repos/example/project/actions/runs/21/attempts/2/jobs?per_page=100&page=1",
+      {
+        "body": {
+          "total_count": 1,
+          "jobs": [
+            {
+              "id": 22,
+              "name": "conclusion",
+              "run_id": 21,
+              "run_attempt": 2,
+              "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+              "check_run_url": "https://api.github.com/repos/example/project/check-runs/415"
+            }
+          ]
+        }
+      }
+    ],
+    "check": [
+      "/repos/example/project/check-runs/415",
+      {
+        "body": {
+          "id": 415,
+          "name": "conclusion",
+          "app": {
+            "id": 15368
+          },
+          "check_suite": {
+            "id": 18
+          },
+          "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      }
+    ],
+    "test_merge": [
+      "/repos/example/project/commits/9999999999999999999999999999999999999999",
+      {
+        "body": {
+          "sha": "9999999999999999999999999999999999999999",
+          "parents": [
+            {
+              "sha": "dddddddddddddddddddddddddddddddddddddddd"
+            },
+            {
+              "sha": "cccccccccccccccccccccccccccccccccccccccc"
+            }
+          ]
+        }
+      }
+    ],
+    "tag": [
+      "/repos/actions/checkout/git/ref/tags/v7.0.2",
+      {
+        "body": {
+          "object": {
+            "type": "commit",
+            "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        }
+      }
+    ],
+    "annotated": [
+      "/repos/actions/checkout/git/tags/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      {
+        "body": {
+          "object": {
+            "type": "commit",
+            "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        }
+      }
+    ],
+    "reviews": [
+      "/repos/example/project/pulls/42/reviews?per_page=100&page=1",
+      {
+        "body": []
+      }
+    ],
+    "post": [
+      "POST /repos/example/project/pulls/42/reviews",
+      {
+        "body": {
+          "id": 100,
+          "commit_id": "cccccccccccccccccccccccccccccccccccccccc",
+          "state": "APPROVED",
+          "user": {
+            "id": 1337,
+            "login": "tbhb-dev-pin-approver[bot]",
+            "type": "Bot"
+          },
+          "body": "Renovate pin approval snapshot v1\n{\"base\": {\"merge_base\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\", \"ref\": \"main\", \"repository_id\": 17}, \"head\": \"cccccccccccccccccccccccccccccccccccccccc\"}"
+        }
+      }
+    ],
+    "dismiss": [
+      "PUT /repos/example/project/pulls/42/reviews/100/dismissals",
+      {
+        "body": {
+          "id": 100,
+          "commit_id": "cccccccccccccccccccccccccccccccccccccccc",
+          "state": "DISMISSED",
+          "user": {
+            "id": 1337,
+            "login": "tbhb-dev-pin-approver[bot]",
+            "type": "Bot"
+          },
+          "body": "Renovate pin approval snapshot v1\n{\"base\": {\"merge_base\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\", \"ref\": \"main\", \"repository_id\": 17}, \"head\": \"cccccccccccccccccccccccccccccccccccccccc\"}"
+        }
+      }
+    ],
+    "asset": [
+      "/repos/j178/prek/releases/assets/13",
+      {
+        "body": {
+          "browser_download_url": "https://github.com/j178/prek/releases/download/v0.5.12/prek-linux.tar.gz"
+        }
+      }
+    ],
+    "default_source": [
+      "/repos/example-org/rules-fixture",
+      {
+        "body": {
+          "default_branch": "main"
+        }
+      }
+    ],
+    "source_ref": [
+      "/repos/example-org/rules-fixture/git/ref/heads/main",
+      {
+        "body": {
+          "object": {
+            "type": "commit",
+            "sha": "8888888888888888888888888888888888888888"
+          }
+        }
+      }
+    ],
+    "source_contains": [
+      "/repos/example-org/rules-fixture/compare/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb...8888888888888888888888888888888888888888",
+      {
+        "body": {
+          "status": "ahead"
+        }
+      }
+    ],
+    "source_advances": [
+      "/repos/example-org/rules-fixture/compare/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      {
+        "body": {
+          "status": "ahead"
+        }
+      }
+    ]
+  },
+  "review": {
+    "id": 100,
+    "commit_id": "cccccccccccccccccccccccccccccccccccccccc",
+    "state": "APPROVED",
+    "user": {
+      "id": 1337,
+      "login": "tbhb-dev-pin-approver[bot]",
+      "type": "Bot"
+    },
+    "body": "Renovate pin approval snapshot v1\n{\"base\": {\"merge_base\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\", \"ref\": \"main\", \"repository_id\": 17}, \"head\": \"cccccccccccccccccccccccccccccccccccccccc\"}"
+  }
+}

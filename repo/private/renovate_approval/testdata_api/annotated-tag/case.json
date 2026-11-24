@@ -1,0 +1,17 @@
+{
+  "group": "gather",
+  "reason": "ok_pin_only",
+  "overrides": {
+    "tag": [
+      {
+        "body": {
+          "object": {
+            "type": "tag",
+            "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    ]
+  },
+  "reads": 2
+}

@@ -1,0 +1,21 @@
+{
+  "action": "completed",
+  "repository": {
+    "id": 17,
+    "full_name": "example/project",
+    "default_branch": "main"
+  },
+  "workflow_run": {
+    "id": 21,
+    "run_attempt": 2,
+    "workflow_id": 93,
+    "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+    "head_repository": {
+      "id": 17,
+      "full_name": "example/project",
+      "default_branch": "main"
+    },
+    "event": "pull_request",
+    "check_suite_id": 18
+  }
+}

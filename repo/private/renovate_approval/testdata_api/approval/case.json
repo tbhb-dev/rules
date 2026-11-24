@@ -1,0 +1,8 @@
+{
+  "group": "approve",
+  "reason": "ok_pin_only",
+  "mode": "enforce",
+  "reads": 3,
+  "posts": 1,
+  "dismissals": 0
+}

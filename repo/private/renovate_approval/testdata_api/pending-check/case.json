@@ -1,0 +1,24 @@
+{
+  "group": "gather",
+  "reason": "checks_pending",
+  "overrides": {
+    "check": [
+      {
+        "body": {
+          "id": 415,
+          "name": "conclusion",
+          "app": {
+            "id": 15368
+          },
+          "check_suite": {
+            "id": 18
+          },
+          "head_sha": "cccccccccccccccccccccccccccccccccccccccc",
+          "status": "in_progress",
+          "conclusion": null
+        }
+      }
+    ]
+  },
+  "reads": 1
+}

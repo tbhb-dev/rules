@@ -1,0 +1,16 @@
+{
+  "group": "gather",
+  "reason": "rate_limited",
+  "overrides": {
+    "associated": [
+      {
+        "error": 403,
+        "headers": {
+          "X-RateLimit-Remaining": "0"
+        }
+      }
+    ]
+  },
+  "waits": [],
+  "reads": 0
+}

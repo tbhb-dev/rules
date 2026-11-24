@@ -1,0 +1,34 @@
+{
+  "group": "approve",
+  "reason": "ok_pin_only",
+  "reads": 3,
+  "mode": "enforce",
+  "posts": 1,
+  "overrides": {
+    "post": [
+      {
+        "body": null
+      }
+    ],
+    "reviews": [
+      {
+        "body": []
+      },
+      {
+        "body": [
+          {
+            "id": 100,
+            "commit_id": "cccccccccccccccccccccccccccccccccccccccc",
+            "state": "APPROVED",
+            "user": {
+              "id": 1337,
+              "login": "tbhb-dev-pin-approver[bot]",
+              "type": "Bot"
+            },
+            "body": "Renovate pin approval snapshot v1\n{\"base\": {\"merge_base\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\", \"ref\": \"main\", \"repository_id\": 17}, \"head\": \"cccccccccccccccccccccccccccccccccccccccc\"}"
+          }
+        ]
+      }
+    ]
+  }
+}

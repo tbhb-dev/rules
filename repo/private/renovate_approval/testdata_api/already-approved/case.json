@@ -1,0 +1,38 @@
+{
+  "group": "approve",
+  "reason": "already_approved",
+  "mode": "enforce",
+  "reads": 2,
+  "posts": 0,
+  "dismissals": 0,
+  "overrides": {
+    "reviews": [
+      {
+        "body": [
+          {
+            "id": 100,
+            "commit_id": "cccccccccccccccccccccccccccccccccccccccc",
+            "state": "APPROVED",
+            "user": {
+              "id": 1337,
+              "login": "tbhb-dev-pin-approver[bot]",
+              "type": "Bot"
+            },
+            "body": "Renovate pin approval snapshot v1\n{\"base\": {\"merge_base\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\", \"ref\": \"main\", \"repository_id\": 17}, \"head\": \"cccccccccccccccccccccccccccccccccccccccc\"}"
+          },
+          {
+            "id": 101,
+            "commit_id": "cccccccccccccccccccccccccccccccccccccccc",
+            "state": "COMMENTED",
+            "user": {
+              "id": 1337,
+              "login": "tbhb-dev-pin-approver[bot]",
+              "type": "Bot"
+            },
+            "body": "Renovate pin approval snapshot v1\n{\"base\": {\"merge_base\": \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\", \"ref\": \"main\", \"repository_id\": 17}, \"head\": \"cccccccccccccccccccccccccccccccccccccccc\"}"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "group": "gather",
+  "reason": "new_file",
+  "reads": 1,
+  "patch": "new_file",
+  "git": "new_file",
+  "overrides": {
+    "files": [
+      {
+        "body": [
+          {
+            "filename": ".github/workflows/ci.yml"
+          }
+        ]
+      }
+    ]
+  }
+}

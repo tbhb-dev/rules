@@ -1,0 +1,17 @@
+{
+  "group": "gather",
+  "reason": "tag_mismatch",
+  "overrides": {
+    "tag": [
+      {
+        "body": {
+          "object": {
+            "type": "commit",
+            "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      }
+    ]
+  },
+  "reads": 1
+}

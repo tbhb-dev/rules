@@ -1,0 +1,15 @@
+{
+  "group": "main",
+  "reason": "ok_pin_only",
+  "env": {
+    "RA_PIN_FILES": "workflow: .github/workflows/ci.yml",
+    "RA_FIRST_PARTY_OWNERS": "example-org",
+    "RA_FIRST_PARTY_MODULES": "fixture_rules*",
+    "RA_ALLOWED_BUMPS": "patch",
+    "RA_REGISTRY": "https://bcr.bazel.build/",
+    "RA_OPT_OUT_LABEL": "approval-disabled",
+    "RA_MAX_COMMITS": "2",
+    "RA_MAX_DOWNLOAD_MB": "1"
+  },
+  "reads": 2
+}

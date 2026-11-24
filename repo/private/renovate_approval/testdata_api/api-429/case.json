@@ -1,0 +1,13 @@
+{
+  "group": "gather",
+  "reason": "rate_limited",
+  "overrides": {
+    "associated": [
+      {
+        "error": 429
+      }
+    ]
+  },
+  "waits": [],
+  "reads": 0
+}

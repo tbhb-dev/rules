@@ -1,0 +1,27 @@
+{
+  "group": "gather",
+  "reason": "commit_not_renovate",
+  "overrides": {
+    "commits": [
+      {
+        "body": [
+          {
+            "sha": "ffffffffffffffffffffffffffffffffffffffff",
+            "author": {
+              "id": 289255489
+            },
+            "committer": {
+              "login": "web-flow"
+            },
+            "commit": {
+              "verification": {
+                "verified": true
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "reads": 1
+}

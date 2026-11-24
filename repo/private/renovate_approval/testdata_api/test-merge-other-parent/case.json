@@ -1,0 +1,30 @@
+{
+  "group": "gather",
+  "reason": "check_missing",
+  "overrides": {
+    "suite": [
+      {
+        "body": {
+          "id": 18,
+          "head_sha": "9999999999999999999999999999999999999999"
+        }
+      }
+    ],
+    "test_merge": [
+      {
+        "body": {
+          "sha": "9999999999999999999999999999999999999999",
+          "parents": [
+            {
+              "sha": "ffffffffffffffffffffffffffffffffffffffff"
+            },
+            {
+              "sha": "cccccccccccccccccccccccccccccccccccccccc"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "reads": 1
+}
