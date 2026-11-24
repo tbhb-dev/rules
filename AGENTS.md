@@ -4,7 +4,7 @@ Before choosing a model for a subagent or peer run, read models/README.md in tbh
 
 ## Tier 2 review paths
 
-Determine the tier before review using the table. Tier 1 is the default. Class 2 protects the agent account boundary. Class 3 applies when a change loosens merge-gate enforcement. A reviewer can raise the tier. Every later decision must honor the highest tier.
+Determine the tier before review using the table. Tier 1 is the default. Class 2 protects the agent account boundary. Touching a listed path within its stated scope sets the class shown in the table and requires tier 2. A reviewer can raise the tier. Every later decision must honor the highest tier.
 
 Tier 2 requires two fresh review runs with different variants. Each run must use a provider other than the builder's. This repository has no class 1 paths for durable data deletion.
 
@@ -19,15 +19,16 @@ Tier 2 requires two fresh review runs with different variants. Each run must use
 | `lint/private/commit_identity.bzl` | 2 | Defines allowed author and committer pairs and selects the identity checker. |
 | `lint/private/commit_identity.sh.tpl` | 2 | Checks identities and invokes trailer validation over the pull request's commits. |
 | `lint/private/commit_identity/**` | 2 | Checks the trailers required for agent commits and tests that validation. |
-| `.github/CODEOWNERS` | 2 | Sets who GitHub treats as code owners for review requests and approvals. |
-| `repo/baseline/files/.github/CODEOWNERS` | 2 | Sets the policy on code ownership for new repositories. |
+| `.github/CODEOWNERS` | 3 | Sets who GitHub treats as code owners for review requests and approvals. |
+| `repo/baseline/files/.github/CODEOWNERS` | 3 | Sets the policy on code ownership for new repositories. |
 | `.github/workflows/renovate.yaml` | 2 | Selects the workflow that uses the Renovate app credentials. |
 | `repo/baseline/files/.github/workflows/renovate.yaml` | 2 | Sets which workflow uses the Renovate app credentials in new repositories. |
 | `.github/renovate.json5` | 2 | Selects the presets and rules for the Renovate app's pull requests. |
 | `repo/baseline/seed/*/.github/renovate.json5` | 2 | Sets those presets and rules for new repositories. |
 | `.github/workflows/renovate-auto-approval.yml` | 2 | Sets when automation can approve a dependency pull request. Not yet present. |
 | `repo/private/renovate_approval/**` | 2 | Checks whether automation may approve a dependency pull request. Not yet present. |
-| `AGENTS.md` | 3 | Applies to the Tier 2 review paths section, which sets the rules for assigning the review tier. |
+| `AGENTS.md` | 3 | Applies to any text that sets, overrides, or adds exceptions to the rules for assigning the review tier. |
+| `CLAUDE.md` | 3 | Applies to any text that sets, overrides, or adds exceptions to the rules for assigning the review tier. |
 | `.github/rulesets/**` | 3 | Sets branch protection, approval requirements, and required checks. |
 | `repo/baseline/files/.github/rulesets/**` | 3 | Sets how new repositories protect branches and govern merges. |
 | `.github/workflows/ci.yml` | 3 | Selects which jobs the required conclusion checks. |
@@ -58,7 +59,7 @@ Tier 2 requires two fresh review runs with different variants. Each run must use
 | `BUILD.bazel` | 3 | The required status and review policy target wiring selects what those checks inspect. |
 | `lint/BUILD.bazel` | 3 | The repository check and review policy target wiring selects the gate code and inputs. |
 
-A behavior-preserving refactor within a listed scope still requires tier 2 even when tests prove equivalence unless @tbhb records an exception before tier assignment.
+A behavior-preserving refactor within a listed scope still requires tier 2 even when tests prove equivalence unless @tbhb records an exception in the pull request description before tier assignment.
 
 ## Tests that run a subprocess
 
