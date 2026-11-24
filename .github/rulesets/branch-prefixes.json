@@ -27,9 +27,6 @@
     },
     {
       "type": "update"
-    },
-    {
-      "type": "deletion"
     }
   ]
 }
