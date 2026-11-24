@@ -10,8 +10,8 @@ generated:
     model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:5d0a52b5d43e52e8
-    at: "2026-11-23T22:17:14Z"
+    session: sha-256-64:4020686d006f6175
+    at: "2026-11-24T19:14:05Z"
 ---
 
 # Repository baseline
@@ -62,6 +62,21 @@ reason = "A version upgrade needs a separate migration."
 Unknown schema versions, unknown kinds, and blank exception reasons fail validation. Each exception must still describe a difference. An exception whose file no longer differs fails. Public repositories have an Apache-2.0 `LICENSE`. Private repositories have `LICENSES/LicenseRef-Proprietary.txt` and no Apache `LICENSE`. Future consumer checks cross-check those files against `private`.
 
 Bootstrap seeds start with a small Bazel workspace and a secrets check. They call the shared repository workflow and give branch protection one `conclusion` job that needs every other job. Application-specific build targets and dependency checks come next as the repository adds code. The first build creates the repository-owned module lock.
+
+Run `bazel run //:temporal_dev_server` to start a headless, in-memory Temporal server on loopback. The launcher prints `TEMPORAL_ADDRESS` when the frontend is ready. Press Ctrl-C to stop the server. To run a local command with that address in its environment, pass it after `--`.
+
+For a Bazel test, pass the test executable as `command`. Use `args` for its arguments and `data` for extra input files.
+
+```starlark
+load("@tbhb_rules//repo/temporal:defs.bzl", "temporal_dev_server_test")
+
+temporal_dev_server_test(
+    name = "workflow_test",
+    command = ":workflow_test_binary",
+)
+```
+
+Bazel fetches the Temporal archive for the target platform. The launcher starts a fresh server for each invocation and stops it when the command exits or times out. Renovate updates all four archives together in the shared tool pins.
 
 Renovate ignores `repo/baseline/**`, so it never bumps the baseline copies. Renovate bumps the source repositories' own pins. The baseline follows them only through a reviewed sync pull request that recopies files from a newer source commit. No automation does that resync yet.
 

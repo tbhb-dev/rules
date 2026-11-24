@@ -18,6 +18,24 @@ def test_baseline() -> None:
     check_manifest(ROOT)
 
 
+def test_each_seed_exposes_temporal() -> None:
+    manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
+    seeds = {
+        kind: ROOT / entry["source"]
+        for entry in manifest["file"]
+        if entry["path"] == "BUILD.bazel" and entry["mode"] == "seed"
+        for kind in entry["kinds"]
+    }
+    assert set(seeds) == set(manifest["kinds"])
+    for seed in seeds.values():
+        content = seed.read_text()
+        assert 'name = "temporal_dev_server"' in content
+        assert 'actual = "@tbhb_rules//repo/temporal:dev_server"' in content
+        bazelrc = seed.with_name("bazelrc").read_text()
+        assert "common --enable_platform_specific_config" in bazelrc
+        assert "common:windows --enable_runfiles" in bazelrc
+
+
 def test_commit_msg_hooks_match_seed_configs() -> None:
     manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
     for kind in manifest["kinds"]:

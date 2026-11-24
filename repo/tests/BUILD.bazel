@@ -23,6 +23,21 @@ pytest_test(
     visibility = ["//visibility:public"],
 )
 
+pytest_test(
+    name = "temporal_dev_server_test",
+    srcs = [
+        "//:pyproject.toml",
+        "//repo/temporal:repo_files",
+    ],
+    args = ["repo/temporal/test_dev_server.py"],
+    coverage = ["repo.temporal.dev_server"],
+    # Tech debt (AGENTS.md): port the fake Temporal subprocess tests to Windows.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
 scripts_layout_test(
     name = "good_test",
     fixture = "good",
