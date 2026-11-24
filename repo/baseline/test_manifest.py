@@ -68,6 +68,10 @@ def test_ci_runs_on_merge_group() -> None:
     workflow = yaml.safe_load((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))
     # PyYAML's YAML 1.1 loader reads the `on` key as True.
     assert workflow[True]["merge_group"] == {"types": ["checks_requested"]}
+    jobs = workflow["jobs"]
+    for name in ["conclusion", *jobs["conclusion"]["needs"]]:
+        condition = jobs[name].get("if", True)
+        assert condition in (True, "always()", "success()"), (name, condition)
 
 
 @pytest.mark.parametrize("name", ["ci.yml", "repo-checks.yml", "pr-text.yml"])

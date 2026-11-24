@@ -28,16 +28,26 @@ plan=$(awk '
 plan+=$'\n''printf "{\"selected\":%s,\"matrix\":%s,\"apple\":%s,\"swift\":%s}\n" "$selected" "$matrix" "$apple" "${swift:-false}"'
 
 gh() {
-  if [[ -z $CHANGED_FILES || $* != "api --paginate repos/test/rules/pulls/123/files "* ]]; then
-    echo "FAIL: unexpected GitHub API call: $*" >&2
-    return 1
+  if [[ -n $CHANGED_FILES && $# == 5 && $1 == api && $2 == --paginate && $4 == --jq ]]; then
+    case "${EVENT:?}:$3" in
+    pull_request:repos/test/rules/pulls/123/files)
+      jq -r "$5" "$CHANGED_FILES"
+      return
+      ;;
+    merge_group:repos/test/rules/compare/queue-base...queue-head)
+      # The compare endpoint includes files on its first page only.
+      jq '{files: .}, {}' "$CHANGED_FILES" | jq -r "$5"
+      return
+      ;;
+    esac
   fi
-  cat "$CHANGED_FILES"
+  echo "FAIL: unexpected GitHub API call: $*" >&2
+  return 1
 }
 export -f gh
 
 run_plan() {
-  EVENT="$1" CHANGED_FILES="${2:-}" PR="${3:-}" WORKSPACES="$workspaces" \
+  EVENT="$1" CHANGED_FILES="${2:-}" PR=123 BASE_SHA=queue-base HEAD_SHA=queue-head WORKSPACES="$workspaces" \
     RUNNER_TEMP="$dir" GITHUB_REPOSITORY=test/rules bash -euo pipefail -c "$plan"
 }
 
@@ -179,23 +189,27 @@ done
 failures=0
 platforms='["ubuntu-26.04", "ubuntu-26.04-arm"]'
 for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/private/simulator/tbhb_rules_swift_simulator/test_simulator_runtime.py diagrams/structurizr/defs.bzl; do
-  printf '%s\n' "$path" >"$dir/pr-files"
-  result=$(run_plan pull_request "$dir/pr-files" 123 2>&1) || {
-    echo "FAIL: $path: $result" >&2
+  jq -n --arg path "$path" '[{filename: $path}]' >"$dir/files.json"
+  result=$(run_plan pull_request "$dir/files.json")
+  queue_result=$(run_plan merge_group "$dir/files.json")
+  [[ $queue_result == "$result" ]] || {
+    echo "FAIL: merge_group and pull_request differ for $path" >&2
     exit 1
   }
-  summary=$(jq -cr '"matrix=\(.matrix) apple=\(.apple) swift=\(.swift)"' <<<"$result")
-  echo "pull_request $path: $summary"
+  echo "PASS: merge_group matches pull_request for $path"
   case $path in
   apple/e2e/smoke/BUILD.bazel)
     assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == true and .swift == false'
     ;;
   README.md)
     # A root file must retain every workspace in the shared matrix.
-    assertion='(.matrix | map(.workspace) | unique) == (.selected | map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke") | {id, dir}) | unique) and (.matrix | length > 1)'
+    full_result=$result
+    # shellcheck disable=SC2016 # jq expands workspaces.
+    assertion='(.selected | map(.id)) == ($workspaces | map(.id)) and .apple and .swift
+      and (.matrix | map(.workspace.id) | unique) == ($workspaces | map(.id) - ["apple-smoke", "swift", "swift-smoke"] | sort)'
     ;;
   e2e/smoke/README.md)
-    assertion='(.matrix | map(.workspace) | unique) == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false'
+    assertion='(.matrix | length) == 2 and (.matrix | map(.workspace) | unique) == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false and .swift == false'
     ;;
   swift/defs.bzl)
     assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == false and .swift == true'
@@ -204,15 +218,13 @@ for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs
     assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == false and .swift == true'
     ;;
   diagrams/structurizr/defs.bzl)
-    # shellcheck disable=SC2016 # jq expands platforms.
-    assertion='(.matrix | map(.workspace) | unique) == [{id: "structurizr", dir: "diagrams/structurizr"}] and (.matrix | map(.os) | sort) == ($platforms - ["windows-2025"])'
+    assertion='(.matrix | map(.workspace) | unique) == [{id: "structurizr", dir: "diagrams/structurizr"}]'
     ;;
   *) assertion='true' ;;
   esac
   # cspell:ignore argjson
-  if ! jq -e --argjson platforms "$platforms" "(.matrix | length > 0) and ($assertion)
-    and (.matrix | map(.os) | unique == \$platforms)
-    and ([.matrix[] | select(.workspace.id == \"root\")] | if length == 0 then true else map(.os) | sort == \$platforms end)" <<<"$result" >/dev/null; then
+  if ! jq -e --argjson platforms "$platforms" --argjson workspaces "$workspaces" "(.matrix | length > 0) and ($assertion)
+    and (.matrix | group_by(.workspace.id) | all(map(.os) | sort == \$platforms))" <<<"$result" >/dev/null; then
     echo "FAIL: $path: unexpected matrix or smoke selection" >&2
     failures=$((failures + 1))
   fi
@@ -220,18 +232,29 @@ done
 ((failures == 0)) || exit 1
 echo 'PASS: Apple and Swift changes keep a root matrix and select their smoke; root changes keep the shared matrix; all matrices are nonempty; Structurizr excludes Windows'
 
-for event in push merge_group; do
-  result=$(run_plan "$event")
-  platforms='["ubuntu-26.04"]'
-  if [[ $event == push ]]; then
-    platforms='["macos-26", "ubuntu-26.04", "ubuntu-26.04-arm", "windows-2025"]'
+for event in pull_request merge_group; do
+  limit=3000
+  if [[ $event == merge_group ]]; then
+    limit=300
   fi
-  jq -e --argjson workspaces "$workspaces" --argjson platforms "$platforms" '
-    (.selected | map(.id)) == ($workspaces | map(.id)) and .apple and .swift
-    and (.matrix | map(.workspace.id) | unique) ==
-      ($workspaces | map(.id) - ["apple-smoke", "swift", "swift-smoke"] | sort)
-    and ([.matrix[] | select(.workspace.id == "structurizr" and .os == "windows-2025")] | length == 0)
-    and (.matrix | map(.os) | unique == $platforms)
-  ' <<<"$result" >/dev/null
-  echo "PASS: $event selects all workspaces without a PR and uses $platforms"
+  for count in 0 "$limit"; do
+    jq -n --argjson count "$count" '[range($count) | {filename: "e2e/smoke/file-\(.)"}]' >"$dir/files.json"
+    result=$(run_plan "$event" "$dir/files.json")
+    [[ $result == "$full_result" ]] || {
+      echo "FAIL: $event with $count changed files did not select the full matrix" >&2
+      exit 1
+    }
+    echo "PASS: $event with $count changed files selects the full matrix"
+  done
 done
+
+result=$(run_plan push)
+platforms='["macos-26", "ubuntu-26.04", "ubuntu-26.04-arm", "windows-2025"]'
+jq -e --argjson workspaces "$workspaces" --argjson platforms "$platforms" '
+  (.selected | map(.id)) == ($workspaces | map(.id)) and .apple and .swift
+  and (.matrix | map(.workspace.id) | unique) ==
+    ($workspaces | map(.id) - ["apple-smoke", "swift", "swift-smoke"] | sort)
+  and ([.matrix[] | select(.workspace.id == "structurizr" and .os == "windows-2025")] | length == 0)
+  and (.matrix | map(.os) | unique == $platforms)
+' <<<"$result" >/dev/null
+echo "PASS: push selects all workspaces and uses $platforms"

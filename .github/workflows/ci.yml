@@ -28,12 +28,13 @@ jobs:
   # included). A workspace runs when it owns a changed file or `deps` names
   # the owner: the ids of the local modules its MODULE.bazel overrides
   # (root's python is a dev dependency, which only root's own tests see).
-  # Pushes to main and any other event run every workspace.
+  # Pushes to main run every workspace.
   plan:
     name: plan
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
+      contents: read  # compare the merge group's base and head commits
       pull-requests: read  # the pull request's changed files, from the GitHub API
     outputs:
       workspaces: ${{ steps.plan.outputs.workspaces }}
@@ -51,6 +52,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}
           PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+          BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.merge_group.head_sha }}
           WORKSPACES: |
             [
               {"id": "root", "dir": ".", "deps": ["python"]},
@@ -94,15 +97,20 @@ jobs:
           if [ "${EVENT}" = pull_request ]; then
             gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${PR}/files" \
               --jq '.[] | .filename, (.previous_filename // empty)' >"${files}"
+          elif [ "${EVENT}" = merge_group ]; then
+            # Only the first compare page has files. The list can stop at 300.
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/compare/${BASE_SHA}...${HEAD_SHA}" \
+              --jq '(.files // []) | select(length < 300) | .[] | .filename, (.previous_filename // empty)' >"${files}"
           else
             : >"${files}"
           fi
-          # The files API lists at most 3000; past that, test everything.
+          # An empty or possibly truncated list must test every workspace.
+          # The pull request files API lists at most 3000 files.
           count="$(wc -l <"${files}")"
           # cspell:ignore argjson
-          selected="$(jq -c --rawfile files "${files}" --arg event "${EVENT}" --argjson count "${count}" '
+          selected="$(jq -c --rawfile files "${files}" --argjson count "${count}" '
             . as $ws
-            | if $event != "pull_request" or $count >= 3000 then $ws
+            | if $count == 0 or $count >= 3000 then $ws
               else
                 ($files | split("\n") | map(select(length > 0))) as $paths
                 | def owner($p):
@@ -122,8 +130,7 @@ jobs:
             | if length == 0 then [{id: "root", dir: ".",
                 os: ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"]}] else . end
             | [.[] | . as $workspace | .os[] | {os: ., workspace: ($workspace | {id, dir})}]
-            | map(select($event == "push" or .os == "ubuntu-26.04"
-                or ($event == "pull_request" and .os == "ubuntu-26.04-arm")))
+            | map(select($event == "push" or .os == "ubuntu-26.04" or .os == "ubuntu-26.04-arm"))
           ' <<<"${selected}")"
           apple="$(jq -r 'any(.[]; .id == "apple-smoke")' <<<"${selected}")"
           swift="$(jq -r 'any(.[]; .id == "swift-smoke")' <<<"${selected}")"
