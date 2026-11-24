@@ -77,7 +77,9 @@ def changed_paths(repo: str, base: str, head: str) -> tuple[list[str], bool]:
             "diff",
             *flags.split(),
             "--ignore-submodules=none",
-            f"{base}...{head}",
+            "--merge-base",
+            base,
+            head,
             "--",
         )
     records = iter(diff.split("\0")[:-1])

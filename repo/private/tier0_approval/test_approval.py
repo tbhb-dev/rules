@@ -101,6 +101,7 @@ def test_changed_paths(
     expected = ["old.md", "new.md"] if regular else ["old.md"]
     assert approval.changed_paths(REPO, BASE, HEAD) == (expected, regular)
     assert command.call_args_list[1].args[-2:] == (BASE, HEAD)
+    assert command.call_args.args[-4:] == ("--merge-base", BASE, HEAD, "--")
 
 
 @pytest.fixture
