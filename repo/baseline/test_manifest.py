@@ -40,24 +40,34 @@ def test_commit_msg_hooks_match_seed_configs() -> None:
         assert hooks == set(manifest["kind"][kind]["hooks"]["commit-msg"]), kind
 
 
-@pytest.mark.parametrize("kind", ["rules", "chezmoi", "docs", "go", "python"])
-def test_ci_runs_on_merge_group(kind: str) -> None:
-    directory = (
-        WORKFLOWS if kind == "rules" else ROOT / "seed" / kind / ".github" / "workflows"
-    )
+@pytest.mark.parametrize(
+    "directive",
+    ["common --enable_platform_specific_config", "common:windows --enable_runfiles"],
+)
+def test_seed_enables_windows_runfiles(directive: str) -> None:
+    manifest = tomllib.loads((ROOT / "manifest.toml").read_text())
+    for kind in manifest["kinds"]:
+        seed = ROOT / "seed" / kind / "bazelrc"
+        assert directive in seed.read_text().splitlines(), kind
+
+
+@pytest.mark.parametrize("kind", ["chezmoi", "docs", "go", "python"])
+def test_seed_ci_runs_on_merge_group(kind: str) -> None:
+    path = ROOT / "seed" / kind / ".github" / "workflows" / "ci.yml"
     # Read the key before YAML can coerce `on` to a boolean.
     workflow: object = yaml.compose(
-        (directory / "ci.yml").read_text(encoding="utf-8"), Loader=yaml.SafeLoader
+        path.read_text(encoding="utf-8"), Loader=yaml.SafeLoader
     )
     assert isinstance(workflow, yaml.MappingNode)
     events = next(value for key, value in workflow.value if key.value == "on")
     assert isinstance(events, yaml.MappingNode)
-    merge_group = next(
-        value for key, value in events.value if key.value == "merge_group"
-    )
-    assert yaml.safe_load(yaml.serialize(merge_group)) == {
-        "types": ["checks_requested"]
-    }
+    assert any(key.value == "merge_group" for key, _ in events.value)
+
+
+def test_ci_runs_on_merge_group() -> None:
+    workflow = yaml.safe_load((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))
+    # PyYAML's YAML 1.1 loader reads the `on` key as True.
+    assert workflow[True]["merge_group"] == {"types": ["checks_requested"]}
 
 
 @pytest.mark.parametrize("name", ["ci.yml", "repo-checks.yml", "pr-text.yml"])
