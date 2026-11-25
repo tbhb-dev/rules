@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
-# cspell:ignore bootstatus endgroup launchctl simctl udid
+# cspell:ignore bootstatus datamigrator devicetypes endgroup launchctl presettle simctl tonumber udid
 
 set -euo pipefail
 
@@ -19,30 +19,124 @@ reset_simulators() {
     done
 }
 
-log_simulator_timeout() (
-  run_with_limit() {
-    local deadline=$((SECONDS + $1)) pid
-    shift
-    "$@" </dev/null &
-    pid=$!
-    while kill -0 "$pid" 2>/dev/null; do
-      if ((SECONDS >= deadline)); then
-        kill -KILL "$pid" 2>/dev/null || true
-        wait "$pid" 2>/dev/null || true
-        return 124
-      fi
-      sleep 1
-    done
-    wait "$pid"
-  }
+run_with_limit() {
+  local deadline=$((SECONDS + $1)) pid
+  shift
+  "$@" </dev/null &
+  pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    if ((SECONDS >= deadline)); then
+      kill -KILL "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      return 124
+    fi
+    sleep 1
+  done
+  wait "$pid"
+}
 
+# A descendant can keep writing after the timed command exits, so read from files.
+log_simulator_devices() {
+  run_with_limit 20 xcrun simctl list devices >"$1/devices" 2>&1 || true
+  cat "$1/devices" || true
+}
+
+log_simulator_logs() {
+  run_with_limit 20 log show --last 15m --style compact \
+    --predicate 'process == "launchd_sim" OR process CONTAINS "datamigrator" OR process CONTAINS "LaunchServicesMigrator" OR subsystem == "com.apple.CoreSimulator"' >"$1/log" 2>&1 || true
+  if [[ -s $1/log ]]; then
+    tail -n 80 "$1/log" || true
+  else
+    echo 'no log lines'
+  fi
+}
+
+settle_simulator() (
+  local diagnostics='' udid='' name=PRESETTLE_$$ runtime device_type start boot_status=0
+  trap '
+    if [[ -n $udid ]]; then
+      if ! run_with_limit 20 xcrun simctl shutdown "$udid" >"$diagnostics/shutdown" 2>&1; then
+        echo "Could not shut down $udid"
+        cat "$diagnostics/shutdown" || true
+      fi
+      if ! run_with_limit 20 xcrun simctl delete "$udid" >"$diagnostics/delete" 2>&1; then
+        echo "Could not delete $udid"
+        cat "$diagnostics/delete" || true
+      fi
+    fi
+    if [[ -n $diagnostics ]]; then
+      rm -rf "$diagnostics" || true
+    fi
+    echo "##[endgroup]"
+  ' EXIT
+  echo '##[group]iOS simulator pre-settle'
+  if ! diagnostics=$(mktemp -d "$RUNNER_TEMP/ios-presettle.XXXXXX"); then
+    return 0
+  fi
+
+  if ! run_with_limit 20 xcrun simctl list runtimes --json >"$diagnostics/runtimes" 2>"$diagnostics/error" ||
+    ! run_with_limit 20 jq -er '
+      .runtimes | map(select(.isAvailable and (.identifier | startswith("com.apple.CoreSimulator.SimRuntime.iOS-"))))
+      | sort_by(.version | split(".") | map(tonumber)) | last | .identifier
+    ' "$diagnostics/runtimes" >"$diagnostics/runtime" 2>>"$diagnostics/error" ||
+    ! IFS= read -r runtime <"$diagnostics/runtime"; then
+    echo 'Could not select an available iOS runtime'
+    cat "$diagnostics/error" || true
+    return 0
+  fi
+
+  if ! run_with_limit 20 xcrun simctl list devicetypes --json >"$diagnostics/types" 2>"$diagnostics/error" ||
+    ! run_with_limit 20 jq -er '
+      .devicetypes | map(select(.name | startswith("iPhone")))
+      | ((map(select(.name == "iPhone 17")) | first) // first) | .identifier
+    ' "$diagnostics/types" >"$diagnostics/type" 2>>"$diagnostics/error" ||
+    ! IFS= read -r device_type <"$diagnostics/type"; then
+    echo 'Could not select an iPhone device type'
+    cat "$diagnostics/error" || true
+    return 0
+  fi
+
+  if ! run_with_limit 20 xcrun simctl create "$name" "$device_type" "$runtime" >"$diagnostics/create" 2>"$diagnostics/error" ||
+    ! IFS= read -r udid <"$diagnostics/create" || [[ -z $udid ]]; then
+    echo "Could not create $name"
+    cat "$diagnostics/error" || true
+    # Creation can be interrupted after the device has been registered.
+    if run_with_limit 20 xcrun simctl list devices --json >"$diagnostics/created-devices" 2>"$diagnostics/error" &&
+      run_with_limit 20 jq -r --arg name "$name" \
+        ".devices[][] | select(.name == \$name) | .udid" "$diagnostics/created-devices" \
+        >"$diagnostics/created-udid" 2>>"$diagnostics/error"; then
+      IFS= read -r udid <"$diagnostics/created-udid" || true
+    fi
+    return 0
+  fi
+
+  if ! run_with_limit 20 xcrun simctl boot "$udid" >"$diagnostics/boot" 2>&1; then
+    echo "Could not boot $udid"
+    cat "$diagnostics/boot" || true
+    return 0
+  fi
+
+  start=$SECONDS
+  run_with_limit 600 xcrun simctl bootstatus "$udid" -b >"$diagnostics/bootstatus" 2>&1 || boot_status=$?
+  echo "Pre-settle bootstatus finished after $((SECONDS - start)) seconds (status $boot_status)"
+  cat "$diagnostics/bootstatus" || true
+  if ((boot_status == 124)); then
+    echo "Data migration service for $udid (up to 20 seconds)"
+    run_with_limit 20 xcrun simctl spawn "$udid" launchctl print system/com.apple.datamigrator >"$diagnostics/migration" 2>&1 || true
+    cat "$diagnostics/migration" || true
+    log_simulator_devices "$diagnostics"
+    log_simulator_logs "$diagnostics"
+  fi
+  return 0
+)
+
+log_simulator_timeout() (
   local diagnostics boot_status
   diagnostics=$(mktemp -d "$RUNNER_TEMP/ios-diagnostics.XXXXXX") || return 0
   trap 'rm -rf "$diagnostics"' EXIT
 
-  # A descendant can keep writing after the timed command exits, so read from files.
   echo '::group::iOS simulator diagnostics after TIMEOUT'
-  xcrun simctl list devices || true
+  log_simulator_devices "$diagnostics"
   list_test_simulators |
     while IFS= read -r udid; do
       echo "Boot status for $udid (up to 120 seconds)"
@@ -57,9 +151,7 @@ log_simulator_timeout() (
       head -n 40 "$diagnostics/launch" || true
       rm -f "$diagnostics/boot" "$diagnostics/launch"
     done || true
-  run_with_limit 20 log show --last 10m --style compact \
-    --predicate 'process == "launchd_sim" OR subsystem == "com.apple.CoreSimulator"' >"$diagnostics/log" 2>&1 || true
-  tail -n 80 "$diagnostics/log" || true
+  log_simulator_logs "$diagnostics"
   echo '::endgroup::'
 )
 
@@ -70,6 +162,7 @@ events=$(mktemp "$RUNNER_TEMP/ios-smoke.XXXXXX")
 trap 'rm -f "$events"' EXIT
 
 reset_simulators
+settle_simulator || true
 if bazelisk test --config=ci --flaky_test_attempts=1 --build_event_json_file="$events" "$ios_test"; then
   exit 0
 else
