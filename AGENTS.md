@@ -27,6 +27,8 @@ Tier 2 requires two fresh review runs with different variants. Each run must use
 | `repo/baseline/seed/*/.github/renovate.json5` | 2 | Sets those presets and rules for new repositories. |
 | `.github/workflows/renovate-auto-approval.yml` | 2 | Sets when automation can approve a dependency pull request. Not yet present. |
 | `repo/private/renovate_approval/**` | 2 | Checks whether automation may approve a dependency pull request. Not yet present. |
+| `.github/workflows/tier0-approval.yml` | 2 | Sets when automation can approve a tier 0 pull request and merge it with the workflow token. |
+| `repo/private/tier0_approval/**` | 2 | Checks the changed paths, check results and head commit that the tier 0 approval relies on, and the tests for those checks. |
 | `AGENTS.md` | 3 | Applies to any text that sets, overrides, or adds exceptions to the rules for assigning the review tier. |
 | `CLAUDE.md` | 3 | Applies to any text that sets, overrides, or adds exceptions to the rules for assigning the review tier. |
 | `.github/rulesets/**` | 3 | Sets branch protection, approval requirements, and required checks. |
