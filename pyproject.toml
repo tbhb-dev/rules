@@ -293,13 +293,13 @@ testpaths = ["lint/private/claude_settings", "lint/private/commit_identity", "li
 
 [tool.mutmut]
 # Mutate this repository's Python; every mutant must be killed.
-source_paths = ["lint/private/claude_settings", "lint/private/commit_identity", "lint/private/commit_messages", "lint/private/content", "lint/private/decision_records", "lint/private/mutation_oses", "lint/private/okf_docs", "repo/tests", "runtime/private"]
+source_paths = ["lint/private/claude_settings", "lint/private/commit_identity", "lint/private/commit_messages", "lint/private/content", "lint/private/decision_records", "lint/private/mutation_oses", "lint/private/okf_docs", "repo/private/tier0_approval", "repo/tests", "runtime/private"]
 # Tests are copied and run, never mutated.
-do_not_mutate = ["lint/private/claude_settings/test_*.py", "lint/private/commit_identity/test_*.py", "lint/private/commit_messages/test_*.py", "lint/private/content/test_*.py", "lint/private/decision_records/test_*.py", "lint/private/mutation_oses/test_*.py", "lint/private/okf_docs/test_*.py", "repo/tests/test_*.py", "runtime/private/test_*.py", "runtime/private/boot/*"]
+do_not_mutate = ["lint/private/claude_settings/test_*.py", "lint/private/commit_identity/test_*.py", "lint/private/commit_messages/test_*.py", "lint/private/content/test_*.py", "lint/private/decision_records/test_*.py", "lint/private/mutation_oses/test_*.py", "lint/private/okf_docs/test_*.py", "repo/private/tier0_approval/test_*.py", "repo/tests/test_*.py", "runtime/private/test_*.py", "runtime/private/boot/*"]
 # Copy the baseline directory so mutmut creates its destination parents.
 # Keep the shared test settings, the repository schemas the docs checker reads, and its fixture tree.
-also_copy = ["conftest.py", "repo/baseline", "docs/schemas", ".github/schemas", "lint/tests/okf_docs/testdata/tree", "lint/tests/content/testdata"]
-pytest_add_cli_args_test_selection = ["lint/private/claude_settings", "lint/private/commit_identity", "lint/private/commit_messages", "lint/private/content", "lint/private/decision_records", "lint/private/mutation_oses", "lint/private/okf_docs", "repo/tests", "runtime/private"]
+also_copy = ["conftest.py", ".github/workflows", "repo/baseline", "docs/schemas", ".github/schemas", "lint/tests/okf_docs/testdata/tree", "lint/tests/content/testdata"]
+pytest_add_cli_args_test_selection = ["lint/private/claude_settings", "lint/private/commit_identity", "lint/private/commit_messages", "lint/private/content", "lint/private/decision_records", "lint/private/mutation_oses", "lint/private/okf_docs", "repo/private/tier0_approval", "repo/tests", "runtime/private"]
 
 [tool.ruff]
 line-length = 88
