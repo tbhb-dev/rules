@@ -10,8 +10,8 @@ generated:
     model: openai:gpt-6.2-sol
     effort: high
     surface: exec
-    session: sha-256-64:92305effc45e4135
-    at: "2026-11-23T07:13:10Z"
+    session: sha-256-64:5764266fb6c236d8
+    at: "2026-11-25T13:56:43Z"
 ---
 
 # Commit identity
@@ -20,7 +20,7 @@ Run `bazel run @tbhb_rules//lint:commit_identity -- BASE HEAD [HEAD_BRANCH]` fro
 
 ## Agent messages
 
-A commit with `agent@tonyburns.net` as author or committer requires agent trailers. If the caller supplies a head branch, the same commit also requires the branch to start with `agent/`.
+A commit with `agent@tonyburns.net` as author or committer requires agent trailers. If the caller supplies a head branch, the same commit also requires the branch to start with `agent/` or `renovate/`.
 
 | Trailer | Agent's contribution |
 | --- | --- |

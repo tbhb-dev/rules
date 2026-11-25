@@ -48,7 +48,7 @@ _commit_identity = rule(
 Fails on any commit whose author and committer, together, are not one of
 the allowed pairs, and names the commit and both identities. Agent authors or
 committers also require valid identity trailers without sign-off or co-author lines.
-If supplied, the head branch must start with `agent/` for those commits.""",
+If supplied, the head branch must start with `agent/` or `renovate/` for those commits.""",
     attrs = SHELL_ATTRS | {
         "git": attr.label(
             default = "@tbhb_rules_git//:git",
