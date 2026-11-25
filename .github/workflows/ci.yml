@@ -260,18 +260,6 @@ jobs:
           cache-save: false
           working-directory: ${{ matrix.workspace.dir }}
 
-      # Prints disk and temp space, so a `tar: Write error` in a test action names its cause.
-      - name: Report macOS disk and temp space
-        if: runner.os == 'macOS'
-        run: |
-          echo "TMPDIR=${TMPDIR:-unset}" || true
-          df -h / /System/Volumes/Data "${TMPDIR:-/tmp}" "$HOME" 2>&1 || true
-          du -sh "${TMPDIR:-/tmp}" 2>&1 || true
-          du -sh "$HOME/.bazel" "$HOME/.cache" 2>&1 || true
-          # cspell:ignore maxfiles maxfilesperproc
-          sysctl kern.maxfiles kern.maxfilesperproc 2>&1 || true
-          ulimit -a || true
-
       - name: Build the Go nogo smoke target
         if: matrix.workspace.id == 'go-smoke'
         working-directory: ${{ matrix.workspace.dir }}
@@ -281,17 +269,12 @@ jobs:
         working-directory: ${{ matrix.workspace.dir }}
         run: bash "$GITHUB_WORKSPACE/.github/actions/setup-bazel-ci/test.sh"
 
-      # Prints disk and temp space after the tests, including when they fail.
-      - name: Report macOS disk and temp space after the tests
-        if: always() && runner.os == 'macOS'
-        run: |
-          echo "TMPDIR=${TMPDIR:-unset}" || true
-          df -h / /System/Volumes/Data "${TMPDIR:-/tmp}" "$HOME" 2>&1 || true
-          du -sh "${TMPDIR:-/tmp}" 2>&1 || true
-          du -sh "$HOME/.bazel" "$HOME/.cache" 2>&1 || true
-          # cspell:ignore maxfiles maxfilesperproc
-          sysctl kern.maxfiles kern.maxfilesperproc 2>&1 || true
-          ulimit -a || true
+      # Prints disk and temp space after a failure, so a `tar: Write error`
+      # in a test wrapper names its cause. The setup action prints it before.
+      - name: Report macOS disk and temp space after a failure
+        if: failure() && runner.os == 'macOS'
+        working-directory: ${{ matrix.workspace.dir }}
+        run: bash "$GITHUB_WORKSPACE/.github/actions/setup-bazel-ci/disk_report.sh" "after a failure"
 
       # govulncheck_test needs the network and gives a different answer as
       # advisories are published, so it is manual and `//...` skips it. The

@@ -278,3 +278,13 @@ runs:
           esac
         fi
         rm -rf -- "$cache"
+
+    # A `tar: Write error` in a macOS test wrapper left no trace of its cause.
+    # This reads the disk, temp directory and swap before the tests, for the
+    # log and the job summary. A composite action has no post step, so the
+    # caller prints the same report after a failure; see the README.
+    - name: Report macOS disk and temp space
+      if: runner.os == 'macOS'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: bash "${GITHUB_ACTION_PATH}/disk_report.sh" "before the tests"
