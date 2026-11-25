@@ -129,6 +129,7 @@ on:
 jobs:
   approve:
     permissions:
+      actions: read
       contents: write
       pull-requests: write
     uses: tbhb-dev/rules/.github/workflows/tier0-approval.yml@bf77356b02e39e2e55d44848ebf5f51dd99a1b9a  # main
@@ -160,9 +161,9 @@ jobs:
 
 `check_workflows` takes one `context:workflow-id` pair per line. `tier0_paths` and `deny_paths` use the defaults shown above. Each path input takes one case-insensitive glob per line. `max_files` defaults to 50 and counts both paths in a rename. Set `design_paths` to require the exact head commit in `design_go_sha` or the caller's `DESIGN_GO_SHA` repository variable.
 
-The caller needs the `pins-approver` environment and the installed `tbhb-dev-auto-reviews` GitHub App. The App needs read access to Actions, Checks, and Contents in both modes. The runner's `python3` must be 3.14 or newer.
+The caller needs the `pins-approver` environment and the installed `tbhb-dev-auto-reviews` GitHub App. The App needs read access to Checks and Contents in both modes. The runner's `python3` must be 3.14 or newer.
 
-The calling job must grant `contents: write` and `pull-requests: write` in both modes, including `evaluate`. The reusable workflow requests both permissions at startup and GitHub rejects the call if the caller grants less.
+The calling job must grant `actions: read`, `contents: write`, and `pull-requests: write` in both modes, including `evaluate`. GitHub rejects the call if the caller grants less. The workflow reads Actions runs with `github.token`.
 
 In the default `mode: evaluate`, the App uses Pull requests read access. The workflow yields the decision artifact and outputs `decision`, `reason`, and `head_sha`.
 

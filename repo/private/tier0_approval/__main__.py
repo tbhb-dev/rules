@@ -32,10 +32,10 @@ class HoldError(Exception):
     pass
 
 
-def command(*args: str) -> str:
+def command(*args: str, env: Mapping[str, str] | None = None) -> str:
     # Fixed executables and argument vectors, without shell expansion.
     return subprocess.check_output(  # nosec B603  # noqa: S603
-        args, encoding="utf-8", stderr=subprocess.PIPE
+        args, encoding="utf-8", stderr=subprocess.PIPE, env=env
     )
 
 
@@ -45,9 +45,17 @@ def sha(value: str) -> str:
     return value
 
 
-def api(repo: str, path: str, *flags: str, **query: str) -> object:
+def api(
+    repo: str, path: str, *flags: str, auth_env: str | None = None, **query: str
+) -> object:
     endpoint = f"repos/{repo}/{path}?{urlencode(query)}"
-    response: object = json.loads(command("gh", "api", endpoint, *flags))
+    env = None
+    if auth_env is not None:
+        token = os.environ.get(auth_env)
+        if not token:
+            raise HoldError("missing-actions-token")
+        env = os.environ | {"GH_TOKEN": token}
+    response: object = json.loads(command("gh", "api", endpoint, *flags, env=env))
     return response
 
 
@@ -56,7 +64,11 @@ def context_pass(repo: str, head: str, spec: str) -> bool:
     if not (name and re.fullmatch(r"[1-9][0-9]*", workflow)):
         return False
     response = api(
-        repo, f"actions/workflows/{workflow}/runs", head_sha=head, per_page="1"
+        repo,
+        f"actions/workflows/{workflow}/runs",
+        auth_env="ACTIONS_TOKEN",
+        head_sha=head,
+        per_page="1",
     )
     payload = cast("dict[str, list[Record]]", response)  # pragma: no mutate
     runs = payload["workflow_runs"]

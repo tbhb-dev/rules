@@ -71,6 +71,7 @@ jobs:
     timeout-minutes: 10
     environment: pins-approver
     permissions:
+      actions: read  # Read workflow runs for the checked commit.
       contents: write  # Merge the checked commit.
       pull-requests: write  # Enqueue the approved pull request.
     outputs:
@@ -105,7 +106,6 @@ jobs:
         with:
           client-id: ${{ secrets.PIN_APPROVER_CLIENT_ID }}
           private-key: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}
-          permission-actions: read
           permission-checks: read
           permission-contents: read
           permission-pull-requests: ${{ inputs.mode == 'enforce' && 'write' || 'read' }}
@@ -114,6 +114,7 @@ jobs:
         id: decide
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
+          ACTIONS_TOKEN: ${{ github.token }}
           APP_SLUG: ${{ steps.app.outputs.app-slug }}
           CHECK_WORKFLOWS: ${{ inputs.check_workflows }}
           TIER0_PATHS: ${{ inputs.tier0_paths }}
