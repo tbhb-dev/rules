@@ -7,10 +7,10 @@
   // The presets track tbhb-dev/renovate-config's main branch, pinned by
   // commit; Renovate bumps the pins (the "renovate-config" group).
   extends: [
-    "github>tbhb-dev/renovate-config//default.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
-    "github>tbhb-dev/renovate-config//bazel.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
-    "github>tbhb-dev/renovate-config//go.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
-    "github>tbhb-dev/renovate-config//python.json5#ad8b77a732a0855deb411341b56296e58c1cc537", // main
+    "github>tbhb-dev/renovate-config//default.json5#6fc408cfec75871cd01b04bf1396e4f82c7fc792", // main
+    "github>tbhb-dev/renovate-config//bazel.json5#6fc408cfec75871cd01b04bf1396e4f82c7fc792", // main
+    "github>tbhb-dev/renovate-config//go.json5#6fc408cfec75871cd01b04bf1396e4f82c7fc792", // main
+    "github>tbhb-dev/renovate-config//python.json5#6fc408cfec75871cd01b04bf1396e4f82c7fc792", // main
   ],
 
   // Preserve the ignore paths inherited from the shared default preset.
