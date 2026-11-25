@@ -45,7 +45,7 @@ case "${*:2}" in
   'list devices --json') echo '{"devices":{"iOS":[{"name":"BAZEL_TEST_stub","udid":"stub"}]}}' ;;
   'list devices') echo devices >>"$calls" ;;
   'delete stub') echo delete >>"$calls" ;;
-  'bootstatus stub') echo boot >>"$calls"; exit "$boot_status" ;;
+  'bootstatus stub') echo boot >>"$calls"; exit "$stub_boot_status" ;;
   'spawn stub launchctl list')
     echo launch >>"$calls"
     if [[ $hang == launch ]]; then
@@ -100,7 +100,7 @@ run_case() {
   fi
 }
 
-export first_status=0 first_event=PASSED retry_status=0 boot_status=0 hang=none
+export first_status=0 first_event=PASSED retry_status=0 stub_boot_status=0 hang=none
 run_case pass 0 'suite reset delete first'
 export first_status=3 first_event=FAILED
 run_case test-failure 3 'suite reset delete first'
@@ -109,10 +109,10 @@ run_case build-failure 1 'suite reset delete first'
 export first_status=3
 retry_calls='suite reset delete first devices boot launch log reset delete retry'
 run_case timeout-retry-pass 0 "$retry_calls"
-export retry_status=3 boot_status=7
+export retry_status=3 stub_boot_status=7
 run_case timeout-retry-fail 3 "$retry_calls"
 grep -qx 'Boot status for stub exited with status 7' "$work/output"
-export retry_status=0 boot_status=0 hang=launch
+export retry_status=0 stub_boot_status=0 hang=launch
 run_case launch-descendant 0 "$retry_calls"
 export hang=log
 run_case log-descendant 0 "$retry_calls"
