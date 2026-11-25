@@ -361,7 +361,7 @@ jobs:
       - name: Test
         if: github.event_name == 'push' && env.RUN_APPLE == 'true'
         working-directory: apple/e2e/smoke
-        run: bazelisk test --config=ci //...
+        run: bash "$GITHUB_WORKSPACE/.github/actions/setup-bazel-ci/test-ios-smoke.sh"
 
       - name: Keep the test logs
         if: github.event_name == 'push' && failure() && env.RUN_APPLE == 'true'
@@ -412,7 +412,7 @@ jobs:
       - name: Test
         if: github.event_name == 'push' && env.RUN_SWIFT == 'true'
         working-directory: swift/e2e/smoke
-        run: bazelisk test --config=ci //...
+        run: bash "$GITHUB_WORKSPACE/.github/actions/setup-bazel-ci/test-ios-smoke.sh"
 
       - name: Keep the test logs
         if: github.event_name == 'push' && failure() && env.RUN_SWIFT == 'true'
