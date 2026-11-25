@@ -19,6 +19,7 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 * [pnpm workspace settings](reference/pnpm-workspaces.md) - The pnpm settings each pnpm-workspace.yaml holds, and why those files have no comments or license header.
 * [Required files](reference/required-files.md) - How the check finds files that a consumer repository lacks.
 * [Review severity and finding ids](reference/review-severity.md) - Severity ratings, evidence requirements, and finding ids for review reports.
+* [Review tiers](reference/review-tiers.md) - Path declarations and review requirements for changes to this repository.
 * [Swift module reference](reference/swift.md) - Swift and Apple build macros, pinned tools, quality checks, and the smoke consumer.
 * [Temporary files](reference/temporary-files.md) - Temporary file paths and the shell source check.
 * [Workflow lint](reference/workflow-lint.md) - What the workflow lint check rejects in workflow and action YAML, and what it skips.
