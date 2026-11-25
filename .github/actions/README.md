@@ -130,8 +130,6 @@ jobs:
   approve:
     permissions:
       actions: read
-      contents: write
-      pull-requests: write
     uses: tbhb-dev/rules/.github/workflows/tier0-approval.yml@bf77356b02e39e2e55d44848ebf5f51dd99a1b9a  # main
     with:
       mode: enforce
@@ -163,13 +161,11 @@ jobs:
 
 The caller needs the `pins-approver` environment and the installed `tbhb-dev-auto-reviews` GitHub App. The App needs read access to Checks and Contents in both modes. The runner's `python3` must be 3.14 or newer.
 
-The calling job must grant `actions: read`, `contents: write`, and `pull-requests: write` in both modes, including `evaluate`. GitHub rejects the call if the caller grants less. The workflow reads Actions runs with `github.token`.
+The calling job grants only `actions: read` in both modes. The workflow reads Actions runs with `github.token`.
 
 In the default `mode: evaluate`, the App uses Pull requests read access. The workflow yields the decision artifact and outputs `decision`, `reason`, and `head_sha`.
 
-In `mode: enforce`, the App uses Pull requests write access to approve the checked commit. The workflow then uses `github.token` to enqueue or merge that commit. Enforcement requires stale approval dismissal in the caller's branch rules. The workflow rejects drafts, forks, and changes attributed to the approver App. It checks who opened the pull request and who pushed to its branch. It also checks the author and committer on the head commit.
-
-Events caused by `github.token` don't start new workflow runs. Before enabling `enforce`, confirm the wiki's `push` and `merge_group` workflows still run after an enqueue.
+In `mode: enforce`, the App token alone needs `pull-requests: write` to approve the checked commit. Renovate automerge or the repository owner handles merging. Enforcement requires stale approval dismissal in the caller's branch rules. The workflow rejects drafts, forks, and changes attributed to the approver App. It checks who opened the pull request and who pushed to its branch. It also checks the author and committer on the head commit.
 
 ## In a consumer's `ci.yml`
 

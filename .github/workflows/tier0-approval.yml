@@ -45,7 +45,7 @@ on:
         type: number
         default: 50
       mode:
-        description: Evaluate the pull request or enforce the decision with a review and merge.
+        description: Evaluate the pull request or enforce the decision by approving the checked commit only.
         type: string
         default: evaluate
     secrets:
@@ -72,11 +72,9 @@ jobs:
     environment: pins-approver
     permissions:
       actions: read  # Read workflow runs for the checked commit.
-      contents: write  # Merge the checked commit.
-      pull-requests: write  # Enqueue the approved pull request.
     outputs:
       decision: ${{ steps.decide.outputs.decision }}
-      reason: ${{ steps.merge.outputs.reason || steps.decide.outputs.reason }}
+      reason: ${{ steps.decide.outputs.reason }}
       head_sha: ${{ steps.decide.outputs.head_sha }}
     steps:
       - name: Harden the runner
@@ -124,13 +122,6 @@ jobs:
           MAX_FILES: ${{ inputs.max_files }}
           MODE: ${{ inputs.mode }}
         run: python3 -I -S rules/repo/private/tier0_approval/__main__.py
-
-      - name: Enqueue or merge the approved pull request
-        id: merge
-        if: inputs.mode == 'enforce' && steps.decide.outputs.decision == 'approve'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 -I -S rules/repo/private/tier0_approval/__main__.py merge
 
       - name: Upload the decision
         if: ${{ !cancelled() && steps.decide.outcome == 'success' }}
