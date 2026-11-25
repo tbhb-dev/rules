@@ -11,10 +11,10 @@ dependencies = ["apppkg", "corepkg", "clipkg", "weakpkg"]
 dev = [
   "deptry==0.25.1",
   "mutmut==3.8.1",
-  "pyrefly==1.4.1",
+  "pyrefly==1.5.0",
   "pytest==9.2.0",
   "pytest-cov==7.1.0",
-  "ruff==0.17.5",
+  "ruff==0.17.6",
 ]
 
 [tool.uv]
