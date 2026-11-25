@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
-# cspell:ignore simctl udid
+# cspell:ignore bootstatus endgroup gtimeout simctl udid
 
 set -euo pipefail
 
