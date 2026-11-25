@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
-# cspell:ignore bootstatus endgroup gtimeout simctl udid
+# cspell:ignore bootstatus endgroup launchctl simctl udid
 
 set -euo pipefail
 
@@ -19,21 +19,37 @@ reset_simulators() {
     done
 }
 
-log_simulator_timeout() {
-  local timeout_command=timeout
-  command -v timeout >/dev/null || timeout_command=gtimeout
+log_simulator_timeout() (
+  run_with_limit() {
+    local deadline=$((SECONDS + $1)) pid
+    shift
+    "$@" </dev/null &
+    pid=$!
+    while kill -0 "$pid" 2>/dev/null; do
+      if ((SECONDS >= deadline)); then
+        kill -KILL "$pid" 2>/dev/null || true
+        wait "$pid" 2>/dev/null || true
+        return 124
+      fi
+      sleep 1
+    done
+    wait "$pid"
+  }
 
   echo '::group::iOS simulator diagnostics after TIMEOUT'
   xcrun simctl list devices || true
   list_test_simulators |
     while IFS= read -r udid; do
       echo "Boot status for $udid (up to 120 seconds)"
-      "$timeout_command" 120 xcrun simctl bootstatus "$udid" </dev/null ||
+      run_with_limit 120 xcrun simctl bootstatus "$udid" ||
         echo "Boot status for $udid exited with status $?"
+      echo "Launch services for $udid (up to 20 seconds)"
+      run_with_limit 20 xcrun simctl spawn "$udid" launchctl list | head -n 40 || true
     done || true
-  log show --last 10m --predicate 'subsystem == "com.apple.CoreSimulator"' | tail -n 50 || true
+  run_with_limit 20 log show --last 10m --style compact \
+    --predicate 'process == "launchd_sim" OR subsystem == "com.apple.CoreSimulator"' | tail -n 80 || true
   echo '::endgroup::'
-}
+)
 
 ios_test=//:ios_app_test
 bazelisk test --config=ci -- //... "-$ios_test"
