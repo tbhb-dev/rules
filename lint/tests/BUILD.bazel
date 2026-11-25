@@ -131,6 +131,13 @@ pytest_test(
 )
 
 pytest_test(
+    name = "module_size_test",
+    srcs = ["//:repo_files"],
+    args = ["lint/tests/test_module_size.py"],
+    coverage = ["lint.private.check_module_size"],
+)
+
+pytest_test(
     name = "gitleaks_hook_pin_test",
     srcs = ["//:repo_files"],
     args = ["lint/tests/test_gitleaks_hook.py::test_hook_pin"],

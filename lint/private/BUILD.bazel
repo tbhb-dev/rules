@@ -10,6 +10,7 @@ repo_files()
 
 exports_files([
     "check_actionlint_labels.py",
+    "check_module_size.py",
     "check_trailing_newline.py",
     "gitleaks_guard.py",
 ])

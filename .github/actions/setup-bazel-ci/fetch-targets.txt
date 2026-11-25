@@ -13,6 +13,7 @@
 @tbhb_rules//lint:runner_default
 @tbhb_rules//lint:actionlint_labels
 @tbhb_rules//lint:gitleaks_guard
+@tbhb_rules//lint:module_size
 //:gitleaks_history
 //:gazelle
 //tools:pip_audit

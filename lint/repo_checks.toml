@@ -26,6 +26,12 @@ args = "none"
 runs_locally = true
 
 [[checks]]
+name = "module_size"
+target = "@tbhb_rules//lint:module_size"
+args = "none"
+runs_locally = true
+
+[[checks]]
 name = "gitleaks_history"
 target = "//:gitleaks_history"
 args = "scan-mode"

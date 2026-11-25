@@ -72,6 +72,7 @@ def _assert_no_range_output(calls: Path, stdout: str, status: int) -> None:
         "run @tbhb_rules//lint:runner_default",
         "run @tbhb_rules//lint:actionlint_labels",
         "run @tbhb_rules//lint:gitleaks_guard",
+        "run @tbhb_rules//lint:module_size",
     ]
     assert stdout.splitlines() == [
         "output from @tbhb_rules//lint:job_timeouts",
@@ -82,9 +83,11 @@ def _assert_no_range_output(calls: Path, stdout: str, status: int) -> None:
         "FAIL actionlint_labels" if status else "PASS actionlint_labels",
         "output from @tbhb_rules//lint:gitleaks_guard",
         "PASS gitleaks_guard",
-        "repo_checks: 3 passed, 1 failed (actionlint_labels)"
+        "output from @tbhb_rules//lint:module_size",
+        "PASS module_size",
+        "repo_checks: 4 passed, 1 failed (actionlint_labels)"
         if status
-        else "repo_checks: 4 passed, 0 failed",
+        else "repo_checks: 5 passed, 0 failed",
     ]
 
 
