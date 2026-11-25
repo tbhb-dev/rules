@@ -52,9 +52,9 @@ while IFS=$'\t' read -r sha pair; do
   emails=$(git log -1 --format='%ae%n%ce' "$sha")
   emails=${emails//$'\r'/}
   if grep -Fxq -- agent@tonyburns.net <<<"$emails"; then
-    if (($# == 3)) && [[ $3 != agent/* ]]; then
+    if (($# == 3)) && [[ $3 != agent/* && $3 != renovate/* ]]; then
       commit_failed=1
-      echo "commit_identity: FAIL: $sha agent commits require a pull request head branch starting with agent/" >&2
+      echo "commit_identity: FAIL: $sha agent commits require a pull request head branch starting with agent/ or renovate/" >&2
     fi
     message=$(git log -1 --format=%B "$sha")
     committer_time=$(git log -1 --format=%ct "$sha")

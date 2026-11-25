@@ -8,6 +8,7 @@ load("//shell:defs.bzl", "SHELL_ATTRS", "SHELL_TOOLCHAINS", "path_dir", "shell_e
 _CHECK_OUTPUT = """
 subject="$PWD/@@SUBJECT@@"
 human='Tony Burns <tony@tonyburns.net>'
+branch_problem='agent commits require a pull request head branch starting with agent/ or renovate/'
 summary='The allowed pairs are ALLOWED_PAIRS in @tbhb_rules//lint/private:commit_identity.bzl; use an allowed identity pair and valid agent identity trailers.'
 check_run() {
   local expected_status=$1 expected=$2 status=0 actual
@@ -83,12 +84,11 @@ commit "$human" "$human" "$valid"
 check_output "$base" 0 'commit_identity: 1 commits checked' topic
 commit "$agent" "$agent"
 sha=$(git -C "$repo" rev-parse HEAD)
-problem='agent commits require a pull request head branch starting with agent/'
 commit "$human" "$human" change
 check_output "$base" 0 'commit_identity: 3 commits checked'
 check_output "$base" 0 'commit_identity: 3 commits checked' agent/topic
 check_output "$base" 0 'commit_identity: 3 commits checked' agent/team/topic
-expected="commit_identity: FAIL: $sha $problem"$'\\n'"commit_identity: 1 of 3 commits failed. $summary"
+expected="commit_identity: FAIL: $sha $branch_problem"$'\\n'"commit_identity: 1 of 3 commits failed. $summary"
 check_output "$base" 1 "$expected" my-agent/topic
 check_output "$base" 1 "$expected" ""
 
@@ -103,9 +103,23 @@ for pair in 'author' 'committer'; do
   fi
   sha=$(git -C "$repo" rev-parse HEAD)
   expected="commit_identity: FAIL: $sha author and committer are not an allowed pair: $author (author) -> $committer (committer)"$'\\n'
-  expected+="commit_identity: FAIL: $sha $problem"$'\\n'"commit_identity: 1 of 1 commits failed. $summary"
+  expected+="commit_identity: FAIL: $sha $branch_problem"$'\\n'"commit_identity: 1 of 1 commits failed. $summary"
   check_output HEAD~1 1 "$expected" topic
 done
+"""
+
+_RENOVATE_BRANCH_CASES = """
+commit "$agent" "$agent"
+check_output "$base" 0 'commit_identity: 1 commits checked' renovate/foo
+sha=$(git -C "$repo" rev-parse HEAD)
+expected="commit_identity: FAIL: $sha $branch_problem"$'\\n'"commit_identity: 1 of 1 commits failed. $summary"
+check_output "$base" 1 "$expected" feature/foo
+check_output "$base" 1 "$expected" renovate
+
+commit "$agent" "$agent" $'change\\n\\nGenerated-by: nope'
+sha=$(git -C "$repo" rev-parse HEAD)
+expected="commit_identity: FAIL: $sha Generated-by: nope: must start with literal LLM"$'\\n'"commit_identity: 1 of 1 commits failed. $summary"
+check_output HEAD~1 1 "$expected" renovate/foo
 """
 
 _DRIVER = """#!/usr/bin/env bash
@@ -144,6 +158,11 @@ case {scenario} in
 {head_branch_cases}
     exit 0
     ;;
+  renovate_branch)
+{check_output}
+{renovate_branch_cases}
+    exit 0
+    ;;
   empty) ;;
   merge_commit)
     commit "$agent" "$agent"
@@ -173,6 +192,7 @@ def _commit_identity_scenario_test_impl(ctx):
             check_output = _CHECK_OUTPUT.replace("@@SUBJECT@@", ctx.executable.subject.short_path),
             git_dir = path_dir(ctx.attr.git),
             head_branch_cases = _HEAD_BRANCH_CASES,
+            renovate_branch_cases = _RENOVATE_BRANCH_CASES,
             scenario = ctx.attr.scenario,
             subject = ctx.executable.subject.short_path,
             trailer_cases = _TRAILER_CASES,
@@ -191,7 +211,7 @@ commit_identity_scenario_test = rule(
     toolchains = SHELL_TOOLCHAINS,
     attrs = SHELL_ATTRS | {
         "git": attr.label(default = "@tbhb_rules_git//:git", executable = True, cfg = "target", allow_files = True),
-        "scenario": attr.string(mandatory = True, values = ["allowed", "empty", "head_branch", "merge_commit", "noreply_author", "wrong_committer", "trailers"]),
+        "scenario": attr.string(mandatory = True, values = ["allowed", "empty", "head_branch", "merge_commit", "noreply_author", "renovate_branch", "wrong_committer", "trailers"]),
         "subject": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )
