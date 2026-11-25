@@ -27,6 +27,9 @@ download_pattern+='|connect timed out'     # Connection could not be established
 download_pattern+='|Read timed out'        # Transfer stalled while reading.
 download_pattern+='|Unknown host'          # DNS lookup failed.
 
+download_pattern+='|could not download Bazel' # Bazelisk could not download Bazel.
+download_pattern+='|could not copy from'      # Bazelisk transfer failed.
+
 workspace_diagnostic() {
   local bazel_command=${1:-} module=missing repo=missing git_checkout cause
   if [[ -f MODULE.bazel ]]; then

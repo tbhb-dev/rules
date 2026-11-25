@@ -184,6 +184,33 @@ fetch_count=$(wc -l <"$LOG" | tr -d ' ')
 [[ $fetch_count == 2 ]]
 sleep_delays=$(cat "$SLEEP_LOG")
 [[ $sleep_delays == 1 ]]
+# Bazelisk can fail to download Bazel before the fetch command starts.
+: >"$LOG"
+: >"$SLEEP_LOG"
+: >"$GITHUB_OUTPUT"
+now=$(date +%s)
+FETCH_FAILURE=download-once BUDGET=1 DEADLINE=$((now + 60)) \
+  DOWNLOAD_ERROR='could not download Bazel: failed to download bazel: failed to download bazel: could not copy from https://releases.bazel.build/9.3.3/release/bazel-9.3.3-linux-x86_64 to ...' \
+  bash "$script"
+fetch_count=$(wc -l <"$LOG" | tr -d ' ')
+[[ $fetch_count == 2 ]]
+sleep_delays=$(cat "$SLEEP_LOG")
+[[ $sleep_delays == 1 ]]
+grep -q '^seconds=[0-9][0-9]*$' "$GITHUB_OUTPUT"
+# A similar message about parsing a BUILD file must fail immediately.
+: >"$LOG"
+: >"$SLEEP_LOG"
+: >"$GITHUB_OUTPUT"
+now=$(date +%s)
+if FETCH_FAILURE=download-once DOWNLOAD_ERROR='could not parse BUILD' \
+  BUDGET=1 DEADLINE=$((now + 60)) bash "$script" >"$scratch/failure" 2>&1; then
+  echo 'FAIL: BUILD parse error returned success'
+  exit 1
+fi
+cat "$scratch/failure"
+fetch_count=$(wc -l <"$LOG" | tr -d ' ')
+[[ $fetch_count == 1 && ! -s $SLEEP_LOG && ! -s $GITHUB_OUTPUT ]]
+grep -qxF '::error::command failed without a download error' "$scratch/failure"
 # Exhausted download retries name only a URL on a matching failure line.
 : >"$LOG"
 : >"$SLEEP_LOG"
