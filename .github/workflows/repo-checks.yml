@@ -463,11 +463,14 @@ jobs:
       - name: Check changed Go SDK archive checksums
         if: >-
           inputs.go-sdk-checksum-dirs != '' &&
-          (github.event_name == 'pull_request' || github.event_name == 'push')
+          (github.event_name == 'pull_request' || github.event_name == 'push' ||
+          github.event_name == 'merge_group')
         working-directory: ${{ inputs.go-sdk-checksum-workspace }}
         env:
           DIRS: ${{ inputs.go-sdk-checksum-dirs }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          BASE_SHA: >-
+            ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha ||
+            github.event.before }}
         run: |
           read -ra dirs <<<"${DIRS}"
           paths=()

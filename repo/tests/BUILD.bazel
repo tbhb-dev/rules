@@ -15,12 +15,30 @@ repo_layout_test_suite(name = "repo_layout_tests")
 pytest_test(
     name = "manifest_test",
     srcs = [
+        "//:.github/workflows/ci.yml",
+        "//:.github/workflows/pr-text.yml",
+        "//:.github/workflows/repo-checks.yml",
         "//:pyproject.toml",
         "//repo/baseline:repo_files",
     ],
     args = ["repo/baseline/test_manifest.py"],
     coverage = ["repo.baseline.check_manifest"],
     visibility = ["//visibility:public"],
+)
+
+pytest_test(
+    name = "temporal_dev_server_test",
+    srcs = [
+        "//:pyproject.toml",
+        "//repo/temporal:repo_files",
+    ],
+    args = ["repo/temporal/test_dev_server.py"],
+    coverage = ["repo.temporal.dev_server"],
+    # Tech debt (AGENTS.md): port the fake Temporal subprocess tests to Windows.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
 )
 
 scripts_layout_test(

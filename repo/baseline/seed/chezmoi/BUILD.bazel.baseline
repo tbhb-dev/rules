@@ -16,3 +16,8 @@ gitleaks_history(
     name = "gitleaks_history",
     config = ".gitleaks.toml",
 )
+
+alias(
+    name = "temporal_dev_server",
+    actual = "@tbhb_rules//repo/temporal:dev_server",
+)

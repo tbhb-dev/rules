@@ -40,6 +40,7 @@ use_repo(
     "tbhb_rules_shellcheck",
     "tbhb_rules_shfmt",
     "tbhb_rules_structurizr_cli",
+    "tbhb_rules_temporal",
     "tbhb_rules_tombi",
     "tbhb_rules_vale",
     "tbhb_rules_zizmor",
