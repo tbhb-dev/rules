@@ -116,6 +116,60 @@ jobs:
 
 It takes one input, `runs-on`, with no default: a private caller uses the org's private runner label and a public caller uses `ubuntu-26.04`. It reads the same fetch list from the pinned Bazel module and restores caches without saving them.
 
+## `tier0-approval.yml`
+
+Call this workflow from the wiki repository after its CI completes. Replace `<sha>` with the rules commit and `12345678` with the wiki's numeric CI workflow ID.
+
+```yaml
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+jobs:
+  approve:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: tbhb-dev/rules/.github/workflows/tier0-approval.yml@bf77356b02e39e2e55d44848ebf5f51dd99a1b9a  # main
+    with:
+      mode: enforce
+      check_workflows: |
+        conclusion:12345678
+      tier0_paths: |
+        **/*.md
+        docs/**/*.md
+        docs/**/*.txt
+        LICENSE
+        LICENSE.md
+        LICENSE.txt
+      deny_paths: |
+        .github/**
+        **/CODEOWNERS
+        **/AGENTS*.md
+        **/CLAUDE*.md
+        **/GEMINI.md
+        **/.claude/**
+        **/.agents/**
+        **/.codex/**
+        **/.cursor/**
+    secrets:
+      PIN_APPROVER_CLIENT_ID: ${{ secrets.PIN_APPROVER_CLIENT_ID }}
+      PIN_APPROVER_PRIVATE_KEY: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}
+```
+
+`check_workflows` takes one `context:workflow-id` pair per line. `tier0_paths` and `deny_paths` use the defaults shown above. Each path input takes one case-insensitive glob per line. `max_files` defaults to 50 and counts both paths in a rename. Set `design_paths` to require the exact head commit in `design_go_sha` or the caller's `DESIGN_GO_SHA` repository variable.
+
+The caller needs the `pins-approver` environment and the installed `tbhb-dev-auto-reviews` GitHub App. The App needs read access to Actions, Checks, and Contents in both modes. The runner's `python3` must be 3.14 or newer.
+
+The calling job must grant `contents: write` and `pull-requests: write` in both modes, including `evaluate`. The reusable workflow requests both permissions at startup and GitHub rejects the call if the caller grants less.
+
+In the default `mode: evaluate`, the App uses Pull requests read access. The workflow yields the decision artifact and outputs `decision`, `reason`, and `head_sha`.
+
+In `mode: enforce`, the App uses Pull requests write access to approve the checked commit. The workflow then uses `github.token` to enqueue or merge that commit. Enforcement requires stale approval dismissal in the caller's branch rules. The workflow rejects drafts, forks, and changes attributed to the approver App. It checks who opened the pull request and who pushed to its branch. It also checks the author and committer on the head commit.
+
+Events caused by `github.token` don't start new workflow runs. Before enabling `enforce`, confirm the wiki's `push` and `merge_group` workflows still run after an enqueue.
+
 ## In a consumer's `ci.yml`
 
 Adopt the rules pin update from Renovate, then edit the consumer's `ci.yml`: set `cache-save: false` on every test job and add one `cache-warm` job for pushes to `main`. Copy the `cache-warm` job from [this repository's `ci.yml`](../workflows/ci.yml), replace its local action reference with the same pinned remote reference as the test job, and set `fetch-workspaces` to the consumer's other workspace directories. Keep the four OS entries from the test matrix. The warm job hashes the root workspace files even when it fetches tools from another workspace. Keep `cache-warm` outside the required `conclusion` dependencies, because pull requests skip it.
