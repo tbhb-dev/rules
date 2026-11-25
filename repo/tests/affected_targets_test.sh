@@ -12,15 +12,17 @@ action=${TEST_SRCDIR:?}/${ACTION_RLOCATIONPATH:?}
 script=${action%/*}/select.sh
 git_bin=${TEST_SRCDIR:?}/${GIT_RLOCATIONPATH:?}
 scratch=${TEST_TMPDIR:?}/affected
-mkdir -p "$scratch/bin" "$scratch/tmp" "$scratch/repo/sub" "$scratch/no-git" "$scratch/broken-diff"
+mkdir -p "$scratch/bin" "$scratch/tmp" "$scratch/repo/sub" "$scratch/no-git" "$scratch/broken"
 ln -s "$git_bin" "$scratch/bin/git"
 ln -s "$scratch/fake-td" "$scratch/bin/bazelisk"
 # One fake serves as target-determinator and as bazelisk. Each records its
 # arguments and which runner command files it can see. `fail` and `hang`
 # first check out the base, as a stopped run could leave it, and start a
 # child that checks out the base again later unless it's stopped too.
-# `mixed` leaves the base's content and submodule under the head, `litter`
-# an untracked file, and `bare` a last log line with no newline.
+# `mixed` leaves the base's content and an older submodule commit under the
+# head, `litter` an untracked file, `smudge` a change after a selection, and
+# `bare` a last log line with no newline.
+# The cquery lists tests whose tags match `manual`, one of them `tagged`.
 cat >"$scratch/fake-td" <<'MOCK'
 #!/usr/bin/env bash
 for name in GITHUB_OUTPUT GITHUB_STEP_SUMMARY GITHUB_ENV GITHUB_PATH GITHUB_STATE; do
@@ -29,9 +31,7 @@ done
 if [[ ${0##*/} == bazelisk ]]; then
   printf '%s\n' "$@" >"$CQUERY_LOG"
   [[ $FAKE_CQUERY != fail ]] || { echo 'ERROR: analysis failed' >&2 && exit 7; }
-  tag() { printf '{"target":{"type":"RULE","rule":{"name":"%s","attribute":[{"name":"tags","type":"STRING_LIST","stringListValue":[%s]}]}}}' "$@"; }
-  printf '{"results":[%s,%s,%s]}\n' "$(tag //go:lib_test '"review, manual"')" \
-    "$(tag //go:cmd_test '"manual] suffix"')" "$(tag //go:manual_test '"manual","x"')"
+  printf '{"results":[{"target":{"rule":{"name":"//go:%s"}}}]}\n' idle_test manual_test
   exit
 fi
 printf '%s\n' "$@" >"$ARGS_LOG"
@@ -43,18 +43,19 @@ case $FAKE in
   none) ;;
   fail) git checkout -q "${!#}" && straggle "${!#}" && echo 'ERROR: cquery failed' >&2 && exit 3 ;;
   hang) git checkout -q "${!#}" && straggle "${!#}" && exec sleep 30 ;;
-  mixed) h=$(git rev-parse HEAD) && git checkout -q "${!#}" && git submodule update -q &&
-    git checkout -q "$h" && git checkout -q "${!#}" -- :/ && exit 3 ;;
+  mixed) git -C ../lib checkout -q HEAD~ && git checkout -q "${!#}" -- :/ && exit 3 ;;
   litter) : >stray && exit 3 ;;
+  smudge) echo x >>../README.md && echo //go:lib_test ;;
   bare) printf 'ERROR: no newline' >&2 && exit 3 ;;
 esac
 MOCK
-cat >"$scratch/broken-diff/git" <<MOCK
+# This git fails the subcommand BREAK names, with a workflow command in its error.
+cat >"$scratch/broken/git" <<MOCK
 #!/usr/bin/env bash
-for arg in "\$@"; do [[ \$arg != diff ]] || exit 128; done
+for arg in "\$@"; do [[ \$arg != "\$BREAK" ]] || { printf 'x\n##[notice]y\n' >&2 && exit 128; }; done
 exec "$git_bin" "\$@"
 MOCK
-chmod +x "$scratch/fake-td" "$scratch/broken-diff/git"
+chmod +x "$scratch/fake-td" "$scratch/broken/git"
 export PATH="$scratch/bin:$PATH" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export GIT_CEILING_DIRECTORIES=$scratch GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always
@@ -109,16 +110,19 @@ commit() {
 base=$(commit README.md)
 docs_head=$(commit docs/guide.md)
 
-# run CASE EVENT HEAD [EXPECTED_ALL] [EXPECTED_COUNT]: check out HEAD, run
-# the script from sub/ and check the outputs and the final checkout.
+# [HEAD_SHA=SHA] [STATUS=LINES] run CASE EVENT HEAD [EXPECTED_ALL]
+# [EXPECTED_COUNT]: check out HEAD, run the script from sub/ with HEAD_SHA,
+# HEAD unless set, and check the outputs, the final checkout and that
+# `git status` lists STATUS, nothing unless set.
 run() {
-  local name=$1 expected_all=${4:-true} expected_count=${5:-all} want=${HEAD_SHA:-$3} now changes
+  local name=$1 expected_all=${4:-true} expected_count=${5:-all} sha=${HEAD_SHA-$3} now changes
+  local want=${sha:-$3}
   git checkout -q "$3"
   : >"$GITHUB_OUTPUT"
   : >"$GITHUB_STEP_SUMMARY"
   : >"$ENV_LOG"
   rm -f "$CHILD_MARK"
-  if ! (cd sub && EVENT=$2 bash "$script") >"$scratch/stdout" 2>&1; then
+  if ! (cd sub && EVENT=$2 HEAD_SHA=$sha bash "$script") >"$scratch/stdout" 2>&1; then
     cat "$scratch/stdout" >&2
     fail "$name: exited nonzero"
   fi
@@ -141,8 +145,8 @@ run() {
   fi
   now=$(git rev-parse HEAD)
   [[ $now == "$want" ]] || fail "$name: the checkout is not $want"
-  changes=$(git status --porcelain --ignore-submodules=none)
-  [[ -z $changes ]] || fail "$name: the tree is not clean"
+  changes=$("$git_bin" status --porcelain --untracked-files=all --ignore-submodules=none)
+  [[ $changes == "${STATUS:-}" ]] || fail "$name: the tree is not as it was"
   if [[ $expected_all == true ]]; then
     [[ $targets == //... ]] || fail "$name: fallback is not //..."
     grep -qxF '//...' "$file" || fail "$name: file is not //..."
@@ -159,7 +163,8 @@ refuse() {
   echo "PASS: $1"
 }
 
-export BASE_SHA=$base HEAD_SHA='' FAKE=two TIMEOUT_SECONDS=''
+unset HEAD_SHA
+export BASE_SHA=$base FAKE=two TIMEOUT_SECONDS=''
 for event in push schedule workflow_dispatch ''; do
   run "event '$event'" "$event" "$docs_head"
 done
@@ -176,9 +181,9 @@ for arg in cquery --output=jsonproto --config=ci --keep_going 'attr(tags, manual
   grep -qxF -- "$arg" "$CQUERY_LOG" || fail "cquery missed argument $arg"
 done
 
-# Only the exact tag manual drops a test, not `review, manual` or `manual] suffix`.
-FAKE=tagged run 'manual tag' pull_request "$docs_head" false 2
-[[ $targets == $'//go:lib_test\n//go:cmd_test' ]] || fail 'manual tag: targets output'
+# `bazel test //...` can still run a manual test through a test_suite.
+FAKE=tagged run 'manual tag' pull_request "$docs_head"
+[[ $reason == *'tagged manual'* ]] || fail 'manual tag: wrong reason'
 FAKE_CQUERY=fail run 'tag cquery failure' pull_request "$docs_head"
 [[ $reason == *'exit status 7' ]] || fail 'tag cquery failure: status missing'
 
@@ -190,6 +195,7 @@ HEAD_SHA=$docs_head run 'merge group' merge_group "$docs_head" false 2
 HEAD_SHA=$docs_head run 'checkout behind the head' merge_group "$base"
 FAKE=none run 'no affected tests' pull_request "$docs_head" false 0
 [[ -z $targets ]] || fail 'empty selection'
+FAKE=smudge run 'changed under a selection' pull_request "$docs_head"
 FAKE=fail run 'tool failure' pull_request "$docs_head"
 [[ $reason == *'exit status 3' ]] || fail 'failure status missing'
 first=$file
@@ -204,8 +210,21 @@ TD='' run 'no tool' pull_request "$docs_head"
 TIMEOUT_MINUTES=1.5 run 'bad timeout-minutes' pull_request "$docs_head"
 BASE_SHA='' run 'no base' pull_request "$docs_head"
 BASE_SHA=0123456789abcdef0123456789abcdef01234567 run 'base not fetched' pull_request "$docs_head"
-PATH="$scratch/broken-diff:$PATH" run 'git diff failure' pull_request "$docs_head"
+BREAK=diff PATH="$scratch/broken:$PATH" run 'git diff failure' pull_request "$docs_head"
 [[ $reason == 'git diff failed' ]] || fail 'git diff: wrong reason'
+BREAK=status PATH="$scratch/broken:$PATH" run 'git status failure' pull_request "$docs_head"
+QUERY=$'tests(//...)\n+ //x' run 'query on two lines' pull_request "$docs_head"
+HEAD_SHA='' run 'no event head' pull_request "$docs_head"
+
+# target-determinator would analyze a change on top of the head, even one
+# that status.showUntrackedFiles=no hides, so the script leaves it alone.
+echo dirty >>README.md
+STATUS=' M README.md' run 'changed file' pull_request "$docs_head"
+git checkout -q README.md
+git config status.showUntrackedFiles no
+: >sub/stray
+STATUS='?? sub/stray' run 'hidden untracked file' pull_request "$docs_head"
+rm sub/stray
 
 # No checkout at all: the event's head can't be checked, so the step fails.
 refuse 'no checkout' "$scratch/no-git"
@@ -261,11 +280,17 @@ lib_head=$(commit lib.txt)
 cd "$scratch/mixed"
 git init -q -b main .
 git submodule add -q "$scratch/lib" lib
-git -C lib checkout -q "$lib_base"
 mixed_base=$(commit README.md)
-git -C lib checkout -q "$lib_head"
 mixed_head=$(commit README.md)
 BASE_SHA=$mixed_base FAKE=mixed run 'mixed tree' pull_request "$mixed_head"
 now=$(git -C lib rev-parse HEAD)
 [[ $now == "$lib_head" ]] || fail 'mixed tree: the submodule is not at the head'
-BASE_SHA=$mixed_base FAKE=litter refuse 'untracked file left behind'
+BASE_SHA=$mixed_base HEAD_SHA=$mixed_head FAKE=litter refuse 'untracked file left behind'
+rm sub/stray
+
+# A diff of only a submodule's commit lists no file target-determinator
+# can trace, so the script tests everything.
+git -C lib checkout -q "$lib_base"
+bumped=$(commit)
+BASE_SHA=$mixed_head run 'submodule commit' pull_request "$bumped"
+[[ $reason == 'the submodule lib changed' ]] || fail 'submodule commit: wrong reason'

@@ -19,9 +19,9 @@ inputs:
     default: .
   query:
     description: >-
-      The Bazel query of the candidate targets. The action then drops tests
-      tagged exactly manual, which `bazel test //...` skips too, by reading
-      their tags from `bazel cquery --output=jsonproto`.
+      The Bazel query of the candidate targets, on one line. When an
+      affected test's tags match `manual` in `bazel cquery`, the action
+      selects `//...`, which can still run it through a test_suite.
     required: false
     default: 'tests(//...)'
   bazel-opts:

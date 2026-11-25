@@ -4,10 +4,11 @@
 
 # Chooses the Bazel test targets that the change from BASE_SHA to HEAD_SHA can
 # affect, with target-determinator (TD). When the script can't decide, it
-# selects `//...`. Every path ends in finish, which returns the checkout to
-# HEAD_SHA, clean once a tool has run, and writes the outputs and a line to
-# the job summary, so no fallback is silent and none tests another commit.
-# Without a checkout to verify, the script fails.
+# selects `//...`, since only a selection too small to cover the change is
+# wrong. Every path ends in finish, which returns the checkout to HEAD_SHA,
+# clean once a tool has run, and writes the outputs and a line to the job
+# summary, so no fallback is silent and none tests another commit. Without a
+# checkout to verify, the script fails.
 set -euo pipefail
 
 # A directory of its own for each run, so a second run in the job leaves the
@@ -40,14 +41,21 @@ show() {
   echo "::$token::"
 }
 
-# at_head: HEAD is the event's head and, once a tool has run, the tree and
-# every submodule hold no change, since a stopped checkout can leave the
-# base's content under the head.
+# clean: the tree and every submodule hold no change, untracked files
+# included whatever status.showUntrackedFiles says. Git's errors go nowhere,
+# since a submodule's path can hold a workflow command.
+clean() {
+  local changes
+  changes=$(git status --porcelain --untracked-files=all --ignore-submodules=none 2>/dev/null) &&
+    [[ -z $changes ]]
+}
+
+# at_head: HEAD is the event's head and, once a tool has run, the checkout is
+# clean, since a stopped checkout can leave the base's content under the head.
 at_head() {
-  local now changes
+  local now
   now=$(git rev-parse HEAD 2>/dev/null) && [[ $now == "$want" ]] || return
-  [[ -n $ran ]] || return 0
-  changes=$(git status --porcelain --ignore-submodules=none) && [[ -z $changes ]]
+  [[ -z $ran ]] || clean
 }
 
 # ensure_head: put the checkout back on the commit the event tests, by force
@@ -62,8 +70,11 @@ ensure_head() {
 }
 
 # finish MODE REASON: MODE is `all` or `selected`. REASON can hold a changed
-# path, so it loses control characters here and Markdown in the summary.
+# path, so it loses control characters here and Markdown in the summary. A
+# selection holds only for the clean head the tools analyzed, so finish
+# never repairs the checkout under one and falls back instead.
 finish() {
+  [[ $1 == all ]] || at_head || set -- all 'the checkout changed while the tools ran'
   local all=false count line reason=${2//[[:cntrl:]]/?} delim
   ensure_head || die "can't restore a clean checkout of the event's head $want"
   if [[ $1 == all ]]; then
@@ -115,38 +126,28 @@ deadline() {
   return "$status"
 }
 
-# drop_manual SECONDS: remove the tests tagged exactly `manual`, which
-# `bazel test //...` skips too. cquery's JSON lists each tag on its own, and
-# a regex over the printed list can't tell `manual` from `review, manual`.
-drop_manual() {
-  [[ -s $file ]] || return 0
-  ensure_head || return
-  deadline "$1" "${isolate[@]}" bazelisk cquery --output=jsonproto ${opts[@]+"${opts[@]}"} \
-    "attr(tags, manual, ($QUERY))" >"$out/tags.json" || return
-  jq -r '.results[]?.target.rule // empty
-    | select(any(.attribute[]?; .name == "tags" and any(.stringListValue[]?; . == "manual")))
-    | .name' "$out/tags.json" >"$out/manual" || return
-  grep -vxFf "$out/manual" "$file" >"$out/kept" || (($? == 1)) || return
-  mv "$out/kept" "$file"
-}
-
 head=$(git rev-parse HEAD 2>/dev/null) || die "no Git checkout, so the event's head can't be verified"
-want=${HEAD_SHA:-$head}
 [[ ${BAZEL_OPTS:-} != *$'\n'* ]] || die 'bazel-opts must be one line'
+want=${HEAD_SHA:-$head}
+[[ -n ${HEAD_SHA:-} ]] || finish all "no event head to check the checkout $head against"
 
 # Any other event, such as push or schedule, tests everything. An empty
 # BASE_SHA fails the check of the base below.
 [[ ${EVENT:-} == pull_request || ${EVENT:-} == merge_group ]] || finish all "a '${EVENT:-}' event tests everything"
 [[ $head == "$want" ]] || finish all "the checkout $head is not the event's head $want"
+[[ -n ${QUERY:-} && $QUERY != *$'\n'* ]] || finish all 'the query is not one line'
 git cat-file -e "${BASE_SHA:-}^{commit}" 2>/dev/null ||
   finish all "the base '${BASE_SHA:-}' is missing from the checkout (check out with fetch-depth: 0)"
-git -c core.quotePath=false diff -z --name-only --no-renames --output="$changed" "$BASE_SHA" "$head" 2>&1 | show >&2 ||
+git -c core.quotePath=false diff -z --raw --no-renames --output="$changed" "$BASE_SHA" "$head" 2>&1 | show >&2 ||
   finish all 'git diff failed'
 
-# These files change the module graph, the flags, the Bazel version, the
-# package set or the rules for the whole workspace. Match the base name, in
-# any directory, since a module can override a nested one by path.
-while IFS= read -r -d '' path; do
+# A submodule's commit (mode 160000) is no file target-determinator can
+# trace. The other files change the module graph, the flags, the Bazel
+# version, the package set or the rules for the whole workspace. Match the
+# base name, in any directory, since a module can override a nested one by
+# path.
+while IFS= read -r -d '' meta && IFS= read -r -d '' path; do
+  [[ ${meta:0:15} != *160000* ]] || finish all "the submodule $path changed"
   case ${path##*/} in
   MODULE.bazel* | *.MODULE.bazel | WORKSPACE* | REPO.bazel | BUILD | BUILD.* | *.bzl | \
     .bazelrc* | *bazelrc | .bazelversion | .bazeliskrc | .bazelignore)
@@ -161,8 +162,11 @@ minutes=${TIMEOUT_MINUTES:-15}
 # Tests set TIMEOUT_SECONDS to stop a fake run sooner.
 seconds=${TIMEOUT_SECONDS:-$((minutes * 60))}
 
+# target-determinator would analyze a change on top of the head as the head.
+clean || finish all "the checkout of $head has changes, or git status failed"
+
 args=(-bazel bazelisk -nocache_results -delete-cached-worktree
-  -before-query-error-behavior=fatal -targets "${QUERY:?}")
+  -before-query-error-behavior=fatal -targets "$QUERY")
 read -ra opts <<<"${BAZEL_OPTS:-}"
 args+=(${opts[@]+"${opts[@]/#/-bazel-opts=}"})
 # Repository rules run code from the change, so Bazel gets no runner
@@ -170,10 +174,16 @@ args+=(${opts[@]+"${opts[@]/#/-bazel-opts=}"})
 isolate=(env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY -u GITHUB_ENV -u GITHUB_PATH -u GITHUB_STATE)
 start=$SECONDS status=0 step=target-determinator ran=1
 deadline "$seconds" "${isolate[@]}" "$TD" "${args[@]}" "$BASE_SHA" >"$file" 2>"$log" || status=$?
-if [[ $status == 0 ]]; then
-  step='the cquery of manual tags'
-  left=$((seconds + start - SECONDS))
-  drop_manual "$((left > 0 ? left : 1))" 2>>"$log" || status=$?
+# target-determinator reports tests tagged manual too. `bazel test //...`
+# can still run one through a test_suite, so any affected test whose tags
+# match `manual` falls back; jq fails then.
+if [[ $status == 0 && -s $file ]]; then
+  step='the cquery of manual tags' left=$((seconds + start - SECONDS))
+  deadline "$((left > 0 ? left : 1))" "${isolate[@]}" bazelisk cquery --output=jsonproto \
+    ${opts[@]+"${opts[@]}"} "attr(tags, manual, ($QUERY))" >"$out/tags.json" 2>>"$log" || status=$?
+  [[ $status != 0 ]] || jq -en --rawfile s "$file" '($s | split("\n")) as $s
+    | all(inputs | .results[]?.target.rule.name; IN($s[]) | not)' "$out/tags.json" >/dev/null 2>>"$log" ||
+    finish all 'an affected test is tagged manual, or its tags are unreadable'
 fi
 [[ $status != 0 ]] || finish selected "target-determinator compared $BASE_SHA with $head"
 # The log comes from the change too.
