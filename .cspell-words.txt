@@ -10,6 +10,7 @@ awrel
 bazelignore
 bazelignored
 bazelisk
+bazeliskrc
 bazelrc
 bazelversion
 BINDIR
@@ -202,6 +203,7 @@ unkeyed
 unmutated
 unstampable
 unvalidated
+urandom
 usefixtures
 usetesting
 vitest

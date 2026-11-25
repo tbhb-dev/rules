@@ -58,7 +58,10 @@ exports_files(
 
 # For //repo/tests:affected_targets_test.
 exports_files(
-    [".github/actions/affected-targets/select.sh"],
+    [
+        ".github/actions/affected-targets/action.yml",
+        ".github/actions/affected-targets/select.sh",
+    ],
     visibility = ["//repo/tests:__pkg__"],
 )
 

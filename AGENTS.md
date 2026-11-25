@@ -76,3 +76,9 @@ target_compatible_with = select({
 ```
 
 Add a tech-debt comment on the line before it, and a tracker row. A reviewer checks for the exclusion on any new test that shells out, and reports a missing one as blocking.
+
+### Windows exclusion tracker
+
+| Test | Tech debt | Remove when |
+| --- | --- | --- |
+| `//repo/tests:affected_targets_test` | Runs Bash, Git, and a fake target-determinator in a scratch repository. | It passes on `windows-2025`. |

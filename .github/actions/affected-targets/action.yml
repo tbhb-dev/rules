@@ -20,9 +20,9 @@ inputs:
   query:
     description: >-
       The Bazel query of the candidate targets. The default leaves out tests
-      tagged manual, which `bazel test //...` skips too.
+      tagged exactly manual, which `bazel test //...` skips too.
     required: false
-    default: 'tests(//...) except attr(tags, "\bmanual\b", //...)'
+    default: 'tests(//...) except attr(tags, "(\[|, )manual(,|])", //...)'
   bazel-opts:
     description: >-
       Options for target-determinator's cquery and build, split on
@@ -32,7 +32,8 @@ inputs:
   timeout-minutes:
     description: >-
       Whole minutes target-determinator may run before the action stops it
-      and selects `//...`. Keep it below the job's timeout.
+      and selects `//...`, with or without timeout(1) on the runner. Keep it
+      below the job's timeout.
     required: false
     default: "15"
 
@@ -48,13 +49,14 @@ outputs:
     value: ${{ steps.select.outputs.reason }}
   targets:
     description: >-
-      The selected targets, separated by spaces, or `//...`. Empty when the
-      change affects no test target.
+      The selected targets, one per line, or `//...`. Empty when the change
+      affects no test target. Prefer `file`.
     value: ${{ steps.select.outputs.targets }}
   file:
     description: >-
-      A file with one selected target per line, for Bazel's
-      --target_pattern_file. Empty when the change affects no test target.
+      The path of a file with one selected target per line, for Bazel's
+      --target_pattern_file. The file is empty when the change affects no
+      test target.
     value: ${{ steps.select.outputs.file }}
 
 runs:
@@ -97,4 +99,6 @@ runs:
         QUERY: ${{ inputs.query }}
         BAZEL_OPTS: ${{ inputs.bazel-opts }}
         TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+        # Only tests set it; a job's own value must not shorten the deadline.
+        TIMEOUT_SECONDS: ""
       run: bash "${GITHUB_ACTION_PATH}/select.sh"

@@ -112,10 +112,12 @@ sh_test(
     name = "affected_targets_test",
     srcs = ["affected_targets_test.sh"],
     data = [
+        "//:.github/actions/affected-targets/action.yml",
         "//:.github/actions/affected-targets/select.sh",
         "@tbhb_rules_git//:git",
     ],
     env = {
+        "ACTION_RLOCATIONPATH": "$(rlocationpath //:.github/actions/affected-targets/action.yml)",
         "GIT_RLOCATIONPATH": "$(rlocationpath @tbhb_rules_git//:git)",
         "SCRIPT_RLOCATIONPATH": "$(rlocationpath //:.github/actions/affected-targets/select.sh)",
     },

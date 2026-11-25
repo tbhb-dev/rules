@@ -60,21 +60,23 @@ On Linux x64 and arm64, the action downloads [target-determinator](https://githu
 When the action can't decide, it selects `//...`:
 
 - A `push` or `schedule` event, or any other event that isn't `pull_request` or `merge_group`.
-- A missing base commit, a base commit absent from the checkout, or a checkout other than the event's head.
-- A change to `MODULE.bazel`, `MODULE.bazel.lock`, `WORKSPACE`, `WORKSPACE.bazel`, `WORKSPACE.bzlmod`, `.bazelversion`, or any `*bazelrc` file (including `.bazelrc` and `preset.bazelrc`), in any directory.
+- No Git checkout, a missing base commit, a base commit absent from the checkout, a checkout other than the event's head, or a failed `git diff`.
+- A change to a file whose base name, in any directory, is `MODULE.bazel*`, `*.MODULE.bazel`, `WORKSPACE*`, `REPO.bazel`, `BUILD`, `BUILD.*`, `*.bzl`, `.bazelrc*`, `*bazelrc` (such as `preset.bazelrc`), `.bazelversion`, `.bazeliskrc`, or `.bazelignore`.
 - A runner other than Linux x64 or arm64, or a failed download or checksum.
-- A target-determinator failure, including a base commit that doesn't build and a run longer than `timeout-minutes`.
+- A target-determinator failure, including a base commit that doesn't build and a run longer than `timeout-minutes`. Runners without `timeout` use the script's own deadline.
 
-Every run writes its count and reason to the job summary and to the `reason` output. An empty `targets` output means the change affects no test target, which the summary reports as a count of 0. The caller then skips `bazel test`. Pass `--skip_incompatible_explicit_targets` to `bazel test`, because explicit labels that are incompatible with the platform fail without it.
+Every run ends with the checkout on the event's head, `merge_group.head_sha` or `github.sha`, so a fallback never tests the base. When the action can't check out that commit, it fails. Every run writes its count and reason to the job summary, with the reason's Markdown escaped, and to the `count` and `reason` outputs. A count of 0 means the change affects no test target, and the caller then skips `bazel test`. Pass `--skip_incompatible_explicit_targets` to `bazel test`, because explicit labels that are incompatible with the platform fail without it.
+
+Repository rules run code from the change. target-determinator and Bazel therefore run without `GITHUB_OUTPUT`, `GITHUB_STEP_SUMMARY`, `GITHUB_ENV`, `GITHUB_PATH`, and `GITHUB_STATE`, and only the action's script writes the outputs. The action prints the tail of the target-determinator log with workflow commands stopped.
 
 | Input               | Default | Meaning |
 |---------------------|---------|---------|
 | `working-directory` | `.`     | The Bazel workspace to query. |
-| `query`             | `tests(//...) except attr(tags, "\bmanual\b", //...)` | The candidate targets. target-determinator reports tests tagged `manual` too, so the default removes them. |
+| `query`             | `tests(//...) except attr(tags, "(\[\|, )manual(,\|])", //...)` | The candidate targets. target-determinator reports tests tagged `manual` too, so the default removes them. It keeps tags such as `manual-review`. |
 | `bazel-opts`        | `--config=ci` | Options for target-determinator's cquery, split on whitespace. Match the options of the test step. |
 | `timeout-minutes`   | `15`    | Whole minutes target-determinator may run before the action selects `//...`. |
 
-The outputs are `all` (`true` on a fallback), `count` (a number, or `all`), `reason`, `targets` (separated by spaces), and `file` (one target per line, for `--target_pattern_file`). `//repo/tests:affected_targets_test` checks the selection and each fallback, with a fake target-determinator.
+The outputs are `all` (`true` on a fallback), `count` (a number, or `all`), `reason`, `targets` (one per line), and `file`. `file` is the path of a file with one target per line, for `--target_pattern_file`. Prefer it, since a label can contain a space. `//repo/tests:affected_targets_test` checks the selection, each fallback, and the final checkout, with a fake target-determinator.
 
 ## `repo-checks.yml`
 
