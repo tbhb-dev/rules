@@ -118,7 +118,7 @@ It takes one input, `runs-on`, with no default: a private caller uses the org's 
 
 ## `tier0-approval.yml`
 
-Call this workflow from the wiki repository after its CI completes. Replace `<sha>` with the rules commit and `12345678` with the wiki's numeric CI workflow ID.
+Call this workflow from the wiki repository after its CI completes. Replace `<sha>` with a rules commit that supports workflow file names.
 
 ```yaml
 on:
@@ -134,7 +134,7 @@ jobs:
     with:
       mode: enforce
       check_workflows: |
-        conclusion:12345678
+        conclusion:ci.yml
       tier0_paths: |
         **/*.md
         docs/**/*.md
@@ -157,7 +157,7 @@ jobs:
       PIN_APPROVER_PRIVATE_KEY: ${{ secrets.PIN_APPROVER_PRIVATE_KEY }}
 ```
 
-`check_workflows` takes one `context:workflow-id` pair per line. `tier0_paths` and `deny_paths` use the defaults shown above. Each path input takes one case-insensitive glob per line. `max_files` defaults to 50 and counts both paths in a rename. Set `design_paths` to require the exact head commit in `design_go_sha` or the caller's `DESIGN_GO_SHA` repository variable.
+`check_workflows` takes one `context:workflow` pair per line. Use the workflow's `.yml` or `.yaml` file name from `.github/workflows`. A numeric workflow ID still works. `tier0_paths` and `deny_paths` use the defaults shown above. Each path input takes one case-insensitive glob per line. `max_files` defaults to 50 and counts both paths in a rename. Set `design_paths` to require the exact head commit in `design_go_sha` or the caller's `DESIGN_GO_SHA` repository variable.
 
 The caller needs the `pins-approver` environment and the installed `tbhb-dev-auto-reviews` GitHub App. The App needs read access to Checks and Contents in both modes. The runner's `python3` must be 3.14 or newer.
 
