@@ -24,6 +24,7 @@ tools = use_extension("//pins:extensions.bzl", "tools")
 use_repo(
     tools,
     "tbhb_rules_actionlint",
+    "tbhb_rules_ast_grep",
     "tbhb_rules_bats",
     "tbhb_rules_buildifier",
     "tbhb_rules_cog",

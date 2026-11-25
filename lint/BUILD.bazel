@@ -149,6 +149,7 @@ bzl_library(
     srcs = ["defs.bzl"],
     visibility = ["//visibility:public"],
     deps = [
+        "//lint/private:ast_grep",
         "//lint/private:checks",
         "//lint/private:codeowners",
         "//lint/private:content",

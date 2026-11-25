@@ -15,6 +15,7 @@ exports_files([
 ])
 
 exports_files([
+    "ast_grep.sh.tpl",
     "codeowners.sh",
     "codeowners_errors.sh",
     "cspell.sh.tpl",
@@ -29,6 +30,16 @@ exports_files([
     "vale_sync.sh.tpl",
     "workflow_lint.sh",
 ])
+
+bzl_library(
+    name = "ast_grep",
+    srcs = ["ast_grep.bzl"],
+    visibility = ["//lint:__subpackages__"],
+    deps = [
+        "//shell:defs",
+        "@bazel_skylib//lib:shell",
+    ],
+)
 
 bzl_library(
     name = "commit_identity",

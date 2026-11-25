@@ -3,6 +3,7 @@
 
 """Public API for lint rules."""
 
+load("//lint/private:ast_grep.bzl", _ast_grep_lint = "ast_grep_lint")
 load(
     "//lint/private:checks.bzl",
     _actionlint_test = "actionlint_test",
@@ -30,6 +31,7 @@ load("//lint/private:vale.bzl", _vale_sync = "vale_sync", _vale_test = "vale_tes
 load("//lint/private:workflow_lint.bzl", _workflow_lint_test = "workflow_lint_test")
 
 actionlint_test = _actionlint_test
+ast_grep_lint = _ast_grep_lint
 bats_test = _bats_test
 claude_settings_test = _claude_settings_test
 codeowners_test = _codeowners_test

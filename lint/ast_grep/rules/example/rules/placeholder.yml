@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+id: example-placeholder
+language: Python
+severity: warning
+message: Placeholder call used to exercise the ast-grep lint target.
+rule:
+  pattern: ast_grep_example_placeholder()

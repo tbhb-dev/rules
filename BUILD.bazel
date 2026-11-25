@@ -273,6 +273,8 @@ SHELL_SCRIPTS = [
     ".github/actions/setup-bazel-ci/cpu_quota.sh",
     ".github/actions/setup-bazel-ci/fetch.sh",
     "format/private/format.sh.tpl",
+    "lint/ast_grep/ast_grep_test.sh",
+    "lint/private/ast_grep.sh.tpl",
     "lint/private/codeowners.sh",
     "lint/private/codeowners_errors.sh",
     "lint/private/cspell.sh.tpl",
@@ -441,6 +443,14 @@ decision_records_test(
 required_status_checks_test(
     name = "required_status_checks_test",
     srcs = [":repo_files"],
+)
+
+test_suite(
+    name = "ast_grep_tests",
+    tests = [
+        "//lint/ast_grep:changed_test",
+        "//lint/ast_grep:full_test",
+    ],
 )
 
 test_suite(

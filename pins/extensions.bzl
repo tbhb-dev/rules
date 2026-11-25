@@ -59,6 +59,35 @@ def _tools_impl(mctx):
         url = "https://github.com/bats-core/bats-core/archive/refs/tags/v1.14.0.tar.gz",
     )
 
+    # GitHub publishes the SHA-256 of each ast-grep ZIP in release metadata.
+    http_archive(
+        name = "tbhb_rules_ast_grep_macos_arm64",
+        build_file_content = _EXPORT.format("ast-grep"),
+        sha256 = "e18e13c27ed6c4b3ec4de00745b0755dee9dc26c035e226f4dd5d147dca99cc8",
+        url = "https://github.com/ast-grep/ast-grep/releases/download/0.51.0/app-aarch64-apple-darwin.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_ast_grep_linux_x86_64",
+        build_file_content = _EXPORT.format("ast-grep"),
+        sha256 = "a7eead5552d3a8daad70f5d50d935da44bd0c138e946b5b0a96b1d38169fa639",
+        url = "https://github.com/ast-grep/ast-grep/releases/download/0.51.0/app-x86_64-unknown-linux-gnu.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_ast_grep_linux_arm64",
+        build_file_content = _EXPORT.format("ast-grep"),
+        sha256 = "73af0ebe5958acee012754a5b2826a186580ef83333092408a7a01096fc30b8b",
+        url = "https://github.com/ast-grep/ast-grep/releases/download/0.51.0/app-aarch64-unknown-linux-gnu.zip",
+    )
+
+    http_archive(
+        name = "tbhb_rules_ast_grep_windows_x86_64",
+        build_file_content = _EXPORT.format("ast-grep.exe"),
+        sha256 = "1a5b7824c5925ac34257f806488e54860817cefd855fd308d13df7550d068908",
+        url = "https://github.com/ast-grep/ast-grep/releases/download/0.51.0/app-x86_64-pc-windows-msvc.zip",
+    )
+
     http_archive(
         name = "tbhb_rules_cog_macos_arm64",
         build_file_content = _EXPORT.format("cog"),
@@ -484,6 +513,17 @@ def _tools_impl(mctx):
             "linux_x86_64": "@tbhb_rules_actionlint_linux_x86_64//:actionlint",
             "macos_arm64": "@tbhb_rules_actionlint_macos_arm64//:actionlint",
             "windows_x86_64": "@tbhb_rules_actionlint_windows_x86_64//:actionlint.exe",
+        },
+    )
+
+    _tool_hub(
+        name = "tbhb_rules_ast_grep",
+        tool = "ast-grep",
+        binaries = {
+            "linux_arm64": "@tbhb_rules_ast_grep_linux_arm64//:ast-grep",
+            "linux_x86_64": "@tbhb_rules_ast_grep_linux_x86_64//:ast-grep",
+            "macos_arm64": "@tbhb_rules_ast_grep_macos_arm64//:ast-grep",
+            "windows_x86_64": "@tbhb_rules_ast_grep_windows_x86_64//:ast-grep.exe",
         },
     )
 

@@ -1,0 +1,53 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//lint:defs.bzl", "ast_grep_lint")
+load("//repo:defs.bzl", "repo_files")
+
+repo_files()
+
+filegroup(
+    name = "example_rules",
+    srcs = glob(["rules/example/**/*.yml"]),
+    visibility = ["//visibility:public"],
+)
+
+ast_grep_lint(
+    name = "clean",
+    srcs = ["testdata/clean.py"],
+    rule_dirs = [":example_rules"],
+)
+
+ast_grep_lint(
+    name = "mixed",
+    srcs = glob(["testdata/*.py"]),
+    rule_dirs = [":example_rules"],
+)
+
+[
+    sh_test(
+        name = mode + "_test",
+        srcs = ["ast_grep_test.sh"],
+        args = [mode],
+        data = [
+            ":clean",
+            ":mixed",
+            "@tbhb_rules_git//:git",
+        ] + glob(["testdata/*.py"]),
+        env = {
+            "CLEAN_RLOCATIONPATH": "$(rlocationpath :clean)",
+            "GIT_RLOCATIONPATH": "$(rlocationpath @tbhb_rules_git//:git)",
+            "MIXED_RLOCATIONPATH": "$(rlocationpath :mixed)",
+        },
+        # Tech debt: validate the ast-grep and Git subprocesses on Windows and remove this exclusion.
+        target_compatible_with = select({
+            "@platforms//os:windows": ["@platforms//:incompatible"],
+            "//conditions:default": [],
+        }),
+    )
+    for mode in [
+        "full",
+        "changed",
+    ]
+]

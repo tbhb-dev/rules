@@ -47,6 +47,12 @@
   // every .bazelversion as one group.
   packageRules: [
     {
+      description: "ast-grep archives move together",
+      matchManagers: ["bazel"],
+      matchDepNames: ["tbhb_rules_ast_grep_*"],
+      groupName: "ast-grep",
+    },
+    {
       description: "Temporal CLI archives move together",
       matchManagers: ["bazel"],
       matchDepNames: ["tbhb_rules_temporal_*"],

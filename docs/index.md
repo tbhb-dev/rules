@@ -8,6 +8,7 @@ Hand-written documentation for tbhb_rules, as an OKF v0.2 bundle. The rules for 
 
 ## Reference
 
+* [ast-grep lint](reference/ast-grep.md) - How to run ast-grep over declared Bazel sources.
 * [Commit identity](reference/commit-identity.md) - Allowed identities and required agent identity trailers.
 * [Content types](reference/content-types.md) - Reusable design templates, checks, and directory indexes for consuming repositories.
 * [Decision records](reference/decision-records.md) - Where decision records live, their names and frontmatter, and what the check enforces.

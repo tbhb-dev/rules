@@ -1,0 +1,1 @@
+ast_grep_example_placeholder()

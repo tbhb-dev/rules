@@ -163,6 +163,7 @@ sarif
 sess
 sessionstart
 setopt
+sgconfig
 shellcheck
 shfmt
 sitecustomize
