@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
-# cspell:ignore bootstatus launchctl simctl
+# cspell:ignore bootstatus launchctl simctl udid
 
 # Run with Bash and jq on Linux.
 set -euo pipefail
 
-work=$(mktemp -d)
+work=$(mktemp -d "${TMPDIR:-/tmp}/ios-smoke-stub.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/bin"
 export PATH="$work/bin:$PATH"
