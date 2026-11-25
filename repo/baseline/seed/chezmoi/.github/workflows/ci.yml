@@ -24,8 +24,10 @@ concurrency:
 
 jobs:
   # Bazel 9.x only, the version .bazelversion pins, on Linux (x86_64 and
-  # arm64), macOS (arm64) and Windows (x86_64). The checks that need the
-  # network or GitHub's API run on Linux only; they do not depend on the OS.
+  # arm64), macOS (arm64) and Windows (x86_64). Pull requests run Linux
+  # x86_64 only; the merge queue and pushes to main run every platform, so a
+  # platform break shows before merge. The checks that need the network or
+  # GitHub's API run on Linux only; they do not depend on the OS.
   bazel:
     name: "bazel (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
@@ -33,7 +35,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-26.04, ubuntu-26.04-arm, macos-26, windows-2025]
+        os: ${{ fromJSON(github.event_name == 'pull_request'
+          && '["ubuntu-26.04"]'
+          || '["ubuntu-26.04","ubuntu-26.04-arm","macos-26","windows-2025"]') }}
     defaults:
       run:
         shell: bash

@@ -82,6 +82,28 @@ def test_seed_ci_runs_on_merge_group(kind: str) -> None:
     assert any(key.value == "merge_group" for key, _ in events.value)
 
 
+SEED_MATRIX = re.compile(
+    r"\$\{\{ fromJSON\(github\.event_name == 'pull_request' "
+    r"&& '(\[[^']*\])' \|\| '(\[[^']*\])'\) \}\}"
+)
+
+
+@pytest.mark.parametrize("kind", ["chezmoi", "docs", "go", "python"])
+def test_seed_ci_runs_linux_amd64_only_on_pull_requests(kind: str) -> None:
+    path = ROOT / "seed" / kind / ".github" / "workflows" / "ci.yml"
+    workflow = yaml.safe_load(path.read_text(encoding="utf-8"))
+    os_source: str = workflow["jobs"]["bazel"]["strategy"]["matrix"]["os"]
+    os_expression = " ".join(os_source.split())
+    match = SEED_MATRIX.fullmatch(os_expression)
+    assert match, os_expression
+    pull_request, other = (json.loads(group) for group in match.groups())
+    assert pull_request == ["ubuntu-26.04"]
+    # The merge queue and pushes to main run every platform before and after merge.
+    assert other == ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"]
+    # The one required check, `conclusion`, needs the matrix job, not its legs.
+    assert workflow["jobs"]["conclusion"]["needs"] == ["bazel", "repo"]
+
+
 def test_ci_runs_on_merge_group() -> None:
     workflow = yaml.safe_load((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))
     # PyYAML's YAML 1.1 loader reads the `on` key as True.

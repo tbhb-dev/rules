@@ -169,7 +169,7 @@ In `mode: enforce`, the App token alone needs `pull-requests: write` to approve 
 
 ## In a consumer's `ci.yml`
 
-Adopt the rules pin update from Renovate, then edit the consumer's `ci.yml`: set `cache-save: false` on every test job and add one `cache-warm` job for pushes to `main`. Copy the `cache-warm` job from [this repository's `ci.yml`](../workflows/ci.yml), replace its local action reference with the same pinned remote reference as the test job, and set `fetch-workspaces` to the consumer's other workspace directories. Keep the four OS entries from the test matrix. The warm job hashes the root workspace files even when it fetches tools from another workspace. Keep `cache-warm` outside the required `conclusion` dependencies, because pull requests skip it.
+Adopt the rules pin update from Renovate, then edit the consumer's `ci.yml`: set `cache-save: false` on every test job and add one `cache-warm` job for pushes to `main`. Copy the `cache-warm` job from [this repository's `ci.yml`](../workflows/ci.yml), replace its local action reference with the same pinned remote reference as the test job, and set `fetch-workspaces` to the consumer's other workspace directories. Give it the four OS entries that the test matrix runs on the merge queue and on pushes. The warm job hashes the root workspace files even when it fetches tools from another workspace. Keep `cache-warm` outside the required `conclusion` dependencies, because pull requests skip it.
 
 Pin `tbhb-dev/rules` by commit and put the branch in a trailing comment. Renovate updates those action and workflow references along with the Bazel module pin. A rules pin update alone leaves an existing consumer's test jobs as cache writers until the `ci.yml` edit merges. The consumer changes the copied warm job's setup step to:
 
@@ -195,7 +195,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-26.04, ubuntu-26.04-arm, macos-26, windows-2025]
+        # Pull requests run Linux amd64 only. The merge queue and pushes run
+        # every platform, so a platform break shows before merge.
+        os: ${{ fromJSON(github.event_name == 'pull_request'
+          && '["ubuntu-26.04"]'
+          || '["ubuntu-26.04","ubuntu-26.04-arm","macos-26","windows-2025"]') }}
     defaults:
       run:
         shell: bash
@@ -241,6 +245,8 @@ jobs:
         with:
           needs: ${{ toJSON(needs) }}
 ```
+
+On a pull request the matrix keeps only `ubuntu-26.04`. The ruleset requires only `conclusion`, which needs the `bazel` job as a whole, so the missing legs leave no required check unreported. A `matrix.include` entry naming an OS that's missing from the list adds a leg for that OS. Derive per-OS values from `matrix.os` in expressions instead.
 
 ### Go SDK archive checksums
 

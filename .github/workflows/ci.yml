@@ -125,12 +125,14 @@ jobs:
           # Apple and Swift workspaces need Xcode, so their smoke consumers have
           # jobs of their own on a GitHub-hosted macOS runner.
           # GitHub fails an empty matrix; Apple or Swift changes keep root checks running.
+          # Pull requests run the Linux amd64 legs only. The merge queue and
+          # pushes run every platform, so a platform break shows before merge.
           matrix="$(jq -c --arg event "${EVENT}" '
             map(select(.id != "apple-smoke" and .id != "swift" and .id != "swift-smoke"))
             | if length == 0 then [{id: "root", dir: ".",
                 os: ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"]}] else . end
             | [.[] | . as $workspace | .os[] | {os: ., workspace: ($workspace | {id, dir})}]
-            | map(select($event == "push" or .os == "ubuntu-26.04" or .os == "ubuntu-26.04-arm"))
+            | map(select($event != "pull_request" or .os == "ubuntu-26.04"))
           ' <<<"${selected}")"
           apple="$(jq -r 'any(.[]; .id == "apple-smoke")' <<<"${selected}")"
           swift="$(jq -r 'any(.[]; .id == "swift-smoke")' <<<"${selected}")"

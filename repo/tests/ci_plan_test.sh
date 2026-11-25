@@ -187,16 +187,28 @@ for platform in apple swift; do
 done
 
 failures=0
-platforms='["ubuntu-26.04", "ubuntu-26.04-arm"]'
+# Pull requests run Linux amd64 only. The merge queue runs each workspace's
+# platforms, the four by default, as pushes do.
+pr_platforms='["ubuntu-26.04"]'
 for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs.bzl swift/e2e/smoke/BUILD.bazel swift/private/simulator/tbhb_rules_swift_simulator/test_simulator_runtime.py diagrams/structurizr/defs.bzl; do
   jq -n --arg path "$path" '[{filename: $path}]' >"$dir/files.json"
   result=$(run_plan pull_request "$dir/files.json")
   queue_result=$(run_plan merge_group "$dir/files.json")
-  [[ $queue_result == "$result" ]] || {
-    echo "FAIL: merge_group and pull_request differ for $path" >&2
+  # The queue selects the same workspaces and keeps every platform; the pull
+  # request keeps only the Linux amd64 legs of the queue's matrix.
+  # shellcheck disable=SC2016 # jq expands workspaces.
+  jq -e -n --argjson pr "$result" --argjson queue "$queue_result" --argjson workspaces "$workspaces" '
+    ($pr | del(.matrix)) == ($queue | del(.matrix))
+    and $pr.matrix == ($queue.matrix | map(select(.os == "ubuntu-26.04")))
+    and ($queue.matrix | group_by(.workspace.id) | all(
+      .[0].workspace.id as $id
+      | (map(.os) | sort) == ([$workspaces[] | select(.id == $id)][0].os
+          // ["ubuntu-26.04", "ubuntu-26.04-arm", "macos-26", "windows-2025"] | sort)))
+  ' >/dev/null || {
+    echo "FAIL: $path: merge_group must select the pull request's workspaces on every platform" >&2
     exit 1
   }
-  echo "PASS: merge_group matches pull_request for $path"
+  echo "PASS: merge_group runs every platform of the pull request's workspaces for $path"
   case $path in
   apple/e2e/smoke/BUILD.bazel)
     assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == true and .swift == false'
@@ -204,12 +216,13 @@ for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs
   README.md)
     # A root file must retain every workspace in the shared matrix.
     full_result=$result
+    full_queue_result=$queue_result
     # shellcheck disable=SC2016 # jq expands workspaces.
     assertion='(.selected | map(.id)) == ($workspaces | map(.id)) and .apple and .swift
       and (.matrix | map(.workspace.id) | unique) == ($workspaces | map(.id) - ["apple-smoke", "swift", "swift-smoke"] | sort)'
     ;;
   e2e/smoke/README.md)
-    assertion='(.matrix | length) == 2 and (.matrix | map(.workspace) | unique) == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false and .swift == false'
+    assertion='(.matrix | length) == 1 and (.matrix | map(.workspace) | unique) == [{id: "smoke", dir: "e2e/smoke"}] and .apple == false and .swift == false'
     ;;
   swift/defs.bzl)
     assertion='(.matrix | map(.workspace) | unique) == [{id: "root", dir: "."}] and .apple == false and .swift == true'
@@ -223,24 +236,26 @@ for path in apple/e2e/smoke/BUILD.bazel README.md e2e/smoke/README.md swift/defs
   *) assertion='true' ;;
   esac
   # cspell:ignore argjson
-  if ! jq -e --argjson platforms "$platforms" --argjson workspaces "$workspaces" "(.matrix | length > 0) and ($assertion)
+  if ! jq -e --argjson platforms "$pr_platforms" --argjson workspaces "$workspaces" "(.matrix | length > 0) and ($assertion)
     and (.matrix | group_by(.workspace.id) | all(map(.os) | sort == \$platforms))" <<<"$result" >/dev/null; then
     echo "FAIL: $path: unexpected matrix or smoke selection" >&2
     failures=$((failures + 1))
   fi
 done
 ((failures == 0)) || exit 1
-echo 'PASS: Apple and Swift changes keep a root matrix and select their smoke; root changes keep the shared matrix; all matrices are nonempty; Structurizr excludes Windows'
+echo 'PASS: Apple and Swift changes keep a root matrix and select their smoke; root changes keep the shared matrix; all matrices are nonempty; pull requests run Linux amd64 only; Structurizr excludes Windows'
 
 for event in pull_request merge_group; do
   limit=3000
+  expected=$full_result
   if [[ $event == merge_group ]]; then
     limit=300
+    expected=$full_queue_result
   fi
   for count in 0 "$limit"; do
     jq -n --argjson count "$count" '[range($count) | {filename: "e2e/smoke/file-\(.)"}]' >"$dir/files.json"
     result=$(run_plan "$event" "$dir/files.json")
-    [[ $result == "$full_result" ]] || {
+    [[ $result == "$expected" ]] || {
       echo "FAIL: $event with $count changed files did not select the full matrix" >&2
       exit 1
     }
