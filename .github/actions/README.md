@@ -130,7 +130,7 @@ jobs:
   approve:
     permissions:
       actions: read
-    uses: tbhb-dev/rules/.github/workflows/tier0-approval.yml@<sha>
+    uses: tbhb-dev/rules/.github/workflows/tier0-approval.yml@bf77356b02e39e2e55d44848ebf5f51dd99a1b9a  # main
     with:
       mode: enforce
       check_workflows: |
