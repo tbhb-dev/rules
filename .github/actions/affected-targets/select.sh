@@ -42,12 +42,15 @@ show() {
 }
 
 # clean: the tree and every submodule hold no change, untracked files
-# included whatever status.showUntrackedFiles says. Git's errors go nowhere,
-# since a submodule's path can hold a workflow command.
+# included whatever status.showUntrackedFiles says, and no index entry is
+# marked assume-unchanged (a lowercase tag) or skip-worktree (`S`), which
+# hides a change from git status. Git's errors go nowhere, since a
+# submodule's path can hold a workflow command.
 clean() {
-  local changes
+  local changes flags
   changes=$(git status --porcelain --untracked-files=all --ignore-submodules=none 2>/dev/null) &&
-    [[ -z $changes ]]
+    [[ -z $changes ]] && flags=$(git ls-files -v --recurse-submodules :/ 2>/dev/null) &&
+    ! grep -q '^[[:lower:]S]' <<<"$flags"
 }
 
 # at_head: HEAD is the event's head and, once a tool has run, the checkout is
@@ -138,7 +141,7 @@ want=${HEAD_SHA:-$head}
 [[ -n ${QUERY:-} && $QUERY != *$'\n'* ]] || finish all 'the query is not one line'
 git cat-file -e "${BASE_SHA:-}^{commit}" 2>/dev/null ||
   finish all "the base '${BASE_SHA:-}' is missing from the checkout (check out with fetch-depth: 0)"
-git -c core.quotePath=false diff -z --raw --no-renames --output="$changed" "$BASE_SHA" "$head" 2>&1 | show >&2 ||
+git -c core.quotePath=false diff -z --raw --no-renames --ignore-submodules=none --output="$changed" "$BASE_SHA" "$head" 2>&1 | show >&2 ||
   finish all 'git diff failed'
 
 # A submodule's commit (mode 160000) is no file target-determinator can
@@ -163,7 +166,7 @@ minutes=${TIMEOUT_MINUTES:-15}
 seconds=${TIMEOUT_SECONDS:-$((minutes * 60))}
 
 # target-determinator would analyze a change on top of the head as the head.
-clean || finish all "the checkout of $head has changes, or git status failed"
+clean || finish all "the checkout of $head has changes or flagged index entries, or git failed"
 
 args=(-bazel bazelisk -nocache_results -delete-cached-worktree
   -before-query-error-behavior=fatal -targets "$QUERY")

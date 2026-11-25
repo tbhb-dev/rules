@@ -225,6 +225,14 @@ git config status.showUntrackedFiles no
 : >sub/stray
 STATUS='?? sub/stray' run 'hidden untracked file' pull_request "$docs_head"
 rm sub/stray
+# An index flag hides a changed file from git status, so the script tests everything.
+for flag in assume-unchanged skip-worktree; do
+  git update-index "--$flag" README.md
+  echo dirty >>README.md
+  run "$flag" pull_request "$docs_head"
+  git update-index "--no-$flag" README.md
+  git checkout -q README.md
+done
 
 # No checkout at all: the event's head can't be checked, so the step fails.
 refuse 'no checkout' "$scratch/no-git"
@@ -294,3 +302,11 @@ git -C lib checkout -q "$lib_base"
 bumped=$(commit)
 BASE_SHA=$mixed_head run 'submodule commit' pull_request "$bumped"
 [[ $reason == 'the submodule lib changed' ]] || fail 'submodule commit: wrong reason'
+
+# `ignore = all` in .gitmodules hides a submodule's commit from git diff.
+git config -f .gitmodules submodule.lib.ignore all
+ignored=$(commit)
+git -C lib checkout -q "$lib_head"
+git update-index --cacheinfo "160000,$lib_head,lib"
+hidden=$(commit)
+BASE_SHA=$ignored run 'ignored submodule commit' pull_request "$hidden"
