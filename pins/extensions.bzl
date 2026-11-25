@@ -390,6 +390,35 @@ def _tools_impl(mctx):
         url = "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.zip",
     )
 
+    # Temporal publishes these four digests in the release's checksums.txt.
+    http_archive(
+        name = "tbhb_rules_temporal_linux_arm64",
+        build_file_content = _EXPORT.format("temporal"),
+        sha256 = "2f748e9411b37c9cabb57f1f08e37765388c12b5534432c7aea28b593df9145d",
+        url = "https://github.com/temporalio/cli/releases/download/v1.10.1/temporal_cli_1.10.1_linux_arm64.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_temporal_linux_x86_64",
+        build_file_content = _EXPORT.format("temporal"),
+        sha256 = "4c1500e2ce2d4de136e5fe8852d9b7f82eb62f19b6b383b3e0c040519a9d20b1",
+        url = "https://github.com/temporalio/cli/releases/download/v1.10.1/temporal_cli_1.10.1_linux_amd64.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_temporal_macos_arm64",
+        build_file_content = _EXPORT.format("temporal"),
+        sha256 = "94f7f982b26438e8abbde6000ba471b694be6a2413b31f6162f87a9f9c48c738",
+        url = "https://github.com/temporalio/cli/releases/download/v1.10.1/temporal_cli_1.10.1_darwin_arm64.tar.gz",
+    )
+
+    http_archive(
+        name = "tbhb_rules_temporal_windows_x86_64",
+        build_file_content = _EXPORT.format("temporal.exe"),
+        sha256 = "5069cdb76569914305ed7c90e1c8406cd27bcb6c2a822fce201a488c34ab074f",
+        url = "https://github.com/temporalio/cli/releases/download/v1.10.1/temporal_cli_1.10.1_windows_amd64.zip",
+    )
+
     http_archive(
         name = "tbhb_rules_tombi_windows_x86_64",
         build_file_content = _EXPORT.format("tombi.exe"),
@@ -584,6 +613,17 @@ def _tools_impl(mctx):
             "linux_x86_64": "@tbhb_rules_shfmt_linux_x86_64//file:shfmt",
             "macos_arm64": "@tbhb_rules_shfmt_macos_arm64//file:shfmt",
             "windows_x86_64": "@tbhb_rules_shfmt_windows_x86_64//file:shfmt.exe",
+        },
+    )
+
+    _tool_hub(
+        name = "tbhb_rules_temporal",
+        tool = "temporal",
+        binaries = {
+            "linux_arm64": "@tbhb_rules_temporal_linux_arm64//:temporal",
+            "linux_x86_64": "@tbhb_rules_temporal_linux_x86_64//:temporal",
+            "macos_arm64": "@tbhb_rules_temporal_macos_arm64//:temporal",
+            "windows_x86_64": "@tbhb_rules_temporal_windows_x86_64//:temporal.exe",
         },
     )
 
