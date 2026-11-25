@@ -10,7 +10,6 @@ import json
 import os
 import re
 import subprocess  # nosec B404 - Uses argument vectors with Git and GitHub CLI only.
-import sys
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, cast
@@ -198,7 +197,6 @@ def evaluate(
         and env["DESIGN_GO_SHA"] != head
     ):
         raise HoldError("design-needs-go")
-    result["base_ref"] = pr_base["ref"]
     return endpoint, base
 
 
@@ -279,40 +277,5 @@ def main() -> None:
     print(artifact)  # noqa: T201
 
 
-def merge() -> None:
-    result = record(json.loads(Path(ARTIFACT).read_text(encoding="utf-8")))
-    repo, pr = os.environ["GITHUB_REPOSITORY"], str(result["pr"])
-    try:
-        current = record(api(repo, f"pulls/{pr}"))
-        if record(current["base"])["ref"] != result["base_ref"]:
-            reason = "base-changed"
-        else:
-            # gh handles enqueueing when the base requires a queue.
-            head_sha = result["head_sha"]
-            head = cast("str", head_sha)  # pragma: no mutate
-            command(
-                "gh",
-                "pr",
-                "merge",
-                pr,
-                "--repo",
-                repo,
-                "--squash",
-                "--match-head-commit",
-                head,
-            )
-            reason = "merge-requested"
-    except KeyError, TypeError, ValueError, OSError, subprocess.CalledProcessError:
-        reason = "merge-failed"
-    result["reason"] = reason
-    pending = Path("tier0-merge.json")
-    pending.write_text(f"{json.dumps(result)}\n", encoding="utf-8")
-    pending.replace(ARTIFACT)
-    with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
-        output.write(f"reason={reason}\n")
-    if reason != "merge-requested":
-        raise SystemExit(1)
-
-
 if __name__ == "__main__":
-    (merge if sys.argv[1:] == ["merge"] else main)()
+    main()

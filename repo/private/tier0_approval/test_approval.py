@@ -5,9 +5,11 @@
 
 import json
 import os
+import runpy
 import subprocess
+import sys
 from pathlib import Path
-from unittest.mock import Mock, call
+from unittest.mock import Mock, call, patch
 
 import pytest
 import yaml
@@ -399,7 +401,6 @@ def test_enforce(api: Mock, monkeypatch: pytest.MonkeyPatch) -> None:
         "head_sha": HEAD,
         "pr": 5,
         "files": 1,
-        "base_ref": "main",
     }
 
 
@@ -409,7 +410,7 @@ def files(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, Mock]:
     monkeypatch.setenv("GITHUB_REPOSITORY", REPO)
     monkeypatch.setenv("GITHUB_OUTPUT", "output")
     Path("output").write_text("previous=value\n", encoding="utf-8")
-    names = (str(ARTIFACT), "tier0-merge.json", "output", "event")
+    names = (str(ARTIFACT), "output", "event")
     spies = {name: Mock(wraps=Path(name)) for name in names}
     monkeypatch.setattr(gate, "Path", spies.__getitem__)
     return spies
@@ -459,50 +460,52 @@ def test_main(
     assert Path("output").read_text(encoding="utf-8") == f"{previous}head_sha={HEAD}\n"
 
 
-@pytest.mark.parametrize(
-    ("branch", "reason"),
-    [("main", "merge-requested"), ("other", "base-changed"), ("main", "merge-failed")],
-)
-def test_merge(
-    monkeypatch: pytest.MonkeyPatch, files: dict[str, Mock], branch: str, reason: str
+@pytest.mark.parametrize("arguments", [(), ("merge",)])
+def test_enforce_cli_only_reviews(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, arguments: tuple[str, ...]
 ) -> None:
-    decision = {"pr": 5, "base_ref": "main", "head_sha": HEAD, "reason": "tier0"}
-    ARTIFACT.write_text(json.dumps(decision), encoding="utf-8")
-    api = Mock(return_value={"base": {"ref": branch}})
-    command = Mock()
-    if reason == "merge-failed":
-        command.configure_mock(side_effect=subprocess.CalledProcessError(1, "gh"))
-    monkeypatch.setattr(gate, "api", api)
-    monkeypatch.setattr(gate, "command", command)
-    if reason == "merge-requested":
-        gate.merge()
-    else:
-        with pytest.raises(SystemExit) as error:
-            gate.merge()
-        assert error.value.code == 1
-    api.assert_called_once_with(REPO, "pulls/5")
-    if branch == "main":
-        command.assert_called_once_with(
-            "gh",
-            "pr",
-            "merge",
-            "5",
-            "--repo",
-            REPO,
-            "--squash",
-            "--match-head-commit",
-            HEAD,
-        )
-    else:
-        command.assert_not_called()
-    artifact = f"{json.dumps(decision | {'reason': reason})}\n"
-    files[str(ARTIFACT)].read_text.assert_called_once_with(encoding="utf-8")
-    pending = files["tier0-merge.json"]
-    pending.write_text.assert_called_once_with(artifact, encoding="utf-8")
-    pending.replace.assert_called_once_with(str(ARTIFACT))
-    files["output"].open.assert_called_once_with("a", encoding="utf-8")
-    assert ARTIFACT.read_text(encoding="utf-8") == artifact
-    assert (
-        Path("output").read_text(encoding="utf-8")
-        == f"previous=value\nreason={reason}\n"
+    script = str(Path(__file__).with_name("__main__.py"))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "argv", [script, *arguments])
+    env = ENV | {
+        "MODE": "enforce",
+        "GITHUB_EVENT_PATH": "event",
+        "GITHUB_OUTPUT": "output",
+        "ACTIONS_TOKEN": "job-token",
+    }
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    Path("event").write_text(json.dumps({"workflow_run": RUN}), encoding="utf-8")
+    request = Mock(
+        side_effect=[
+            *map(json.dumps, EVIDENCE[:4]),
+            json.dumps({"workflow_runs": [WORKFLOW_RUN]}),
+            json.dumps([{"check_runs": [CHECK]}]),
+            "",
+            "",
+            ":100644 100644 777 000 M\0README.md\x001\t0\tREADME.md\0",
+            *map(json.dumps, EVIDENCE[4:]),
+        ]
     )
+    monkeypatch.setattr(gate.subprocess, "check_output", request)
+    with patch.object(Path, "open", autospec=True, side_effect=Path.open) as opened:
+        runpy.run_path(script, run_name="__main__")
+
+    gh_commands = [
+        entry.args[0] for entry in request.call_args_list if entry.args[0][0] == "gh"
+    ]
+    assert all(args[:2] == ("gh", "api") for args in gh_commands)
+    assert gh_commands[-1] == (
+        "gh",
+        "api",
+        f"repos/{REPO}/pulls/5/reviews?",
+        "--method",
+        "POST",
+        "-f",
+        f"commit_id={HEAD}",
+        "-f",
+        "event=APPROVE",
+    )
+    opened_paths = {entry.args[0].name for entry in opened.call_args_list}
+    assert "tier0-merge.json" not in opened_paths
+    assert json.loads(ARTIFACT.read_text(encoding="utf-8"))["decision"] == "approve"
