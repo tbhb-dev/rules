@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
-# cspell:ignore bootstatus datamigrator launchctl presettle simctl udid
+# cspell:ignore bootstatus datamigrator devicetypes endgroup launchctl presettle simctl udid
 
 # Run with Bash and jq on Linux.
 set -euo pipefail
