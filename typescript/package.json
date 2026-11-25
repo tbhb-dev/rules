@@ -12,7 +12,7 @@
     "dependency-cruiser": "18.8.0",
     "eslint": "10.15.0",
     "eslint-plugin-sonarjs": "4.2.2",
-    "eslint-plugin-storybook": "10.6.7",
+    "eslint-plugin-storybook": "10.6.8",
     "knip": "6.45.1",
     "pnpm": "12.21.0",
     "typescript": "6.0.3",
