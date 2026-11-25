@@ -60,7 +60,10 @@ def api(
 
 def context_pass(repo: str, head: str, spec: str) -> bool:
     name, _, workflow = (part.strip() for part in spec.rpartition(":"))
-    if not (name and re.fullmatch(r"[1-9][0-9]*", workflow)):
+    numeric = re.fullmatch(r"[1-9][0-9]*", workflow)
+    if not name or (
+        not numeric and not re.fullmatch(r"(?!\.\.)[A-Za-z0-9._-]+\.ya?ml", workflow)
+    ):
         return False
     response = api(
         repo,
@@ -74,8 +77,15 @@ def context_pass(repo: str, head: str, spec: str) -> bool:
     if not runs:
         return False
     run = runs[0]
-    if (run["workflow_id"], run["head_sha"], run["conclusion"]) != (
-        int(workflow),
+    if numeric:
+        identity = run["workflow_id"]
+    else:
+        path = run["path"]
+        if not isinstance(path, str):
+            return False
+        identity = path.split("@")[0]
+    if (identity, run["head_sha"], run["conclusion"]) != (
+        int(workflow) if numeric else f".github/workflows/{workflow}",
         head,
         "success",
     ):

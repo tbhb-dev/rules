@@ -8,7 +8,7 @@ on:
   workflow_call:
     inputs:
       check_workflows:
-        description: Required check names and numeric workflow IDs, one context:workflow-id per line.
+        description: Required check names and workflow file names or numeric IDs, one context:workflow per line.
         type: string
         required: true
       tier0_paths:

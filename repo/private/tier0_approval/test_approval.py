@@ -121,12 +121,78 @@ def test_unsuccessful_context(
     assert not gate.context_pass(REPO, HEAD, "CI:123")
 
 
-@pytest.mark.parametrize("spec", ["", "  ", "CI", "CI:01", ":123"])
+@pytest.mark.parametrize(
+    "spec",
+    [
+        "",
+        "  ",
+        "CI",
+        "CI:0",
+        "CI:01",
+        ":123",
+        ":ci.yml",
+        "CI:../ci.yml",
+        "CI:..ci.yml",
+        "CI:workflows/ci.yml",
+        r"CI:workflows\ci.yml",
+        "CI:ci.yml?x=1",
+        "CI:ci.yml#ref",
+        "CI:ci",
+        "CI:.yml",
+        "CI:",
+    ],
+)
 def test_invalid_context(monkeypatch: pytest.MonkeyPatch, spec: str) -> None:
     api = Mock()
     monkeypatch.setattr(gate, "api", api)
     assert not gate.contexts_pass(REPO, HEAD, spec)
     api.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("workflow", "ref"), [("ci.yml", ""), (".CI_build-2.0.yaml", "@refs/heads/main")]
+)
+def test_workflow_file_context(
+    monkeypatch: pytest.MonkeyPatch, workflow: str, ref: str
+) -> None:
+    run = SUCCESS | {"path": f".github/workflows/{workflow}{ref}", "check_suite_id": 3}
+    api = Mock(side_effect=[{"workflow_runs": [run]}, [{"check_runs": [CHECK]}]])
+    monkeypatch.setattr(gate, "api", api)
+    assert gate.context_pass(REPO, HEAD, f" CI : {workflow} ")
+    assert api.call_args_list == [
+        call(
+            REPO,
+            f"actions/workflows/{workflow}/runs",
+            auth_env="ACTIONS_TOKEN",
+            head_sha=HEAD,
+            per_page="1",
+        ),
+        call(
+            REPO, "check-suites/3/check-runs", "--paginate", "--slurp", check_name="CI"
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    "run_fields",
+    [
+        {"path": "elsewhere/ci.yml"},
+        {"path": ".github/workflows/other.yml"},
+        {"path": None},
+        {"head_sha": BASE},
+        {"conclusion": "failure"},
+    ],
+)
+def test_unsuccessful_workflow_file_context(
+    monkeypatch: pytest.MonkeyPatch, run_fields: gate.Record
+) -> None:
+    run = (
+        SUCCESS | {"path": ".github/workflows/ci.yml", "check_suite_id": 3} | run_fields
+    )
+    api = Mock(return_value={"workflow_runs": [run]})
+    monkeypatch.setattr(gate, "api", api)
+    assert not gate.context_pass(REPO, HEAD, "CI:ci.yml")
+    api.assert_called_once()
 
 
 def test_contexts(monkeypatch: pytest.MonkeyPatch) -> None:
