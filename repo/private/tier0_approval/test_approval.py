@@ -4,6 +4,7 @@
 # cspell:ignore textconv Adraft
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from unittest.mock import Mock, call
@@ -129,24 +130,67 @@ def test_invalid_context(monkeypatch: pytest.MonkeyPatch, spec: str) -> None:
 def test_contexts(monkeypatch: pytest.MonkeyPatch) -> None:
     stage = CHECK | {"name": "CI: stage"}
     pages = [{"check_runs": [CHECK]}, {"check_runs": [stage]}]
-    api = Mock(
-        side_effect=[{"workflow_runs": [WORKFLOW_RUN]}, pages, {"workflow_runs": []}]
-    )
-    monkeypatch.setattr(gate, "api", api)
+    runs = {"workflow_runs": [WORKFLOW_RUN]}
+    request = Mock(side_effect=map(json.dumps, (runs, pages, {"workflow_runs": []})))
+    monkeypatch.setattr(gate.subprocess, "check_output", request)
+    app_credential = "app-token"
+    monkeypatch.setenv("GH_TOKEN", app_credential)
+    monkeypatch.setenv("ACTIONS_TOKEN", "job-token")
+    actions_env = os.environ | {"GH_TOKEN": "job-token"}
     assert not gate.contexts_pass(REPO, HEAD, " CI: stage : 123 \nOther:456")
-    assert api.call_args_list == [
-        call(REPO, "actions/workflows/123/runs", head_sha=HEAD, per_page="1"),
+    assert request.call_args_list == [
         call(
-            REPO,
-            "check-suites/3/check-runs",
-            "--paginate",
-            "--slurp",
-            check_name="CI: stage",
+            (
+                "gh",
+                "api",
+                f"repos/{REPO}/actions/workflows/123/runs?head_sha={HEAD}&per_page=1",
+            ),
+            encoding="utf-8",
+            stderr=subprocess.PIPE,
+            env=actions_env,
         ),
-        call(REPO, "actions/workflows/456/runs", head_sha=HEAD, per_page="1"),
+        call(
+            (
+                "gh",
+                "api",
+                f"repos/{REPO}/check-suites/3/check-runs?check_name=CI%3A+stage",
+                "--paginate",
+                "--slurp",
+            ),
+            encoding="utf-8",
+            stderr=subprocess.PIPE,
+            env=None,
+        ),
+        call(
+            (
+                "gh",
+                "api",
+                f"repos/{REPO}/actions/workflows/456/runs?head_sha={HEAD}&per_page=1",
+            ),
+            encoding="utf-8",
+            stderr=subprocess.PIPE,
+            env=actions_env,
+        ),
     ]
-    api.configure_mock(side_effect=[{"workflow_runs": [WORKFLOW_RUN]}, pages])
+    assert os.environ["GH_TOKEN"] == app_credential
+    request.configure_mock(side_effect=map(json.dumps, (runs, pages)))
     assert gate.contexts_pass(REPO, HEAD, "CI: stage:123")
+
+
+@pytest.mark.parametrize("token", [None, ""])
+def test_missing_actions_token(
+    monkeypatch: pytest.MonkeyPatch, token: str | None
+) -> None:
+    if token is None:
+        monkeypatch.delenv("ACTIONS_TOKEN", raising=False)
+    else:
+        monkeypatch.setenv("ACTIONS_TOKEN", token)
+    monkeypatch.setenv("GH_TOKEN", "app-token")
+    request = Mock()
+    monkeypatch.setattr(gate.subprocess, "check_output", request)
+    with pytest.raises(gate.HoldError, match=r"^missing-actions-token$"):
+        gate.context_pass(REPO, HEAD, "CI:123")
+    request.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -390,11 +434,13 @@ def test_main(
             ("gh", "api", endpoint, "--paginate", "--slurp"),
             encoding="utf-8",
             stderr=subprocess.PIPE,
+            env=None,
         ),
         call(
             ("gh", "api", f"repos/{REPO}/pulls/5?"),
             encoding="utf-8",
             stderr=subprocess.PIPE,
+            env=None,
         ),
     ]
     artifact = ARTIFACT.read_text(encoding="utf-8")
