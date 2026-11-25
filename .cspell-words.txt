@@ -18,6 +18,7 @@ buildifier
 buildmeta
 buildozer
 buildtag
+bzlmod
 cacheinfo
 cainfo
 cand
@@ -30,6 +31,7 @@ compgen
 complexipy
 conftest
 cpus
+cquery
 cuda
 cyclop
 deadcode
@@ -37,6 +39,7 @@ delenv
 depguard
 depset
 deptry
+determinator
 direnv
 docstrings
 DTCG

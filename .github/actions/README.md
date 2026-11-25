@@ -4,6 +4,7 @@ Repositories using `tbhb_rules` would otherwise each copy the same CI. The share
 
 - `.github/actions/setup-bazel-ci` prepares a Bazel job.
 - `.github/actions/ci-conclusion` decides the `conclusion` check.
+- `.github/actions/affected-targets` chooses the test targets that a change can affect.
 - `.github/workflows/repo-checks.yml` runs the repository-level checks.
 - `.github/workflows/pr-text.yml` scans a pull request's title and body after an edit.
 
@@ -49,6 +50,31 @@ The action prints the `needs` context and fails unless every result equals `succ
 ### `conclusion` stays a local job
 
 Keep a job named `conclusion` in your own `ci.yml` and call this action from it. The ruleset requires the check context `conclusion`, and a job that calls a reusable workflow reports a different context. Give the job `if: always()` so it runs after a failed job.
+
+## `affected-targets`
+
+The action chooses the test targets that a pull request or merge group can affect, inside one workspace. The `plan` job in `ci.yml` chooses workspaces. This action narrows the targets within each one. Run it after `checkout` with `fetch-depth: 0`, so the base commit is present, and after `setup-bazel-ci`, which puts `bazelisk` on `PATH`.
+
+On Linux x64 and arm64, the action downloads [target-determinator](https://github.com/bazel-contrib/target-determinator) v0.34.1 and checks it against a pinned sha256. target-determinator compares the configured targets of the base commit with the checkout and prints the targets whose inputs, rule, or configuration changed. The base is `pull_request.base.sha` or `merge_group.base_sha`. The checkout must be `github.sha`, or `merge_group.head_sha` in a merge group.
+
+When the action can't decide, it selects `//...`:
+
+- A `push` or `schedule` event, or any other event that isn't `pull_request` or `merge_group`.
+- A missing base commit, a base commit absent from the checkout, or a checkout other than the event's head.
+- A change to `MODULE.bazel`, `MODULE.bazel.lock`, `WORKSPACE`, `WORKSPACE.bazel`, `WORKSPACE.bzlmod`, `.bazelversion`, or any `*bazelrc` file (including `.bazelrc` and `preset.bazelrc`), in any directory.
+- A runner other than Linux x64 or arm64, or a failed download or checksum.
+- A target-determinator failure, including a base commit that doesn't build and a run longer than `timeout-minutes`.
+
+Every run writes its count and reason to the job summary and to the `reason` output. An empty `targets` output means the change affects no test target, which the summary reports as a count of 0. The caller then skips `bazel test`. Pass `--skip_incompatible_explicit_targets` to `bazel test`, because explicit labels that are incompatible with the platform fail without it.
+
+| Input               | Default | Meaning |
+|---------------------|---------|---------|
+| `working-directory` | `.`     | The Bazel workspace to query. |
+| `query`             | `tests(//...) except attr(tags, "\bmanual\b", //...)` | The candidate targets. target-determinator reports tests tagged `manual` too, so the default removes them. |
+| `bazel-opts`        | `--config=ci` | Options for target-determinator's cquery, split on whitespace. Match the options of the test step. |
+| `timeout-minutes`   | `15`    | Whole minutes target-determinator may run before the action selects `//...`. |
+
+The outputs are `all` (`true` on a fallback), `count` (a number, or `all`), `reason`, `targets` (separated by spaces), and `file` (one target per line, for `--target_pattern_file`). `//repo/tests:affected_targets_test` checks the selection and each fallback, with a fake target-determinator.
 
 ## `repo-checks.yml`
 
