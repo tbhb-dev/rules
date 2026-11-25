@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
-# cspell:ignore bootstatus datamigrator devicetypes endgroup launchctl presettle simctl tonumber udid
+# cspell:ignore bootstatus datamigrator devicetypes endgroup launchctl presettle simctl udid
 
 set -euo pipefail
 
@@ -52,14 +52,21 @@ log_simulator_logs() {
 }
 
 settle_simulator() (
-  local diagnostics='' udid='' name=PRESETTLE_$$ runtime device_type start boot_status=0
+  # Match the runner settings in apple/e2e/smoke/BUILD.bazel and swift/defs.bzl.
+  local test_device='iPhone 17' test_os='27.2'
+  local diagnostics='' udid='' keep_device=false start boot_status=0
+  local name runtime runtime_version device_type device_name
   trap '
     if [[ -n $udid ]]; then
       if ! run_with_limit 20 xcrun simctl shutdown "$udid" >"$diagnostics/shutdown" 2>&1; then
-        echo "Could not shut down $udid"
-        cat "$diagnostics/shutdown" || true
+        if [[ $keep_device == false ]] ||
+          ! run_with_limit 60 xcrun simctl shutdown "$udid" >>"$diagnostics/shutdown" 2>&1; then
+          echo "Could not shut down $udid"
+          cat "$diagnostics/shutdown" || true
+        fi
       fi
-      if ! run_with_limit 20 xcrun simctl delete "$udid" >"$diagnostics/delete" 2>&1; then
+      if [[ $keep_device == false ]] &&
+        ! run_with_limit 20 xcrun simctl delete "$udid" >"$diagnostics/delete" 2>&1; then
         echo "Could not delete $udid"
         cat "$diagnostics/delete" || true
       fi
@@ -75,35 +82,36 @@ settle_simulator() (
   fi
 
   if ! run_with_limit 20 xcrun simctl list runtimes --json >"$diagnostics/runtimes" 2>"$diagnostics/error" ||
-    ! run_with_limit 20 jq -er '
-      .runtimes | map(select(.isAvailable and (.identifier | startswith("com.apple.CoreSimulator.SimRuntime.iOS-"))))
-      | sort_by(.version | split(".") | map(tonumber)) | last | .identifier
-    ' "$diagnostics/runtimes" >"$diagnostics/runtime" 2>>"$diagnostics/error" ||
-    ! IFS= read -r runtime <"$diagnostics/runtime"; then
+    ! run_with_limit 20 jq -er --arg version "$test_os" --arg device "$test_device" "
+      first(.runtimes[] | select(.platform == \"iOS\" and .isAvailable and .version == \$version
+        and any(.supportedDeviceTypes[]?; .name == \$device)))
+      | .identifier, .version
+    " "$diagnostics/runtimes" >"$diagnostics/runtime" 2>>"$diagnostics/error" ||
+    ! { IFS= read -r runtime && IFS= read -r runtime_version; } <"$diagnostics/runtime"; then
     echo 'Could not select an available iOS runtime'
     cat "$diagnostics/error" || true
     return 0
   fi
 
   if ! run_with_limit 20 xcrun simctl list devicetypes --json >"$diagnostics/types" 2>"$diagnostics/error" ||
-    ! run_with_limit 20 jq -er '
-      .devicetypes | map(select(.name | startswith("iPhone")))
-      | ((map(select(.name == "iPhone 17")) | first) // first) | .identifier
-    ' "$diagnostics/types" >"$diagnostics/type" 2>>"$diagnostics/error" ||
-    ! IFS= read -r device_type <"$diagnostics/type"; then
+    ! run_with_limit 20 jq -er --arg device "$test_device" \
+      "first(.devicetypes[] | select(.name == \$device)) | .identifier, .name" \
+      "$diagnostics/types" >"$diagnostics/type" 2>>"$diagnostics/error" ||
+    ! { IFS= read -r device_type && IFS= read -r device_name; } <"$diagnostics/type"; then
     echo 'Could not select an iPhone device type'
     cat "$diagnostics/error" || true
     return 0
   fi
 
+  name="BAZEL_TEST_${device_name}_${runtime_version}"
   if ! run_with_limit 20 xcrun simctl create "$name" "$device_type" "$runtime" >"$diagnostics/create" 2>"$diagnostics/error" ||
     ! IFS= read -r udid <"$diagnostics/create" || [[ -z $udid ]]; then
     echo "Could not create $name"
     cat "$diagnostics/error" || true
     # Creation can be interrupted after the device has been registered.
     if run_with_limit 20 xcrun simctl list devices --json >"$diagnostics/created-devices" 2>"$diagnostics/error" &&
-      run_with_limit 20 jq -r --arg name "$name" \
-        ".devices[][] | select(.name == \$name) | .udid" "$diagnostics/created-devices" \
+      run_with_limit 20 jq -r --arg name "$name" --arg runtime "$runtime" \
+        ".devices[\$runtime][]? | select(.name == \$name) | .udid" "$diagnostics/created-devices" \
         >"$diagnostics/created-udid" 2>>"$diagnostics/error"; then
       IFS= read -r udid <"$diagnostics/created-udid" || true
     fi
@@ -120,7 +128,9 @@ settle_simulator() (
   run_with_limit 600 xcrun simctl bootstatus "$udid" -b >"$diagnostics/bootstatus" 2>&1 || boot_status=$?
   echo "Pre-settle bootstatus finished after $((SECONDS - start)) seconds (status $boot_status)"
   cat "$diagnostics/bootstatus" || true
-  if ((boot_status == 124)); then
+  if ((boot_status == 0)); then
+    keep_device=true
+  elif ((boot_status == 124)); then
     echo "Data migration service for $udid (up to 20 seconds)"
     run_with_limit 20 xcrun simctl spawn "$udid" launchctl print system/com.apple.datamigrator >"$diagnostics/migration" 2>&1 || true
     cat "$diagnostics/migration" || true
