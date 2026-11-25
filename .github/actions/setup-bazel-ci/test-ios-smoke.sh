@@ -36,18 +36,30 @@ log_simulator_timeout() (
     wait "$pid"
   }
 
+  local diagnostics boot_status
+  diagnostics=$(mktemp -d "$RUNNER_TEMP/ios-diagnostics.XXXXXX") || return 0
+  trap 'rm -rf "$diagnostics"' EXIT
+
+  # A descendant can keep writing after the timed command exits, so read from files.
   echo '::group::iOS simulator diagnostics after TIMEOUT'
   xcrun simctl list devices || true
   list_test_simulators |
     while IFS= read -r udid; do
       echo "Boot status for $udid (up to 120 seconds)"
-      run_with_limit 120 xcrun simctl bootstatus "$udid" ||
-        echo "Boot status for $udid exited with status $?"
+      boot_status=0
+      run_with_limit 120 xcrun simctl bootstatus "$udid" >"$diagnostics/boot" 2>&1 || boot_status=$?
+      cat "$diagnostics/boot" || true
+      if ((boot_status != 0)); then
+        echo "Boot status for $udid exited with status $boot_status"
+      fi
       echo "Launch services for $udid (up to 20 seconds)"
-      run_with_limit 20 xcrun simctl spawn "$udid" launchctl list | head -n 40 || true
+      run_with_limit 20 xcrun simctl spawn "$udid" launchctl list >"$diagnostics/launch" 2>&1 || true
+      head -n 40 "$diagnostics/launch" || true
+      rm -f "$diagnostics/boot" "$diagnostics/launch"
     done || true
   run_with_limit 20 log show --last 10m --style compact \
-    --predicate 'process == "launchd_sim" OR subsystem == "com.apple.CoreSimulator"' | tail -n 80 || true
+    --predicate 'process == "launchd_sim" OR subsystem == "com.apple.CoreSimulator"' >"$diagnostics/log" 2>&1 || true
+  tail -n 80 "$diagnostics/log" || true
   echo '::endgroup::'
 )
 
