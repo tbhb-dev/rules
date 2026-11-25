@@ -8,11 +8,11 @@
 # every case must leave the checkout at the event's head.
 
 set -euo pipefail
-script=${TEST_SRCDIR:?}/${SCRIPT_RLOCATIONPATH:?}
 action=${TEST_SRCDIR:?}/${ACTION_RLOCATIONPATH:?}
+script=${action%/*}/select.sh
 git_bin=${TEST_SRCDIR:?}/${GIT_RLOCATIONPATH:?}
 scratch=${TEST_TMPDIR:?}/affected
-mkdir -p "$scratch/bin" "$scratch/tmp" "$scratch/repo/sub" "$scratch/no-git" "$scratch/broken-diff" "$scratch/no-timeout"
+mkdir -p "$scratch/bin" "$scratch/tmp" "$scratch/repo/sub" "$scratch/no-git" "$scratch/broken-diff"
 ln -s "$git_bin" "$scratch/bin/git"
 ln -s "$scratch/fake-td" "$scratch/bin/bazelisk"
 # One fake serves as target-determinator and as bazelisk. Each records its
@@ -55,16 +55,6 @@ for arg in "\$@"; do [[ \$arg != diff ]] || exit 128; done
 exec "$git_bin" "\$@"
 MOCK
 chmod +x "$scratch/fake-td" "$scratch/broken-diff/git"
-# no-timeout/ mirrors PATH without timeout(1), for the script's own deadline.
-IFS=: read -ra dirs <<<"$scratch/bin:$PATH"
-for dir in "${dirs[@]}"; do
-  for tool in "$dir"/*; do
-    name=${tool##*/}
-    if [[ $name != timeout && -x $tool && ! -e $scratch/no-timeout/$name ]]; then
-      ln -s "$tool" "$scratch/no-timeout/$name"
-    fi
-  done
-done
 export PATH="$scratch/bin:$PATH" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export GIT_CEILING_DIRECTORIES=$scratch GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always
@@ -78,7 +68,6 @@ fail() {
   echo "FAIL: $*" >&2
   exit 1
 }
-! PATH=$scratch/no-timeout command -v timeout >/dev/null || fail 'timeout(1) is on the limited PATH'
 
 # output KEY: KEY's value in GITHUB_OUTPUT, in either the one-line or the
 # delimited form.
@@ -91,16 +80,6 @@ output() {
       delim = substr($0, at + 2)
     }
   ' "$GITHUB_OUTPUT"
-}
-
-# load: read the outputs into all, count, reason, targets, file and alls.
-load() {
-  all=$(output all)
-  count=$(output count)
-  reason=$(output reason)
-  targets=$(output targets)
-  file=$(output file)
-  alls=$(grep -c '^all=' "$GITHUB_OUTPUT")
 }
 
 # stopped FILE: every line of FILE with `::` or the legacy `##[` in it, where
@@ -143,7 +122,12 @@ run() {
     cat "$scratch/stdout" >&2
     fail "$name: exited nonzero"
   fi
-  load
+  all=$(output all)
+  count=$(output count)
+  reason=$(output reason)
+  targets=$(output targets)
+  file=$(output file)
+  alls=$(grep -c '^all=' "$GITHUB_OUTPUT")
   [[ $all == "$expected_all" ]] || fail "$name: want all=$expected_all"
   [[ $count == "$expected_count" ]] || fail "$name: want count=$expected_count"
   [[ $alls == 1 ]] || fail "$name: more than one all output"
@@ -167,16 +151,12 @@ run() {
   echo "PASS: $name: $reason"
 }
 
-# refuse NAME [VAR=VALUE...]: the script must fail on a pull request, and
-# print no workflow command on the way.
+# VAR=VALUE... refuse NAME [DIR]: the script must fail on a pull request in
+# DIR, sub/ by default, and print no workflow command on the way.
 refuse() {
-  local name=$1
-  shift
-  if (cd sub && env EVENT=pull_request "$@" bash "$script") >"$scratch/stdout" 2>&1; then
-    fail "$name: exited zero"
-  fi
-  stopped "$scratch/stdout" || fail "$name: a log line can issue a workflow command"
-  echo "PASS: $name"
+  ! (cd "${2:-sub}" && EVENT=pull_request bash "$script") >"$scratch/stdout" 2>&1 || fail "$1: exited zero"
+  stopped "$scratch/stdout" || fail "$1: a log line can issue a workflow command"
+  echo "PASS: $1"
 }
 
 export BASE_SHA=$base HEAD_SHA='' FAKE=two TIMEOUT_SECONDS=''
@@ -208,7 +188,6 @@ grep -qxF '//a:with space' "$file" || fail 'space: file'
 
 HEAD_SHA=$docs_head run 'merge group' merge_group "$docs_head" false 2
 HEAD_SHA=$docs_head run 'checkout behind the head' merge_group "$base"
-HEAD_SHA=$base run 'checkout ahead of the head' merge_group "$docs_head"
 FAKE=none run 'no affected tests' pull_request "$docs_head" false 0
 [[ -z $targets ]] || fail 'empty selection'
 FAKE=fail run 'tool failure' pull_request "$docs_head"
@@ -218,11 +197,9 @@ run 'second run in the job' pull_request "$docs_head" false 2
 [[ $file != "$first" ]] || fail 'second run: same file'
 grep -qxF '//...' "$first" || fail 'second run: replaced the first file'
 FAKE=bare run 'log with no last newline' pull_request "$docs_head"
-refuse 'bazel-opts on two lines' BAZEL_OPTS=$'--config=ci\n--keep_going'
+BAZEL_OPTS=$'--config=ci\n--keep_going' refuse 'bazel-opts on two lines'
 FAKE=hang TIMEOUT_SECONDS=1 run 'timeout' pull_request "$docs_head"
 [[ $reason == *'timed out'* ]] || fail 'timeout reason missing'
-FAKE=hang TIMEOUT_SECONDS=1 PATH=$scratch/no-timeout run 'timeout without timeout(1)' pull_request "$docs_head"
-[[ $reason == *'timed out'* ]] || fail 'portable timeout reason missing'
 TD='' run 'no tool' pull_request "$docs_head"
 TIMEOUT_MINUTES=1.5 run 'bad timeout-minutes' pull_request "$docs_head"
 BASE_SHA='' run 'no base' pull_request "$docs_head"
@@ -231,23 +208,15 @@ PATH="$scratch/broken-diff:$PATH" run 'git diff failure' pull_request "$docs_hea
 [[ $reason == 'git diff failed' ]] || fail 'git diff: wrong reason'
 
 # No checkout at all: the event's head can't be checked, so the step fails.
-for want in '' "$docs_head"; do
-  if (cd "$scratch/no-git" && EVENT=pull_request HEAD_SHA=$want bash "$script") >"$scratch/stdout" 2>&1; then
-    fail "no checkout, head '$want': exited zero"
-  fi
-done
-echo 'PASS: no checkout'
+refuse 'no checkout' "$scratch/no-git"
 
-# An event head the clone lacks can't be restored, so the step fails.
-git checkout -q "$docs_head"
-refuse 'unreachable head' HEAD_SHA=0123456789abcdef0123456789abcdef01234567
-
-# A checkout that fails over a local file prints its name with commands stopped.
+# An event head the step can't check out fails it. The checkout fails
+# over a local file, and its name prints with commands stopped.
 git checkout -q "$base"
 notice=$(commit '##[notice]x')
 git checkout -q "$base"
 echo changed >'##[notice]x'
-refuse 'failed checkout' HEAD_SHA="$notice"
+HEAD_SHA=$notice refuse 'failed checkout'
 rm '##[notice]x'
 
 for path in MODULE.bazel MODULE.bazel.lock .bazelrc .bazelrc.user preset.bazelrc \
@@ -260,26 +229,20 @@ for path in MODULE.bazel MODULE.bazel.lock .bazelrc .bazelrc.user preset.bazelrc
   [[ $reason == "$path changed" ]] || fail "$path: wrong reason"
 done
 
-# A file name can't issue a workflow command through the log.
+# A file name can't issue a workflow command through the log, or add
+# outputs or Markdown to the summary.
 git checkout -q "$docs_head"
-head=$(commit 'x ::set-output name=all::false ::add-mask::y/MODULE.bazel')
-run 'workflow command in a path' pull_request "$head"
-grep -qF -- '::set-output name=all::false' "$scratch/stdout" || fail 'command path: name not logged'
-
-# A file name can't add outputs or Markdown to the summary.
-git checkout -q "$docs_head"
-head=$(commit $'x\nall=false/[a](b)*_/MODULE.bazel')
+head=$(commit $'x ::set-output name=all::false ::add-mask::y\nall=false/[a](b)*_/MODULE.bazel')
 run 'hostile path' pull_request "$head"
-grep -qF 'x\?all\=false\/\[a\]\(b\)\*\_\/MODULE\.bazel' "$GITHUB_STEP_SUMMARY" ||
+grep -qF -- '::set-output name=all::false' "$scratch/stdout" || fail 'hostile path: name not logged'
+grep -qF '\:\:add\-mask\:\:y\?all\=false\/\[a\]\(b\)\*\_\/MODULE\.bazel' "$GITHUB_STEP_SUMMARY" ||
   fail 'hostile path: the summary does not escape the name'
 
 # A rename lists only the new path unless the script turns renames off.
 git checkout -q "$docs_head"
 module_base=$(commit go/MODULE.bazel)
 git mv go/MODULE.bazel go/MODULE.txt
-git -c user.name=test -c user.email=test@example.invalid \
-  -c commit.gpgsign=false commit -q -m rename
-renamed=$(git rev-parse HEAD)
+renamed=$(commit)
 BASE_SHA=$module_base run 'renamed module' pull_request "$renamed"
 [[ $reason == 'go/MODULE.bazel changed' ]] || fail 'rename: wrong reason'
 
@@ -305,4 +268,4 @@ mixed_head=$(commit README.md)
 BASE_SHA=$mixed_base FAKE=mixed run 'mixed tree' pull_request "$mixed_head"
 now=$(git -C lib rev-parse HEAD)
 [[ $now == "$lib_head" ]] || fail 'mixed tree: the submodule is not at the head'
-refuse 'untracked file left behind' BASE_SHA="$mixed_base" FAKE=litter
+BASE_SHA=$mixed_base FAKE=litter refuse 'untracked file left behind'

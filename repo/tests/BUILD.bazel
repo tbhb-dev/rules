@@ -119,7 +119,6 @@ sh_test(
     env = {
         "ACTION_RLOCATIONPATH": "$(rlocationpath //:.github/actions/affected-targets/action.yml)",
         "GIT_RLOCATIONPATH": "$(rlocationpath @tbhb_rules_git//:git)",
-        "SCRIPT_RLOCATIONPATH": "$(rlocationpath //:.github/actions/affected-targets/select.sh)",
     },
     # Tech debt (AGENTS.md): run the Bash subprocess and Git on windows-2025 and remove the exclusion.
     target_compatible_with = select({

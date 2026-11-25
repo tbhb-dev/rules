@@ -18,6 +18,13 @@ log=$out/target-determinator.log
 changed=$out/changed
 want='' ran=''
 
+# die MESSAGE: fail the step, for a checkout the script can't verify or
+# restore, or bazel-opts it can't split.
+die() {
+  echo "affected-targets: $*; stopping" >&2
+  exit 1
+}
+
 # rand: 32 random hex digits, for a delimiter or token no input can guess.
 rand() { od -An -N16 -tx1 /dev/urandom | tr -d ' \n'; }
 
@@ -33,14 +40,6 @@ show() {
   echo "::$token::"
 }
 
-# logged COMMAND...: run COMMAND and print its output through show.
-logged() {
-  local status=0
-  "$@" >"$out/command.log" 2>&1 || status=$?
-  show <"$out/command.log" >&2
-  return "$status"
-}
-
 # at_head: HEAD is the event's head and, once a tool has run, the tree and
 # every submodule hold no change, since a stopped checkout can leave the
 # base's content under the head.
@@ -52,12 +51,13 @@ at_head() {
 }
 
 # ensure_head: put the checkout back on the commit the event tests, by force
-# once a tool has run.
+# once a tool has run. Git's messages go through show; pipefail keeps its
+# status.
 ensure_head() {
   ! at_head || return 0
   echo "affected-targets: checking out the event's head $want" >&2
-  logged git checkout -q ${ran:+-f} --detach "$want" || return
-  [[ -z $ran ]] || logged git submodule update -q --recursive --force || return
+  git checkout -q ${ran:+-f} --detach "$want" 2>&1 | show >&2 || return
+  [[ -z $ran ]] || git submodule update -q --recursive --force 2>&1 | show >&2 || return
   at_head
 }
 
@@ -65,16 +65,12 @@ ensure_head() {
 # path, so it loses control characters here and Markdown in the summary.
 finish() {
   local all=false count line reason=${2//[[:cntrl:]]/?} delim
-  if ! ensure_head; then
-    echo "affected-targets: can't restore a clean checkout of the event's head $want; stopping" >&2
-    exit 1
-  fi
+  ensure_head || die "can't restore a clean checkout of the event's head $want"
   if [[ $1 == all ]]; then
-    all=true
-    count=all
+    all=true count=all line="Running every target (\`//...\`): "
     echo '//...' >"$file"
   else
-    count=$(grep -c . "$file" || true)
+    count=$(grep -c . "$file" || true) line="Selected $count test targets: "
   fi
   # A random delimiter, which no target line can match by chance.
   delim=EOF_$(rand)
@@ -87,11 +83,6 @@ finish() {
     cat "$file"
     echo "$delim"
   } >>"${GITHUB_OUTPUT:?}"
-  if [[ $all == true ]]; then
-    line="Running every target (\`//...\`): "
-  else
-    line="Selected $count test targets: "
-  fi
   line+=$(printf '%s' "$reason" | LC_ALL=C sed 's/[[:punct:]]/\\&/g')
   printf '### Affected Bazel targets\n\n%s\n' "$line" >>"${GITHUB_STEP_SUMMARY:-/dev/null}"
   echo "affected-targets: $count: $reason" | show
@@ -99,34 +90,23 @@ finish() {
 }
 
 # deadline SECONDS COMMAND...: run COMMAND in a process group of its own,
-# with status 124 like timeout(1) when it runs past SECONDS. The group stops
-# at the deadline and again once COMMAND exits, so no child it left running
-# can check out the base after finish restores the event's head.
+# with status 124 like timeout(1) when it runs past SECONDS. The group gets
+# TERM at the deadline, KILL 60 seconds later, and KILL once COMMAND exits,
+# so no child it left running can check out the base after finish restores
+# the event's head. The watchdog has a group of its own too, so one kill
+# stops it and its sleep.
 deadline() {
-  local seconds=$1 pid dog status=0 _
-  shift
+  local pid dog status=0 _
   rm -f "$out/expired"
   set -m
-  "$@" </dev/null &
+  "${@:2}" </dev/null &
   pid=$!
-  set +m
-  (
-    trap 'kill "$nap" 2>/dev/null; exit 0' TERM
-    sleep "$seconds" &
-    nap=$!
-    wait "$nap"
-    : >"$out/expired"
-    kill -TERM -- "-$pid" 2>/dev/null
-    sleep 60 &
-    nap=$!
-    wait "$nap"
-    kill -KILL -- "-$pid" 2>/dev/null
-  ) </dev/null >/dev/null 2>&1 &
+  (sleep "$1" && : >"$out/expired" && kill -TERM -- "-$pid" && sleep 60 && kill -KILL -- "-$pid") \
+    </dev/null >/dev/null 2>&1 &
   dog=$!
+  set +m
   { wait "$pid"; } 2>/dev/null || status=$?
-  kill -TERM "$dog" 2>/dev/null || true
-  wait "$dog" 2>/dev/null || true
-  kill -KILL -- "-$pid" 2>/dev/null || true
+  kill -KILL -- "-$dog" "-$pid" 2>/dev/null || true
   for _ in {1..50}; do
     kill -0 -- "-$pid" 2>/dev/null || break
     sleep 0.1
@@ -139,7 +119,6 @@ deadline() {
 # `bazel test //...` skips too. cquery's JSON lists each tag on its own, and
 # a regex over the printed list can't tell `manual` from `review, manual`.
 drop_manual() {
-  local status=0
   [[ -s $file ]] || return 0
   ensure_head || return
   deadline "$1" "${isolate[@]}" bazelisk cquery --output=jsonproto ${opts[@]+"${opts[@]}"} \
@@ -147,33 +126,21 @@ drop_manual() {
   jq -r '.results[]?.target.rule // empty
     | select(any(.attribute[]?; .name == "tags" and any(.stringListValue[]?; . == "manual")))
     | .name' "$out/tags.json" >"$out/manual" || return
-  grep -vxFf "$out/manual" "$file" >"$out/kept" || status=$?
-  ((status < 2)) || return "$status"
+  grep -vxFf "$out/manual" "$file" >"$out/kept" || (($? == 1)) || return
   mv "$out/kept" "$file"
 }
 
-if ! head=$(git rev-parse HEAD 2>/dev/null); then
-  echo "affected-targets: no Git checkout, so the event's head can't be verified; stopping" >&2
-  exit 1
-fi
+head=$(git rev-parse HEAD 2>/dev/null) || die "no Git checkout, so the event's head can't be verified"
 want=${HEAD_SHA:-$head}
-if [[ ${BAZEL_OPTS:-} == *$'\n'* ]]; then
-  echo 'affected-targets: bazel-opts must be one line; stopping' >&2
-  exit 1
-fi
+[[ ${BAZEL_OPTS:-} != *$'\n'* ]] || die 'bazel-opts must be one line'
 
-case ${EVENT:-} in
-pull_request | merge_group) ;;
-push | schedule) finish all "a $EVENT run tests everything" ;;
-*) finish all "unknown event '${EVENT:-}'" ;;
-esac
-
-[[ -n ${BASE_SHA:-} ]] || finish all "the $EVENT event has no base commit"
+# Any other event, such as push or schedule, tests everything. An empty
+# BASE_SHA fails the check of the base below.
+[[ ${EVENT:-} == pull_request || ${EVENT:-} == merge_group ]] || finish all "a '${EVENT:-}' event tests everything"
 [[ $head == "$want" ]] || finish all "the checkout $head is not the event's head $want"
-if ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
-  finish all "the base $BASE_SHA is missing from the checkout (check out with fetch-depth: 0)"
-fi
-logged git -c core.quotePath=false diff -z --name-only --no-renames --output="$changed" "$BASE_SHA" "$head" ||
+git cat-file -e "${BASE_SHA:-}^{commit}" 2>/dev/null ||
+  finish all "the base '${BASE_SHA:-}' is missing from the checkout (check out with fetch-depth: 0)"
+git -c core.quotePath=false diff -z --name-only --no-renames --output="$changed" "$BASE_SHA" "$head" 2>&1 | show >&2 ||
   finish all 'git diff failed'
 
 # These files change the module graph, the flags, the Bazel version, the
@@ -197,9 +164,7 @@ seconds=${TIMEOUT_SECONDS:-$((minutes * 60))}
 args=(-bazel bazelisk -nocache_results -delete-cached-worktree
   -before-query-error-behavior=fatal -targets "${QUERY:?}")
 read -ra opts <<<"${BAZEL_OPTS:-}"
-for opt in ${opts[@]+"${opts[@]}"}; do
-  args+=("-bazel-opts=$opt")
-done
+args+=(${opts[@]+"${opts[@]/#/-bazel-opts=}"})
 # Repository rules run code from the change, so Bazel gets no runner
 # command files to write outputs, the summary or the environment through.
 isolate=(env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY -u GITHUB_ENV -u GITHUB_PATH -u GITHUB_STATE)
