@@ -1,0 +1,106 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+---
+# Chooses the Bazel test targets a pull request or merge group can affect.
+# Run it after checkout with `fetch-depth: 0` and after setup-bazel-ci, which
+# puts bazelisk on PATH. When it can't decide, it selects `//...`; see the
+# README for the list.
+name: Affected Bazel targets
+description: >-
+  Select the test targets that the change from the event's base commit can
+  affect, with target-determinator, and fall back to `//...` whenever the
+  change can't be decided.
+
+inputs:
+  working-directory:
+    description: The directory of the Bazel workspace to query.
+    required: false
+    default: .
+  query:
+    description: >-
+      The Bazel query of the candidate targets, on one line. When an
+      affected test's tags match `manual` in `bazel cquery`, the action
+      selects `//...`, which can still run it through a test_suite.
+    required: false
+    default: 'tests(//...)'
+  bazel-opts:
+    description: >-
+      Options for target-determinator's cquery and build, and for the cquery
+      of manual tags, on one line and split on whitespace. A newline fails
+      the step. Match the options of the tests that use the result.
+    required: false
+    default: --config=ci
+  timeout-minutes:
+    description: >-
+      Whole minutes target-determinator and the cquery of manual tags may
+      run together before the action stops them and selects `//...`. Keep it
+      below the job's timeout.
+    required: false
+    default: "15"
+
+outputs:
+  all:
+    description: '"true" when the action fell back to `//...`, else "false".'
+    value: ${{ steps.select.outputs.all }}
+  count:
+    description: The number of selected targets, or "all" on a fallback.
+    value: ${{ steps.select.outputs.count }}
+  reason:
+    description: Why the action chose this selection, one line.
+    value: ${{ steps.select.outputs.reason }}
+  targets:
+    description: >-
+      The selected targets, one per line, or `//...`. Empty when the change
+      affects no test target. Prefer `file`.
+    value: ${{ steps.select.outputs.targets }}
+  file:
+    description: >-
+      The path of a file with one selected target per line, for Bazel's
+      --target_pattern_file, new in each run. The file is empty when the
+      change affects no test target.
+    value: ${{ steps.select.outputs.file }}
+
+runs:
+  using: composite
+  steps:
+    # Release binaries are static, and the action checks each against its
+    # pinned sha256. Other runners and a failed download fall back to `//...`.
+    - name: Download target-determinator
+      id: download
+      if: runner.os == 'Linux' && (runner.arch == 'X64' || runner.arch == 'ARM64')
+      continue-on-error: true
+      shell: bash
+      env:
+        VERSION: v0.34.1
+        SHA256_AMD64: 7f3360cf38d43d4d106440e8ce9d394d4b16bde52af11cd010e897394cec439b
+        SHA256_ARM64: 55d362d87b1c8d946b50ccc483d32ef48620ad1dd95eebd14e2ad41baf1baa2c
+      run: |
+        if [[ $RUNNER_ARCH == ARM64 ]]; then
+          arch=arm64 sha=$SHA256_ARM64
+        else
+          arch=amd64 sha=$SHA256_AMD64
+        fi
+        bin="${RUNNER_TEMP}/target-determinator/target-determinator"
+        mkdir -p "${bin%/*}"
+        curl -fsSL --retry 3 -o "${bin}" \
+          "https://github.com/bazel-contrib/target-determinator/releases/download/${VERSION}/target-determinator.linux.${arch}"
+        echo "${sha}  ${bin}" | sha256sum -c --quiet -
+        chmod +x "${bin}"
+        echo "path=${bin}" >>"$GITHUB_OUTPUT"
+
+    - name: Select the affected targets
+      id: select
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        EVENT: ${{ github.event_name }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        HEAD_SHA: ${{ github.event.merge_group.head_sha || github.sha }}
+        TD: ${{ steps.download.outputs.path }}
+        QUERY: ${{ inputs.query }}
+        BAZEL_OPTS: ${{ inputs.bazel-opts }}
+        TIMEOUT_MINUTES: ${{ inputs.timeout-minutes }}
+        # Only tests set it; a job's own value must not shorten the deadline.
+        TIMEOUT_SECONDS: ""
+      run: bash "${GITHUB_ACTION_PATH}/select.sh"

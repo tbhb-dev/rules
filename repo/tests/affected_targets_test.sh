@@ -1,0 +1,312 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
+# Copyright Tony Burns
+
+# The affected-targets action's selection script, against a scratch Git
+# repository and a fake target-determinator. Every case must end with
+# outputs and a summary line, each undecidable one must select `//...`, and
+# every case must leave the checkout at the event's head.
+
+set -euo pipefail
+action=${TEST_SRCDIR:?}/${ACTION_RLOCATIONPATH:?}
+script=${action%/*}/select.sh
+git_bin=${TEST_SRCDIR:?}/${GIT_RLOCATIONPATH:?}
+scratch=${TEST_TMPDIR:?}/affected
+mkdir -p "$scratch/bin" "$scratch/tmp" "$scratch/repo/sub" "$scratch/no-git" "$scratch/broken"
+ln -s "$git_bin" "$scratch/bin/git"
+ln -s "$scratch/fake-td" "$scratch/bin/bazelisk"
+# One fake serves as target-determinator and as bazelisk. Each records its
+# arguments and which runner command files it can see. `fail` and `hang`
+# first check out the base, as a stopped run could leave it, and start a
+# child that checks out the base again later unless it's stopped too.
+# `mixed` leaves the base's content and an older submodule commit under the
+# head, `litter` an untracked file, `smudge` a change after a selection, and
+# `bare` a last log line with no newline.
+# The cquery lists tests whose tags match `manual`, one of them `tagged`.
+cat >"$scratch/fake-td" <<'MOCK'
+#!/usr/bin/env bash
+for name in GITHUB_OUTPUT GITHUB_STEP_SUMMARY GITHUB_ENV GITHUB_PATH GITHUB_STATE; do
+  [[ -z ${!name+set} ]] || echo "$name" >>"$ENV_LOG"
+done
+if [[ ${0##*/} == bazelisk ]]; then
+  printf '%s\n' "$@" >"$CQUERY_LOG"
+  [[ $FAKE_CQUERY != fail ]] || { echo 'ERROR: analysis failed' >&2 && exit 7; }
+  printf '{"results":[{"target":{"rule":{"name":"//go:%s"}}}]}\n' idle_test manual_test
+  exit
+fi
+printf '%s\n' "$@" >"$ARGS_LOG"
+straggle() { (sleep 2 && git checkout -q "$1" && : >"$CHILD_MARK") </dev/null >/dev/null 2>&1 & }
+case $FAKE in
+  two) printf '//go:lib_test\n//go:cmd_test\n' ;;
+  tagged) printf '//go:lib_test\n//go:manual_test\n//go:cmd_test\n' ;;
+  space) printf '//a:with space\n//b:t\n' ;;
+  none) ;;
+  fail) git checkout -q "${!#}" && straggle "${!#}" && echo 'ERROR: cquery failed' >&2 && exit 3 ;;
+  hang) git checkout -q "${!#}" && straggle "${!#}" && exec sleep 30 ;;
+  mixed) git -C ../lib checkout -q HEAD~ && git checkout -q "${!#}" -- :/ && exit 3 ;;
+  litter) : >stray && exit 3 ;;
+  smudge) echo x >>../README.md && echo //go:lib_test ;;
+  bare) printf 'ERROR: no newline' >&2 && exit 3 ;;
+esac
+MOCK
+# This git fails the subcommand BREAK names, with a workflow command in its error.
+cat >"$scratch/broken/git" <<MOCK
+#!/usr/bin/env bash
+for arg in "\$@"; do [[ \$arg != "\$BREAK" ]] || { printf 'x\n##[notice]y\n' >&2 && exit 128; }; done
+exec "$git_bin" "\$@"
+MOCK
+chmod +x "$scratch/fake-td" "$scratch/broken/git"
+export PATH="$scratch/bin:$PATH" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+export GIT_CEILING_DIRECTORIES=$scratch GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0=protocol.file.allow GIT_CONFIG_VALUE_0=always
+export RUNNER_TEMP=$scratch/tmp ARGS_LOG=$scratch/args ENV_LOG=$scratch/env TD=$scratch/fake-td
+export CQUERY_LOG=$scratch/cquery CHILD_MARK=$scratch/child-ran FAKE_CQUERY=
+export QUERY='tests(//...)' BAZEL_OPTS='--config=ci --keep_going'
+export GITHUB_OUTPUT=$scratch/output GITHUB_STEP_SUMMARY=$scratch/summary
+export GITHUB_ENV=$scratch/github-env GITHUB_PATH=$scratch/github-path GITHUB_STATE=$scratch/state
+
+fail() {
+  echo "FAIL: $*" >&2
+  exit 1
+}
+
+# output KEY: KEY's value in GITHUB_OUTPUT, in either the one-line or the
+# delimited form.
+output() {
+  awk -v key="$1" '
+    delim != "" { if ($0 == delim) delim = ""; else if (mine) print; next }
+    index($0, key "=") == 1 { print substr($0, length(key) + 2); next }
+    (at = index($0, "<<")) && substr($0, 1, at - 1) ~ /^[A-Za-z_]+$/ {
+      mine = substr($0, 1, at - 1) == key
+      delim = substr($0, at + 2)
+    }
+  ' "$GITHUB_OUTPUT"
+}
+
+# stopped FILE: every line of FILE with `::` or the legacy `##[` in it, where
+# the runner can see a workflow command, sits between ::stop-commands::TOKEN
+# and ::TOKEN::.
+stopped() {
+  awk '
+    tok == "" && index($0, "::stop-commands::") == 1 { tok = substr($0, 18); next }
+    tok != "" { if ($0 == "::" tok "::") tok = ""; next }
+    /::|##\[/ { bad = 1; print "unstopped: " $0 > "/dev/stderr" }
+    END { exit bad || tok != "" }
+  ' "$1"
+}
+
+cd "$scratch/repo"
+git init -q -b main .
+commit() {
+  for path in "$@"; do
+    mkdir -p "$(dirname "$path")"
+    echo "$RANDOM" >>"$path"
+  done
+  git add -A
+  git -c user.name=test -c user.email=test@example.invalid \
+    -c commit.gpgsign=false commit -q -m change
+  git rev-parse HEAD
+}
+base=$(commit README.md)
+docs_head=$(commit docs/guide.md)
+
+# [HEAD_SHA=SHA] [STATUS=LINES] run CASE EVENT HEAD [EXPECTED_ALL]
+# [EXPECTED_COUNT]: check out HEAD, run the script from sub/ with HEAD_SHA,
+# HEAD unless set, and check the outputs, the final checkout and that
+# `git status` lists STATUS, nothing unless set.
+run() {
+  local name=$1 expected_all=${4:-true} expected_count=${5:-all} sha=${HEAD_SHA-$3} now changes
+  local want=${sha:-$3}
+  git checkout -q "$3"
+  : >"$GITHUB_OUTPUT"
+  : >"$GITHUB_STEP_SUMMARY"
+  : >"$ENV_LOG"
+  rm -f "$CHILD_MARK"
+  if ! (cd sub && EVENT=$2 HEAD_SHA=$sha bash "$script") >"$scratch/stdout" 2>&1; then
+    cat "$scratch/stdout" >&2
+    fail "$name: exited nonzero"
+  fi
+  all=$(output all)
+  count=$(output count)
+  reason=$(output reason)
+  targets=$(output targets)
+  file=$(output file)
+  alls=$(grep -c '^all=' "$GITHUB_OUTPUT")
+  [[ $all == "$expected_all" ]] || fail "$name: want all=$expected_all"
+  [[ $count == "$expected_count" ]] || fail "$name: want count=$expected_count"
+  [[ $alls == 1 ]] || fail "$name: more than one all output"
+  [[ $reason == ?* ]] || fail "$name: no reason"
+  grep -qF '### Affected Bazel targets' "$GITHUB_STEP_SUMMARY" || fail "$name: no summary"
+  [[ ! -s $ENV_LOG ]] || fail "$name: target-determinator saw runner command files"
+  stopped "$scratch/stdout" || fail "$name: a log line can issue a workflow command"
+  if [[ $FAKE == fail || $FAKE == hang ]]; then
+    sleep 3
+    [[ ! -e $CHILD_MARK ]] || fail "$name: a child of target-determinator outlived the run"
+  fi
+  now=$(git rev-parse HEAD)
+  [[ $now == "$want" ]] || fail "$name: the checkout is not $want"
+  changes=$("$git_bin" status --porcelain --untracked-files=all --ignore-submodules=none)
+  [[ $changes == "${STATUS:-}" ]] || fail "$name: the tree is not as it was"
+  if [[ $expected_all == true ]]; then
+    [[ $targets == //... ]] || fail "$name: fallback is not //..."
+    grep -qxF '//...' "$file" || fail "$name: file is not //..."
+    grep -qF 'Running every target' "$GITHUB_STEP_SUMMARY" || fail "$name: summary hides the fallback"
+  fi
+  echo "PASS: $name: $reason"
+}
+
+# VAR=VALUE... refuse NAME [DIR]: the script must fail on a pull request in
+# DIR, sub/ by default, and print no workflow command on the way.
+refuse() {
+  ! (cd "${2:-sub}" && EVENT=pull_request bash "$script") >"$scratch/stdout" 2>&1 || fail "$1: exited zero"
+  stopped "$scratch/stdout" || fail "$1: a log line can issue a workflow command"
+  echo "PASS: $1"
+}
+
+unset HEAD_SHA
+export BASE_SHA=$base FAKE=two TIMEOUT_SECONDS=''
+for event in push schedule workflow_dispatch ''; do
+  run "event '$event'" "$event" "$docs_head"
+done
+
+run 'pull request' pull_request "$docs_head" false 2
+[[ $targets == $'//go:lib_test\n//go:cmd_test' ]] || fail 'targets output'
+grep -qF 'Selected 2 test targets' "$GITHUB_STEP_SUMMARY" || fail 'summary count'
+for arg in -bazel bazelisk "-targets" "tests(//...)" -bazel-opts=--config=ci -bazel-opts=--keep_going "$base"; do
+  grep -qxF -- "$arg" "$ARGS_LOG" || fail "target-determinator missed argument $arg"
+done
+last=$(tail -n 1 "$ARGS_LOG")
+[[ $last == "$base" ]] || fail 'the base commit is not the last argument'
+for arg in cquery --output=jsonproto --config=ci --keep_going 'attr(tags, manual, (tests(//...)))'; do
+  grep -qxF -- "$arg" "$CQUERY_LOG" || fail "cquery missed argument $arg"
+done
+
+# `bazel test //...` can still run a manual test through a test_suite.
+FAKE=tagged run 'manual tag' pull_request "$docs_head"
+[[ $reason == *'tagged manual'* ]] || fail 'manual tag: wrong reason'
+FAKE_CQUERY=fail run 'tag cquery failure' pull_request "$docs_head"
+[[ $reason == *'exit status 7' ]] || fail 'tag cquery failure: status missing'
+
+FAKE=space run 'label with a space' pull_request "$docs_head" false 2
+[[ $targets == $'//a:with space\n//b:t' ]] || fail 'space: targets output'
+grep -qxF '//a:with space' "$file" || fail 'space: file'
+
+HEAD_SHA=$docs_head run 'merge group' merge_group "$docs_head" false 2
+HEAD_SHA=$docs_head run 'checkout behind the head' merge_group "$base"
+FAKE=none run 'no affected tests' pull_request "$docs_head" false 0
+[[ -z $targets ]] || fail 'empty selection'
+FAKE=smudge run 'changed under a selection' pull_request "$docs_head"
+FAKE=fail run 'tool failure' pull_request "$docs_head"
+[[ $reason == *'exit status 3' ]] || fail 'failure status missing'
+first=$file
+run 'second run in the job' pull_request "$docs_head" false 2
+[[ $file != "$first" ]] || fail 'second run: same file'
+grep -qxF '//...' "$first" || fail 'second run: replaced the first file'
+FAKE=bare run 'log with no last newline' pull_request "$docs_head"
+BAZEL_OPTS=$'--config=ci\n--keep_going' refuse 'bazel-opts on two lines'
+FAKE=hang TIMEOUT_SECONDS=1 run 'timeout' pull_request "$docs_head"
+[[ $reason == *'timed out'* ]] || fail 'timeout reason missing'
+TD='' run 'no tool' pull_request "$docs_head"
+TIMEOUT_MINUTES=1.5 run 'bad timeout-minutes' pull_request "$docs_head"
+BASE_SHA='' run 'no base' pull_request "$docs_head"
+BASE_SHA=0123456789abcdef0123456789abcdef01234567 run 'base not fetched' pull_request "$docs_head"
+BREAK=diff PATH="$scratch/broken:$PATH" run 'git diff failure' pull_request "$docs_head"
+[[ $reason == 'git diff failed' ]] || fail 'git diff: wrong reason'
+BREAK=status PATH="$scratch/broken:$PATH" run 'git status failure' pull_request "$docs_head"
+QUERY=$'tests(//...)\n+ //x' run 'query on two lines' pull_request "$docs_head"
+HEAD_SHA='' run 'no event head' pull_request "$docs_head"
+
+# target-determinator would analyze a change on top of the head, even one
+# that status.showUntrackedFiles=no hides, so the script leaves it alone.
+echo dirty >>README.md
+STATUS=' M README.md' run 'changed file' pull_request "$docs_head"
+git checkout -q README.md
+git config status.showUntrackedFiles no
+: >sub/stray
+STATUS='?? sub/stray' run 'hidden untracked file' pull_request "$docs_head"
+rm sub/stray
+# An index flag hides a changed file from git status, so the script tests everything.
+for flag in assume-unchanged skip-worktree; do
+  git update-index "--$flag" README.md
+  echo dirty >>README.md
+  run "$flag" pull_request "$docs_head"
+  git update-index "--no-$flag" README.md
+  git checkout -q README.md
+done
+
+# No checkout at all: the event's head can't be checked, so the step fails.
+refuse 'no checkout' "$scratch/no-git"
+
+# An event head the step can't check out fails it. The checkout fails
+# over a local file, and its name prints with commands stopped.
+git checkout -q "$base"
+notice=$(commit '##[notice]x')
+git checkout -q "$base"
+echo changed >'##[notice]x'
+HEAD_SHA=$notice refuse 'failed checkout'
+rm '##[notice]x'
+
+for path in MODULE.bazel MODULE.bazel.lock .bazelrc .bazelrc.user preset.bazelrc \
+  WORKSPACE WORKSPACE.bazel WORKSPACE.extra .bazelversion go/MODULE.bazel \
+  go/deps.MODULE.bazel 'café/MODULE.bazel' go/BUILD go/BUILD.bazel defs/rules.bzl \
+  .bazelignore REPO.bazel; do
+  git checkout -q "$docs_head"
+  head=$(commit "$path" src/lib.go)
+  run "$path" pull_request "$head"
+  [[ $reason == "$path changed" ]] || fail "$path: wrong reason"
+done
+
+# A file name can't issue a workflow command through the log, or add
+# outputs or Markdown to the summary.
+git checkout -q "$docs_head"
+head=$(commit $'x ::set-output name=all::false ::add-mask::y\nall=false/[a](b)*_/MODULE.bazel')
+run 'hostile path' pull_request "$head"
+grep -qF -- '::set-output name=all::false' "$scratch/stdout" || fail 'hostile path: name not logged'
+grep -qF '\:\:add\-mask\:\:y\?all\=false\/\[a\]\(b\)\*\_\/MODULE\.bazel' "$GITHUB_STEP_SUMMARY" ||
+  fail 'hostile path: the summary does not escape the name'
+
+# A rename lists only the new path unless the script turns renames off.
+git checkout -q "$docs_head"
+module_base=$(commit go/MODULE.bazel)
+git mv go/MODULE.bazel go/MODULE.txt
+renamed=$(commit)
+BASE_SHA=$module_base run 'renamed module' pull_request "$renamed"
+[[ $reason == 'go/MODULE.bazel changed' ]] || fail 'rename: wrong reason'
+
+# The default query leaves the manual tag to cquery's JSON, since a regex
+# over the printed list can't tell `manual` from `review, manual`.
+grep -qxF "    default: 'tests(//...)'" "$action" || fail 'default query is not tests(//...)'
+echo 'PASS: default query'
+
+# A stopped checkout can leave the base's content under the event's head, in
+# the tree and in a submodule. The step restores both, or fails when it can't.
+mkdir -p "$scratch/lib" "$scratch/mixed/sub"
+cd "$scratch/lib"
+git init -q -b main .
+lib_base=$(commit lib.txt)
+lib_head=$(commit lib.txt)
+cd "$scratch/mixed"
+git init -q -b main .
+git submodule add -q "$scratch/lib" lib
+mixed_base=$(commit README.md)
+mixed_head=$(commit README.md)
+BASE_SHA=$mixed_base FAKE=mixed run 'mixed tree' pull_request "$mixed_head"
+now=$(git -C lib rev-parse HEAD)
+[[ $now == "$lib_head" ]] || fail 'mixed tree: the submodule is not at the head'
+BASE_SHA=$mixed_base HEAD_SHA=$mixed_head FAKE=litter refuse 'untracked file left behind'
+rm sub/stray
+
+# A diff of only a submodule's commit lists no file target-determinator
+# can trace, so the script tests everything.
+git -C lib checkout -q "$lib_base"
+bumped=$(commit)
+BASE_SHA=$mixed_head run 'submodule commit' pull_request "$bumped"
+[[ $reason == 'the submodule lib changed' ]] || fail 'submodule commit: wrong reason'
+
+# `ignore = all` in .gitmodules hides a submodule's commit from git diff.
+git config -f .gitmodules submodule.lib.ignore all
+ignored=$(commit)
+git -C lib checkout -q "$lib_head"
+git update-index --cacheinfo "160000,$lib_head,lib"
+hidden=$(commit)
+BASE_SHA=$ignored run 'ignored submodule commit' pull_request "$hidden"

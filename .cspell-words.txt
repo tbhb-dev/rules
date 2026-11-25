@@ -10,6 +10,7 @@ awrel
 bazelignore
 bazelignored
 bazelisk
+bazeliskrc
 bazelrc
 bazelversion
 BINDIR
@@ -18,6 +19,7 @@ buildifier
 buildmeta
 buildozer
 buildtag
+bzlmod
 cacheinfo
 cainfo
 cand
@@ -30,6 +32,7 @@ compgen
 complexipy
 conftest
 cpus
+cquery
 cuda
 cyclop
 deadcode
@@ -37,6 +40,7 @@ delenv
 depguard
 depset
 deptry
+determinator
 direnv
 docstrings
 DTCG
@@ -82,6 +86,7 @@ hprof
 importlinter
 importpath
 inconshreveable
+jsonproto
 junitxml
 keepends
 ldconfig
@@ -199,6 +204,7 @@ unkeyed
 unmutated
 unstampable
 unvalidated
+urandom
 usefixtures
 usetesting
 vitest

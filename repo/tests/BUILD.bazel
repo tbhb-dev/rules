@@ -106,6 +106,27 @@ sh_test(
     }),
 )
 
+# The affected-targets action's selection and every fallback, with a fake
+# target-determinator in a scratch Git repository.
+sh_test(
+    name = "affected_targets_test",
+    srcs = ["affected_targets_test.sh"],
+    data = [
+        "//:.github/actions/affected-targets/action.yml",
+        "//:.github/actions/affected-targets/select.sh",
+        "@tbhb_rules_git//:git",
+    ],
+    env = {
+        "ACTION_RLOCATIONPATH": "$(rlocationpath //:.github/actions/affected-targets/action.yml)",
+        "GIT_RLOCATIONPATH": "$(rlocationpath @tbhb_rules_git//:git)",
+    },
+    # Tech debt (AGENTS.md): run the Bash subprocess and Git on windows-2025 and remove the exclusion.
+    target_compatible_with = select({
+        "@platforms//os:windows": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
+)
+
 # Check the CODEOWNERS API wrapper against a fake curl in the caller's tree.
 sh_test(
     name = "codeowners_errors_test",
