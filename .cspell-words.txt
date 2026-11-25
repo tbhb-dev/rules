@@ -86,6 +86,7 @@ hprof
 importlinter
 importpath
 inconshreveable
+jsonproto
 junitxml
 keepends
 ldconfig

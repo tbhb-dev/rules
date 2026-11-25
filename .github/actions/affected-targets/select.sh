@@ -6,7 +6,8 @@
 # affect, with target-determinator (TD). When the script can't decide, it
 # selects `//...`. Every path ends in finish, which returns the checkout to
 # HEAD_SHA and writes the outputs and a line to the job summary, so no
-# fallback is silent and none tests another commit.
+# fallback is silent and none tests another commit. Without a checkout to
+# verify, the script fails.
 set -euo pipefail
 
 out=${RUNNER_TEMP:?}/affected-targets
@@ -16,10 +17,22 @@ log=$out/target-determinator.log
 changed=$out/changed
 want=
 
+# rand: 32 random hex digits, for a delimiter or token no input can guess.
+rand() { od -An -N16 -tx1 /dev/urandom | tr -d ' \n'; }
+
+# quiet COMMAND...: run COMMAND with workflow commands stopped, since its
+# output can hold a file name or a log from the change.
+quiet() {
+  local token
+  token=$(rand)
+  echo "::stop-commands::$token"
+  "$@" || true
+  echo "::$token::"
+}
+
 # ensure_head: put the checkout back on the commit the event tests.
 ensure_head() {
   local now
-  [[ -n $want ]] || return 0
   now=$(git rev-parse HEAD 2>/dev/null) || now=
   [[ $now != "$want" ]] || return 0
   echo "affected-targets: checking out the event's head $want" >&2
@@ -44,7 +57,7 @@ finish() {
     count=$(grep -c . "$file" || true)
   fi
   # A random delimiter, which no target line can match by chance.
-  delim=EOF_$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+  delim=EOF_$(rand)
   {
     echo "all=$all"
     echo "count=$count"
@@ -61,43 +74,68 @@ finish() {
   fi
   line+=$(printf '%s' "$reason" | LC_ALL=C sed 's/[[:punct:]]/\\&/g')
   printf '### Affected Bazel targets\n\n%s\n' "$line" >>"${GITHUB_STEP_SUMMARY:-/dev/null}"
-  echo "affected-targets: $count: $reason"
+  quiet echo "affected-targets: $count: $reason"
   exit 0
 }
 
-# deadline SECONDS COMMAND...: run COMMAND, stopping it after SECONDS with
-# status 124, like timeout(1). The fallback covers runners without one.
+# deadline SECONDS COMMAND...: run COMMAND in a process group of its own,
+# with status 124 like timeout(1) when it runs past SECONDS. The group stops
+# at the deadline and again once COMMAND exits, so no child it left running
+# can check out the base after finish restores the event's head.
 deadline() {
-  local seconds=$1 pid dog status=0
+  local seconds=$1 pid dog status=0 _
   shift
-  if command -v timeout >/dev/null; then
-    timeout -k 60 "$seconds" "$@"
-    return
-  fi
   rm -f "$out/expired"
-  "$@" &
+  set -m
+  "$@" </dev/null &
   pid=$!
+  set +m
   (
     trap 'kill "$nap" 2>/dev/null; exit 0' TERM
     sleep "$seconds" &
     nap=$!
     wait "$nap"
     : >"$out/expired"
-    kill -TERM "$pid" 2>/dev/null
+    kill -TERM -- "-$pid" 2>/dev/null
     sleep 60 &
     nap=$!
     wait "$nap"
-    kill -KILL "$pid" 2>/dev/null
+    kill -KILL -- "-$pid" 2>/dev/null
   ) </dev/null >/dev/null 2>&1 &
   dog=$!
-  wait "$pid" || status=$?
+  { wait "$pid"; } 2>/dev/null || status=$?
   kill -TERM "$dog" 2>/dev/null || true
   wait "$dog" 2>/dev/null || true
+  kill -KILL -- "-$pid" 2>/dev/null || true
+  for _ in {1..50}; do
+    kill -0 -- "-$pid" 2>/dev/null || break
+    sleep 0.1
+  done
   [[ ! -e $out/expired ]] || status=124
   return "$status"
 }
 
-head=$(git rev-parse HEAD 2>/dev/null) || finish all 'no Git checkout'
+# drop_manual SECONDS: remove the tests tagged exactly `manual`, which
+# `bazel test //...` skips too. cquery's JSON lists each tag on its own, and
+# a regex over the printed list can't tell `manual` from `review, manual`.
+drop_manual() {
+  local status=0
+  [[ -s $file ]] || return 0
+  ensure_head || return
+  deadline "$1" "${isolate[@]}" bazelisk cquery --output=jsonproto ${opts[@]+"${opts[@]}"} \
+    "attr(tags, manual, ($QUERY))" >"$out/tags.json" || return
+  jq -r '.results[]?.target.rule // empty
+    | select(any(.attribute[]?; .name == "tags" and any(.stringListValue[]?; . == "manual")))
+    | .name' "$out/tags.json" >"$out/manual" || return
+  grep -vxFf "$out/manual" "$file" >"$out/kept" || status=$?
+  ((status < 2)) || return "$status"
+  mv "$out/kept" "$file"
+}
+
+if ! head=$(git rev-parse HEAD 2>/dev/null); then
+  echo "affected-targets: no Git checkout, so the event's head can't be verified; stopping" >&2
+  exit 1
+fi
 want=${HEAD_SHA:-$head}
 
 case ${EVENT:-} in
@@ -140,18 +178,16 @@ for opt in ${opts[@]+"${opts[@]}"}; do
 done
 # Repository rules run code from the change, so Bazel gets no runner
 # command files to write outputs, the summary or the environment through.
-if deadline "$seconds" env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY -u GITHUB_ENV \
-  -u GITHUB_PATH -u GITHUB_STATE "$TD" "${args[@]}" "$BASE_SHA" >"$file" 2>"$log"; then
-  finish selected "target-determinator compared $BASE_SHA with $head"
-else
-  status=$?
+isolate=(env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY -u GITHUB_ENV -u GITHUB_PATH -u GITHUB_STATE)
+start=$SECONDS status=0 step=target-determinator
+deadline "$seconds" "${isolate[@]}" "$TD" "${args[@]}" "$BASE_SHA" >"$file" 2>"$log" || status=$?
+if [[ $status == 0 ]]; then
+  step='the cquery of manual tags'
+  left=$((seconds + start - SECONDS))
+  drop_manual "$((left > 0 ? left : 1))" 2>>"$log" || status=$?
 fi
-# The log comes from the change too; keep it from issuing workflow commands.
-token=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
-echo "::stop-commands::$token" >&2
-tail -n 40 "$log" >&2
-echo "::$token::" >&2
-if [[ $status == 124 ]]; then
-  finish all "target-determinator timed out after $seconds seconds"
-fi
-finish all "target-determinator failed with exit status $status"
+[[ $status != 0 ]] || finish selected "target-determinator compared $BASE_SHA with $head"
+# The log comes from the change too.
+quiet tail -n 40 "$log" >&2
+[[ $status != 124 ]] || finish all "$step timed out after $seconds seconds"
+finish all "$step failed with exit status $status"

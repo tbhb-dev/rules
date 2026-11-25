@@ -60,23 +60,23 @@ On Linux x64 and arm64, the action downloads [target-determinator](https://githu
 When the action can't decide, it selects `//...`:
 
 - A `push` or `schedule` event, or any other event that isn't `pull_request` or `merge_group`.
-- No Git checkout, a missing base commit, a base commit absent from the checkout, a checkout other than the event's head, or a failed `git diff`.
+- A missing base commit, a base commit absent from the checkout, a checkout other than the event's head, or a failed `git diff`.
 - A change to a file whose base name, in any directory, is `MODULE.bazel*`, `*.MODULE.bazel`, `WORKSPACE*`, `REPO.bazel`, `BUILD`, `BUILD.*`, `*.bzl`, `.bazelrc*`, `*bazelrc` (such as `preset.bazelrc`), `.bazelversion`, `.bazeliskrc`, or `.bazelignore`.
 - A runner other than Linux x64 or arm64, or a failed download or checksum.
-- A target-determinator failure, including a base commit that doesn't build and a run longer than `timeout-minutes`. Runners without `timeout` use the script's own deadline.
+- A failure of target-determinator or of the cquery of tags, including a base commit that doesn't build and a run of both longer than `timeout-minutes`.
 
-Every run ends with the checkout on the event's head, `merge_group.head_sha` or `github.sha`, so a fallback never tests the base. When the action can't check out that commit, it fails. Every run writes its count and reason to the job summary, with the reason's Markdown escaped, and to the `count` and `reason` outputs. A count of 0 means the change affects no test target, and the caller then skips `bazel test`. Pass `--skip_incompatible_explicit_targets` to `bazel test`, because explicit labels that are incompatible with the platform fail without it.
+target-determinator and the cquery each run in a process group of their own. The action stops the whole group at the deadline and again when the command exits, so no process left in the group can check out the base afterward. A process that starts its own session, as Bazel's server does, leaves the group and keeps running. Every run then ends with the checkout on the event's head, `merge_group.head_sha` or `github.sha`, so a fallback never tests the base. When the directory has no Git checkout, or the action can't check out that commit, it fails. Every run writes its count and reason to the job summary, with the reason's Markdown escaped, and to the `count` and `reason` outputs. A count of 0 means the change affects no test target, and the caller then skips `bazel test`. Pass `--skip_incompatible_explicit_targets` to `bazel test`, because explicit labels that are incompatible with the platform fail without it.
 
-Repository rules run code from the change. target-determinator and Bazel therefore run without `GITHUB_OUTPUT`, `GITHUB_STEP_SUMMARY`, `GITHUB_ENV`, `GITHUB_PATH`, and `GITHUB_STATE`, and only the action's script writes the outputs. The action prints the tail of the target-determinator log with workflow commands stopped.
+Repository rules run code from the change. target-determinator and Bazel therefore run without `GITHUB_OUTPUT`, `GITHUB_STEP_SUMMARY`, `GITHUB_ENV`, `GITHUB_PATH`, and `GITHUB_STATE`, and only the action's script writes the outputs. The action prints the tail of the target-determinator log, and its final line, which can hold a changed file's name, with workflow commands stopped.
 
 | Input               | Default | Meaning |
 |---------------------|---------|---------|
 | `working-directory` | `.`     | The Bazel workspace to query. |
-| `query`             | `tests(//...) except attr(tags, "(\[\|, )manual(,\|])", //...)` | The candidate targets. target-determinator reports tests tagged `manual` too, so the default removes them. It keeps tags such as `manual-review`. |
-| `bazel-opts`        | `--config=ci` | Options for target-determinator's cquery, split on whitespace. Match the options of the test step. |
-| `timeout-minutes`   | `15`    | Whole minutes target-determinator may run before the action selects `//...`. |
+| `query`             | `tests(//...)` | The candidate targets. target-determinator reports tests tagged `manual` too, so the action drops the selected tests whose tag list, from `bazel cquery --output=jsonproto` at the head, holds the exact tag `manual`. It keeps tags such as `manual-review` and `review, manual`. |
+| `bazel-opts`        | `--config=ci` | Options for target-determinator's cquery and the action's cquery of tags, split on whitespace. Match the options of the test step. |
+| `timeout-minutes`   | `15`    | Whole minutes target-determinator and the cquery of tags may run together before the action selects `//...`. |
 
-The outputs are `all` (`true` on a fallback), `count` (a number, or `all`), `reason`, `targets` (one per line), and `file`. `file` is the path of a file with one target per line, for `--target_pattern_file`. Prefer it, since a label can contain a space. `//repo/tests:affected_targets_test` checks the selection, each fallback, and the final checkout, with a fake target-determinator.
+The outputs are `all` (`true` on a fallback), `count` (a number, or `all`), `reason`, `targets` (one per line), and `file`. `file` is the path of a file with one target per line, for `--target_pattern_file`. Prefer it, since a label can contain a space. `//repo/tests:affected_targets_test` checks the selection, the `manual` tag, each fallback, the final checkout, and the stopped workflow commands, with a fake target-determinator and `bazelisk` whose failing runs leave a child behind.
 
 ## `repo-checks.yml`
 

@@ -14,20 +14,33 @@ git_bin=${TEST_SRCDIR:?}/${GIT_RLOCATIONPATH:?}
 scratch=${TEST_TMPDIR:?}/affected
 mkdir -p "$scratch/bin" "$scratch/repo/sub" "$scratch/no-git" "$scratch/broken-diff" "$scratch/no-timeout"
 ln -s "$git_bin" "$scratch/bin/git"
-# The fake records its arguments and which runner command files it can see.
-# `fail` and `hang` first check out the base, as a stopped run could leave it.
+ln -s "$scratch/fake-td" "$scratch/bin/bazelisk"
+# One fake serves as target-determinator and as bazelisk. Each records its
+# arguments and which runner command files it can see. `fail` and `hang`
+# first check out the base, as a stopped run could leave it, and start a
+# child that checks out the base again later unless it's stopped too.
 cat >"$scratch/fake-td" <<'MOCK'
 #!/usr/bin/env bash
-printf '%s\n' "$@" >"$ARGS_LOG"
 for name in GITHUB_OUTPUT GITHUB_STEP_SUMMARY GITHUB_ENV GITHUB_PATH GITHUB_STATE; do
   [[ -z ${!name+set} ]] || echo "$name" >>"$ENV_LOG"
 done
+if [[ ${0##*/} == bazelisk ]]; then
+  printf '%s\n' "$@" >"$CQUERY_LOG"
+  [[ $FAKE_CQUERY != fail ]] || { echo 'ERROR: analysis failed' >&2 && exit 7; }
+  tag() { printf '{"target":{"type":"RULE","rule":{"name":"%s","attribute":[{"name":"tags","type":"STRING_LIST","stringListValue":[%s]}]}}}' "$@"; }
+  printf '{"results":[%s,%s,%s]}\n' "$(tag //go:lib_test '"review, manual"')" \
+    "$(tag //go:cmd_test '"manual] suffix"')" "$(tag //go:manual_test '"manual","x"')"
+  exit
+fi
+printf '%s\n' "$@" >"$ARGS_LOG"
+straggle() { (sleep 2 && git checkout -q "$1" && : >"$CHILD_MARK") </dev/null >/dev/null 2>&1 & }
 case $FAKE in
   two) printf '//go:lib_test\n//go:cmd_test\n' ;;
+  tagged) printf '//go:lib_test\n//go:manual_test\n//go:cmd_test\n' ;;
   space) printf '//a:with space\n//b:t\n' ;;
   none) ;;
-  fail) git checkout -q "${!#}" && echo 'ERROR: cquery failed' >&2 && exit 3 ;;
-  hang) git checkout -q "${!#}" && exec sleep 30 ;;
+  fail) git checkout -q "${!#}" && straggle "${!#}" && echo 'ERROR: cquery failed' >&2 && exit 3 ;;
+  hang) git checkout -q "${!#}" && straggle "${!#}" && exec sleep 30 ;;
 esac
 MOCK
 cat >"$scratch/broken-diff/git" <<MOCK
@@ -49,6 +62,7 @@ done
 export PATH="$scratch/bin:$PATH" GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 export GIT_CEILING_DIRECTORIES=$scratch
 export RUNNER_TEMP=$scratch/tmp ARGS_LOG=$scratch/args ENV_LOG=$scratch/env TD=$scratch/fake-td
+export CQUERY_LOG=$scratch/cquery CHILD_MARK=$scratch/child-ran FAKE_CQUERY=
 export QUERY='tests(//...)' BAZEL_OPTS='--config=ci --keep_going'
 export GITHUB_OUTPUT=$scratch/output GITHUB_STEP_SUMMARY=$scratch/summary
 export GITHUB_ENV=$scratch/github-env GITHUB_PATH=$scratch/github-path GITHUB_STATE=$scratch/state
@@ -81,6 +95,17 @@ load() {
   alls=$(grep -c '^all=' "$GITHUB_OUTPUT")
 }
 
+# stopped FILE: every line of FILE with `::` in it, where the runner can see
+# a workflow command, sits between ::stop-commands::TOKEN and ::TOKEN::.
+stopped() {
+  awk '
+    tok == "" && index($0, "::stop-commands::") == 1 { tok = substr($0, 18); next }
+    tok != "" { if ($0 == "::" tok "::") tok = ""; next }
+    /::/ { bad = 1; print "unstopped: " $0 > "/dev/stderr" }
+    END { exit bad || tok != "" }
+  ' "$1"
+}
+
 cd "$scratch/repo"
 git init -q -b main .
 commit() {
@@ -104,6 +129,7 @@ run() {
   : >"$GITHUB_OUTPUT"
   : >"$GITHUB_STEP_SUMMARY"
   : >"$ENV_LOG"
+  rm -f "$CHILD_MARK"
   if ! (cd sub && EVENT=$2 bash "$script") >"$scratch/stdout" 2>&1; then
     cat "$scratch/stdout" >&2
     fail "$name: exited nonzero"
@@ -115,6 +141,11 @@ run() {
   [[ $reason == ?* ]] || fail "$name: no reason"
   grep -qF '### Affected Bazel targets' "$GITHUB_STEP_SUMMARY" || fail "$name: no summary"
   [[ ! -s $ENV_LOG ]] || fail "$name: target-determinator saw runner command files"
+  stopped "$scratch/stdout" || fail "$name: a log line can issue a workflow command"
+  if [[ $FAKE == fail || $FAKE == hang ]]; then
+    sleep 3
+    [[ ! -e $CHILD_MARK ]] || fail "$name: a child of target-determinator outlived the run"
+  fi
   now=$(git rev-parse HEAD)
   [[ $now == "$want" ]] || fail "$name: the checkout is not $want"
   if [[ $expected_all == true ]]; then
@@ -138,6 +169,15 @@ for arg in -bazel bazelisk "-targets" "tests(//...)" -bazel-opts=--config=ci -ba
 done
 last=$(tail -n 1 "$ARGS_LOG")
 [[ $last == "$base" ]] || fail 'the base commit is not the last argument'
+for arg in cquery --output=jsonproto --config=ci --keep_going 'attr(tags, manual, (tests(//...)))'; do
+  grep -qxF -- "$arg" "$CQUERY_LOG" || fail "cquery missed argument $arg"
+done
+
+# Only the exact tag manual drops a test, not `review, manual` or `manual] suffix`.
+FAKE=tagged run 'manual tag' pull_request "$docs_head" false 2
+[[ $targets == $'//go:lib_test\n//go:cmd_test' ]] || fail 'manual tag: targets output'
+FAKE_CQUERY=fail run 'tag cquery failure' pull_request "$docs_head"
+[[ $reason == *'exit status 7' ]] || fail 'tag cquery failure: status missing'
 
 FAKE=space run 'label with a space' pull_request "$docs_head" false 2
 [[ $targets == $'//a:with space\n//b:t' ]] || fail 'space: targets output'
@@ -161,12 +201,12 @@ BASE_SHA=0123456789abcdef0123456789abcdef01234567 run 'base not fetched' pull_re
 PATH="$scratch/broken-diff:$PATH" run 'git diff failure' pull_request "$docs_head"
 [[ $reason == 'git diff failed' ]] || fail 'git diff: wrong reason'
 
-# No checkout at all: nothing to restore, and the run still falls back.
-: >"$GITHUB_OUTPUT"
-(cd "$scratch/no-git" && EVENT=pull_request bash "$script") >"$scratch/stdout" 2>&1 ||
-  fail 'no checkout: exited nonzero'
-load
-[[ $all == true && $reason == 'no Git checkout' ]] || fail 'no checkout'
+# No checkout at all: the event's head can't be checked, so the step fails.
+for want in '' "$docs_head"; do
+  if (cd "$scratch/no-git" && EVENT=pull_request HEAD_SHA=$want bash "$script") >"$scratch/stdout" 2>&1; then
+    fail "no checkout, head '$want': exited zero"
+  fi
+done
 echo 'PASS: no checkout'
 
 # An event head the clone lacks can't be restored, so the step fails.
@@ -187,6 +227,12 @@ for path in MODULE.bazel MODULE.bazel.lock .bazelrc .bazelrc.user preset.bazelrc
   [[ $reason == "$path changed" ]] || fail "$path: wrong reason"
 done
 
+# A file name can't issue a workflow command through the log.
+git checkout -q "$docs_head"
+head=$(commit 'x ::set-output name=all::false ::add-mask::y/MODULE.bazel')
+run 'workflow command in a path' pull_request "$head"
+grep -qF -- '::set-output name=all::false' "$scratch/stdout" || fail 'command path: name not logged'
+
 # A file name can't add outputs or Markdown to the summary.
 git checkout -q "$docs_head"
 head=$(commit $'x\nall=false/[a](b)*_/MODULE.bazel')
@@ -204,13 +250,7 @@ renamed=$(git rev-parse HEAD)
 BASE_SHA=$module_base run 'renamed module' pull_request "$renamed"
 [[ $reason == 'go/MODULE.bazel changed' ]] || fail 'rename: wrong reason'
 
-# The default query drops the exact tag manual and keeps manual-review.
-pattern=$(sed -n 's/.*attr(tags, "\([^"]*\)".*/\1/p' "$action")
-[[ -n $pattern ]] || fail 'no tag pattern in the default query'
-for tags in '[manual]' '[a, manual]' '[manual, b]' '[a, manual, b]'; do
-  grep -qE -- "$pattern" <<<"$tags" || fail "query keeps $tags"
-done
-for tags in '[manual-review]' '[a, manual-review]' '[not-manual]' '[manually, b]' '[]'; do
-  ! grep -qE -- "$pattern" <<<"$tags" || fail "query drops $tags"
-done
-echo 'PASS: manual tag pattern'
+# The default query leaves the manual tag to cquery's JSON, since a regex
+# over the printed list can't tell `manual` from `review, manual`.
+grep -qxF "    default: 'tests(//...)'" "$action" || fail 'default query is not tests(//...)'
+echo 'PASS: default query'

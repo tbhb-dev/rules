@@ -19,20 +19,22 @@ inputs:
     default: .
   query:
     description: >-
-      The Bazel query of the candidate targets. The default leaves out tests
-      tagged exactly manual, which `bazel test //...` skips too.
+      The Bazel query of the candidate targets. The action then drops tests
+      tagged exactly manual, which `bazel test //...` skips too, by reading
+      their tags from `bazel cquery --output=jsonproto`.
     required: false
-    default: 'tests(//...) except attr(tags, "(\[|, )manual(,|])", //...)'
+    default: 'tests(//...)'
   bazel-opts:
     description: >-
-      Options for target-determinator's cquery and build, split on
-      whitespace. Match the options of the tests that use the result.
+      Options for target-determinator's cquery and build, and for the cquery
+      of manual tags, split on whitespace. Match the options of the tests
+      that use the result.
     required: false
     default: --config=ci
   timeout-minutes:
     description: >-
-      Whole minutes target-determinator may run before the action stops it
-      and selects `//...`, with or without timeout(1) on the runner. Keep it
+      Whole minutes target-determinator and the cquery of manual tags may
+      run together before the action stops them and selects `//...`. Keep it
       below the job's timeout.
     required: false
     default: "15"
