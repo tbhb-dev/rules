@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: Apache-2.0
 # Copyright Tony Burns
-# cspell:ignore bootstatus endgroup gtimeout simctl udid
+# cspell:ignore bootstatus endgroup launchctl simctl udid
 
 set -euo pipefail
 
@@ -19,21 +19,49 @@ reset_simulators() {
     done
 }
 
-log_simulator_timeout() {
-  local timeout_command=timeout
-  command -v timeout >/dev/null || timeout_command=gtimeout
+log_simulator_timeout() (
+  run_with_limit() {
+    local deadline=$((SECONDS + $1)) pid
+    shift
+    "$@" </dev/null &
+    pid=$!
+    while kill -0 "$pid" 2>/dev/null; do
+      if ((SECONDS >= deadline)); then
+        kill -KILL "$pid" 2>/dev/null || true
+        wait "$pid" 2>/dev/null || true
+        return 124
+      fi
+      sleep 1
+    done
+    wait "$pid"
+  }
 
+  local diagnostics boot_status
+  diagnostics=$(mktemp -d "$RUNNER_TEMP/ios-diagnostics.XXXXXX") || return 0
+  trap 'rm -rf "$diagnostics"' EXIT
+
+  # A descendant can keep writing after the timed command exits, so read from files.
   echo '::group::iOS simulator diagnostics after TIMEOUT'
   xcrun simctl list devices || true
   list_test_simulators |
     while IFS= read -r udid; do
       echo "Boot status for $udid (up to 120 seconds)"
-      "$timeout_command" 120 xcrun simctl bootstatus "$udid" </dev/null ||
-        echo "Boot status for $udid exited with status $?"
+      boot_status=0
+      run_with_limit 120 xcrun simctl bootstatus "$udid" >"$diagnostics/boot" 2>&1 || boot_status=$?
+      cat "$diagnostics/boot" || true
+      if ((boot_status != 0)); then
+        echo "Boot status for $udid exited with status $boot_status"
+      fi
+      echo "Launch services for $udid (up to 20 seconds)"
+      run_with_limit 20 xcrun simctl spawn "$udid" launchctl list >"$diagnostics/launch" 2>&1 || true
+      head -n 40 "$diagnostics/launch" || true
+      rm -f "$diagnostics/boot" "$diagnostics/launch"
     done || true
-  log show --last 10m --predicate 'subsystem == "com.apple.CoreSimulator"' | tail -n 50 || true
+  run_with_limit 20 log show --last 10m --style compact \
+    --predicate 'process == "launchd_sim" OR subsystem == "com.apple.CoreSimulator"' >"$diagnostics/log" 2>&1 || true
+  tail -n 80 "$diagnostics/log" || true
   echo '::endgroup::'
-}
+)
 
 ios_test=//:ios_app_test
 bazelisk test --config=ci -- //... "-$ios_test"
