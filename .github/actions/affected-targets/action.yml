@@ -27,8 +27,8 @@ inputs:
   bazel-opts:
     description: >-
       Options for target-determinator's cquery and build, and for the cquery
-      of manual tags, split on whitespace. Match the options of the tests
-      that use the result.
+      of manual tags, on one line and split on whitespace. A newline fails
+      the step. Match the options of the tests that use the result.
     required: false
     default: --config=ci
   timeout-minutes:
@@ -57,8 +57,8 @@ outputs:
   file:
     description: >-
       The path of a file with one selected target per line, for Bazel's
-      --target_pattern_file. The file is empty when the change affects no
-      test target.
+      --target_pattern_file, new in each run. The file is empty when the
+      change affects no test target.
     value: ${{ steps.select.outputs.file }}
 
 runs:

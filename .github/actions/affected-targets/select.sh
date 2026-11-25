@@ -5,40 +5,60 @@
 # Chooses the Bazel test targets that the change from BASE_SHA to HEAD_SHA can
 # affect, with target-determinator (TD). When the script can't decide, it
 # selects `//...`. Every path ends in finish, which returns the checkout to
-# HEAD_SHA and writes the outputs and a line to the job summary, so no
-# fallback is silent and none tests another commit. Without a checkout to
-# verify, the script fails.
+# HEAD_SHA, clean once a tool has run, and writes the outputs and a line to
+# the job summary, so no fallback is silent and none tests another commit.
+# Without a checkout to verify, the script fails.
 set -euo pipefail
 
-out=${RUNNER_TEMP:?}/affected-targets
-mkdir -p "$out"
+# A directory of its own for each run, so a second run in the job leaves the
+# first run's file alone.
+out=$(mktemp -d "${RUNNER_TEMP:?}/affected-targets.XXXXXXXX")
 file=$out/targets.txt
 log=$out/target-determinator.log
 changed=$out/changed
-want=
+want='' ran=''
 
 # rand: 32 random hex digits, for a delimiter or token no input can guess.
 rand() { od -An -N16 -tx1 /dev/urandom | tr -d ' \n'; }
 
-# quiet COMMAND...: run COMMAND with workflow commands stopped, since its
-# output can hold a file name or a log from the change.
-quiet() {
+# show: the one way the script prints text that can hold a file name or a
+# log from the change. Each line of stdin gets a prefix and a newline, with
+# workflow commands stopped, so neither form of command and no unfinished
+# last line can reach the runner or swallow the resume token.
+show() {
   local token
   token=$(rand)
   echo "::stop-commands::$token"
-  "$@" || true
+  awk '{ print "  | " $0 }' || true
   echo "::$token::"
 }
 
-# ensure_head: put the checkout back on the commit the event tests.
+# logged COMMAND...: run COMMAND and print its output through show.
+logged() {
+  local status=0
+  "$@" >"$out/command.log" 2>&1 || status=$?
+  show <"$out/command.log" >&2
+  return "$status"
+}
+
+# at_head: HEAD is the event's head and, once a tool has run, the tree and
+# every submodule hold no change, since a stopped checkout can leave the
+# base's content under the head.
+at_head() {
+  local now changes
+  now=$(git rev-parse HEAD 2>/dev/null) && [[ $now == "$want" ]] || return
+  [[ -n $ran ]] || return 0
+  changes=$(git status --porcelain --ignore-submodules=none) && [[ -z $changes ]]
+}
+
+# ensure_head: put the checkout back on the commit the event tests, by force
+# once a tool has run.
 ensure_head() {
-  local now
-  now=$(git rev-parse HEAD 2>/dev/null) || now=
-  [[ $now != "$want" ]] || return 0
+  ! at_head || return 0
   echo "affected-targets: checking out the event's head $want" >&2
-  git checkout -q --detach "$want" || return
-  now=$(git rev-parse HEAD) || return
-  [[ $now == "$want" ]]
+  logged git checkout -q ${ran:+-f} --detach "$want" || return
+  [[ -z $ran ]] || logged git submodule update -q --recursive --force || return
+  at_head
 }
 
 # finish MODE REASON: MODE is `all` or `selected`. REASON can hold a changed
@@ -46,7 +66,7 @@ ensure_head() {
 finish() {
   local all=false count line reason=${2//[[:cntrl:]]/?} delim
   if ! ensure_head; then
-    echo "affected-targets: can't check out the event's head $want; stopping" >&2
+    echo "affected-targets: can't restore a clean checkout of the event's head $want; stopping" >&2
     exit 1
   fi
   if [[ $1 == all ]]; then
@@ -74,7 +94,7 @@ finish() {
   fi
   line+=$(printf '%s' "$reason" | LC_ALL=C sed 's/[[:punct:]]/\\&/g')
   printf '### Affected Bazel targets\n\n%s\n' "$line" >>"${GITHUB_STEP_SUMMARY:-/dev/null}"
-  quiet echo "affected-targets: $count: $reason"
+  echo "affected-targets: $count: $reason" | show
   exit 0
 }
 
@@ -137,6 +157,10 @@ if ! head=$(git rev-parse HEAD 2>/dev/null); then
   exit 1
 fi
 want=${HEAD_SHA:-$head}
+if [[ ${BAZEL_OPTS:-} == *$'\n'* ]]; then
+  echo 'affected-targets: bazel-opts must be one line; stopping' >&2
+  exit 1
+fi
 
 case ${EVENT:-} in
 pull_request | merge_group) ;;
@@ -149,7 +173,7 @@ esac
 if ! git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
   finish all "the base $BASE_SHA is missing from the checkout (check out with fetch-depth: 0)"
 fi
-git -c core.quotePath=false diff -z --name-only --no-renames "$BASE_SHA" "$head" >"$changed" ||
+logged git -c core.quotePath=false diff -z --name-only --no-renames --output="$changed" "$BASE_SHA" "$head" ||
   finish all 'git diff failed'
 
 # These files change the module graph, the flags, the Bazel version, the
@@ -179,7 +203,7 @@ done
 # Repository rules run code from the change, so Bazel gets no runner
 # command files to write outputs, the summary or the environment through.
 isolate=(env -u GITHUB_OUTPUT -u GITHUB_STEP_SUMMARY -u GITHUB_ENV -u GITHUB_PATH -u GITHUB_STATE)
-start=$SECONDS status=0 step=target-determinator
+start=$SECONDS status=0 step=target-determinator ran=1
 deadline "$seconds" "${isolate[@]}" "$TD" "${args[@]}" "$BASE_SHA" >"$file" 2>"$log" || status=$?
 if [[ $status == 0 ]]; then
   step='the cquery of manual tags'
@@ -188,6 +212,6 @@ if [[ $status == 0 ]]; then
 fi
 [[ $status != 0 ]] || finish selected "target-determinator compared $BASE_SHA with $head"
 # The log comes from the change too.
-quiet tail -n 40 "$log" >&2
+tail -n 40 "$log" | show >&2
 [[ $status != 124 ]] || finish all "$step timed out after $seconds seconds"
 finish all "$step failed with exit status $status"
