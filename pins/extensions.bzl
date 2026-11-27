@@ -308,22 +308,22 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_zizmor_macos_arm64",
         build_file_content = _EXPORT.format("zizmor"),
-        sha256 = "6efed18c4539a663fd3c851a2be9533fd8456c4e646d9416206da059154a0d3c",
-        url = "https://github.com/zizmorcore/zizmor/releases/download/v1.32.0/zizmor-aarch64-apple-darwin.tar.gz",
+        sha256 = "68516d45723aac36e9c87c47d56e8418009fcb919c6ceb44514d85b9d0c1c011",
+        url = "https://github.com/zizmorcore/zizmor/releases/download/v1.33.1/zizmor-aarch64-apple-darwin.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_zizmor_linux_x86_64",
         build_file_content = _EXPORT.format("zizmor"),
-        sha256 = "bb110cc765eca9cd7efb2e284a956be5974c60027b0970f16397d86208a9957b",
-        url = "https://github.com/zizmorcore/zizmor/releases/download/v1.32.0/zizmor-x86_64-unknown-linux-gnu.tar.gz",
+        sha256 = "3e6a301c7a820a2501915f5a9de8c0486da82bdec7965f068477538a98743d43",
+        url = "https://github.com/zizmorcore/zizmor/releases/download/v1.33.1/zizmor-x86_64-unknown-linux-gnu.tar.gz",
     )
 
     http_archive(
         name = "tbhb_rules_zizmor_linux_arm64",
         build_file_content = _EXPORT.format("zizmor"),
-        sha256 = "cb152b207f815116d7fa1c1ee4614f61578803351395052908095e79adfd9fd0",
-        url = "https://github.com/zizmorcore/zizmor/releases/download/v1.32.0/zizmor-aarch64-unknown-linux-gnu.tar.gz",
+        sha256 = "aa487c792a7cbbe86e4f8dccd3b66de33b3b51813c090aaa0842d7ea08a3fc35",
+        url = "https://github.com/zizmorcore/zizmor/releases/download/v1.33.1/zizmor-aarch64-unknown-linux-gnu.tar.gz",
     )
 
     http_archive(
@@ -436,8 +436,8 @@ def _tools_impl(mctx):
     http_archive(
         name = "tbhb_rules_zizmor_windows_x86_64",
         build_file_content = _EXPORT.format("zizmor.exe"),
-        sha256 = "d284a16e09d9df4ce2c000357e7b59bd531be093bea5718a1ce225b449b59d49",
-        url = "https://github.com/zizmorcore/zizmor/releases/download/v1.32.0/zizmor-x86_64-pc-windows-msvc.zip",
+        sha256 = "f02ebeedf651da468b4de19d31f0609050af74e11be41dc46d82e355cf44f68b",
+        url = "https://github.com/zizmorcore/zizmor/releases/download/v1.33.1/zizmor-x86_64-pc-windows-msvc.zip",
     )
 
     http_file(
