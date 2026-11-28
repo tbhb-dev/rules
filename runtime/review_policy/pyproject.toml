@@ -19,7 +19,7 @@ dependencies = [
   "jsonschema[format]==4.26.0",
   "onepasswordconnectsdk==2.1.1",
   "psycopg[binary]==3.3.9",
-  "pyyaml==6.0.3",
+  "pyyaml==6.0.4",
   "tomlkit==0.15.2",
 ]
 

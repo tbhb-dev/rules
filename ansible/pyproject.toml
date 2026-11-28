@@ -13,7 +13,7 @@ description = "Development tools for tbhb_rules_ansible"
 requires-python = ">=3.15"
 # The lock script's one import beyond the standard library, which
 # @tbhb_rules_python_runtime provides at the same version.
-dependencies = ["pyyaml==6.0.3"]
+dependencies = ["pyyaml==6.0.4"]
 
 [dependency-groups]
 test = [
